@@ -15,6 +15,7 @@ import { downloadPreparationFile } from "../preparation";
 import type { PreparationFile } from "../../config/preparationFile";
 import { preparationFileCaption } from "../../../preparationMessage";
 import { loadCatalog, type BotCatalog } from "./catalog";
+import { buildScope, EXAMS_CHOICE, PROFESSIONAL_KEY, scopeCatalog, type ProfessionalScope } from "./professionalScope";
 import {
   ASK_BIRTHDATE_AGAIN,
   HANDOFF_SUBJECT_QUESTION,
@@ -49,9 +50,14 @@ export type BotClinic = {
   timeZone: string;
   today: string;
   ageLimitYears: number | null;
+  /** Informações que o bot responde: as do profissional em uso (MI, 07/nov/2026); null sem profissional. */
   paymentInfo: string | null;
   insuranceInfo: string | null;
   notes: string | null;
+  /** Convênios que o profissional em uso atende (null: item "Convênios" desligado ou sem profissional; vazio: só particular). */
+  insurancePlans: string[] | null;
+  /** Nome do profissional em uso (Informações › Convênios). */
+  professionalName: string | null;
   /** Como a clínica é chamada nos textos genéricos (cliente, 11/out/2026). */
   designation: Designation;
   /** Prazo para oferecer horários, em dias. */
@@ -70,8 +76,12 @@ export type Bot = BotEnv & {
   incomingId: string | null;
   /** Textos próprios da clínica (item "Mensagens personalizadas", F6.6). */
   custom: Map<BotMessageKey, string>;
-  /** Catálogo, lido na primeira vez que o fluxo precisa. */
+  /** Catálogo no contexto do profissional escolhido (MB). */
   catalog(): Promise<BotCatalog>;
+  /** Profissionais da clínica e a escolha da conversa (MB, 07/nov/2026). */
+  scope: ProfessionalScope;
+  /** Catálogo da clínica inteira (a escolha da especialidade e do profissional). */
+  fullCatalog: BotCatalog;
   /** Lista ou botões enviados nesta mensagem (id da Meta; null = foram em texto). */
   promptId?: string | null;
   /** Tipo da mensagem do paciente ("text", "audio", "image"…; F8.5d). */
@@ -201,7 +211,7 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     env.db.from("clinics").select("name").eq("id", env.clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
     env.db
       .from("clinic_settings")
-      .select("profile, timezone, consultation_age_limit_years, bot_payment_info, bot_insurance_info, bot_notes, message_noun, message_noun_article, booking_horizon_days")
+      .select("profile, timezone, consultation_age_limit_years, message_noun, message_noun_article, booking_horizon_days")
       .eq("clinic_id", env.clinicId)
       .maybeSingle()
       .then((r) => unwrapOne(r, "Configuração da clínica")),
@@ -213,9 +223,12 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     timeZone: settings.timezone,
     today: todayIn(settings.timezone, env.now),
     ageLimitYears: settings.consultation_age_limit_years,
-    paymentInfo: settings.bot_payment_info?.trim() || null,
-    insuranceInfo: settings.bot_insurance_info?.trim() || null,
-    notes: settings.bot_notes?.trim() || null,
+    // MI (07/nov/2026): as informações são do profissional (createBot); aqui, nenhuma.
+    paymentInfo: null,
+    insuranceInfo: null,
+    notes: null,
+    insurancePlans: null,
+    professionalName: null,
     designation: { noun: settings.message_noun, article: settings.message_noun_article as NounArticle },
     horizonDays: settings.booking_horizon_days,
   };
@@ -228,8 +241,10 @@ export async function createBot(env: BotEnv, convo: Conversation, incomingId: st
     getWhatsappConnection(env.db, env.clinicId),
   ]);
   const custom = features.includes("custom_messages") ? await listBotMessages(env.db, env.clinicId) : new Map<BotMessageKey, string>();
-  let catalog: Promise<BotCatalog> | null = null;
-  return {
+  // O catálogo diz quem atende pelo bot: com mais de um profissional, a conversa segue no contexto do escolhido (MB).
+  const fullCatalog = await loadCatalog(env.db, env.clinicId, features);
+  const scope = buildScope(fullCatalog, convo.context);
+  const b: Bot = {
     ...env,
     phone: convo.phone,
     convo,
@@ -240,9 +255,82 @@ export async function createBot(env: BotEnv, convo: Conversation, incomingId: st
     incomingId,
     incomingType,
     custom,
-    catalog: () => (catalog ??= loadCatalog(env.db, env.clinicId, features)),
+    scope,
+    fullCatalog,
+    catalog: async () => scopeCatalog(fullCatalog, scope),
+  };
+  await loadProfessionalInfo(b);
+  return b;
+}
+
+type ProfessionalInfo = Pick<BotClinic, "paymentInfo" | "insuranceInfo" | "notes" | "insurancePlans" | "professionalName">;
+
+/** Informações que o bot responde e convênios de um profissional (MI e MC, 07/nov/2026); sem profissional, nada. */
+export async function professionalInfoFor(
+  db: DbClient,
+  clinicId: string,
+  features: readonly FeatureKey[],
+  current: ProfessionalScope["current"],
+): Promise<ProfessionalInfo> {
+  if (!current) return { paymentInfo: null, insuranceInfo: null, notes: null, insurancePlans: null, professionalName: null };
+  const [info, links] = await Promise.all([
+    db
+      .from("professional_bot_info")
+      .select("payment_info, insurance_info, notes")
+      .eq("clinic_id", clinicId)
+      .eq("professional_id", current.id)
+      .maybeSingle()
+      .then((r) => unwrap(r, "Informações do bot")),
+    features.includes("insurance")
+      ? db
+          .from("professional_insurance_plans")
+          .select("insurance_plans(name, is_active)")
+          .eq("clinic_id", clinicId)
+          .eq("professional_id", current.id)
+          .then((r) => unwrap(r, "Convênios atendidos"))
+      : Promise.resolve(null),
+  ]);
+  // Clínica sem nenhum plano ativo: o bot não fala de convênio (nem "só particular").
+  const anyPlan =
+    links !== null &&
+    (links.length > 0 ||
+      unwrap(await db.from("insurance_plans").select("id").eq("clinic_id", clinicId).eq("is_active", true).limit(1), "Convênios").length > 0);
+  return {
+    paymentInfo: info?.payment_info?.trim() || null,
+    insuranceInfo: info?.insurance_info?.trim() || null,
+    notes: info?.notes?.trim() || null,
+    insurancePlans: links && anyPlan
+      ? links
+          .map((l) => l.insurance_plans)
+          .filter((plan): plan is { name: string; is_active: boolean } => !!plan && plan.is_active)
+          .map((plan) => plan.name)
+          .sort((x, y) => x.localeCompare(y, "pt-BR"))
+      : null,
+    professionalName: current.name,
   };
 }
+
+async function loadProfessionalInfo(b: Bot): Promise<void> {
+  b.clinic = { ...b.clinic, ...(await professionalInfoFor(b.db, b.clinicId, b.features, b.scope.current)) };
+}
+
+/** Guarda a escolha da especialidade ou do profissional (MB) e passa a conversa para o contexto dele. */
+export async function applyProfessionalChoice(b: Bot, choice: string): Promise<void> {
+  await mergeContext(b, { [PROFESSIONAL_KEY]: choice });
+  b.scope = buildScope(b.fullCatalog, b.convo.context);
+  b.catalog = async () => scopeCatalog(b.fullCatalog, b.scope);
+  await loadProfessionalInfo(b);
+}
+
+/** Esquece a escolha (o paciente quer outra especialidade ou outro profissional). */
+export async function clearProfessionalChoice(b: Bot): Promise<void> {
+  await mergeContext(b, { [PROFESSIONAL_KEY]: undefined });
+  b.scope = buildScope(b.fullCatalog, b.convo.context);
+  b.catalog = async () => scopeCatalog(b.fullCatalog, b.scope);
+  await loadProfessionalInfo(b);
+}
+
+export { EXAMS_CHOICE };
 
 async function record(b: Bot, kind: string, outcome: SendOutcome, body: string): Promise<void> {
   await recordOutboundMessage(
@@ -369,7 +457,11 @@ export function tick(b: Bot): Date {
 export async function go(b: Bot, state: string, context: object = {}): Promise<void> {
   // Opções enviadas nesta mensagem; senão, as de antes só no mesmo passo (passo novo sem opções: nenhum toque vale).
   const prompt = b.promptId !== undefined ? b.promptId : state === b.convo.state ? currentPrompt(b.convo) : null;
-  b.convo = await setConversationState(b.db, b.clinicId, b.phone, state, { context: { ...(context as Record<string, unknown>), [PROMPT_KEY]: prompt } }, tick(b));
+  // O profissional escolhido segue com a conversa até ela recomeçar (MB, 07/nov/2026).
+  const next: Record<string, unknown> = { ...(context as Record<string, unknown>), [PROMPT_KEY]: prompt };
+  const chosen = ((b.convo.context ?? {}) as Record<string, unknown>)[PROFESSIONAL_KEY];
+  if (state !== WELCOME && chosen !== undefined && !(PROFESSIONAL_KEY in next)) next[PROFESSIONAL_KEY] = chosen;
+  b.convo = await setConversationState(b.db, b.clinicId, b.phone, state, { context: next }, tick(b));
 }
 
 /** Passo avulso no funil da tentativa em andamento. */

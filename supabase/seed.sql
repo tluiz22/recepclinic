@@ -96,8 +96,6 @@ begin
   insert into public.clinic_features (clinic_id, feature_key) select c_a, key from public.features;
   update public.clinic_settings
     set profile = 'mixed', consultation_age_limit_years = 14, reminder_hour = 14,
-        bot_payment_info = 'Pix, cartão de crédito e débito.',
-        bot_insurance_info = 'Atendemos Unimed, Bradesco Saúde e Hapvida.',
         brand_color = '#0F766E', require_insurance_details = true
     where clinic_id = c_a;
 
@@ -188,6 +186,12 @@ begin
     values (c_a, 'Unimed', '{"Unimed Natal","Unimed RN"}', '339679') returning id into ip_unimed;
   insert into public.insurance_plans (clinic_id, name) values (c_a, 'Bradesco Saúde') returning id into ip_bradesco;
   insert into public.insurance_plans (clinic_id, name) values (c_a, 'Hapvida') returning id into ip_hapvida;
+  -- Informações que o bot responde, por profissional (MI, 07/nov/2026).
+  insert into public.professional_bot_info (clinic_id, professional_id, payment_info, insurance_info, notes) values
+    (c_a, p_ped, 'Pix, cartão de crédito e débito.', 'Traga a carteirinha e um documento com foto.', null),
+    (c_a, p_psi, 'Pix ou transferência.', null, 'Sessões de 50 minutos.'),
+    (c_a, p_fis, 'Pix, cartão de crédito e débito.', null, null);
+
   -- Convênios que cada profissional atende (MC, 07/nov/2026): o fisioterapeuta não atende Hapvida.
   insert into public.professional_insurance_plans (clinic_id, professional_id, insurance_plan_id) values
     (c_a, p_ped, ip_unimed), (c_a, p_ped, ip_bradesco), (c_a, p_ped, ip_hapvida),

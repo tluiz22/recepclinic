@@ -235,9 +235,9 @@ const CLINICS = [
       profile: "pediatric",
       consultation_age_limit_years: 14,
       brand_color: "#EA580C",
-      bot_payment_info: "Pix, cartão de crédito e débito.",
-      bot_notes: "Atendemos de segunda a sexta, das 8h às 12h e das 14h às 18h.",
     },
+    // Informações que o bot responde (MI, 07/nov/2026): iguais para os profissionais da demonstração.
+    botInfo: { payment_info: "Pix, cartão de crédito e débito.", insurance_info: null, notes: "Atendemos de segunda a sexta, das 8h às 12h e das 14h às 18h." },
     professionals: [{ key: "laura", name: "Dra. Laura Mendes", profession: "Médica", specialty: "Pediatria", council: "CRM", number: "123456", state: "SP", admin: true }],
     locations: [{ key: "office", name: "Consultório", type: "clinic", address: "Rua das Acácias, 120, sala 4 · Jardim Primavera, São Paulo" }],
     agendas: [{ key: "laura", professional: "laura" }],
@@ -265,10 +265,10 @@ const CLINICS = [
       brand_color: "#0891B2",
       message_noun: "consultório",
       message_noun_article: "o",
-      bot_payment_info: "Pix, cartão de crédito em até 3x e débito.",
-      bot_notes: "Atendemos de segunda a sexta, das 8h às 18h.",
     },
-    professionals: [{ key: "felipe", name: "Dr. Felipe Andrade", profession: "Cirurgião-dentista", specialty: "Clínica geral e estética", council: "CRO", number: "54321", state: "SP", admin: true }],
+    // Informações que o bot responde (MI, 07/nov/2026): iguais para os profissionais da demonstração.
+    botInfo: { payment_info: "Pix, cartão de crédito em até 3x e débito.", insurance_info: null, notes: "Atendemos de segunda a sexta, das 8h às 18h." },
+    professionals: [{ key: "felipe", name: "Dr. Felipe Andrade", profession: "Cirurgião-dentista", specialty: "Odontologia (clínica geral)", council: "CRO", number: "54321", state: "SP", admin: true }],
     locations: [{ key: "office", name: "Consultório", type: "clinic", address: "Av. Brasil, 845, sala 12 · Centro, Campinas" }],
     agendas: [{ key: "felipe", professional: "felipe" }],
     services: [
@@ -297,10 +297,9 @@ const CLINICS = [
       profile: "mixed",
       brand_color: "#4F46E5",
       require_insurance_details: true,
-      bot_payment_info: "Pix, cartão de crédito em até 3x e débito.",
-      bot_insurance_info: "Atendemos Unimed, SulAmérica e Bradesco Saúde. Traga a carteirinha e um documento com foto.",
-      bot_notes: "Estacionamento conveniado ao lado da clínica. Chegue 10 minutos antes.",
     },
+    // Informações que o bot responde (MI, 07/nov/2026): iguais para os profissionais da demonstração.
+    botInfo: { payment_info: "Pix, cartão de crédito em até 3x e débito.", insurance_info: "Traga a carteirinha e um documento com foto.", notes: "Estacionamento conveniado ao lado da clínica. Chegue 10 minutos antes." },
     professionals: [
       { key: "marcos", name: "Dr. Marcos Ribeiro", profession: "Médico", specialty: "Clínica médica", council: "CRM", number: "234567", state: "SP", admin: true },
       { key: "camila", name: "Dra. Camila Torres", profession: "Médica", specialty: "Pediatria", council: "CRM", number: "345678", state: "SP" },
@@ -356,15 +355,14 @@ const CLINICS = [
       profile: "mixed",
       brand_color: "#0F766E",
       require_insurance_details: true,
-      bot_payment_info: "Pix, cartão de crédito em até 3x e débito.",
-      bot_insurance_info: "Atendemos Unimed, Amil, Bradesco Saúde e Cassi. Traga a carteirinha e um documento com foto.",
-      bot_notes: "Estacionamento gratuito no subsolo. Chegue 15 minutos antes do horário.",
     },
+    // Informações que o bot responde (MI, 07/nov/2026): iguais para os profissionais da demonstração.
+    botInfo: { payment_info: "Pix, cartão de crédito em até 3x e débito.", insurance_info: "Traga a carteirinha e um documento com foto.", notes: "Estacionamento gratuito no subsolo. Chegue 15 minutos antes do horário." },
     professionals: [
       { key: "helena", name: "Dra. Helena Duarte", profession: "Médica", specialty: "Clínica médica", council: "CRM", number: "21345", state: "DF", admin: true },
       { key: "rafael", name: "Dr. Rafael Moreira", profession: "Médico", specialty: "Ortopedia", council: "CRM", number: "22456", state: "DF" },
       { key: "paula", name: "Dra. Paula Sena", profession: "Médica", specialty: "Pediatria", council: "CRM", number: "23567", state: "DF" },
-      { key: "bianca", name: "Bianca Freitas", profession: "Psicóloga", specialty: "Psicologia clínica", council: "CRP", number: "01/12345", state: "DF" },
+      { key: "bianca", name: "Bianca Freitas", profession: "Psicóloga", specialty: "Psicologia", council: "CRP", number: "01/12345", state: "DF" },
     ],
     locations: [
       { key: "office", name: "Clínica Demonstração RecepClinic", type: "clinic", address: "SQN 201 Bloco C, Asa Norte, Brasília - DF" },
@@ -523,6 +521,11 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
       })
     ).id;
   }
+  // Especialidades da lista do Suporte, pelo nome (ME, 07/nov/2026).
+  await db.query("select app.link_legacy_specialties()");
+  if (clinic.botInfo) {
+    for (const p of clinic.professionals) await insert(db, "professional_bot_info", { clinic_id: clinic.id, professional_id: ids.professional[p.key], ...clinic.botInfo });
+  }
   for (const l of clinic.locations) ids.location[l.key] = (await insert(db, "locations", { clinic_id: clinic.id, name: l.name, type: l.type, address: l.address ?? null })).id;
   for (const a of clinic.agendas) {
     const professional = clinic.professionals.find((p) => p.key === a.professional);
@@ -565,6 +568,10 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
     });
   }
   for (const name of clinic.insurance) ids.insurance[name] = (await insert(db, "insurance_plans", { clinic_id: clinic.id, name })).id;
+  // Convênios por profissional (MC, 07/nov/2026): na demonstração, todos atendem todos.
+  for (const name of clinic.insurance) {
+    for (const p of clinic.professionals) await insert(db, "professional_insurance_plans", { clinic_id: clinic.id, professional_id: ids.professional[p.key], insurance_plan_id: ids.insurance[name] });
+  }
   for (const r of clinic.teamRecipients ?? []) await insert(db, "notification_recipients", { clinic_id: clinic.id, label: r.label, phone: r.phone });
 
   // --- Pacientes: quem não tem responsável é o próprio contato --------------

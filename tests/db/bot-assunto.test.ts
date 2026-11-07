@@ -93,7 +93,7 @@ async function askReception(phone: string): Promise<string[]> {
 }
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica Assunto E4", "+55849912290");
+  f = await setupAgendaClinic("Clínica Assunto E4", "+55849912290", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "e4-waba", status: "connected", coexistence: true });
 });
 

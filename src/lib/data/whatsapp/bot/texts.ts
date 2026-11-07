@@ -119,7 +119,28 @@ export const MAIN_MENU_DESCRIPTIONS = {
   menu_exams: "Agendamentos, retornos, remarcações e cancelamentos.",
   menu_info: "Dúvidas sobre consultas e exames.",
   menu_reception: "Precisa de ajuda? Fale com nossa equipe.",
+  menu_change_professional: "Escolher outra especialidade ou outro profissional.",
 } as const;
+
+// Clínica com mais de um profissional (MB, cliente, 07/nov/2026): especialidade
+// e profissional antes do menu; com um só na especialidade, só o nome.
+export const SPECIALTY_QUESTION = "Para qual especialidade é o atendimento?";
+export const PROFESSIONAL_QUESTION = "Com qual profissional?";
+export const SPECIALTY_EXAMS_LABEL = "Exames";
+export const SPECIALTY_EXAMS_DESCRIPTION = "Marcar, remarcar ou cancelar exames.";
+export const SPECIALTY_OTHERS_LABEL = "Outros profissionais";
+export const MORE_OPTIONS_LABEL = "Mais opções";
+export const OTHER_SPECIALTY_LABEL = "Outra especialidade";
+export const CHANGE_PROFESSIONAL_LABEL = "Outro profissional";
+export const CHANGE_SPECIALTY_LABEL = "Outra especialidade";
+/** "Atendimento com *Dra. Ana* (Pediatria)." */
+export const professionalChosen = (name: string, specialty: string | null) => `Atendimento com *${name}*${specialty ? ` (${specialty})` : ""}.`;
+export const EXAMS_CHOSEN = "Certo, vamos ver os exames.";
+/** Informações gerais › Convênios (MC + MI): os planos que o profissional atende e o texto dele. */
+export function insuranceInfoText(name: string, plans: string[], text: string | null): string {
+  const list = plans.length ? `Convênios atendidos por *${name}*: ${plans.join(", ")}.` : `*${name}* atende só particular.`;
+  return text ? `${list}\n\n${text}` : list;
+}
 
 // Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
 // antes do menu; os detalhes só depois da data de nascimento.

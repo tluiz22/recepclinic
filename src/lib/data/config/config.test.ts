@@ -161,8 +161,8 @@ describe("serviços", () => {
 
 describe("configuração da clínica", () => {
   it("normaliza textos e cor; só valida o que veio", () => {
-    expect(validateClinicSettingsPatch({ botNotes: "  ", brandColor: "#0f766e", name: " Clínica " })).toEqual({
-      botNotes: null,
+    expect(validateClinicSettingsPatch({ websiteUrl: "  ", brandColor: "#0f766e", name: " Clínica " })).toEqual({
+      websiteUrl: null,
       brandColor: "#0F766E",
       name: "Clínica",
     });

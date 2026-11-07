@@ -36,6 +36,32 @@ const FIRST_MENU =
 const FIRST_MENU_NOTE =
   "Só aparecem as opções (e as linhas da apresentação) que a clínica usa: sem exames, \"consultas\"; sem Lista de espera, sem a fila; recepção só com coexistência. Sem Perguntas frequentes, termina em \"Escolha uma das opções abaixo.\" Nas outras vezes, o menu curto (\"Escolha uma opção abaixo ou faça uma pergunta.\").";
 
+// Clínica com mais de um profissional (MB, cliente, 07/nov/2026): especialidade e profissional antes do menu.
+const CHOOSE_PROFESSIONAL: FlowItem[] = [
+  check("A clínica tem mais de um profissional no bot?", "Não (um profissional só, como a piloto): nada muda, o menu vem direto."),
+  bot(
+    "\"Para qual especialidade é o atendimento?\" Lista das especialidades (e \"Exames\", com exame na agenda da equipe)",
+    "Profissional sem especialidade fica em \"Outros profissionais\". O nome escrito também vale (\"cardiologia\"). Mais de 10 opções: \"Mais opções\".",
+  ),
+  branch(
+    ["Exames", [bot("\"Certo, vamos ver os exames.\" e o submenu Exames, sem profissional")]],
+    [
+      "Uma especialidade",
+      [
+        check("Mais de um profissional nela?"),
+        branch(
+          ["Não", [bot("\"Atendimento com *Dr. X* (Cardiologia).\"")]],
+          ["Sim", [bot("\"Com qual profissional?\" (com as outras especialidades de cada um e \"Outra especialidade\")"), bot("\"Atendimento com *Dra. Y* (Pediatria).\"")]],
+        ),
+      ],
+    ],
+  ),
+  bot(
+    "Daqui em diante, tudo no contexto dele",
+    "Serviços, valores, formas de pagamento, convênios e observações do profissional escolhido. O menu ganha \"Outro profissional\" (volta à especialidade). Remarcar e cancelar mostram todos os atendimentos do paciente. A escolha vale até a conversa recomeçar.",
+  ),
+];
+
 export type JourneySection = { id: string; title: string; intro: string; flow: FlowItem[] };
 
 export const JOURNEY: JourneySection[] = [
@@ -58,7 +84,7 @@ export const JOURNEY: JourneySection[] = [
             branch(
               ["Pedido claro (marcar, remarcar, cancelar…)", [bot("Abre esse caminho direto, sem o menu")]],
               ["Pergunta (\"vocês aceitam Unimed?\")", [bot("A resposta e o menu principal com a apresentação", "Sem o \"Isso resolve sua dúvida?\" (item 9).")]],
-              ["Não", [bot(FIRST_MENU, FIRST_MENU_NOTE)]],
+              ["Não", [...CHOOSE_PROFESSIONAL, bot(FIRST_MENU, FIRST_MENU_NOTE)]],
             ),
           ],
         ],
@@ -87,7 +113,7 @@ export const JOURNEY: JourneySection[] = [
         [
           "Sim",
           [
-            bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de um profissional atende o serviço."),
+            bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de uma agenda atende o serviço no contexto da conversa (com vários profissionais, o paciente já escolheu um no começo)."),
             bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
             check("O caminho escolhido aceita convênios?", "Recurso Convênios ligado e algum plano ativo ligado ao profissional escolhido (agenda de exames: todos os planos). Profissional só particular: não pergunta (MC, 07/11/2026)."),
             branch(
@@ -206,15 +232,15 @@ export const JOURNEY: JourneySection[] = [
   {
     id: "informacoes",
     title: "6. Informações gerais",
-    intro: "Só aparecem os itens que a clínica preencheu em Configurações.",
+    intro: "Só aparecem os itens preenchidos. Formas de pagamento, convênios e observações são do profissional em uso (Configurações › Profissionais; MI, 07/11/2026).",
     flow: [
       bot("O que você gostaria de saber?"),
       branch(
-        ["Valores", [bot("Preço de cada serviço (consultório e domiciliar) e as formas de pagamento")]],
-        ["Convênios", [bot("O texto de convênios da clínica")]],
+        ["Valores", [bot("Preço de cada serviço (consultório e domiciliar) e as formas de pagamento do profissional")]],
+        ["Convênios", [bot("\"Convênios atendidos por *Dra. Y*: Unimed, Amil.\" (ou \"atende só particular\") e o texto dele sobre convênios", "Só com algum plano ativo na clínica; sem o item Convênios, só o texto.")]],
         ["Endereço", [bot("Cada local, com o link do mapa")]],
         ["Preparo para exames", [bot("Escolhe o exame e recebe o preparo (texto ou arquivo)")]],
-        ["Outras informações", [bot("O texto de observações da clínica")]],
+        ["Outras informações", [bot("As observações do profissional")]],
       ),
       bot("Volta à lista de informações"),
     ],

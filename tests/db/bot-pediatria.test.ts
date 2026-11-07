@@ -82,13 +82,18 @@ async function lastLinkPatient(phone: string) {
   return data as unknown as { patients: { full_name: string; birthdate: string; contacts: { full_name: string } } };
 }
 
-/** "Oi" › Consultas › Marcar consulta (consulta única) › profissional; Dr. Segundo só tem consultório. */
-async function consultationWith(phone: string, professional: "Dr. Segundo" | "Primeiro horário"): Promise<Sent[]> {
+/**
+ * "Oi" › especialidade › profissional (MB, 07/nov/2026: clínica com dois profissionais) › Consultas › Marcar consulta
+ * (consulta única, só a agenda dele). Os dois estão sem especialidade: "Outros profissionais". Dr. Segundo só tem
+ * consultório.
+ */
+async function consultationWith(phone: string, professional: "Dr. Segundo"): Promise<Sent[]> {
   await adminClient().from("conversation_state").update({ state: "WELCOME", context: {} }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
-  await say(phone, "Oi");
+  const specialties = await say(phone, "Oi");
+  const professionals = await say(phone, { id: optionId(specialties, "Outros profissionais") });
+  await say(phone, { id: optionId(professionals, professional) });
   await say(phone, "1");
-  const agendas = await say(phone, "1");
-  let reply = await say(phone, { id: optionId(agendas, professional) });
+  let reply = await say(phone, "1");
   if (reply.at(-1)!.body === "Prefere consultório ou atendimento domiciliar?") reply = await say(phone, "1");
   return reply;
 }
@@ -129,10 +134,7 @@ describe("clínica Pediátrica com idade limite", () => {
     });
   });
 
-  it("\"Primeiro horário\": o aviso usa a clínica", async () => {
-    const reply = await consultationWith("+5584991228098", "Primeiro horário");
-    expect(bodies(reply).slice(-2)).toEqual(["A clínica atende pacientes até 11 anos.", "Qual é o nome completo da criança?"]);
-  });
+  // "Primeiro horário" entre profissionais não existe mais na clínica com vários (MB): o paciente escolhe antes.
 
   it("criança acima do limite: a marcação incompatível não segue", async () => {
     const phone = "+5584991228097";

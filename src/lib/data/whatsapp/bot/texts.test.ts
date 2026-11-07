@@ -82,18 +82,19 @@ describe("apresentação do menu principal (cliente, 04/nov/2026)", () => {
     expect(t.LIST_BUTTON.length).toBeLessThanOrEqual(20);
   });
 
-  it("descrições das quatro opções, pelos ids de sempre", () => {
+  it("descrições das opções, pelos ids de sempre (e a troca de profissional, MB)", () => {
     expect(t.MAIN_MENU_DESCRIPTIONS).toEqual({
       menu_consultations: "Agendamentos, retornos, remarcações e cancelamentos.",
       menu_exams: "Agendamentos, retornos, remarcações e cancelamentos.",
       menu_info: "Dúvidas sobre consultas e exames.",
       menu_reception: "Precisa de ajuda? Fale com nossa equipe.",
+      menu_change_professional: "Escolher outra especialidade ou outro profissional.",
     });
     const rows = t.numberedList(
-      Object.entries(t.MAIN_MENU_DESCRIPTIONS).map(([id, description], i) => ({ id, label: ["Consultas", "Exames", "Informações gerais", "Falar com a recepção"][i], description })),
+      Object.entries(t.MAIN_MENU_DESCRIPTIONS).map(([id, description], i) => ({ id, label: ["Consultas", "Exames", "Informações gerais", "Falar com a recepção", "Outro profissional"][i], description })),
       false,
     )[0].rows;
-    expect(rows.map((r) => r.title)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais", "4. Falar com a recepção"]);
+    expect(rows.map((r) => r.title)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais", "4. Falar com a recepção", "5. Outro profissional"]);
     expect(rows.map((r) => r.description)).toEqual(Object.values(t.MAIN_MENU_DESCRIPTIONS));
   });
 });

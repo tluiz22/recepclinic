@@ -102,7 +102,7 @@ let consultP2: string;
 let examP3: string;
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica Bot F64", "+55849912264");
+  f = await setupAgendaClinic("Clínica Bot F64", "+55849912264", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "f64-waba", status: "connected" });
   const book = async (patientId: string, serviceId: string, agendaId: string, date: string, time: string) =>
     (

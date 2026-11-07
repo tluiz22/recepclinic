@@ -8,7 +8,7 @@ import { loadKbClinicData } from "../../src/lib/data/whatsapp/bot/knowledge/clin
 import { compileKnowledge, matchQuestion, type KbContent } from "../../src/lib/knowledge/match";
 import catalog from "../../src/lib/knowledge/__fixtures__/catalogo-inicial.json";
 import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
-import { asDb, setupAgendaClinic, type AgendaFixture, linkPlanToAllProfessionals } from "./agendaFixture";
+import { asDb, setupAgendaClinic, type AgendaFixture, linkPlanToAllProfessionals, setBotInfoForAll } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
 // BC 3.2 — fontes da base: os dados saem só da clínica da credencial do bot.
@@ -47,14 +47,16 @@ async function ask(clinicId: string, text: string) {
 }
 
 beforeAll(async () => {
-  a = await setupAgendaClinic("Clínica A das fontes", "859771100");
-  b = await setupAgendaClinic("Clínica B das fontes", "859771200");
+  a = await setupAgendaClinic("Clínica A das fontes", "859771100", { oneBotProfessional: true });
+  b = await setupAgendaClinic("Clínica B das fontes", "859771200", { oneBotProfessional: true });
   const unimed = await createInsurancePlan(asDb(a.admin), a.clinicId, { name: "Unimed", alternativeNames: [], ansCode: null });
   const amil = await createInsurancePlan(asDb(b.admin), b.clinicId, { name: "Amil", alternativeNames: [], ansCode: null });
   await linkPlanToAllProfessionals(a.clinicId, unimed.id);
   await linkPlanToAllProfessionals(b.clinicId, amil.id);
-  await adminClient().from("clinic_settings").update({ bot_payment_info: "Pix da clínica A", website_url: "https://a.exemplo.test" }).eq("clinic_id", a.clinicId);
-  await adminClient().from("clinic_settings").update({ bot_payment_info: "Dinheiro da clínica B", website_url: null }).eq("clinic_id", b.clinicId);
+  await adminClient().from("clinic_settings").update({ website_url: "https://a.exemplo.test" }).eq("clinic_id", a.clinicId);
+  await setBotInfoForAll(a.clinicId, { payment_info: "Pix da clínica A" });
+  await adminClient().from("clinic_settings").update({ website_url: null }).eq("clinic_id", b.clinicId);
+  await setBotInfoForAll(b.clinicId, { payment_info: "Dinheiro da clínica B" });
   await adminClient().from("services").update({ price_cents: 99900 }).eq("id", b.ids.consulta);
 });
 
@@ -89,7 +91,7 @@ describe("dados de cada clínica", () => {
   });
 
   it("alteração no cadastro vale na mensagem seguinte (sem cache dos dados da clínica)", async () => {
-    await adminClient().from("clinic_settings").update({ bot_payment_info: "Só cartão" }).eq("clinic_id", a.clinicId);
+    await setBotInfoForAll(a.clinicId, { payment_info: "Só cartão" });
     expect((await ask(a.clinicId, "aceita pix?")).answer).toMatchObject({ text: "Formas de pagamento: Só cartão" });
     await adminClient().from("insurance_plans").update({ is_active: false }).eq("clinic_id", a.clinicId);
     expect((await ask(a.clinicId, "aceitam unimed?")).answer).toBeNull();

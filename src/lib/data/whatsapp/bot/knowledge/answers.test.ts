@@ -14,7 +14,7 @@ const service = (id: string, name: string, category: BotService["category"], ext
   name,
   category,
   isGroup: false,
-  agendas: [{ id: `ag-${id}`, name: "Agenda", professionalName: "Dra. Ana Karina", professionalId: "p-ana", specialty: "Pneumologia pediátrica", locationTypes: ["clinic"] }],
+  agendas: [{ id: `ag-${id}`, name: "Agenda", professionalName: "Dra. Ana Karina", professionalId: "p-ana", specialty: "Pneumologia pediátrica", specialties: [{ id: "sp-pneumo", name: "Pneumologia pediátrica" }], locationTypes: ["clinic"] }],
   locationPrices: { clinic: 30000 },
   priceCents: 30000,
   returnDeadlineDays: null,

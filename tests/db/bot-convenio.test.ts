@@ -5,7 +5,7 @@ import { confirmBookingLink, linkCandidates, listLinkDates, listLinkSlots, loadB
 import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { asDb, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, setupAgendaClinic, type AgendaFixture, setBotInfoForAll } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
 // Jornada do bot, E2 (cliente, 31/out/2026): particular ou convênio depois de
@@ -125,9 +125,9 @@ async function addPlan(name: string, extra: { is_active?: boolean; alternative_n
 }
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica Convênio E2", "+55849912270");
+  f = await setupAgendaClinic("Clínica Convênio E2", "+55849912270", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "e2-waba", status: "connected" });
-  await adminClient().from("clinic_settings").update({ bot_payment_info: "PIX, dinheiro ou transferência bancária." }).eq("clinic_id", f.clinicId);
+  await setBotInfoForAll(f.clinicId, { payment_info: "PIX, dinheiro ou transferência bancária." });
 });
 
 afterAll(async () => f.cleanup());

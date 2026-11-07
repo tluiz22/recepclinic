@@ -60,11 +60,6 @@ export const POST: APIRoute = async (context) => {
         patch.brandColor = formOptionalText(form, "brand_color");
         patch.websiteUrl = formOptionalText(form, "website_url");
       }
-      if (hasBot && has("bot_info")) {
-        patch.botPaymentInfo = formOptionalText(form, "bot_payment_info");
-        patch.botInsuranceInfo = formOptionalText(form, "bot_insurance_info");
-        patch.botNotes = formOptionalText(form, "bot_notes");
-      }
       if (hasBot && has("bot_limites")) {
         // Campo vazio vira NaN e cai na validação.
         patch.botMaxFutureAppointments = formOptionalInt(form, "bot_max_future_appointments") ?? Number.NaN;

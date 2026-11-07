@@ -9,6 +9,7 @@ import {
 } from "../../../../../lib/data/config/professionals";
 import { DataError } from "../../../../../lib/data/errors";
 import { listInsurancePlans, listProfessionalPlans, setProfessionalPlans } from "../../../../../lib/data/config/insurance";
+import { setProfessionalBotInfo } from "../../../../../lib/data/config/professionalBotInfo";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
@@ -32,6 +33,14 @@ export const POST: APIRoute = async (context) => {
   return runFormAction(
     context,
     async () => {
+      if (acao === "bot_info") {
+        await setProfessionalBotInfo(db, clinic.clinicId, id, {
+          paymentInfo: formOptionalText(form, "payment_info"),
+          insuranceInfo: formOptionalText(form, "insurance_info"),
+          notes: formOptionalText(form, "notes"),
+        });
+        return { redirectTo: page(id), message: "Informações do bot salvas." };
+      }
       if (acao === "convenios") {
         // Convênios atendidos (MC): os planos ativos marcados; a ligação a planos desativados fica.
         const [active, current] = await Promise.all([listInsurancePlans(db, clinic.clinicId), listProfessionalPlans(db, clinic.clinicId, id)]);

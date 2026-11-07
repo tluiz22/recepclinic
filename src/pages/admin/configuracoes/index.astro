@@ -70,12 +70,6 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
   return `${PROFILE_LABELS[profile]}: "${words.patient}" e "${words.contact}"`;
 };
 const words = vocabularyFor(settings.profile);
-const botInfo = [
-  { label: "Formas de pagamento", value: settings.botPaymentInfo, empty: "Vazio: os valores aparecem sem as formas de pagamento" },
-  { label: "Convênios", value: settings.botInsuranceInfo, empty: "Vazio: a opção não aparece no bot" },
-  { label: "Observações", value: settings.botNotes, empty: "Vazio: a opção não aparece no bot" },
-];
-const botInfoFilled = botInfo.filter((info) => info.value).length;
 const action = "/api/admin/configuracoes/clinica";
 const here = "/admin/configuracoes";
 const field = "flex flex-col";
@@ -350,56 +344,14 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 
   {
     hasBot && (
-      <EditCard id="bot-info" title="Informações que o bot responde" summary={`${botInfoFilled} de ${botInfo.length} preenchidas`}>
-        <p class="text-sm text-ink-soft">
-          No WhatsApp, o paciente escolhe <strong>Informações gerais</strong> no menu e vê as opções preenchidas aqui (o endereço vem dos locais, e o preparo, dos exames).
+      // MI (cliente, 07/nov/2026, M5): as informações passaram a ser de cada profissional.
+      <section id="bot-info" class="rounded-xl border border-line bg-white p-4 sm:px-5 sm:py-[18px]" aria-labelledby="bot-info-titulo">
+        <h2 id="bot-info-titulo" class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Informações que o bot responde</h2>
+        <p class="mt-1.5 text-[15px] text-ink-soft">
+          Formas de pagamento, convênios e observações agora são de cada profissional: abra o cadastro dele em{" "}
+          <a href="/admin/configuracoes/profissionais" class="font-semibold text-brand hover:underline">Profissionais</a>.
         </p>
-        <dl class={KV}>
-          {botInfo.map((info) => (
-            <>
-              <dt class={DT}>{info.label}</dt>
-              <dd class={`${DD} whitespace-pre-line`}>{info.value ?? <span class={`${SOFT} italic`}>{info.empty}</span>}</dd>
-            </>
-          ))}
-        </dl>
-        <form slot="edit" method="POST" action={action} class="flex flex-col gap-5">
-          <input type="hidden" name="bloco" value="bot_info" />
-          <p class="text-sm text-ink-soft">
-            No WhatsApp, o paciente escolhe <strong>Informações gerais</strong> no menu e vê as opções preenchidas aqui (o endereço vem dos locais, e o preparo, dos exames).
-          </p>
-          <div class={field}>
-            <label for="bot_payment_info" class={LABEL}>
-              Formas de pagamento
-            </label>
-            <textarea id="bot_payment_info" name="bot_payment_info" rows="3" class={INPUT}>{settings.botPaymentInfo ?? ""}</textarea>
-            <p class={HINT}>
-              Aparece no fim de <strong>Informações gerais › Valores</strong>, depois dos preços dos serviços. Ex.: "PIX, cartão de débito e crédito em até 3x". Vazio: os valores aparecem sem as formas de pagamento.
-            </p>
-          </div>
-          <div class={field}>
-            <label for="bot_insurance_info" class={LABEL}>
-              Convênios
-            </label>
-            <textarea id="bot_insurance_info" name="bot_insurance_info" rows="3" class={INPUT}>{settings.botInsuranceInfo ?? ""}</textarea>
-            <p class={HINT}>
-              É a resposta de <strong>Informações gerais › Convênios</strong>, do jeito que estiver escrito. Ex.: "Atendemos Unimed e Hapvida. Demais planos: reembolso com nota fiscal." Vazio: a opção não aparece.
-            </p>
-          </div>
-          <div class={field}>
-            <label for="bot_notes" class={LABEL}>
-              Observações
-            </label>
-            <textarea id="bot_notes" name="bot_notes" rows="3" class={INPUT}>{settings.botNotes ?? ""}</textarea>
-            <p class={HINT}>
-              É a resposta de <strong>Informações gerais › Outras informações</strong>, do jeito que estiver escrito. Ex.: "Chegue 10 minutos antes. Estacionamento no local." Vazio: a opção não aparece.
-            </p>
-          </div>
-          <div class={actions}>
-            <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar informações</Button>
-            <Button href={here} data-edit-cancel>Cancelar</Button>
-          </div>
-        </form>
-      </EditCard>
+      </section>
     )
   }
 

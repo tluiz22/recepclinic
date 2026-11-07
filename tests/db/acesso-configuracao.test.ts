@@ -31,6 +31,7 @@ import {
   setNotificationRecipientActive,
 } from "../../src/lib/data/config/notificationRecipients";
 import { createProfessional, listProfessionals, listSpecialtyOptions, updateProfessional, type Professional } from "../../src/lib/data/config/professionals";
+import { getProfessionalBotInfo, setProfessionalBotInfo } from "../../src/lib/data/config/professionalBotInfo";
 import {
   createService,
   listServices,
@@ -102,14 +103,12 @@ describe("configuração da clínica", () => {
       timezone: "America/Manaus",
       reminderHour: 9,
       brandColor: "#0f766e",
-      botNotes: "  Estacionamento no local.  ",
     });
     expect(after).toMatchObject({
       name: "Clínica Teste",
       timezone: "America/Manaus",
       reminderHour: 9,
       brandColor: "#0F766E",
-      botNotes: "Estacionamento no local.",
     });
   });
 
@@ -120,7 +119,7 @@ describe("configuração da clínica", () => {
   });
 
   it("Administrador de uma clínica não altera outra", async () => {
-    expect(await codeOf(() => updateClinicSettings(db(admin), CLINIC_B, { botNotes: "invasão" }))).toBe("not_found");
+    expect(await codeOf(() => updateClinicSettings(db(admin), CLINIC_B, { reminderHour: 10 }))).toBe("not_found");
   });
 });
 
@@ -230,6 +229,18 @@ describe("profissionais, locais e agendas", () => {
     }
     // Especialidade em uso não é apagada.
     expect((await adminClient().from("kb_specialties").delete().eq("id", ped)).error?.code).toBe("23503");
+  });
+
+  it("informações que o bot responde (MI): por profissional; o Administrador grava, a Recepção só lê; tudo vazio apaga", async () => {
+    expect(await getProfessionalBotInfo(db(reception), clinicId, professional.id)).toEqual({ paymentInfo: null, insuranceInfo: null, notes: null });
+    const saved = await setProfessionalBotInfo(db(admin), clinicId, professional.id, { paymentInfo: "  Pix  ", insuranceInfo: null, notes: "Chegue antes." });
+    expect(saved).toEqual({ paymentInfo: "Pix", insuranceInfo: null, notes: "Chegue antes." });
+    expect(await getProfessionalBotInfo(db(reception), clinicId, professional.id)).toEqual(saved);
+    expect(await codeOf(() => setProfessionalBotInfo(db(reception), clinicId, professional.id, { paymentInfo: "x", insuranceInfo: null, notes: null }))).toBe("forbidden");
+    expect(await codeOf(() => setProfessionalBotInfo(db(admin), clinicId, professional.id, { paymentInfo: "x".repeat(1001), insuranceInfo: null, notes: null }))).toBe("invalid");
+    await setProfessionalBotInfo(db(admin), clinicId, professional.id, { paymentInfo: " ", insuranceInfo: null, notes: null });
+    const { data } = await adminClient().from("professional_bot_info").select("professional_id").eq("professional_id", professional.id);
+    expect(data).toEqual([]);
   });
 
   it("renomear o profissional renomeia a agenda dele (06/nov)", async () => {

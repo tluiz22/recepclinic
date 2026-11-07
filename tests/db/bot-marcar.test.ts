@@ -5,7 +5,7 @@ import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import { closeIdleConversations } from "../../src/lib/data/whatsapp/bot/router";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { asDb, at, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, NOW, setupAgendaClinic, type AgendaFixture, setBotInfoForAll } from "./agendaFixture";
 import { adminClient } from "./helpers";
 import { bookingPath } from "../../src/lib/publicId";
 
@@ -90,9 +90,9 @@ async function lastLink(phone: string) {
 }
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica Bot F63", "+55849912263");
+  f = await setupAgendaClinic("Clínica Bot F63", "+55849912263", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "f63-waba", status: "connected" });
-  await adminClient().from("clinic_settings").update({ bot_payment_info: "PIX ou cartão", bot_notes: "Chegue 10 minutos antes." }).eq("clinic_id", f.clinicId);
+  await setBotInfoForAll(f.clinicId, { payment_info: "PIX ou cartão", notes: "Chegue 10 minutos antes." });
 });
 
 afterAll(async () => f.cleanup());
@@ -314,10 +314,11 @@ describe("bot: retorno e idade limite", () => {
     await say(phone, "oi");
     await say(phone, "1");
     let reply = await say(phone, "1");
-    reply = await say(phone, { id: optionId(reply, "Dr. Segundo") });
+    reply = await say(phone, { id: optionId(reply, "Dra. Agenda") });
+    reply = await say(phone, "1"); // consultório
     reply = await say(phone, { id: "for_other" });
     reply = await say(phone, "01/01/2020");
-    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Dr. Segundo atende pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Dra. Agenda atende pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
     reply = await say(phone, { id: "no" });
     expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais"]);
     await adminClient().from("clinic_settings").update({ consultation_age_limit_years: null }).eq("clinic_id", f.clinicId);

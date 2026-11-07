@@ -43,9 +43,6 @@ export type ClinicSettings = {
   teamSummaryHour: number;
   /** Orientações gerais depois da marcação de uma consulta (cliente, 08/out/2026). */
   guidanceEnabled: boolean;
-  botPaymentInfo: string | null;
-  botInsuranceInfo: string | null;
-  botNotes: string | null;
   /** Limites do contato no bot (F9.6a): atendimentos futuros (1 a 10), cadastros em 30 dias (1 a 10), faltas em 90 dias (0 desliga). */
   botMaxFutureAppointments: number;
   botMaxNewPatients: number;
@@ -84,7 +81,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows, message_noun, message_noun_article, booking_horizon_days";
+  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows, message_noun, message_noun_article, booking_horizon_days";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -116,9 +113,6 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     teamSummaryTiming: settings.team_summary_timing as ReminderTiming,
     teamSummaryHour: settings.team_summary_hour,
     guidanceEnabled: settings.guidance_enabled,
-    botPaymentInfo: settings.bot_payment_info,
-    botInsuranceInfo: settings.bot_insurance_info,
-    botNotes: settings.bot_notes,
     botMaxFutureAppointments: settings.bot_max_future_appointments,
     botMaxNewPatients: settings.bot_max_new_patients,
     botMaxNoShows: settings.bot_max_no_shows,
@@ -177,9 +171,6 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
     const { min, max } = BOT_LIMIT_RANGES[range];
     v.check(Number.isInteger(value) && value >= min && value <= max, field, `${label}: de ${min} a ${max}`);
   }
-  for (const field of ["botPaymentInfo", "botInsuranceInfo", "botNotes"] as const) {
-    if (field in patch) out[field] = cleanText(patch[field]);
-  }
   if ("logoUrl" in patch) out.logoUrl = cleanText(patch.logoUrl);
   if ("brandColor" in patch) {
     out.brandColor = cleanText(patch.brandColor)?.toUpperCase() ?? null;
@@ -231,9 +222,6 @@ export async function updateClinicSettings(
     ["teamSummaryTiming", "team_summary_timing"],
     ["teamSummaryHour", "team_summary_hour"],
     ["guidanceEnabled", "guidance_enabled"],
-    ["botPaymentInfo", "bot_payment_info"],
-    ["botInsuranceInfo", "bot_insurance_info"],
-    ["botNotes", "bot_notes"],
     ["botMaxFutureAppointments", "bot_max_future_appointments"],
     ["botMaxNewPatients", "bot_max_new_patients"],
     ["botMaxNoShows", "bot_max_no_shows"],

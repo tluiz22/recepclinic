@@ -1627,6 +1627,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"professional_bot_info": {
+                  Row: {
+                    "clinic_id": string,"insurance_info": string | null,"notes": string | null,"payment_info": string | null,"professional_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"insurance_info"?: string | null,"notes"?: string | null,"payment_info"?: string | null,"professional_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"insurance_info"?: string | null,"notes"?: string | null,"payment_info"?: string | null,"professional_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "professional_bot_info_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "professional_bot_info_clinic_id_professional_id_fkey"
+      columns: ["clinic_id","professional_id"]
+isOneToOne: false
+      referencedRelation: "professionals"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"professional_insurance_plans": {
                   Row: {
                     "clinic_id": string,"created_at": string,"insurance_plan_id": string,"professional_id": string

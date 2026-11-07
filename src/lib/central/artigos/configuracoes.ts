@@ -26,7 +26,7 @@ export const configuracoesArtigos = [
       { name: "Prazo para oferecer horários", text: "Até quantos dias à frente o bot e o link de agendamento mostram horários livres. A recepção, pelo painel, não tem esse limite." },
       { name: "Idade limite para consulta", text: "Para clínicas que atendem Consulta só até certa idade (pediatria). Quem passou da idade não marca Consulta pelo bot (Retorno e Exame seguem); no painel, o Marcar e a ficha avisam, sem impedir." },
       { name: "Páginas públicas", text: "Logo (PNG, JPG ou WebP, até 1 MB), cor da clínica (fundo do topo) e site (com ele, as páginas mostram \"Voltar para o site\")." },
-      { name: "Informações que o bot responde (com o bot)", text: "Formas de pagamento (fim de Informações gerais › Valores), Convênios e Observações. Vazio faz a opção sumir do bot (formas de pagamento: os valores aparecem sem elas)." },
+      { name: "Informações que o bot responde", text: "Agora ficam no cadastro de cada profissional (Configurações › Profissionais): formas de pagamento, o texto sobre convênios e observações." },
       { name: "Horário da recepção (com o bot)", text: "Quando a clínica atende pelo WhatsApp. Fora dele, as conversas que precisam da clínica entram em Atendimento sem notificação. Feriados contam como fechado." },
       { name: "Limites do bot por contato (com o bot)", text: "Atendimentos futuros, pacientes cadastrados e faltas, por número. Padrão 5; 0 desliga." },
     ],
@@ -48,6 +48,9 @@ export const configuracoesArtigos = [
     intro: "É o primeiro passo da jornada: sem profissional não há agenda.",
     steps: ["Abra Configurações › Profissionais e toque em Novo profissional.", "Preencha o nome (como aparece para o paciente), a profissão e marque uma ou mais especialidades (com mais de uma, escolha a principal). Falta alguma na lista? Peça ao Suporte.", "Se quiser, informe o conselho (número e UF) e o RQE.", "Informe o WhatsApp se ele for receber o resumo do dia.", "Salve e crie a agenda dele, pelo aviso \"sem agenda\" ou em Agendas."],
     fields: [
+      { name: "Especialidades", text: "Marque uma ou mais da lista (com mais de uma, escolha a principal). No WhatsApp, numa clínica com mais de um profissional, o paciente escolhe a especialidade e depois o profissional. Falta alguma na lista? Peça ao Suporte." },
+      { name: "Convênios atendidos", text: "Os planos que ele atende; nenhum marcado: só particular. Com o item Convênios." },
+      { name: "Informações que o bot responde", text: "Formas de pagamento, o texto sobre convênios e observações dele, mostrados em Informações gerais depois que o paciente o escolhe. Vazio: a opção não aparece." },
       { name: "RQE", text: "Registro de Qualificação de Especialista. Preencha só se tiver; o registro aparece só no painel." },
       { name: "WhatsApp", text: "Para ele receber, pelo WhatsApp da clínica, a lista dos atendimentos das agendas dele, como definido em Lembretes." },
       { name: "Limite de profissionais ativos", text: "A tela mostra \"X de Y ativos\". Atingido o limite, é preciso desativar um ou falar com o suporte." },

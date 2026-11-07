@@ -126,8 +126,8 @@ let consultP4: string;
 let consultP2: string;
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica Bot Entrada", "+55849912265");
-  g = await setupAgendaClinic("Clínica Bot Entrada B", "+55849912265");
+  f = await setupAgendaClinic("Clínica Bot Entrada", "+55849912265", { oneBotProfessional: true });
+  g = await setupAgendaClinic("Clínica Bot Entrada B", "+55849912265", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert([
     { clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "entrada-waba", status: "connected" },
     { clinic_id: g.clinicId, phone_number_id: NUMBER_B, waba_id: "entrada-waba-b", status: "connected" },

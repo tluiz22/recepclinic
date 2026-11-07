@@ -10,7 +10,8 @@ import { getWhatsappConnection } from "../../connection";
 import type { ClinicSender } from "../../send";
 import { clinicLabel, type MessageArticle } from "../../templates";
 import { loadCatalog } from "../catalog";
-import { loadBotClinic, type Bot } from "../engine";
+import { loadBotClinic, professionalInfoFor, type Bot } from "../engine";
+import { buildScope, scopeCatalog } from "../professionalScope";
 import type { KbClinicData } from "./answers";
 
 // Dados da clínica para as respostas da base (BC 3.2). Lidos com a credencial
@@ -31,14 +32,17 @@ export async function kbSourceEnv(db: DbClient, clinicId: string, now: Date): Pr
     getWhatsappConnection(db, clinicId),
   ]);
   const sender = { clinicLabel: clinicLabel(clinic.name, settings.message_article as MessageArticle) } as ClinicSender;
-  let catalog: ReturnType<typeof loadCatalog> | null = null;
+  // Como no bot (MB e MI): na clínica de um profissional, as informações são as dele; com mais de um, nenhuma até a escolha.
+  const fullCatalog = await loadCatalog(db, clinicId, features);
+  const scope = buildScope(fullCatalog, {});
+  const botClinic = await loadBotClinic({ db, clinicId, sender, now });
   return {
     db,
     clinicId,
-    clinic: await loadBotClinic({ db, clinicId, sender, now }),
+    clinic: { ...botClinic, ...(await professionalInfoFor(db, clinicId, features, scope.current)) },
     features,
     receptionAvailable: connection?.coexistence ?? false,
-    catalog: () => (catalog ??= loadCatalog(db, clinicId, features)),
+    catalog: async () => scopeCatalog(fullCatalog, scope),
   };
 }
 

@@ -45,7 +45,11 @@ export async function codeOf(run: () => Promise<unknown>): Promise<string> {
   return "ok";
 }
 
-export async function setupAgendaClinic(name: string, phonePrefix: string): Promise<AgendaFixture> {
+/**
+ * `oneBotProfessional`: o Dr. Segundo fica desativado (a agenda dele continua, com horário), e a clínica vale como
+ * de um profissional no bot (MB, 07/nov/2026: sem a pergunta da especialidade e do profissional).
+ */
+export async function setupAgendaClinic(name: string, phonePrefix: string, { oneBotProfessional = false } = {}): Promise<AgendaFixture> {
   const clinicId = await createClinic(name);
   const admin = await createUser("ag-admin");
   const reception = await createUser("ag-recepcao");
@@ -98,6 +102,10 @@ export async function setupAgendaClinic(name: string, phonePrefix: string): Prom
   ids.p1 = await patient("Paciente Um", `${phonePrefix}01`);
   ids.p2 = await patient("Paciente Dois", `${phonePrefix}02`);
   ids.p3 = await patient("Paciente Três", `${phonePrefix}03`);
+  if (oneBotProfessional) {
+    const { error } = await adminClient().from("professionals").update({ is_active: false }).eq("id", dra2.id);
+    if (error) throw error;
+  }
 
   return {
     clinicId,
@@ -120,4 +128,14 @@ export async function linkPlanToAllProfessionals(clinicId: string, planId: strin
     const { error: linkError } = await adminClient().from("professional_insurance_plans").insert(rows);
     if (linkError) throw linkError;
   }
+}
+
+/** Informações que o bot responde, iguais para todos os profissionais da clínica (MI, 07/nov/2026). */
+export async function setBotInfoForAll(clinicId: string, info: { payment_info?: string | null; insurance_info?: string | null; notes?: string | null }): Promise<void> {
+  const { data: pros, error } = await adminClient().from("professionals").select("id").eq("clinic_id", clinicId);
+  if (error) throw error;
+  const rows = (pros ?? []).map((p) => ({ clinic_id: clinicId, professional_id: p.id, ...info }));
+  if (!rows.length) return;
+  const { error: saveError } = await adminClient().from("professional_bot_info").upsert(rows, { onConflict: "professional_id" });
+  if (saveError) throw saveError;
 }

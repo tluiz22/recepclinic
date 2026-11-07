@@ -13,6 +13,7 @@ import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates
 import { createUserClient } from "../../../../lib/data/clients";
 import { listProfessionals, listSpecialtyOptions, professionalRegistry } from "../../../../lib/data/config/professionals";
 import { listInsurancePlans, listProfessionalPlans } from "../../../../lib/data/config/insurance";
+import { EMPTY_BOT_INFO, getProfessionalBotInfo } from "../../../../lib/data/config/professionalBotInfo";
 import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
@@ -46,6 +47,9 @@ const [plans, acceptedPlans] = insuranceOn
       listProfessionalPlans(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!),
     ])
   : [[], [] as string[]];
+// Informações que o bot responde (MI, 07/nov/2026, M5): só por profissional, com o bot.
+const botOn = clinic.features.includes("whatsapp_bot") && !isNew;
+const botInfo = botOn ? await getProfessionalBotInfo(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!) : EMPTY_BOT_INFO;
 const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 ---
 
@@ -212,6 +216,39 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
               </span>
             </div>
           )}
+        </form>
+      )
+    }
+    {
+      botOn && (
+        <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 p-4 sm:p-5`} aria-labelledby="bot-info-titulo">
+          <input type="hidden" name="acao" value="bot_info" />
+          <div>
+            <h2 id="bot-info-titulo" class={SECTION_TITLE}>Informações que o bot responde</h2>
+            <p class={HINT}>
+              No WhatsApp, o paciente vê estas respostas em <strong>Informações gerais</strong> (com mais de um profissional, depois de escolher{" "}
+              {professional!.displayName}). Vazio: a opção não aparece.
+            </p>
+          </div>
+          <div>
+            <label for="payment_info" class={LABEL}>Formas de pagamento</label>
+            <textarea id="payment_info" name="payment_info" rows="2" maxlength="1000" placeholder="Pix, cartão de débito e crédito em até 3x" class={INPUT}>{botInfo.paymentInfo ?? ""}</textarea>
+            <p class={HINT}>Aparece depois dos valores dos serviços.</p>
+          </div>
+          <div>
+            <label for="insurance_info" class={LABEL}>Sobre convênios</label>
+            <textarea id="insurance_info" name="insurance_info" rows="2" maxlength="1000" placeholder="Traga a carteirinha e um documento com foto." class={INPUT}>{botInfo.insuranceInfo ?? ""}</textarea>
+            <p class={HINT}>
+              {insuranceOn ? "A lista de convênios sai de Convênios atendidos; aqui vai o que ela não diz." : "É a resposta de Informações gerais › Convênios, do jeito que estiver escrito."}
+            </p>
+          </div>
+          <div>
+            <label for="notes" class={LABEL}>Observações</label>
+            <textarea id="notes" name="notes" rows="2" maxlength="1000" placeholder="Chegue 10 minutos antes." class={INPUT}>{botInfo.notes ?? ""}</textarea>
+          </div>
+          <div class="border-t border-[#e6ecea] pt-4">
+            <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar informações</button>
+          </div>
         </form>
       )
     }

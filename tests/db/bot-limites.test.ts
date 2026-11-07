@@ -107,7 +107,7 @@ async function events() {
 }
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica Bot F96", "+55849912296");
+  f = await setupAgendaClinic("Clínica Bot F96", "+55849912296", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "f96-waba", status: "connected" });
   await setLimits({ bot_max_future_appointments: 2, bot_max_new_patients: 2, bot_max_no_shows: 0 });
 });

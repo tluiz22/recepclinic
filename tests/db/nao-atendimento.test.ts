@@ -100,7 +100,7 @@ async function messageCount(phone: string) {
 }
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica NA", "+55849912440");
+  f = await setupAgendaClinic("Clínica NA", "+55849912440", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "na-waba", status: "connected", coexistence: true });
   other = await createClinic("Outra clínica (NA)");
   outsider = await createUser("na-fora");

@@ -1,8 +1,9 @@
 # RecepClinic
 
-> **Multiprofissional (07/nov):** M1 a M8 decididas; **ME e MC no staging** (migrações `20261229120000` e
-> `20261229130000`); o cliente valida no staging depois. Próximo: MI + MB. Retomar pelo
-> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md). NFS-e por profissional (N-P1 a N-P7) depois.
+> **Multiprofissional (07/nov):** M1 a M8 decididas; **ME, MC e MI + MB no staging** (migrações `20261229120000`,
+> `20261229130000` e `20261229140000`). Cliente valida pelo roteiro da seção 8 do
+> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md). Produção só com autorização. 3 capturas na
+> fila. Depois: NFS-e por profissional (N-P1 a N-P7).
 >
 > **Próxima sessão (cliente, 07/nov):** **revisar o planejamento da NFS-e pelo Asaas** com o cliente
 > ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), bloco de retomada e seções 11 a 13). Sem código antes da revisão.

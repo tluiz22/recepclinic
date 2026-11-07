@@ -6,6 +6,8 @@ import * as t from "./texts";
 import { BOOKING_STATES, handOver, startBooking, startReturn } from "./booking";
 import { handoff, MANAGE_STATES, startManage } from "./manage";
 import { askReceptionReason } from "./knowledge/respond";
+import { askSpecialty } from "./chooseProfessional";
+import { clearProfessionalChoice, EXAMS_CHOICE } from "./engine";
 
 // Menus do bot, na estrutura do piloto: Consultas › Marcar consulta / Marcar
 // retorno / Remarcar / Cancelar / Encaixe ou antecipar; Exames › Marcar exame
@@ -22,6 +24,10 @@ async function mainItems(b: Bot): Promise<Item[]> {
   if (servicesOf(catalog, "exam").length) items.push({ id: "menu_exams", label: "Exames" });
   if ((await infoItems(b)).length) items.push({ id: "menu_info", label: "Informações gerais" });
   if (b.receptionAvailable) items.push({ id: "menu_reception", label: "Falar com a recepção" });
+  // Clínica com mais de um profissional (MB, 07/nov/2026): trocar a escolha.
+  if (b.scope.multi && b.scope.choice) {
+    items.push({ id: "menu_change_professional", label: b.scope.choice === EXAMS_CHOICE ? t.CHANGE_SPECIALTY_LABEL : t.CHANGE_PROFESSIONAL_LABEL });
+  }
   // Descrição em cada opção (cliente, 04/nov/2026).
   return items.map((item) => ({ ...item, description: t.MAIN_MENU_DESCRIPTIONS[item.id as keyof typeof t.MAIN_MENU_DESCRIPTIONS] }));
 }
@@ -48,6 +54,8 @@ const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" 
  * boas-vindas, ou `intro`) vem com a apresentação do que dá para resolver (cliente, 04/nov/2026).
  */
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false, intro = false } = {}): Promise<void> {
+  // Mais de um profissional e nenhum escolhido: a especialidade e o profissional antes do menu (MB, 07/nov/2026).
+  if (b.scope.multi && !b.scope.choice) return askSpecialty(b, { withWelcome, notUnderstood });
   if (withWelcome) await say(b, "bot_welcome", welcomeText(b));
   const items = await mainItems(b);
   // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
@@ -79,6 +87,7 @@ export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = fa
  */
 export async function showPreviousMenu(b: Bot): Promise<void> {
   const state = b.convo.state;
+  if (state === "PICK_PROFESSIONAL") return askSpecialty(b);
   if (state === "INFO_PREP_SELECT") return showInfo(b);
   const context = (b.convo.context ?? {}) as { category?: string; group?: string };
   const inFlow = BOOKING_STATES.has(state) || MANAGE_STATES.has(state);
@@ -93,6 +102,10 @@ export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
   if (choice?.id === "menu_consultations") return showSubmenu(b, "CONSULTAS_MENU");
   if (choice?.id === "menu_exams") return showSubmenu(b, "EXAMES_MENU");
   if (choice?.id === "menu_info") return showInfo(b);
+  if (choice?.id === "menu_change_professional") {
+    await clearProfessionalChoice(b);
+    return askSpecialty(b);
+  }
   // Com a base: pergunta o motivo antes, com a recepção a um toque (EA, cliente, 02/nov/2026).
   if (choice?.id === "menu_reception") return b.features.includes("knowledge_base") ? askReceptionReason(b, "menu") : handoff(b, "menu");
   await showMenu(b, { notUnderstood: true });
@@ -133,7 +146,8 @@ async function infoItems(b: Bot): Promise<InfoKey[]> {
   const catalog = await b.catalog();
   const keys: InfoKey[] = [];
   if (catalog.services.length) keys.push("prices");
-  if (b.clinic.insuranceInfo) keys.push("insurance");
+  // Convênios (MC + MI): os planos do profissional em uso e o texto dele; sem o item "Convênios", só o texto.
+  if (b.clinic.insurancePlans !== null || b.clinic.insuranceInfo) keys.push("insurance");
   if (addressLocations(b, catalog.locations).length) keys.push("address");
   if (preparationExams(catalog.services).length) keys.push("preparation");
   if (b.clinic.notes) keys.push("notes");
@@ -161,7 +175,13 @@ export async function handleInfo(b: Bot, selection: Selection): Promise<void> {
       await say(b, "bot_info_prices", t.pricesText(catalog.services.map((s) => ({ name: s.name, lines: t.servicePriceLines(s) })), b.clinic.paymentInfo));
       break;
     case "insurance":
-      await say(b, "bot_info_insurance", b.clinic.insuranceInfo!);
+      await say(
+        b,
+        "bot_info_insurance",
+        b.clinic.insurancePlans !== null && b.clinic.professionalName
+          ? t.insuranceInfoText(b.clinic.professionalName, b.clinic.insurancePlans, b.clinic.insuranceInfo)
+          : b.clinic.insuranceInfo!,
+      );
       break;
     case "address":
       await say(b, "bot_info_address", t.addressText(addressLocations(b, catalog.locations)));

@@ -62,6 +62,7 @@ import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
+import { listProfessionals } from "../../../lib/data/config/professionals";
 import { agendasAcceptingPlan } from "../../../lib/data/agenda/publicBooking";
 import Notice from "../../../components/admin/ui/Notice.astro";
 import { listAppointmentPayments } from "../../../lib/data/payments";
@@ -120,13 +121,14 @@ const link = (changes: Partial<typeof state> & { busca?: string }) => {
 const busca = (params.get("busca") ?? "").trim();
 
 const insuranceOn = clinic.features.includes("insurance");
-const [services, agendas, locations, settings, connection, plans] = await Promise.all([
+const [services, agendas, locations, settings, connection, plans, professionals] = await Promise.all([
   listServices(db, clinic.clinicId, { includeInactive: !!editing }),
   listAgendas(db, clinic.clinicId),
   listLocations(db, clinic.clinicId),
   getClinicSettings(db, clinic.clinicId),
   getWhatsappConnection(db, clinic.clinicId),
   insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
+  listProfessionals(db, clinic.clinicId),
 ]);
 const examsOn = clinic.features.includes("exams");
 // Alterar: o serviço atual aparece mesmo desativado.
@@ -142,6 +144,10 @@ if (!service) {
   }
 }
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
+// Especialidade principal ao lado do nome em "Com quem" (MB, 07/nov/2026).
+const specialtyOfAgenda = new Map(
+  agendas.map((a) => [a.id, professionals.find((p) => p.id === a.professionalId)?.specialties[0]?.name ?? null] as const),
+);
 const location = new Map(locations.map((l) => [l.id, l]));
 
 const patient = state.patient_id ? await getPatient(db, clinic.clinicId, state.patient_id).catch(() => null) : null;
@@ -617,6 +623,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
               {serviceAgendaIds.map((id) => (
                 <a href={link({ agenda_id: id, de: "" })} class={chip(agendaChoice === id)} aria-current={agendaChoice === id ? "true" : undefined}>
                   {agendaName.get(id)}
+                  {specialtyOfAgenda.get(id) && <span class="font-normal opacity-80">{` · ${specialtyOfAgenda.get(id)}`}</span>}
                 </a>
               ))}
             </div>

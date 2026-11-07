@@ -22,6 +22,7 @@ import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
 import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, offerReception, RECEPTION_CONFIRM_KEY, repeatYesNo, say, sendButtons, textFor, type Bot, type BotEnv, type ReceptionOffer } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
+import { CHOOSE_STATES, handleChooseState } from "./chooseProfessional";
 import { asksForReception, extractSelection, type Selection, isBack, isBackToMenu, parseBirthdate, slashlessBirthdate, TALK_TO_RECEPTION_ID, yesNo } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu, showPreviousMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, handoffText, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
@@ -293,6 +294,10 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
 
   if (ENTRY_STATES.has(convo.state)) {
     await handleEntryState(b, convo.state, selection);
+    return;
+  }
+  if (CHOOSE_STATES.has(convo.state)) {
+    await handleChooseState(b, convo.state, selection);
     return;
   }
   if (MANAGE_STATES.has(convo.state)) {

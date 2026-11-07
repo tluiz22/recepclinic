@@ -1,9 +1,9 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
-> **Estado atual (retomar daqui), 07/nov/2026.** M1 a M8 decididas (seção 6). **ME no staging** (migração
-> `20261229120000`, push `89b3094`). **MC feita** (migração `20261229130000`): ligação positiva, permissão em Equipe,
-> trilha, telas e bot; no staging junto com este commit. Cliente valida a frente no staging depois (07/nov).
-> **Próximo:** MI + MB. Telas com `frontend-design`; testes de cada etapa com `playwright-ui-form-best-practices`.
+> **Estado atual (retomar daqui), 07/nov/2026.** M1 a M8 decididas (seção 6). **ME, MC e MI + MB feitas e no
+> staging** (migrações `20261229120000`, `20261229130000` e `20261229140000`). O cliente valida a frente no staging
+> (roteiro na seção 8). Produção: só com autorização (as três migrações juntas). Colunas `clinic_settings.bot_*` saem
+> depois da validação. Próximo: a NFS-e por profissional (seção 14 do plano da NFS-e, N-P1 a N-P7).
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
 
@@ -114,7 +114,8 @@ convênio dizem com quem. Marcar (Recepção): aviso quando o profissional não 
 - Marcação da Recepção e página pública: o mesmo filtro (especialidade, depois profissional).
 - Atualiza no mesmo commit o fluxograma de Tecnologia › Jornada do bot (`botJourney.ts`, `JOURNEY_UPDATED`) e as
   capturas afetadas vão para `docs/capturas-pendentes.md`.
-- Funil (`bot_funnel_events`) ganha os passos `specialty` e `professional`.
+- Funil (`bot_funnel_events`): os passos `specialty` e `professional` ficaram para depois (o funil conta as tentativas
+  de marcar, que começam no menu).
 - **Dependência nova:** como as informações do bot passam a ser só do profissional, a MI precisa da escolha do
   profissional no início: **MI e MB saem juntas** (ver M7).
 
@@ -141,3 +142,29 @@ convênio dizem com quem. Marcar (Recepção): aviso quando o profissional não 
 
 Cada etapa: telas com a skill `frontend-design`; testes de unidade e de banco e testes de tela com a skill
 `playwright-ui-form-best-practices` (390 px e 1280 px); staging; validação do cliente (cliente, 07/nov).
+
+## 8. Feito na MI + MB (07/nov/2026) e roteiro de validação no staging
+
+**MI:** `professional_bot_info` (migração `20261229140000`, com o texto da clínica copiado para cada profissional ativo);
+seção "Informações que o bot responde" no cadastro do profissional; o bloco de Configurações › Clínica virou um aviso.
+O bot e a Base de Conhecimento usam as informações do profissional em uso; "Convênios" mostra os planos dele (ou "atende
+só particular") e o texto dele, só com algum plano ativo na clínica.
+
+**MB:** `bot/professionalScope.ts` e `bot/chooseProfessional.ts`. Clínica com mais de um profissional no bot (com
+serviço e horário): boas-vindas → "Para qual especialidade é o atendimento?" (com "Exames" se houver exame na agenda da
+equipe; quem está sem especialidade fica em "Outros profissionais"; o nome escrito vale; "Mais opções" acima de 10) →
+"Com qual profissional?" (um só: "Atendimento com *Dr. X* (Especialidade).") → menu no contexto dele, com "Outro
+profissional". A escolha vale até a conversa recomeçar. Profissional desativado não entra na escolha. Na clínica com
+vários profissionais, o "Primeiro horário" entre profissionais deixa de existir no bot (o paciente escolhe antes).
+Marcar (Recepção): a especialidade principal ao lado do nome em "Com quem". Jornada do bot atualizada.
+
+**Roteiro (staging):**
+1. Profissionais: cadastrar/editar com uma ou mais especialidades e a principal; salvar sem nenhuma dá erro; quem estava
+   sem especialidade aparece com o selo.
+2. Convênios: plano com "Quem atende"; marcar profissionais no plano e no cadastro do profissional; Equipe › pessoa da
+   Recepção › "Cadastrar e associar convênios" e entrar com ela (só Convênios no menu).
+3. Profissional › Informações que o bot responde: preencher para dois profissionais com textos diferentes.
+4. WhatsApp do número de testes numa clínica com dois profissionais: especialidade → profissional → menu; Informações
+   gerais (valores, convênios, outras informações do escolhido); "Outro profissional"; "Exames".
+5. Clínica de um profissional (piloto do staging): o bot igual a antes.
+6. Marcar (Recepção): paciente com convênio e profissional que não atende o plano mostra o aviso.

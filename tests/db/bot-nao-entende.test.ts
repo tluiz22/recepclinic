@@ -79,7 +79,7 @@ const ALWAYS_OPEN = Array.from({ length: 7 }, () => ({ open: "00:00", close: "23
 const NOT_UNDERSTOOD = /^Não entendi/;
 
 beforeAll(async () => {
-  f = await setupAgendaClinic("Clínica Não Entende", "+55849912277");
+  f = await setupAgendaClinic("Clínica Não Entende", "+55849912277", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "nao-entende-waba", status: "connected", coexistence: true });
 });
 

@@ -153,7 +153,7 @@ export const configuracoes = {
       depende: [{ texto: "Profissionais: cada plano indica quais o atendem.", href: "/admin/configuracoes/profissionais" }],
       alimenta: [
         { texto: "Bot e link de agendar: oferecem só os planos que o profissional escolhido atende. Marcar avisa quando o profissional não atende o plano do paciente." },
-        { texto: "Informações do bot (Clínica): o texto de Convênios é escrito à parte.", href: "/admin/configuracoes" },
+        { texto: "Profissionais: em cada um, os convênios atendidos e o texto sobre convênios que o bot responde.", href: "/admin/configuracoes/profissionais" },
       ],
     },
     whatsapp: {
@@ -192,6 +192,8 @@ export const configuracoes = {
         "O nome do cadastro é o que o paciente vê ao marcar; profissão, conselho e RQE aparecem só no painel.",
         "Cada profissional ativo precisa de uma agenda; sem ela, a lista mostra \"sem agenda\".",
         "O WhatsApp do profissional serve para ele receber o lembrete dos atendimentos, se ligado em Lembretes.",
+        "Especialidade é obrigatória (uma ou mais, da lista do Suporte): com mais de um profissional, o paciente escolhe por ela no WhatsApp.",
+        "Formas de pagamento, convênios e observações que o bot responde são de cada profissional.",
       ],
       depende: [{ texto: "Clínica: os dados básicos, feitos primeiro.", href: "/admin/configuracoes" }],
       alimenta: [
