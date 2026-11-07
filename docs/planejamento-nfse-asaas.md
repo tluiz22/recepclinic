@@ -3,8 +3,10 @@
 > **Estado atual (retomar daqui), 07/nov/2026.** **Asaas pediu ajustes na análise BaaS (13.10):** cláusula do Asaas nos
 > termos e no contrato e selo sem registro de carregamento. Ajustes no ar (07/nov): site `beb9e1c` e app `305efd7` no staging e
 > na produção. **Reanálise pedida pelo cliente (07/nov)**, com o print da habilitação fiscal; aguardando o Asaas.
-> **Próxima sessão:** revisar este planejamento com o cliente. Código das fases direto na `main`, só com o OK do
-> cliente (a branch `faturamento` foi aposentada em 07/nov).
+> **Revisão de 07/nov (seção 14):** emissão e cobrança das notas **por profissional** (pedido do cliente); fases
+> revistas em 14.5; **decisões N-P1 a N-P7 abertas** (14.6). Especialidades, convênios e bot por profissional em
+> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md) (M1 a M8). Código das fases direto na
+> `main`, só com o OK do cliente (a branch `faturamento` foi aposentada em 07/nov).
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
 > (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
 > válidas no BaaS. Decisões do cliente registradas; conta de produção aberta; avaliação BaaS e formulário de IP enviados.
@@ -247,7 +249,7 @@ Assinatura e aba Faturamento do Suporte (faturamento); `tests/db/{emissao-nfse,e
 no Emissor Nacional. **Com o advogado:** termos e prazo de guarda (seção 8). **Operação:** conferir que a produção não
 tem dados fiscais antes da N5.
 
-## 12. Fases (na branch `faturamento` recriada ao começar o código, cada uma com a autorização e a validação do cliente)
+## 12. Fases (revistas na seção 14.5; código direto na `main`, cada fase com a autorização e a validação do cliente)
 
 | Fase | Entrega | Depende de |
 |---|---|---|
@@ -554,6 +556,99 @@ carrega (200) sem bloqueio do CSP. Texto da reanálise para o cliente: "Ajustes 
 (https://www.recepclinic.com.br/termos#servicos-financeiros) e o contrato com a clínica trazem a cláusula de prestação
 de serviços financeiros do Asaas; (2) o selo está aplicado conforme o playbook (link para asaas.com, sem no-referrer)
 nos termos públicos e na tela de habilitação fiscal do painel (app.recepclinic.com.br). Peço a reanálise."
+
+## 14. Revisão de 07/nov/2026: emissão e cobrança por profissional
+
+**Pedido do cliente (07/nov):** o RecepClinic será usado por clínicas com vários médicos de especialidades
+diferentes. Numa clínica com vários médicos, a **nota fiscal é configurada por profissional** e a **cobrança das notas
+é feita direto do profissional**, não da clínica. Se o profissional for o dono da clínica, ver a possibilidade de
+incluir na mesma cobrança da assinatura da clínica. Especialidades, convênios e informações do bot por profissional:
+frente própria em [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md).
+
+### 14.1 O que muda no modelo (seções 1, 3, 5 e 6)
+
+Hoje o plano tem **uma emissora por clínica**: uma subconta Asaas, uma `clinic_fiscal_settings`, um contrato de notas
+dentro do contrato da clínica. Passa a ter **emissores fiscais** dentro da clínica:
+
+| Antes (29/out) | Revisto (07/nov) |
+|---|---|
+| Uma subconta Asaas por clínica | **Uma subconta por emissor** (CNPJ): a clínica e/ou cada profissional com CNPJ próprio |
+| `clinic_fiscal_settings` 1:1 com a clínica | `fiscal_issuers` (clínica, tipo `clinic` \| `professional`, profissional, CNPJ, subconta, chave no Vault, situação fiscal, `municipal_options`, CNAE, NBS, série) e `professional_fiscal_issuer` (cada profissional emite pelo próprio emissor ou pelo da clínica) |
+| Nota sai pela clínica | Emissor da nota = profissional do atendimento (`payments` → `appointments` → `agendas.professional_id`); agenda sem profissional (exame, equipamento) e profissional sem emissor próprio → emissor da clínica |
+| Preço por nota e franquia no contrato da clínica | Preço e franquia **por emissor pagante** (ver 14.2) |
+| Uso cobrado na fatura da clínica | Cobrança avulsa **ao profissional** (pagador próprio) ou, se for o dono, **junto da clínica** |
+| Webhook identifica a clínica pelo `account.id` | Identifica o **emissor** pelo `account.id` (e a clínica por ele) |
+
+`service_fiscal_codes` (código de serviço por serviço) passa a valer **por emissor** (o mesmo serviço pode ter código
+diferente no CNPJ do médico e no da clínica). **[Pendência — contador]**
+
+### 14.2 Cobrança das notas por profissional
+
+- **Pagador das notas:** cada emissor tem um **responsável pelo pagamento**: a própria clínica (assinatura atual) ou o
+  profissional. Para o profissional: um `customer` próprio na conta principal do Asaas (CPF/CNPJ, e-mail, endereço do
+  pagador, como a conta de cobrança da F12.1) e um **contrato de notas** próprio (preço por nota, franquia, aceite).
+- **Profissional que é dono:** opção "**cobrar junto da assinatura da clínica**": as notas dele entram como item
+  `invoice_overage` (com o nome do emissor) na cobrança da clínica, com a franquia da clínica ou a dele (**ver N-P3**).
+- **Mensalidade:** o profissional paga **só o uso das notas** (sem mensalidade do sistema) ou uma taxa fixa de
+  habilitação? **Ver N-P4.**
+- **Apuração** (`billing_invoice_usage`): uma linha por **emissor pagante** e mês, em vez de por clínica. A tela
+  Assinatura da clínica mostra o total da clínica e, por emissor, o que é cobrado de quem.
+- **Inadimplência do profissional:** não suspende a clínica; suspende **só a emissão daquele emissor** (o pagamento
+  segue registrado). **[Hipótese]**, **ver N-P5**.
+- **Onde o profissional vê:** e-mail de cobrança do Asaas e, se tiver login, a tela "Minhas notas e cobranças"; sem
+  login, só o e-mail e o link de pagamento. **Ver N-P6.**
+
+### 14.3 Impacto no Asaas (BaaS) e no jurídico
+
+- **Mais subcontas:** uma por CNPJ. Período de avaliação: 10 subcontas e 60 dias antes da homologação (13.1); com
+  clínicas de vários médicos, o limite chega rápido: **homologação regulatória antes de abrir para clínicas grandes**.
+  **[Pendência — Asaas]**: confirmar que a análise BaaS em curso cobre subconta de **pessoa jurídica do médico** (não
+  da clínica cliente) e o custo por subconta.
+- **Profissional pessoa física (sem CNPJ):** a emissão do Asaas é por CNPJ; o autônomo emite como pessoa física pela
+  prefeitura. **[Pendência — Asaas e contador]**; até a resposta, profissional sem CNPJ emite pelo emissor da clínica
+  ou não emite.
+- **Certificado A1 do profissional:** e-CNPJ do médico, enviado direto ao Asaas (como o da clínica, sem guardar).
+- **Advogado:** contrato com o profissional pagador (novo aceite), o profissional como titular da subconta, LGPD dos
+  dados dele, cláusula do Asaas (13.10) também nesse contrato. **[Pendência — advogado]**
+
+### 14.4 Permissões (revisão da seção 6)
+
+| Ação | Quem |
+|---|---|
+| Criar a subconta do emissor | Suporte (como hoje) |
+| Dados fiscais e certificado do emissor do profissional | Administrador da clínica **ou o próprio profissional com login** (**ver N-P2**) |
+| Escolher o pagador (profissional × junto da clínica) | Administrador da clínica |
+| Emitir | Recepção (como hoje); a nota sai pelo emissor do profissional do atendimento |
+| Cancelar | Administrador (como hoje) e o profissional dono do emissor (**ver N-P2**) |
+
+### 14.5 Fases revistas (substitui a seção 12 a partir da N1)
+
+| Fase | Entrega | Depende de |
+|---|---|---|
+| N0 | Pendências da seção 11 + as novas de 14.3 | Asaas, contador, advogado |
+| ME | Especialidades (frente multiprofissional) | decisões M1, M2, M6 |
+| N1 | Base Asaas (`src/lib/asaas/`, compartilhada com o faturamento já em produção) | N0 |
+| N2 | `fiscal_issuers` + subconta por emissor, Vault, configuração fiscal, habilitação, escolha do emissor do profissional | N1, N-P1, N-P2 |
+| N3 | Emissão pelo emissor do atendimento, cancelamento, webhook por emissor, conciliação | N2 |
+| N4 | PDF e XML no bucket; entregas | N3 |
+| N4b | Apuração por emissor pagante; contrato de notas do profissional; cobrança avulsa ao profissional ou junto da clínica; detalhamento | N3, N-P3, N-P4 |
+| N5 | Desligar e remover o emissor antigo | N3, N4 |
+| N6 | Nota real em Mossoró (emissor da clínica piloto) e produção | cliente e contador |
+
+A F12 (faturamento) já está em produção: a N4b reaproveita `billing_charge_items`, conta de cobrança e a cobrança
+avulsa; o que é novo é o **pagador profissional**.
+
+### 14.6 Decisões abertas da NFS-e (uma por vez, com o cliente)
+
+| # | Pergunta | Recomendação |
+|---|---|---|
+| N-P1 | Profissional sem CNPJ próprio: emite pelo emissor da clínica (CNPJ da clínica) ou não emite pelo sistema? | Emite pelo emissor da clínica (padrão de todo profissional) |
+| N-P2 | Quem configura e cancela o emissor do profissional: só o Administrador ou também o profissional com login? | Administrador e o próprio profissional |
+| N-P3 | Dono com "cobrar junto da clínica": usa a franquia da clínica ou tem franquia própria? | Franquia da clínica (uma conta só) |
+| N-P4 | Profissional pagador paga só as notas ou também uma mensalidade/habilitação? | Só as notas, com franquia definida pelo Suporte no contrato dele |
+| N-P5 | Profissional inadimplente: suspende só a emissão dele? | Sim, só a emissão daquele emissor |
+| N-P6 | Profissional sem login: como vê o uso e as cobranças? | E-mail do Asaas com o detalhamento; login opcional com a tela "Minhas notas" |
+| N-P7 | A clínica piloto (um médico, CNPJ da clínica) continua com o emissor da clínica? | Sim; o modelo por profissional vale quando houver médicos com CNPJ próprio |
 
 ## Fontes (consultadas em 29/out/2026)
 

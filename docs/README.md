@@ -1,5 +1,10 @@
 # RecepClinic
 
+> **Próxima sessão (cliente, 07/nov):** decidir, uma por vez, as perguntas da **revisão multiprofissional**: NFS-e e
+> cobrança por profissional (N-P1 a N-P7, seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)) e
+> especialidades, convênios e informações do bot por profissional (M1 a M8,
+> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md)). Sem código antes das decisões.
+>
 > **Próxima sessão (cliente, 07/nov):** **revisar o planejamento da NFS-e pelo Asaas** com o cliente
 > ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), bloco de retomada e seções 11 a 13). Sem código antes da revisão.
 >
@@ -226,6 +231,8 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 ## Documentos
 
 - [`historico.md`](historico.md): andamento completo, sessão a sessão (arquivo; só por busca).
+- [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md): especialidades, convênios e bot por
+  profissional (ponto de retomada).
 - [`crm.md`](crm.md): etapa paralela do CRM (ponto de retomada); plano ativo em
   [`analises/plano-evolucao-relacionamento.md`](analises/plano-evolucao-relacionamento.md) e o que já foi feito em
   [`analises/crm-arquivo.md`](analises/crm-arquivo.md).
