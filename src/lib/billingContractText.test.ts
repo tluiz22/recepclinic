@@ -34,6 +34,9 @@ describe("texto do contrato", () => {
     expect(billingContractTerms("provisorio-2026-11-02")).toBeNull();
     expect(billingContractTerms("provisorio-2026-11-03")).toBeNull();
     expect(billingContractTerms("provisorio-2026-11-03b")).toBeNull();
+    // A versão de 07/nov sem a exportação a pedido continua legível (contratos aceitos com ela).
+    expect(JSON.stringify(billingContractTerms("provisorio-2026-11-07"))).not.toMatch(/mediante solicitação/);
+    expect(billingContractTerms("provisorio-2026-11-07-nf")).toHaveLength(13);
   });
 
   it("F12.2d: renovação automática, forma de pagamento, IPCA, arrependimento e cancelamento na tela", () => {
@@ -72,5 +75,11 @@ describe("texto do contrato", () => {
     const data = plain.find((s) => s.title.endsWith("Proteção de dados pessoais"))!;
     const list = data.paragraphs.find((p) => Array.isArray(p));
     expect(list).toHaveLength(5);
+  });
+
+  it("cliente, 07/nov (versão b): exportação dos dados no fim do contrato a pedido ao Suporte", () => {
+    for (const version of [BILLING_CONTRACT_TERMS_VERSION, BILLING_CONTRACT_TERMS_VERSION_NF]) {
+      expect(text(version)).toMatch(/disponíveis para exportação, mediante solicitação ao Suporte do RecepClinic, durante 60 dias/);
+    }
   });
 });

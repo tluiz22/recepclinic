@@ -17,10 +17,11 @@
 // Cliente, 07/nov/2026: texto novo do cliente (13 seções; a 6, de notas fiscais,
 // só na versão com nota). Seção 4: a Meta cobra a clínica direto, fora da
 // mensalidade (opção 1; repasse pelo RecepClinic recusado: exigiria Solution
-// Partner na Meta, risco de inadimplência e imposto). Lista na seção 12.
+// Partner na Meta, risco de inadimplência e imposto). Lista na seção 12. Versão b (mesmo dia): exportação
+// dos dados no fim do contrato a pedido ao Suporte (seção 10).
 
-export const BILLING_CONTRACT_TERMS_VERSION = "provisorio-2026-11-07";
-export const BILLING_CONTRACT_TERMS_VERSION_NF = "provisorio-2026-11-07-nf";
+export const BILLING_CONTRACT_TERMS_VERSION = "provisorio-2026-11-07b";
+export const BILLING_CONTRACT_TERMS_VERSION_NF = "provisorio-2026-11-07b-nf";
 
 /** Um parágrafo, ou uma lista de itens (um array de textos). */
 export type ContractParagraph = string | string[];
@@ -41,10 +42,14 @@ export function billingTermsVersionFor(contract: { invoiceUnitPriceCents: number
 export function billingContractTerms(version: string): ContractTermsSection[] | null {
   if (version === BILLING_CONTRACT_TERMS_VERSION) return build(false);
   if (version === BILLING_CONTRACT_TERMS_VERSION_NF) return build(true);
+  // Versão anterior (07/nov/2026, antes da exportação a pedido ao Suporte): continua legível para quem a aceitou.
+  if (version === "provisorio-2026-11-07") return build(false, false);
+  if (version === "provisorio-2026-11-07-nf") return build(true, false);
   return null;
 }
 
-function build(invoicing: boolean): ContractTermsSection[] {
+/** `exportBySupport`: a exportação dos dados no fim do contrato é a pedido ao Suporte (cliente, 07/nov/2026, versão b). */
+function build(invoicing: boolean, exportBySupport = true): ContractTermsSection[] {
   const sections: (ContractTermsSection | null)[] = [
     {
       title: "Objeto",
@@ -137,7 +142,7 @@ function build(invoicing: boolean): ContractTermsSection[] {
         "A clínica poderá cancelar a assinatura a qualquer momento, sem multa e sem prazo mínimo de permanência, pelo botão \"Cancelar a assinatura\", disponível em Configurações › Assinatura.",
         "O pedido de cancelamento interrompe imediatamente as renovações e novas cobranças, mas o acesso ao RecepClinic permanece disponível até o encerramento do período já pago.",
         "As mensalidades vencidas e demais valores já devidos continuam sendo de responsabilidade da clínica, mesmo após o cancelamento.",
-        "Após o encerramento do acesso, os dados da clínica e dos pacientes permanecerão disponíveis para exportação durante 60 dias, contados do encerramento do contrato. Após esse prazo, serão excluídos ou anonimizados, ressalvadas as informações que precisem ser conservadas para cumprimento de obrigações legais ou regulatórias e exercício regular de direitos.",
+        `Após o encerramento do acesso, os dados da clínica e dos pacientes permanecerão disponíveis para exportação${exportBySupport ? ", mediante solicitação ao Suporte do RecepClinic," : ""} durante 60 dias, contados do encerramento do contrato. Após esse prazo, serão excluídos ou anonimizados, ressalvadas as informações que precisem ser conservadas para cumprimento de obrigações legais ou regulatórias e exercício regular de direitos.`,
         "Os dados financeiros e registros necessários ao cumprimento das obrigações legais, fiscais e regulatórias serão conservados pelos prazos aplicáveis.",
       ],
     },

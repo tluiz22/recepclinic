@@ -38,6 +38,7 @@ function setup(options: { open?: { paymentId: string; kind: "monthly" | "setup" 
     openCardChanges: async () => [],
   };
   const api = {
+    setSubscriptionLatePayment: async (id: string) => void log.push(`multa ${id}`),
     updateCustomerAddress: async (customer: string, address: { postalCode: string }) => void log.push(`endereço ${customer} ${address.postalCode}`),
     createCardCheckout: async (input: { nextDueDate: string; customer: string }) => {
       log.push(`checkout ${input.customer} ${input.nextDueDate}`);
@@ -97,7 +98,7 @@ describe("troca de cartão", () => {
       ],
     });
     expect(await finishCardChange(store, api, "c1", new Date("2026-12-20T16:00:00Z"))).toEqual({ status: "changed" });
-    expect(log).toEqual(["delete-sub sub_old", "upsert p1 DELETED", "finish sub_new"]);
+    expect(log).toEqual(["delete-sub sub_old", "upsert p1 DELETED", "multa sub_new", "finish sub_new"]);
   });
 
   it("sem a assinatura nova: espera; depois de 1 dia, descarta o pedido", async () => {

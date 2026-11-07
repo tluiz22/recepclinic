@@ -24,7 +24,7 @@ let current: AsaasPayment;
 const api = (): AsaasBillingApi => ({
   findCustomer: async () => `cus_w_${stamp}`,
   createCustomer: async () => `cus_w_${stamp}`,
-  updateCustomerAddress: async () => {},
+  updateCustomerAddress: async () => {}, setSubscriptionLatePayment: async () => {},
   findSubscription: async () => `sub_w_${stamp}`,
   createSubscription: async () => `sub_w_${stamp}`,
   findPayment: async () => null,

@@ -105,6 +105,12 @@ function toPayment(raw: RawPayment): AsaasPayment {
   };
 }
 
+/**
+ * Atraso (contrato, seção 3; cliente, 07/nov/2026): multa de 2% e juros de 1% ao mês, que o Asaas soma
+ * no pagamento depois do vencimento (proporcional aos dias).
+ */
+export const LATE_PAYMENT = { fine: { value: 2, type: "PERCENTAGE" }, interest: { value: 1 } } as const;
+
 export type AsaasCustomerAddress = { postalCode: string; street: string; number: string; complement: string | null; district: string };
 
 const customerAddress = (a: AsaasCustomerAddress) => ({
@@ -181,8 +187,14 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
         cycle: "MONTHLY",
         description: input.description,
         externalReference: input.externalReference,
+        ...LATE_PAYMENT,
       });
       return created.id;
+    },
+
+    /** Multa e juros na assinatura (a do Checkout nasce sem); vale também para as cobranças dela em aberto. */
+    async setSubscriptionLatePayment(subscription: string): Promise<void> {
+      await post(`/subscriptions/${encodeURIComponent(subscription)}`, { ...LATE_PAYMENT, updatePendingPayments: true });
     },
 
     async findPayment(externalReference: string): Promise<AsaasPayment | null> {
@@ -206,6 +218,7 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
         dueDate: input.dueDate,
         description: input.description,
         externalReference: input.externalReference,
+        ...LATE_PAYMENT,
       });
       return toPayment(created);
     },

@@ -41,6 +41,21 @@ describe("API do Asaas (F12.4)", () => {
     expect(payment).toMatchObject({ id: "pay_1", valueCents: 29990, status: "RECEIVED", paidAt: "2026-12-09T12:00:00-03:00", invoiceUrl: "https://f" });
   });
 
+  it("multa de 2% e juros de 1% ao mês na assinatura, na implantação e na assinatura do Checkout (contrato, seção 3)", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const api = asaasBillingApi(
+      env,
+      fakeFetch({ "/subscriptions/sub_9": { id: "sub_9" }, "/subscriptions": { id: "sub_1" }, "/payments": { id: "pay_1", dueDate: "2026-12-10", value: 1, status: "PENDING" } }, calls),
+    );
+    await api.createSubscription({ customer: "cus_1", billingType: "PIX", valueCents: 100, nextDueDate: "2026-12-10", description: "d", externalReference: "c" });
+    await api.createPayment({ customer: "cus_1", billingType: "PIX", valueCents: 100, dueDate: "2026-12-10", description: "d", externalReference: "setup:c" });
+    await api.setSubscriptionLatePayment("sub_9");
+    for (const call of calls) {
+      expect(JSON.parse(call.init.body as string)).toMatchObject({ fine: { value: 2, type: "PERCENTAGE" }, interest: { value: 1 } });
+    }
+    expect(JSON.parse(calls[2].init.body as string)).toMatchObject({ updatePendingPayments: true });
+  });
+
   it("procura sem duplicar: ignora apagados", async () => {
     const api = asaasBillingApi(env, fakeFetch({ "/customers": { data: [{ id: "cus_old", deleted: true }, { id: "cus_ok" }] } }));
     expect(await api.findCustomer("11222333000181")).toBe("cus_ok");

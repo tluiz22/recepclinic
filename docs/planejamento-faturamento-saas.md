@@ -113,9 +113,10 @@
 > **Texto do contrato do cliente (07/nov/2026, versão `provisorio-2026-11-07`/`-nf`):** 13 seções (a 6, de notas
 > fiscais, só com nota), com a seção 4 "Mensagens do WhatsApp e cobranças da Meta" (a Meta cobra a clínica direto, fora
 > da mensalidade; repasse pelo RecepClinic recusado: Solution Partner na Meta, risco de inadimplência e imposto) e a 12
-> com lista. **Divergências com o sistema, a decidir:** (a) multa de 2% e juros de 1% ao mês: as cobranças no Asaas
-> são criadas sem multa e juros; (b) "alterar a forma de pagamento": a tela só troca o cartão (não passa a Pix);
-> (c) exportação dos dados por 60 dias: sem tela, só pelo Suporte.
+> com lista. **Divergências com o sistema, decididas (cliente, 07/nov/2026):** (a) multa de 2% e juros de 1% ao mês
+> **cobrados pelo Asaas** (assinatura, implantação e a assinatura que o Checkout cria; feito; a do staging ajustada à
+> mão); (b) troca cartão ↔ Pix **pela tela, pelo Administrador**: etapa nova, **a fazer** (desenhar as opções antes);
+> (c) exportação **a pedido ao Suporte**: texto da seção 10 (versão `provisorio-2026-11-07b`; a anterior segue legível).
 > **Fim do contrato só sai pelo contrato novo (cliente, 07/nov/2026, migração `20261227120000`):** o Suporte não
 > libera a suspensão por fim do contrato (como a inadimplência, que sai pelo pagamento). Contrato novo ativo, aceito
 > depois da suspensão e não cancelado libera sozinho: cartão → com o cartão cadastrado; Pix com implantação → com a

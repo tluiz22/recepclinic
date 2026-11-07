@@ -95,6 +95,8 @@ export async function finishCardChange(store: BillingCardChangeStore, api: Asaas
         invoiceUrl: payment.invoiceUrl,
       });
     }
+    // A assinatura que o Checkout criou nasce sem multa e juros (contrato, seção 3).
+    await api.setSubscriptionLatePayment(created.id);
     await store.finishCardChange(contractId, created.id, null);
     return { status: "changed" };
   } catch (error) {

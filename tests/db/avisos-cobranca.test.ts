@@ -33,7 +33,7 @@ const pay = (id: string, dueDays: number, status = "OVERDUE"): AsaasPayment => (
 const api = (): AsaasBillingApi => ({
   findCustomer: async () => `cus_av_${stamp}`,
   createCustomer: async () => `cus_av_${stamp}`,
-  updateCustomerAddress: async () => {},
+  updateCustomerAddress: async () => {}, setSubscriptionLatePayment: async () => {},
   findSubscription: async () => `sub_av_${stamp}`,
   createSubscription: async () => `sub_av_${stamp}`,
   findPayment: async () => null,

@@ -70,6 +70,7 @@ function setup(
       return { last4: "8829" };
     },
     getSubscriptionCard: async () => ({ last4: "1111" }),
+    setSubscriptionLatePayment: async (id: string) => void log.push(`multa ${id}`),
     updateCustomerAddress: async (customer: string, address: { postalCode: string }) => void log.push(`endereço ${customer} ${address.postalCode}`),
     createCardCheckout: async (input: { nextDueDate: string }) => {
       log.push(`checkout ${input.nextDueDate}`);
@@ -134,7 +135,7 @@ describe("passo Cartão: confirmar", () => {
       subs: [{ id: "sub_new", billingType: "CREDIT_CARD", nextDueDate: "2026-11-14", dateCreated: "2026-11-04" }],
     });
     expect(await confirmCardRegistration(store, api, "c1", "1.2.3.4", new Date("2026-11-04T15:05:00Z"))).toEqual({ status: "registered" });
-    expect(log).toEqual(["delete-sub sub_1", "finish sub_new", "registered 1111 checkout"]);
+    expect(log).toEqual(["delete-sub sub_1", "multa sub_new", "finish sub_new", "registered 1111 checkout"]);
   });
 
   it("já cadastrado: nada a fazer", async () => {
