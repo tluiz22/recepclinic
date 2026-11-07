@@ -5,6 +5,7 @@ import { createClinicServiceClient } from "../../src/lib/data/clinicService";
 import type { DbClient } from "../../src/lib/data/clients";
 import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import { getConversation, setConversationClassification } from "../../src/lib/data/whatsapp/conversations";
+import { countAwaitingClinic, listHumanAttention } from "../../src/lib/data/whatsapp/attention";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -298,5 +299,58 @@ describe("NA2: bot e webhook no número marcado", () => {
     // E o eco volta a pausar como sempre.
     await agentReply(P, "Oi, aqui é a recepção");
     expect((await conversation(P)).handoff_status).toBe("in_progress");
+  });
+});
+
+describe("NA3: métricas e contadores", () => {
+  const A = "+5584991244011"; // vai ser marcado
+  const B = "+5584991244012"; // segue como atendimento (operacional)
+
+  const sessions = async () => {
+    const { data, error } = await f.admin.client.rpc("metrics_bot_sessions", {
+      p_clinic_id: f.clinicId,
+      p_start: new Date(Date.now() - 24 * 60 * 60_000).toISOString(),
+      p_end: new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    return (data ?? []) as { session_id: string; flow: string; contact_phone: string }[];
+  };
+  const of = (rows: { contact_phone: string; flow: string }[], phone: string) => rows.filter((r) => r.contact_phone === phone).map((r) => r.flow).sort();
+
+  beforeAll(async () => {
+    for (const phone of [A, B]) {
+      await say(phone, "Oi");
+      await say(phone, "1");
+      await say(phone, "1"); // tentativa de marcar
+      await say(phone, "0");
+      await say(phone, "4"); // pedido de recepção (aguardando a clínica)
+    }
+  });
+
+  it("antes da marcação, os dois números contam", async () => {
+    const rows = await sessions();
+    expect(of(rows, A).length).toBeGreaterThan(0);
+    expect(of(rows, A)).toEqual(of(rows, B));
+    expect((await listHumanAttention(reception(), f.clinicId)).map((i) => i.phone)).toEqual(expect.arrayContaining([A, B]));
+  });
+
+  it("marcado: o número inteiro sai das métricas (inclusive o passado) e dos pendentes; o outro número fica igual", async () => {
+    const before = await sessions();
+    const waitingBefore = await countAwaitingClinic(reception(), f.clinicId);
+    await setConversationClassification(reception(), f.clinicId, A, "administrative");
+    const after = await sessions();
+    expect(of(after, A)).toEqual([]);
+    // Os números de atendimento ficam exatamente como antes.
+    const others = (rows: typeof before) => rows.filter((r) => r.contact_phone !== A).map((r) => r.session_id).sort();
+    expect(others(after)).toEqual(others(before));
+    expect(await countAwaitingClinic(reception(), f.clinicId)).toBe(waitingBefore - 1);
+    expect((await listHumanAttention(reception(), f.clinicId)).map((i) => i.phone)).not.toContain(A);
+    expect((await listHumanAttention(reception(), f.clinicId)).map((i) => i.phone)).toContain(B);
+  });
+
+  it("de volta para atendimento: o passado volta a contar", async () => {
+    await setConversationClassification(reception(), f.clinicId, A, "patient");
+    const rows = await sessions();
+    expect(of(rows, A)).toEqual(of(rows, B));
   });
 });
