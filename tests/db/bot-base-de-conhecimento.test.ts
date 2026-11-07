@@ -446,6 +446,20 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     expect((await handoffOf(phone)).human_handoff).toBe(false);
   });
 
+  it("\"Atendimento\" é pedido de recepção (cliente, 06/nov/2026): confirma; \"horário de atendimento\" segue para a base", async () => {
+    for (const [phone, text] of [["+5584991337097", "Atendimento"], ["+5584991337098", "Bom dia, atendimento por favor"], ["+5584991337099", "quero falar com o atendimento"]]) {
+      await say(phone, "Oi");
+      const ask = await say(phone, text);
+      expect(ask.at(-1), text).toMatchObject({ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." });
+      expect((await handoffOf(phone)).human_handoff).toBe(false);
+    }
+    const phone = "+5584991337094";
+    await say(phone, "Oi");
+    const reply = await say(phone, "qual o horário de atendimento?");
+    expect(bodies(reply).join("\n")).not.toContain("Você quer falar com a recepção?");
+    expect((await handoffOf(phone)).human_handoff).toBe(false);
+  });
+
   it("sem motivo, pelo menu: transfere direto", async () => {
     const phone = "+5584991337071";
     await say(phone, "Oi");

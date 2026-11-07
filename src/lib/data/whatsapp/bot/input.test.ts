@@ -12,6 +12,13 @@ describe("pedido de recepção digitado (cliente, 30/out/2026)", () => {
     expect(asksForReception(typed("oi"))).toBe(false);
     expect(asksForReception(typed("10/03/2020"))).toBe(false);
     expect(asksForReception(typed("Bom dia, meu filho fez o exame ontem e quero saber com a recepção quando sai o resultado"))).toBe(false);
+    // "Atendimento" (cliente, 06/nov/2026): só o pedido; as dúvidas com a palavra seguem para a base.
+    for (const text of ["Atendimento", "atendimento!", "Quero atendimento", "preciso de atendimento", "Bom dia, atendimento por favor", "atendimento humano", "falar com o atendimento", "quero falar com atendimento"]) {
+      expect(asksForReception(typed(text)), text).toBe(true);
+    }
+    for (const text of ["qual o horário de atendimento?", "atendimento domiciliar", "vocês fazem atendimento aos sábados?", "agendar atendimento"]) {
+      expect(asksForReception(typed(text)), text).toBe(false);
+    }
     // Toque num botão ou lista nunca conta como digitado.
     expect(asksForReception({ id: "menu_reception", text: "Falar com a recepção" })).toBe(false);
   });

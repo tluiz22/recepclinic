@@ -1099,4 +1099,8 @@ Pedido do cliente depois do staging:
   também o XML da nota no Financeiro) e o documento tem `download`.
 - **Aviso da mensagem automática do app (06/nov):** no Início e em Configurações › WhatsApp, vale por 6 horas depois da
   última mensagem automática (antes, 7 dias). Pedido do cliente após o aviso de 05/11 seguir na produção.
+- **"Atendimento" é pedido de recepção (06/nov):** só quando a mensagem é o pedido ("Atendimento", "quero atendimento",
+  "atendimento humano", "falar com o atendimento"); pede a confirmação como os outros. "Horário de atendimento",
+  "atendimento domiciliar" e outras dúvidas seguem para a base (`input.ts`, `ATTENDANCE_REQUEST`). Jornada do bot
+  atualizada; 155 testes do bot passando.
 

@@ -244,7 +244,7 @@ export const JOURNEY: JourneySection[] = [
         [
           "O paciente pede",
           [
-            patient("Toca em \"Falar com a recepção\" no menu (ou escreve \"atendente\")", "O botão de saída de uma resposta não entendida e as ações do agendamento transferem direto."),
+            patient("Toca em \"Falar com a recepção\" no menu (ou escreve \"atendente\", \"secretária\" ou \"atendimento\")", "O botão de saída de uma resposta não entendida e as ações do agendamento transferem direto. \"Atendimento\" só quando a mensagem é o pedido (\"quero atendimento\"); \"horário de atendimento\" vai para a base (cliente, 06/nov/2026)."),
             check("O pedido já traz o motivo (\"atendente, qual o endereço?\")?", "Só com \"Perguntas frequentes no bot\". Digitado sem motivo (\"secretária\", \"atendente\"), com ou sem a base: pergunta \"Você quer falar com a recepção?\" com Sim · Não (cliente, 06/nov/2026)."),
             branch(
               ["Não", [bot("Pelo menu: transfere direto (abaixo). Digitado: \"Você quer falar com a recepção?\" Sim · Não", "Sem perguntar o motivo antes (cliente, 06/nov/2026). Sim transfere; Não: \"Tudo bem, seguimos por aqui.\" e o menu.")]],
