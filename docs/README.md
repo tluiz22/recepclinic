@@ -10,7 +10,7 @@
 > roteiro no fim do [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
 >
 > **Ajuda desta tela (07/nov, `32df66f`):** no pé do menu lateral e, no celular, ícone "?" no cabeçalho. No staging e
-> na produção (`d4aff65`). As 28 capturas refeitas (fila vazia). **`faturamento` com a `main` até `d4aff65`** (merge
+> na produção (`d4aff65`). **Validada (07/nov).** As 28 capturas refeitas (fila vazia). **`faturamento` com a `main` até `d4aff65`** (merge
 > só local, sem push; 1087 de unidade e 1034 de banco passando).
 >
 > **Áudio da Conversas (07/nov, `7e8613c`):** não tocava (CSP) e demorava (só a rotina de 1 min); corrigido, validado
