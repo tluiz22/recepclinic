@@ -26,8 +26,7 @@
 >
 > **Próxima sessão (cliente, 06/nov):** o cliente traz melhorias para a versão da produção (`552019b`, com a Central).
 > Para ligar a Central numa clínica: item na Matriz + o Administrador liga em Configurações › WhatsApp (já explicado ao
-> cliente). Pendentes do cliente antes de usar com pacientes: modelo "Retomar conversa" e cópia do
-> bucket/PITR (v4 e campos do webhook feitos em 07/nov). Push na `main` só com autorização (regra da sessão de 06/nov).
+> cliente). Modelo "Retomar conversa", cópia do bucket/PITR, v4 e campos do webhook: feitos (cliente, 07/nov). Push na `main` só com autorização (regra da sessão de 06/nov).
 >
 > **NA, conversas que não são atendimento (07/nov):** NA1 a NA6 feitas, **no staging e na produção** (`d4aff65`,
 > migrações `20261226120000`, `20261226130000` e `20261226140000` aplicadas nos dois). **Validada (07/nov)** pelo
@@ -41,8 +40,8 @@
 > no staging e **na produção**. Detalhe no `producao.md`.
 >
 > **Produção (06/nov, `552019b`):** a `main` inteira, com a Central (12 migrações aplicadas; item `central_attendance`
-> liberado em nenhuma clínica) e todos os ajustes de 06/nov. Saúde `ok`. Antes de liberar a Central numa clínica
-> (cliente): modelo "Retomar conversa" e cópia do bucket/PITR (v4 e webhook feitos em 07/nov). Detalhe no `producao.md`. **`faturamento` com a `main` até `552019b`** (merge `882427f`, migração própria
+> **ligado na clínica piloto, funcionando**, cliente, 07/nov) e todos os ajustes de 06/nov. Saúde `ok`. Modelo
+> "Retomar conversa", cópia do bucket/PITR, v4 e webhook: feitos (07/nov). Detalhe no `producao.md`. **`faturamento` com a `main` até `552019b`** (merge `882427f`, migração própria
 > `20261225130000` do bloqueio de suspensa nas tabelas da Central; 1086 de unidade e 1005 de banco passando).
 >
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
