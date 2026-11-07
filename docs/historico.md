@@ -1120,3 +1120,9 @@ Playwright (menu ⋯ cortado, marcar pela Atendimento caindo em "acesso negado")
 com as regras da `faturamento`: NFS-e e a varredura de tabelas de cobrança, fora da NA). 28 capturas refeitas
 (a `atendimento` com a Central desligada só durante a captura). Migrações `20261226120000`, `20261226130000` e
 `20261226140000` aplicadas no staging (simuladas antes e conferidas depois).
+
+- **Validação no staging (cliente, 07/nov/2026):** troca cartão ↔ Pix (Administrador e Suporte; ajustes da validação:
+  celular do pagador antes do Checkout, `09ae407`; mudar para Pix descarta a troca de cartão aberta, `2c459ec`), EC
+  (mensagens que a Central não mostra; ajuste: localização só por coordenadas e "Ver no mapa", `25fb4b1`) e o item 5
+  (F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral): **tudo validado**. Produção segue sem o financeiro e sem a
+  EC até a autorização do cliente.

@@ -1,10 +1,10 @@
 # RecepClinic
 
-> **Próxima sessão (cliente, 07/nov):** cliente valida no staging (1) **troca cartão ↔ Pix** (card Forma de pagamento
-> na Assinatura; Suporte também passa para Pix; e-mail de confirmação; plano do faturamento, "Troca cartão ↔ Pix") e
-> (1b) **EC, mensagens que a Central não mostra** (plano da Central, seção 16; resposta pelo app com foto, áudio,
-> localização etc.); as duas sobem para a produção junto com o faturamento; (2) item 5 da lista: validar F8.1,
-> F8.2, F8.2b, F8.3, ajuda contextual e menu lateral no staging; depois, os pendentes de "Pendências", abaixo.
+> **Próxima sessão (cliente, 07/nov):** **validados no staging (07/nov):** troca cartão ↔ Pix (com o Suporte, o
+> celular do pagador antes do Checkout e a troca de cartão aberta descartada ao mudar para Pix), EC (mensagens que a
+> Central não mostra, com a localização só por coordenadas e "Ver no mapa") e o item 5 (F8.1, F8.2, F8.2b, F8.3,
+> ajuda contextual e menu lateral). Próximo: a publicação do faturamento + EC na produção (só com autorização; precisa
+> das variáveis, token, webhook e tokenização do Asaas de produção); depois, os pendentes de "Pendências", abaixo.
 > **Staging = `main` (07/nov, com a troca cartão ↔ Pix e a EC; migrações `20261228120000` e `20261228130000` aplicadas)**, com o financeiro e as migrações `20261227120000` (fim do contrato) e `20261227130000`
 > (endereço do pagador). **Produção (`d4aff65`) sem o financeiro:** a próxima publicação leva o financeiro, a EC e 22
 > migrações (`db push --include-all`) e precisa das variáveis do Asaas de produção; só com autorização.
@@ -146,7 +146,6 @@
 > `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
 >
 > **Pendências**
-> - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
 > - **Operação:** 1º backup diário da produção; sessão do painel que caiu (parte P do `staging.md`).
 > - **Clínica piloto (03/nov):** conferir os lembretes de hoje (1º lote depois do cartão na Meta); verificação da
