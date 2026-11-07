@@ -560,15 +560,18 @@ export async function markAutomaticEcho(db: DbClient, clinicId: string, echoReco
   );
 }
 
-/** A última mensagem automática do app nos últimos `days` dias (aviso no Início e em Configurações › WhatsApp). */
-export async function latestAutomaticEcho(db: DbClient, clinicId: string, now: Date = new Date(), days = 7): Promise<Date | null> {
+/**
+ * A última mensagem automática do app nas últimas `hours` horas (aviso no Início e em Configurações › WhatsApp). 6 horas
+ * (cliente, 06/nov/2026; antes, 7 dias): o aviso some sozinho se o app não mandar outra.
+ */
+export async function latestAutomaticEcho(db: DbClient, clinicId: string, now: Date = new Date(), hours = 6): Promise<Date | null> {
   const rows = unwrap(
     await db
       .from("whatsapp_messages")
       .select("created_at")
       .eq("clinic_id", clinicId)
       .eq("message_type", APP_AUTO_REPLY_TYPE)
-      .gte("created_at", new Date(now.getTime() - days * 24 * 60 * 60_000).toISOString())
+      .gte("created_at", new Date(now.getTime() - hours * 60 * 60_000).toISOString())
       .order("created_at", { ascending: false })
       .limit(1),
     "Mensagens do WhatsApp",

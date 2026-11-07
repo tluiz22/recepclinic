@@ -1097,4 +1097,6 @@ Pedido do cliente depois do staging:
 - **Barra de carregamento sem parar no download (06/nov, staging):** o link do documento recebido baixava o arquivo sem
   trocar de página, e a barra ligada no clique nunca desligava. A barra não liga mais em links de arquivo (`/api/`,
   também o XML da nota no Financeiro) e o documento tem `download`.
+- **Aviso da mensagem automática do app (06/nov):** no Início e em Configurações › WhatsApp, vale por 6 horas depois da
+  última mensagem automática (antes, 7 dias). Pedido do cliente após o aviso de 05/11 seguir na produção.
 

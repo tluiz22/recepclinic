@@ -67,7 +67,7 @@ const [counts, sendsAlert, toReview, certificate, connection, templates, attenti
   isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
   has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
   isSupport ? getDeliveredConnectionTest(db, clinic.clinicId) : Promise.resolve(null),
-  // IS4: mensagem automática do app nos últimos 7 dias (Administrador e Suporte).
+  // IS4: mensagem automática do app nas últimas 6 horas (Administrador e Suporte).
   has("whatsapp_bot") && (isSupport || clinic.roles.includes("admin")) ? latestAutomaticEcho(db, clinic.clinicId) : Promise.resolve(null),
 ]);
 // Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
