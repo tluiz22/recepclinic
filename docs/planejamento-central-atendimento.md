@@ -887,5 +887,5 @@ mapa" (Google Maps, outra aba). A localização mandada antes desta correção s
 **Pendentes da Central (cliente, 07/nov/2026):** envio de foto/PDF: validar como está (sem rodada de telas).
 `ACCOUNT_RECONNECTED`: aviso ao Suporte em Sistema › Erros, por clínica ("conectar de novo em Configurações ›
 WhatsApp"). Uso do mês (CN4a): a resposta parada em "enviando" deixa de contar (migração `20261228140000`).
-**Feitos e commitados na `main` (sem push):** falta aplicar a migração no staging, push e o cliente validar.
+**No staging e na produção (07/nov, `305efd7`, com os ajustes do BaaS):** migração aplicada nos dois; falta o cliente validar.
 
