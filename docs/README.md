@@ -5,13 +5,13 @@
 > cliente). Pendentes do cliente antes de usar com pacientes: modelo "Retomar conversa", campos do webhook, v4/
 > `WHATSAPP_ES_CONFIG_ID`, cópia do bucket/PITR. Push na `main` só com autorização (regra da sessão de 06/nov).
 >
-> **Próxima sessão (cliente, 07/nov):** seguir com as etapas da NA (NA1 em diante) na branch `nao-atendimento` (criada
-> da `main` em 07/nov, sem push, nada feito nela). Plano em [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md);
-> análise, decisões 1 a 5 e telas (NA0) aprovadas.
+> **NA, conversas que não são atendimento (07/nov):** NA1 a NA6 feitas e **no staging** (migrações `20261226120000`,
+> `20261226130000` e `20261226140000` aplicadas lá; produção não). **Cliente valida** pelo roteiro no fim do
+> [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md). Branch `nao-atendimento` juntada na `main`.
 >
-> **Ajuda desta tela (07/nov, `32df66f`):** sai da faixa acima do título; no pé do menu lateral e, no celular, ícone "?"
-> no cabeçalho (opção B). Na `main` local, **sem push** (aguarda autorização; depois o cliente valida no staging). As 26
-> capturas na fila (`capturas-pendentes.md`), recaptura só com autorização. Trazer para a `faturamento` só com o OK.
+> **Ajuda desta tela (07/nov, `32df66f`):** no pé do menu lateral e, no celular, ícone "?" no cabeçalho. **No staging**
+> (push de 07/nov); cliente valida. As 28 capturas refeitas (fila vazia). `faturamento` ainda sem esta parte nem a NA
+> (trazer só com o OK).
 >
 > **Áudio da Conversas (07/nov, `7e8613c`):** não tocava (CSP) e demorava (só a rotina de 1 min); corrigido, validado
 > no staging e **na produção**. Detalhe no `producao.md`.
