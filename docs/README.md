@@ -82,8 +82,8 @@
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov) + **Central de Atendimento** (05/nov, 11 migrações aplicadas).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`**: juntada na `main` em 07/nov (`3919ca4`); igual à `main`. Na produção, as 18 migrações dela
->   são anteriores às de lá: `db push --include-all`.
+> - **Branch `faturamento`**: juntada na `main` em 07/nov (`3919ca4`) e **aposentada**: ajustes do financeiro vão direto
+>   na `main` (cliente, 07/nov). Na produção, as 18 migrações dela são anteriores às de lá: `db push --include-all`.
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção. Decisões da
