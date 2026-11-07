@@ -1,7 +1,7 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 decidida** (lista global fechada); **M2 a M8
+> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 e M2 decididas**; **M3 a M8
 > abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
@@ -39,7 +39,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 - **Profissional existente:** a migração liga o texto atual de `specialty` à especialidade do dicionário de mesmo nome
   ou sinônimo (texto sem correspondência: lista para o Suporte decidir antes da publicação); quem não tem especialidade fica **pendente**: a tela Profissionais e a lista de
   configuração da clínica mostram "falta a especialidade", e salvar o profissional passa a exigir. Não bloqueia agenda
-  nem bot no dia da publicação. **Ver M2.**
+  nem bot no dia da publicação (**decidido, cliente, 07/nov, M2**).
 - **Leitura única:** uma função do banco/servidor devolve "profissionais ativos de uma especialidade" (e o inverso),
   usada pelo bot, pela marcação da Recepção e pela página pública de agendamento, para não espalhar consultas.
 - A Base de Conhecimento troca `p.specialty` pelas especialidades vinculadas (`answers.ts:135-159`).
@@ -84,7 +84,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 | # | Pergunta | Recomendação |
 |---|---|---|
 | M1 | Especialidades: lista da clínica ou lista global fechada do Suporte? | **Decidido (07/nov): lista global fechada** |
-| M2 | Profissional sem especialidade na publicação: pendência visível (sem bloquear agenda/bot) ou bloqueio? | Pendência visível; salvar exige |
+| M2 | Profissional sem especialidade na publicação: pendência visível ou bloqueio? | **Decidido (07/nov): pendência visível; salvar exige** |
 | M3 | Exceções de convênio de hoje: converter para a associação positiva (todos menos as exceções)? | Converter |
 | M4 | Recepção mantém convênios e associações (hoje só o Administrador)? | Sim, com trilha |
 | M5 | Informações do bot: por profissional com o texto da clínica como padrão, ou só por profissional? | Padrão da clínica + texto do profissional |
