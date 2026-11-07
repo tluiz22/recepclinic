@@ -50,7 +50,7 @@ Em [resend.com](https://resend.com) › *API Keys* › **Create API Key**: nome 
 domínio `recepclinic.com.br`. Colar no `SMTP_PASSWORD` do `.env.production` (a chave aparece uma vez só). O
 `WHATSAPP_ES_CONFIG_ID` do `.env.production` é o mesmo da Vercel do staging (*Settings › Environment Variables*).
 **Cadastro v4 (07/nov/2026):** configuração nova `3784178581733719` (v4, conferida e testada no staging). A antiga
-(v3) era `2369473416923657`: para voltar atrás, pôr esse ID no `WHATSAPP_ES_CONFIG_ID` da Vercel e fazer o Redeploy.
+(v3) era `2369473416923657`: para voltar atrás, pôr esse ID no `WHATSAPP_ES_CONFIG_ID` da Vercel e fazer o Redeploy. **Trocado na produção (cliente, 07/nov, Redeploy; saúde `ok`)**; `.env.production` atualizado.
 
 ## 4. Banco da produção (Claude)
 
