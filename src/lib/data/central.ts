@@ -134,23 +134,34 @@ export type ConversationSummary = {
   profileName: string | null;
   /** O atendimento atual (eventos e assunto). */
   handoffId: string | null;
+  /** NA: atendimento ou número marcado (Pessoal, Administrativo/outros), com quando e o primeiro nome de quem marcou. */
+  classification: "patient" | "personal" | "administrative";
+  classifiedAt: Date | null;
+  classifiedByName: string | null;
 };
 
-/** Filtro "Mostrar" das Abertas (decisão 3). */
-export type ConversationFilter = "todas" | "nao-atribuidas" | "minhas" | "aguardando-paciente";
+/** Selo do número marcado (NA, telas NA0). */
+export const CLASSIFICATION_LABELS = { personal: "Pessoal", administrative: "Administrativo" } as const;
+
+/** Filtro das Abertas: Todas ou Minhas (NA0, cliente, 06/nov/2026; antes, o "Mostrar" da decisão 3, com quatro opções). */
+export type ConversationFilter = "todas" | "minhas";
 
 const date = (value: string | null) => (value ? new Date(value) : null);
 
-/** Abertas (com a clínica) ou Finalizadas (com o bot), na ordem da tela; o banco aplica quem vê o quê. */
+/**
+ * Abertas (com a clínica), Finalizadas (com o bot) ou Pessoal e admin. (números marcados, NA), na ordem da tela; o banco
+ * aplica quem vê o quê (a aba nova só o Administrador, a Recepção e o Suporte).
+ */
 export async function listConversations(
   db: DbClient,
   clinicId: string,
-  options: { finished?: boolean; search?: string | null } = {},
+  options: { finished?: boolean; classified?: boolean; search?: string | null } = {},
 ): Promise<ConversationSummary[]> {
   const rows = unwrap(
     await db.rpc("central_conversations", {
       p_clinic_id: clinicId,
       p_finished: options.finished ?? false,
+      ...(options.classified ? { p_classified: true } : {}),
       ...(options.search?.trim() ? { p_search: options.search.trim().slice(0, 80) } : {}),
     }),
     "Conversas",
@@ -174,25 +185,20 @@ export async function listConversations(
     unread: row.unread ?? 0,
     profileName: row.profile_name,
     handoffId: row.handoff_id,
+    classification: ((row.classification as ConversationSummary["classification"] | null) ?? "patient"),
+    classifiedAt: date(row.classified_at),
+    classifiedByName: row.classified_by_name ?? null,
   }));
 }
 
-/** Aplica o "Mostrar" sobre as Abertas. "Aguardando paciente" = a clínica já respondeu (Em atendimento). */
+/** Aplica o filtro das Abertas: "Minhas" = as que estão com a pessoa. */
 export function filterConversations(items: ConversationSummary[], filter: ConversationFilter, userId: string): ConversationSummary[] {
-  switch (filter) {
-    case "nao-atribuidas":
-      return items.filter((item) => !item.assignedTo);
-    case "minhas":
-      return items.filter((item) => item.assignedTo === userId);
-    case "aguardando-paciente":
-      return items.filter((item) => item.status === "in_progress");
-    default:
-      return items;
-  }
+  return filter === "minhas" ? items.filter((item) => item.assignedTo === userId) : items;
 }
 
 /** Quem está com a conversa, na lista e no topo da conversa. */
-export function ownerLabel(item: Pick<ConversationSummary, "open" | "assignedTo" | "assignedName">, userId: string): string {
+export function ownerLabel(item: Pick<ConversationSummary, "open" | "assignedTo" | "assignedName"> & { classification?: ConversationSummary["classification"] }, userId: string): string {
+  if (item.classification && item.classification !== "patient") return "Sem o assistente";
   if (!item.open) return "Com o assistente";
   if (!item.assignedTo) return "Sem responsável";
   if (item.assignedTo === userId) return "Com você";

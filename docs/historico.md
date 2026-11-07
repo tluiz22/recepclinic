@@ -1110,3 +1110,13 @@ Pedido do cliente depois do staging:
   visto de Assumir/Transferir/Enviar); agora renova. A proteção continua: mensagem que a tela ainda não mostrou recusa.
   Teste de banco novo (falha sem a correção).
 
+
+## NA, conversas que não são atendimento (07/nov/2026)
+
+Cliente pediu NA1 a NA6 sem parar, com testes e Playwright a cada etapa, recaptura das telas pendentes, merge na `main`
+e push para o staging (migração autorizada só no staging; `faturamento` não atualizada). Implementação, achados do
+Playwright (menu ⋯ cortado, marcar pela Atendimento caindo em "acesso negado") e roteiro de validação no
+`conversas-nao-atendimento.md`. Testes: 1019 de unidade; 949 de banco passando no local (as 14 falhas são do banco local
+com as regras da `faturamento`: NFS-e e a varredura de tabelas de cobrança, fora da NA). 28 capturas refeitas
+(a `atendimento` com a Central desligada só durante a captura). Migrações `20261226120000`, `20261226130000` e
+`20261226140000` aplicadas no staging (simuladas antes e conferidas depois).

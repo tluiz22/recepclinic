@@ -328,6 +328,21 @@ const sideLinkClass = (active: boolean) =>
 
       </div>
 
+      {
+        // "Ajuda desta tela" (cliente, 07/nov/2026, opção B): no pé do menu lateral, fora da tela, para não ocupar uma
+        // faixa acima do título; sempre à vista, inclusive com as seções de Configurações abertas.
+        helpArticle && (
+          <a
+            href={`/admin/ajuda/${helpArticle.id}`}
+            data-help-open
+            data-help-title={helpArticle.title}
+            class="group/side mb-2 flex h-10 shrink-0 items-center gap-3 rounded-[10px] px-2.5 text-[15px] font-semibold text-brand-ink no-underline hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          >
+            <Icon name="question-circle" class="h-5 w-5 shrink-0 text-brand" strokeWidth={1.8} />
+            Ajuda desta tela
+          </a>
+        )
+      }
       <div class="flex shrink-0 items-center gap-2.5 border-t border-line px-1.5 pt-3">
         <span class="min-w-0 flex-1 truncate text-sm text-ink-soft">{whoLabel}</span>
         <form method="POST" action="/api/admin/auth/logout">
@@ -359,6 +374,22 @@ const sideLinkClass = (active: boolean) =>
           </div>
 
           <div class="flex shrink-0 items-center gap-3">
+            {
+              // "Ajuda desta tela" no celular e no tablet (cliente, 07/nov/2026, opção B): ícone no cabeçalho, ao lado
+              // de Sair, sem a faixa acima do título.
+              helpArticle && (
+                <a
+                  href={`/admin/ajuda/${helpArticle.id}`}
+                  data-help-open
+                  data-help-title={helpArticle.title}
+                  aria-label="Ajuda desta tela"
+                  title="Ajuda desta tela"
+                  class="flex h-9 w-9 items-center justify-center rounded-[7px] border border-line-strong bg-white text-brand hover:bg-canvas"
+                >
+                  <Icon name="question-circle" class="h-5 w-5" strokeWidth={1.8} />
+                </a>
+              )
+            }
             {
               // Dentro da clínica, a faixa amarela já diz que é o Suporte. No celular, "Suporte RecepClinic"
               // empurrava o "Sair" para fora da tela (teste da R10); abaixo de 380px, o papel também sai (QA-01
@@ -409,20 +440,6 @@ const sideLinkClass = (active: boolean) =>
         tabindex="-1"
         class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pt-8 lg:px-6 ${fill ? "lg:flex lg:min-h-0 lg:flex-col lg:pb-6" : "lg:pb-12"} ${frame}`}
       >
-        {
-          helpArticle && (
-            <div class="mb-2 flex justify-end">
-              <a
-                href={`/admin/ajuda/${helpArticle.id}`}
-                data-help-open
-                data-help-title={helpArticle.title}
-                class="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-[15px] font-semibold text-brand-ink no-underline hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-              >
-                <Icon name="life-buoy" class="h-[18px] w-[18px]" strokeWidth={1.8} /> Ajuda desta tela
-              </a>
-            </div>
-          )
-        }
         <slot />
       </main>
     </div>

@@ -5,27 +5,13 @@
 > cliente). Pendentes do cliente antes de usar com pacientes: modelo "Retomar conversa", campos do webhook, v4/
 > `WHATSAPP_ES_CONFIG_ID`, cópia do bucket/PITR. Push na `main` só com autorização (regra da sessão de 06/nov).
 >
-> **Conversas que não são atendimento (NA, 06/nov):** análise, decisões 1 a 5 e telas (NA0) aprovadas; próximo: NA1 na
-> branch `nao-atendimento`. Plano em [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
+> **NA, conversas que não são atendimento (07/nov):** NA1 a NA6 feitas e **no staging** (migrações `20261226120000`,
+> `20261226130000` e `20261226140000` aplicadas lá; produção não). **Cliente valida** pelo roteiro no fim do
+> [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md). Branch `nao-atendimento` juntada na `main`.
 >
-> **Estado atual (retomar daqui), 06/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
->
-> **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
-> aplicadas nos dois; base publicada). **Validada pelo cliente (05/nov).**
->
-> **Ajustes do bot (06/nov):** sem "Obrigado! Já repassamos…" e sem a pergunta do motivo antes da recepção (transfere
-> direto). Na `main` (staging); cliente valida. Detalhe no `historico.md`.
->
-> **Ajustes da tela Conversas (06/nov):** cabeçalho preso no topo no celular, conversa e lista atualizando a cada 10 s,
-> tela mais larga no computador. Na `main` (staging); cliente valida. Captura `conversas` refeita.
->
-> **Nome da agenda (06/nov):** agenda de profissional sempre com o nome dele; "Exames" automática com o item
-> (migração `20261225120000` aplicada no staging; produção não). Na `main` (staging); cliente valida. Captura
-> `config-agendas` refeita. **Push na `main` só com autorização do cliente (06/nov).**
->
-> **Conversas como o WhatsApp + anexo + bot (06/nov):** tela na altura da janela no computador, conversa em tela cheia
-> no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
-> no staging (06/nov). Captura `conversas` refeita.
+> **Ajuda desta tela (07/nov, `32df66f`):** no pé do menu lateral e, no celular, ícone "?" no cabeçalho. **No staging**
+> (push de 07/nov); cliente valida. As 28 capturas refeitas (fila vazia). `faturamento` ainda sem esta parte nem a NA
+> (trazer só com o OK).
 >
 > **Áudio da Conversas (07/nov, `7e8613c`):** não tocava (CSP) e demorava (só a rotina de 1 min); corrigido, validado
 > no staging e **na produção**. Detalhe no `producao.md`.

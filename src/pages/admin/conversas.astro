@@ -6,7 +6,10 @@
 // T1 opção C; abaixo de 1280px, a faixa da próxima consulta com "Ver paciente", T5). No celular, a lista, a conversa e o
 // painel em telas separadas, com "Voltar". Administrador, Recepção e Suporte veem
 // todas; o Profissional, só as que estão com ele. Notificações num botão no topo (N1). Responder (dentro das 24 h),
-// Assumir e Transferir (CN4a; decisão 5 e R2): quem responde assume; com outra dona, a tela confirma antes.
+// Assumir e Transferir (CN4a; decisão 5 e R2): quem responde assume; com outra dona, a tela confirma antes. Conversas que
+// não são atendimento (NA4; telas NA0, cliente, 06/nov/2026): aba "Pessoal e admin." com os números marcados e as
+// mensagens novas; o Administrador e a Recepção marcam pelo menu ⋯ da conversa (com confirmação) e desfazem com "Voltar
+// para atendimento". Em Abertas, o filtro é Todas ou Minhas.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import FinishForm from "../../components/admin/FinishAttendanceForm.astro";
@@ -19,6 +22,7 @@ import { attachmentOf, bubbleOf, deliveryLabel } from "../../lib/centralBubbles"
 import { formatInstant, localDateOf } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
 import {
+  CLASSIFICATION_LABELS,
   filterConversations,
   isCentralActive,
   listConversationMedia,
@@ -53,12 +57,7 @@ if (!allowed || !clinic.features.includes("central_attendance") || !(await isCen
 }
 
 const params = Astro.url.searchParams;
-const FILTERS: Record<ConversationFilter, string> = {
-  todas: "Todas",
-  "nao-atribuidas": "Não atribuídas",
-  minhas: "Minhas",
-  "aguardando-paciente": "Aguardando paciente",
-};
+const FILTERS: Record<ConversationFilter, string> = { todas: "Todas", minhas: "Minhas" };
 const search = (params.get("busca") ?? "").trim().slice(0, 80);
 const filter: ConversationFilter = (params.get("mostrar") as ConversationFilter) in FILTERS ? (params.get("mostrar") as ConversationFilter) : "todas";
 const selectedPhone = /^\+\d{10,15}$/.test(params.get("conversa") ?? "") ? params.get("conversa")! : null;
@@ -68,19 +67,31 @@ const cursor: MessageCursor | null = (() => {
   return sortAt && id && !Number.isNaN(Date.parse(sortAt)) && /^[0-9a-f-]{36}$/.test(id) ? { sortAt, id } : null;
 })();
 
-const [openItems, devices] = await Promise.all([
+// Aba "Pessoal e admin." (NA): Administrador, Recepção e Suporte (o Profissional não vê esses números).
+const canEdit = clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception");
+// Quem marca e desmarca: só Administrador e Recepção (decisão 3).
+const canMark = clinic.roles.some((role) => role === "admin" || role === "reception");
+const [openItems, devices, classifiedItems] = await Promise.all([
   listConversations(db, clinic.clinicId, { search }),
   listMyDevices(db, clinic.clinicId, clinic.userId),
+  canEdit ? listConversations(db, clinic.clinicId, { classified: true, search: params.get("aba") === "pessoal" ? search : null }) : Promise.resolve([] as ConversationSummary[]),
 ]);
 // Aba: a pedida; vindo de uma notificação ou de um link, a da conversa escolhida.
-let finished = params.get("aba") === "finalizadas";
+let personal = canEdit && params.get("aba") === "pessoal";
+let finished = !personal && params.get("aba") === "finalizadas";
 let finishedItems: ConversationSummary[] = finished ? await listConversations(db, clinic.clinicId, { finished: true, search }) : [];
-if (selectedPhone && !finished && !openItems.some((item) => item.phone === selectedPhone)) {
-  finishedItems = await listConversations(db, clinic.clinicId, { finished: true });
-  if (finishedItems.some((item) => item.phone === selectedPhone)) finished = true;
+if (selectedPhone && !personal && !finished && !openItems.some((item) => item.phone === selectedPhone)) {
+  if (classifiedItems.some((item) => item.phone === selectedPhone)) personal = true;
+  else {
+    finishedItems = await listConversations(db, clinic.clinicId, { finished: true });
+    if (finishedItems.some((item) => item.phone === selectedPhone)) finished = true;
+  }
 }
-const shown = finished ? finishedItems : filterConversations(openItems, filter, clinic.userId);
-const selected = selectedPhone ? ([...openItems, ...finishedItems].find((item) => item.phone === selectedPhone) ?? null) : null;
+const shown = personal ? classifiedItems : finished ? finishedItems : filterConversations(openItems, filter, clinic.userId);
+const selected = selectedPhone ? ([...openItems, ...finishedItems, ...classifiedItems].find((item) => item.phone === selectedPhone) ?? null) : null;
+const marked = !!selected && selected.classification !== "patient";
+// Mensagens novas nos números marcados (por pessoa), no rótulo da aba.
+const classifiedUnread = classifiedItems.reduce((sum, item) => sum + item.unread, 0);
 
 // A conversa: 50 mensagens (as mais novas, ou as anteriores ao cursor), em ordem de hora.
 let thread: { messages: CentralMessage[]; next: MessageCursor | null } | null = null;
@@ -113,7 +124,6 @@ const names = new Map(
 const panel: Panel | null =
   selected && thread ? await loadConversationPanel(db, clinic.clinicId, { contactId: selected.contactId, phone: selected.phone }, { insurance: clinic.features.includes("insurance"), now: new Date() }) : null;
 const showPanel = params.get("painel") === "1";
-const canEdit = clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception");
 const linking = !!selected && !panel?.contact && canEdit && params.get("ligar") === "1";
 // Responder, assumir e transferir (CN4a). O Profissional responde só na que está com ele; a janela de 24 h conta da
 // última mensagem do paciente (fora dela, só o modelo "Retomar conversa", CN4b).
@@ -170,12 +180,15 @@ const lineAt = (line: Line) => (line.kind === "message" ? line.message.sortAt : 
 // Links: a tela guarda a aba, o "Mostrar" e a busca.
 const hrefWith = (change: Record<string, string | null>) => {
   const next = new URLSearchParams();
-  const base: Record<string, string | null> = { aba: finished ? "finalizadas" : null, mostrar: filter === "todas" ? null : filter, busca: search || null, conversa: null, antes: null, painel: null, ligar: null, ...change };
+  const base: Record<string, string | null> = { aba: personal ? "pessoal" : finished ? "finalizadas" : null, mostrar: filter === "todas" || finished || personal ? null : filter, busca: search || null, conversa: null, antes: null, painel: null, ligar: null, ...change };
   for (const [key, value] of Object.entries(base)) if (value) next.set(key, value);
   const query = next.toString();
   return `/admin/conversas${query ? `?${query}` : ""}`;
 };
 const conversationHref = (phone: string) => hrefWith({ conversa: phone });
+// Depois de marcar: a conversa na aba "Pessoal e admin."; depois de voltar para atendimento, nas Finalizadas (com o bot).
+const markedHref = (phone: string) => `/admin/conversas?aba=pessoal&conversa=${encodeURIComponent(phone)}`;
+const unmarkedHref = (phone: string) => `/admin/conversas?aba=finalizadas&conversa=${encodeURIComponent(phone)}`;
 const backHref = hrefWith({});
 const threadHref = selected ? hrefWith({ conversa: selected.phone }) : backHref;
 const linkParams: Record<string, string> = Object.fromEntries(new URL(hrefWith({ conversa: selected?.phone ?? null, ligar: "1", painel: showPanel ? "1" : null }), "http://x").searchParams);
@@ -207,6 +220,11 @@ const STATUS = {
   in_progress: { label: "Em atendimento", tone: "bg-brand-soft text-brand-ink" },
 } as const;
 const statusOf = (item: ConversationSummary) => (item.status ? STATUS[item.status] : null);
+const CLASSIFICATION_TONE = { personal: "bg-[#ece6f6] text-[#4b3680]", administrative: "bg-[#e3ecf7] text-[#1f4e86]" } as const;
+const markOf = (item: ConversationSummary) =>
+  item.classification === "patient" ? null : { label: CLASSIFICATION_LABELS[item.classification], tone: CLASSIFICATION_TONE[item.classification] };
+const markedBy = (item: ConversationSummary) =>
+  item.classifiedAt ? `Marcada${item.classifiedByName ? ` por ${firstNameOf(item.classifiedByName)}` : ""} · ${formatInstant(item.classifiedAt, clinic.timezone, "dd/MM 'às' HH:mm")}` : null;
 const waitingFor = (item: ConversationSummary) => (item.status === "waiting_clinic" && item.statusAt ? `aguarda ${ago(item.statusAt)}` : null);
 
 const BUBBLE_TONE = {
@@ -239,38 +257,56 @@ const tabClass = (active: boolean) =>
     <!-- Lista -->
     <section aria-label="Lista de conversas" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", selected && "max-lg:hidden", selected && showPanel && "max-xl:hidden"]}>
       <nav class="flex border-b border-line" aria-label="Abertas ou finalizadas" data-live="tabs">
-        <a href={hrefWith({ aba: null })} class={tabClass(!finished)} aria-current={!finished ? "page" : undefined}>Abertas ({openItems.length})</a>
+        <a href={hrefWith({ aba: null })} class={tabClass(!finished && !personal)} aria-current={!finished && !personal ? "page" : undefined}>Abertas ({openItems.length})</a>
         <a href={hrefWith({ aba: "finalizadas", mostrar: null })} class={tabClass(finished)} aria-current={finished ? "page" : undefined}>Finalizadas</a>
+        {canEdit && (
+          <a href={hrefWith({ aba: "pessoal", mostrar: null })} class={`${tabClass(personal)} gap-1.5 px-1 text-center leading-tight`} aria-current={personal ? "page" : undefined}>
+            Pessoal e admin.
+            {classifiedUnread > 0 && (
+              <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-xs font-bold text-white" aria-label={`${classifiedUnread} mensagens novas`}>
+                {classifiedUnread}
+              </span>
+            )}
+          </a>
+        )}
       </nav>
       <form method="get" action="/admin/conversas" class="flex flex-wrap items-end gap-2 border-b border-line p-3" data-conversations-filter>
         {finished && <input type="hidden" name="aba" value="finalizadas" />}
+        {personal && <input type="hidden" name="aba" value="pessoal" />}
+        {!finished && !personal && filter !== "todas" && <input type="hidden" name="mostrar" value={filter} />}
         <div class="flex min-w-0 flex-[3_1_160px] flex-col gap-1">
           <label for="conversas_busca" class="text-[13px] font-semibold text-ink-mid">Buscar</label>
           <input id="conversas_busca" name="busca" type="search" value={search} placeholder="Nome ou telefone" class={`${CONTROL} w-full`} />
         </div>
-        {
-          !finished && (
-            <div class="flex min-w-0 flex-[2_1_120px] flex-col gap-1">
-              <label for="conversas_mostrar" class="text-[13px] font-semibold text-ink-mid">Mostrar</label>
-              <select id="conversas_mostrar" name="mostrar" class={`${CONTROL} w-full`} data-submit-on-change>
-                {Object.entries(FILTERS).map(([value, label]) => (
-                  <option value={value} selected={value === filter}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )
-        }
         <button type="submit" class="sr-only focus:not-sr-only">Buscar</button>
       </form>
+      {
+        !finished && !personal && (
+          <nav class="flex gap-1.5 border-b border-line px-3 py-2.5" aria-label="Filtrar as abertas">
+            {(Object.entries(FILTERS) as [ConversationFilter, string][]).map(([value, label]) => (
+              <a
+                href={hrefWith({ mostrar: value === "todas" ? null : value })}
+                aria-current={value === filter ? "true" : undefined}
+                class:list={[
+                  "inline-flex min-h-9 items-center rounded-full border px-3.5 text-sm no-underline",
+                  value === filter ? "border-ink bg-ink font-semibold text-white" : "border-line-strong bg-white text-ink hover:bg-canvas",
+                ]}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        )
+      }
       <ul class="min-h-0 flex-1 overflow-y-auto" data-live="list">
         {
           shown.length === 0 && (
             <li class="px-4 py-6 text-[15px] text-ink-soft">
               {search
                 ? "Nenhuma conversa com esse nome ou telefone."
-                : finished
+                : personal
+                  ? "Nenhum número marcado. Conversa pessoal ou com fornecedor: abra a conversa e use o menu ⋯ para marcar."
+                  : finished
                   ? "Nenhuma conversa finalizada ainda."
                   : filter === "todas"
                     ? "Nenhuma conversa aberta. Quando o paciente pedir para falar com a clínica, a conversa aparece aqui."
@@ -299,7 +335,8 @@ const tabClass = (active: boolean) =>
                   <span class="truncate text-sm text-ink-mid">{previewOf(item)}</span>
                   <span class="flex flex-wrap items-center gap-2 text-xs">
                     {status && <span class={`rounded-full px-2 py-0.5 font-semibold ${status.tone}`}>{status.label}</span>}
-                    <span class="text-ink-soft">{ownerLabel(item, clinic.userId)}</span>
+                    {markOf(item) && <span class={`rounded-md px-2 py-0.5 font-semibold ${markOf(item)!.tone}`}>{markOf(item)!.label}</span>}
+                    {!markOf(item) && <span class="text-ink-soft">{ownerLabel(item, clinic.userId)}</span>}
                     {item.unread > 0 && (
                       <span class="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 font-bold text-white" aria-label={`${item.unread} não lidas`}>
                         {item.unread}
@@ -312,6 +349,7 @@ const tabClass = (active: boolean) =>
           })
         }
       </ul>
+      {personal && <p class="flex-none border-t border-line px-3.5 py-2.5 text-xs text-ink-soft">Estes números não passam pelo bot e não contam nas métricas nem nos pendentes.</p>}
     </section>
 
     <!-- Conversa -->
@@ -353,16 +391,40 @@ const tabClass = (active: boolean) =>
                   </span>
                   <span class="flex flex-wrap items-center gap-2 text-[13px]" data-live="status">
                     {statusOf(selected) && <span class={`rounded-full px-2 py-0.5 font-semibold ${statusOf(selected)!.tone}`}>{statusOf(selected)!.label}</span>}
-                    <span class="text-ink-soft">
-                      {ownerLabel(selected, clinic.userId)}
-                      {waitingFor(selected) && ` · ${waitingFor(selected)}`}
-                    </span>
+                    {markOf(selected) ? (
+                      <>
+                        <span class={`rounded-md px-2 py-0.5 font-semibold ${markOf(selected)!.tone}`}>{markOf(selected)!.label}</span>
+                        {markedBy(selected) && <span class="text-ink-soft">{markedBy(selected)}</span>}
+                      </>
+                    ) : (
+                      <span class="text-ink-soft">
+                        {ownerLabel(selected, clinic.userId)}
+                        {waitingFor(selected) && ` · ${waitingFor(selected)}`}
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
-              {selected.open && (
-                <div class="flex flex-wrap items-center gap-1.5 max-sm:w-full max-sm:[&>*]:flex-1">
-                  {canEdit && !isMine && thread && (
+              {marked && canMark && (
+                <form method="POST" action="/api/admin/classificar-conversa" class="flex max-sm:w-full">
+                  <input type="hidden" name="telefone" value={selected.phone} />
+                  <input type="hidden" name="classificacao" value="patient" />
+                  <input type="hidden" name="return_to" value={threadHref} />
+                  <input type="hidden" name="depois" value={unmarkedHref(selected.phone)} />
+                  <button
+                    type="submit"
+                    class={`${ACTION} js-confirm-delete w-full`}
+                    data-confirm-title="Voltar para atendimento?"
+                    data-confirm-message={`O bot volta a responder ${formatPhoneBR(selected.phone)} na próxima mensagem, e a conversa volta a contar nas métricas. Nada é enviado agora.`}
+                    data-confirm-label="Voltar para atendimento"
+                  >
+                    Voltar para atendimento
+                  </button>
+                </form>
+              )}
+              {!marked && (selected.open || canMark) && (
+                <div class:list={["flex flex-wrap items-center gap-1.5", selected.open && "max-sm:w-full max-sm:[&>*]:flex-1"]}>
+                  {selected.open && canEdit && !isMine && thread && (
                     <form method="POST" action="/api/admin/conversas/responsavel" class="flex">
                       <input type="hidden" name="acao" value="assumir" />
                       <input type="hidden" name="telefone" value={selected.phone} />
@@ -384,8 +446,13 @@ const tabClass = (active: boolean) =>
                       Transferir
                     </button>
                   )}
-                  {selected.statusAt && (
+                  {selected.open && selected.statusAt && (
                     <FinishForm item={{ phone: selected.phone, name: displayName(selected), statusAt: selected.statusAt }} primary={false} returnTo={backHref} compact />
+                  )}
+                  {canMark && (
+                    <button type="button" aria-label="Mais ações" title="Mais ações" aria-haspopup="dialog" class={`${ACTION} px-3.5 max-sm:flex-none!`} data-more-open>
+                      ⋯
+                    </button>
                   )}
                 </div>
               )}
@@ -531,7 +598,7 @@ const tabClass = (active: boolean) =>
                     rows="1"
                     maxlength="4096"
                     required
-                    placeholder={selected.open ? "Escreva a resposta" : "Escreva para reabrir o atendimento"}
+                    placeholder={selected.open ? "Escreva a resposta" : marked ? "Escreva uma mensagem" : "Escreva para reabrir o atendimento"}
                     class="max-h-40 min-h-11 flex-1 resize-none rounded-lg border border-line-strong bg-white px-3 py-2.5 text-[15px] leading-snug text-ink"
                     data-composer-text></textarea>
                   <button
@@ -597,6 +664,17 @@ const tabClass = (active: boolean) =>
           <a href={threadHref} class="mb-3 inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold text-brand-ink no-underline xl:hidden">
             <Icon name="chevron-left" class="h-5 w-5" /> Voltar para a conversa
           </a>
+          {markOf(selected) && (
+            <section aria-label="Classificação" class="mb-4 flex flex-col gap-1.5 border-b border-line pb-4">
+              <span class="text-xs font-bold tracking-[.06em] text-ink-soft">CLASSIFICAÇÃO</span>
+              <span class="text-sm text-ink">
+                {selected.classification === "personal" ? "Pessoal" : "Administrativo/outros"}
+                {selected.classifiedAt && `, desde ${formatInstant(selected.classifiedAt, clinic.timezone, "dd/MM 'às' HH:mm")}`}
+                {selected.classifiedByName && `, por ${firstNameOf(selected.classifiedByName)}`}.
+              </span>
+              <span class="text-[13px] text-ink-soft">Sem bot, fora das métricas e dos pendentes. Os botões dos lembretes de consulta continuam valendo.</span>
+            </section>
+          )}
           <ConversationPanel
             panel={panel}
             phone={selected.phone}
@@ -723,6 +801,38 @@ const tabClass = (active: boolean) =>
     )
   }
 
+  {
+    canMark && selected && !marked && (
+      <dialog
+        id="more_dialog"
+        aria-label="Mais ações"
+        class="m-0 w-[290px] max-w-[calc(100vw-2rem)] rounded-xl border border-line-strong bg-white p-1.5 text-ink shadow-[0_10px_30px_rgba(20,40,30,.18)] backdrop:bg-transparent max-sm:m-auto"
+      >
+        <div class="flex flex-col">
+          <span class="px-3 pt-2 pb-1 text-xs font-bold tracking-[.06em] text-ink-soft">NÃO É ATENDIMENTO</span>
+          {(["personal", "administrative"] as const).map((value) => (
+            <form method="POST" action="/api/admin/classificar-conversa" class="flex">
+              <input type="hidden" name="telefone" value={selected.phone} />
+              <input type="hidden" name="classificacao" value={value} />
+              <input type="hidden" name="return_to" value={threadHref} />
+              <input type="hidden" name="depois" value={markedHref(selected.phone)} />
+              <button
+                type="submit"
+                class="js-confirm-delete min-h-11 w-full rounded-md px-3 text-left text-[15px] text-ink hover:bg-canvas"
+                data-confirm-title={`Marcar como ${value === "personal" ? "Pessoal" : "Administrativo/outros"}?`}
+                data-confirm-message={`O bot para de responder ${formatPhoneBR(selected.phone)}. A conversa sai dos pendentes e das métricas e vai para "Pessoal e admin.". Dá para desfazer depois.`}
+                data-confirm-label="Marcar"
+              >
+                {value === "personal" ? "Marcar como Pessoal" : "Marcar como Administrativo/outros"}
+              </button>
+            </form>
+          ))}
+          <span class="border-t border-line px-3 pt-2 pb-1.5 text-xs text-ink-soft">Cada opção pede confirmação antes de marcar.</span>
+        </div>
+      </dialog>
+    )
+  }
+
   <ConfirmDeleteDialog />
 </AdminLayout>
 
@@ -805,10 +915,26 @@ const tabClass = (active: boolean) =>
     setInterval(live, LIVE_MS);
     document.addEventListener("visibilitychange", live);
   }
-  // "Mostrar" aplica na hora (sem JavaScript, o botão Buscar envia).
-  document.querySelectorAll<HTMLSelectElement>("[data-submit-on-change]").forEach((select) => {
-    select.addEventListener("change", () => select.form?.requestSubmit());
-  });
+  // Menu ⋯ da conversa (NA): abre logo abaixo do botão (no celular, no meio da tela), por cima de tudo; fecha ao clicar
+  // fora, com Esc ou ao escolher (a confirmação vem em seguida).
+  const moreButton = document.querySelector<HTMLButtonElement>("[data-more-open]");
+  const moreDialog = document.getElementById("more_dialog") as HTMLDialogElement | null;
+  if (moreButton && moreDialog) {
+    moreButton.addEventListener("click", () => {
+      moreDialog.showModal();
+      if (window.matchMedia("(min-width: 640px)").matches) {
+        const rect = moreButton.getBoundingClientRect();
+        const width = moreDialog.offsetWidth;
+        moreDialog.style.position = "fixed";
+        moreDialog.style.top = `${Math.min(rect.bottom + 4, window.innerHeight - moreDialog.offsetHeight - 8)}px`;
+        moreDialog.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`;
+      }
+    });
+    moreDialog.addEventListener("click", (event) => {
+      if (event.target === moreDialog) moreDialog.close();
+    });
+    moreDialog.querySelectorAll("button[type=submit]").forEach((button) => button.addEventListener("click", () => moreDialog.close()));
+  }
   // Caixa de resposta: cresce com o texto; Ctrl+Enter (ou Cmd+Enter) envia; um envio por vez.
   const composer = document.querySelector<HTMLFormElement>("[data-composer]");
   const text = composer?.querySelector<HTMLTextAreaElement>("[data-composer-text]");

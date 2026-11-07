@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+Nenhuma (recapturadas em 07/11/2026: as 26 da "Ajuda desta tela" e as da NA, `conversas` e `atendimento`).
