@@ -168,3 +168,27 @@ Marcar (Recepção): a especialidade principal ao lado do nome em "Com quem". Jo
    gerais (valores, convênios, outras informações do escolhido); "Outro profissional"; "Exames".
 5. Clínica de um profissional (piloto do staging): o bot igual a antes.
 6. Marcar (Recepção): paciente com convênio e profissional que não atende o plano mostra o aviso.
+
+## 9. Serviços por profissional (etapa MS, pedido do cliente em 07/nov/2026)
+
+**Pedido:** serviços vinculados ao médico; cada médico tem os próprios serviços, com características (duração, valor,
+locais, retorno, preparo) só daquele serviço daquele profissional; na lista de Serviços, com mais de um profissional,
+escolher o profissional.
+
+**Hoje [Código]:** o serviço é da clínica e liga a várias agendas (`service_agendas`, N:N); duração, valor, retorno,
+preparo e locais (com valor por local, `service_locations`) são do serviço, iguais para todas as agendas. Ex.: no seed,
+"Avaliação inicial" é de Marina e Rafael ao mesmo tempo. Exames da agenda da equipe não têm profissional.
+
+**Proposta:** o serviço passa a ter **um dono**: um profissional (`services.professional_id`) ou a **equipe** (exames na
+agenda sem profissional). Tudo o que é do serviço vale só para ele. Serviço usado por vários profissionais hoje vira
+uma cópia por profissional, com as mesmas características (ver S2). O bot, a página de agendar e a Marcar já trabalham
+por agenda: com um dono só, o "Com quem" do serviço deixa de existir (já é do profissional escolhido).
+
+**Decisões (uma por vez):**
+
+| # | Pergunta | Recomendação |
+|---|---|---|
+| S1 | Quem cadastra o serviço do profissional? | Administrador e o próprio profissional (só os dele) |
+| S2 | Serviço de vários profissionais hoje | Copiar para cada um, com as mesmas características |
+| S3 | Exames da agenda da equipe | Ficam como serviços da equipe (sem profissional) |
+| S4 | Lista de Serviços com vários profissionais | Desenhar as opções antes de decidir |
