@@ -3,11 +3,12 @@
 > **Próxima sessão (cliente, 07/nov):** **validados no staging (07/nov):** troca cartão ↔ Pix (com o Suporte, o
 > celular do pagador antes do Checkout e a troca de cartão aberta descartada ao mudar para Pix), EC (mensagens que a
 > Central não mostra, com a localização só por coordenadas e "Ver no mapa") e o item 5 (F8.1, F8.2, F8.2b, F8.3,
-> ajuda contextual e menu lateral). **Na produção (07/nov, `47e086d`)**, com as 22 migrações; saúde `ok`. Falta (cliente),
-> antes do 1º contrato: chave e tokenização no Asaas de produção, `ASAAS_API_KEY`/`ASAAS_BASE_URL`/`ASAAS_WEBHOOK_TOKEN`
-> na Vercel da produção + Redeploy, webhook no painel (`/api/asaas/webhook`). Depois, os pendentes de "Pendências".
-> **Staging = produção = `main` (`47e086d`, 07/nov)**, com o financeiro e a EC; a produção ainda sem as variáveis do
-> Asaas (nada é cobrado lá até elas).
+> ajuda contextual e menu lateral). **Na produção (07/nov, `47e086d`)**, com as 22 migrações; saúde `ok`. **Asaas de
+> produção configurado (07/nov):** chave (conta aprovada), 3 variáveis na Vercel + Redeploy, webhook no painel (ativo,
+> não sequencial, com token, 31 eventos; token certo 200, errado 401). Falta (cliente): **tokenização do cartão**
+> pedida ao Asaas (sem ela, o cartão pago na implantação não liga à assinatura; Pix e cartão sem implantação já
+> funcionam); liberada, o Claude confere antes do 1º contrato com implantação no cartão. Depois, "Pendências".
+> **Staging = produção = `main` (`47e086d`, 07/nov)**, com o financeiro e a EC.
 >
 > **Faturamento na `main` e no staging (07/nov, `3919ca4`, a pedido do cliente):** branch `faturamento` juntada na
 > `main` (F12.1 a F12.8, F12.2b a F12.2i) depois de trazer a `main` para ela; 1087 de unidade, 1034 de banco, check e

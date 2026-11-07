@@ -191,3 +191,4 @@ primeiro backup diário (27/out).
 alerta) até a primeira execução. Logo depois de a Vercel publicar, chamar uma vez:
 `curl -s -H "Authorization: Bearer <CRON_SECRET da produção>" https://app.recepclinic.com.br/api/cron/<rotina>` (GET; o
 POST de fora é recusado pela proteção do Astro).
+| 07/nov | — | — | **Asaas de produção configurado (cliente, guiado pelo Claude):** chave da API (conta aprovada; consulta de leitura 200) no `.env.production`; `ASAAS_API_KEY`, `ASAAS_BASE_URL=https://api.asaas.com/v3` e `ASAAS_WEBHOOK_TOKEN` (64 hex, gerado no `.env.production`) na Vercel da produção + Redeploy; webhook `https://app.recepclinic.com.br/api/asaas/webhook` no painel (ativo, v3, não sequencial, com token, 31 eventos de cobrança). Conferido: token errado 401, certo 200; saúde `ok`. **Falta:** tokenização do cartão (pedida pelo cliente ao Asaas). |
