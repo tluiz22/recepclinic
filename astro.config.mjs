@@ -28,7 +28,9 @@ export default defineConfig({
         "media-src 'self' https://*.supabase.co",
         "object-src 'none'",
         "base-uri 'self'",
-        "form-action 'self'",
+        // Assinatura (F12.2i/g): "Informar o cartão no Asaas" e "Trocar o cartão" são formulários que o servidor
+        // redireciona para a fatura ou o Checkout do Asaas; o navegador aplica o form-action também ao redirecionamento.
+        "form-action 'self' https://asaas.com https://*.asaas.com",
         "frame-ancestors 'none'",
       ],
       styleDirective: {
