@@ -1,6 +1,10 @@
 # RecepClinic
 
-> **Próxima sessão (cliente, 07/nov):** **validados no staging (07/nov):** troca cartão ↔ Pix (com o Suporte, o
+> **Próxima sessão (cliente, 07/nov):** **Central de Atendimento finalizada** (etapa 1 na produção, ligada na piloto,
+> funcionando). Retomar o planejamento e a implementação da **NFS-e pelo Asaas**: ler o bloco de retomada do
+> [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md); código só com o OK do cliente, direto na `main`.
+>
+> **Sessão anterior (07/nov):** **validados no staging (07/nov):** troca cartão ↔ Pix (com o Suporte, o
 > celular do pagador antes do Checkout e a troca de cartão aberta descartada ao mudar para Pix), EC (mensagens que a
 > Central não mostra, com a localização só por coordenadas e "Ver no mapa") e o item 5 (F8.1, F8.2, F8.2b, F8.3,
 > ajuda contextual e menu lateral). **Na produção (07/nov, `47e086d`)**, com as 22 migrações; saúde `ok`. **Asaas de
