@@ -1,5 +1,7 @@
 # Roteiro de validação do faturamento (F12.2b a F12.2h), no local
 
+**Validado pelo cliente no staging (07/nov/2026), partes 1 a 9.**
+
 Branch `faturamento`. Senha de todos: `recepclinic-local`. Painel: http://localhost:4321/admin/login ·
 e-mails: http://127.0.0.1:54324 (Mailpit). Asaas: sandbox (`.env`, chave com `\$`; ver o plano).
 
