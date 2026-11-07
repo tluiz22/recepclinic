@@ -27,6 +27,9 @@
 > no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
 > no staging (06/nov). Captura `conversas` refeita.
 >
+> **Áudio da Conversas (07/nov, `7e8613c`):** não tocava (CSP) e demorava (só a rotina de 1 min); corrigido, validado
+> no staging e **na produção**. Detalhe no `producao.md`.
+>
 > **Produção (06/nov, `552019b`):** a `main` inteira, com a Central (12 migrações aplicadas; item `central_attendance`
 > liberado em nenhuma clínica) e todos os ajustes de 06/nov. Saúde `ok`. Antes de liberar a Central numa clínica
 > (cliente): configuração v4 na Meta e `WHATSAPP_ES_CONFIG_ID`, campos do webhook, modelo "Retomar conversa", cópia do
