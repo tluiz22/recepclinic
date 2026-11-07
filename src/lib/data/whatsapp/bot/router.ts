@@ -4,6 +4,7 @@ import { hasFeature } from "../../features";
 import {
   checkHandoff,
   IDLE_TIMEOUT_MINUTES,
+  isClassifiedOut,
   isPastIdleTimeout,
   logAbandonment,
   openConversation,
@@ -53,7 +54,8 @@ import { logError } from "../../../log";
 // uma pergunta do sistema (F6.4). Número bloqueado pela clínica (F9.6b): só
 // os toques no lembrete e o fluxo que eles abrem (cancelar, remarcar); o resto
 // recebe a resposta neutra, uma vez por dia. Nunca lança: o erro vai para o
-// log e a Meta recebe 200 do mesmo jeito.
+// log e a Meta recebe 200 do mesmo jeito. Número marcado como Pessoal ou
+// Administrativo/outros (NA): como o pausado, sem o bot e sem pausa.
 // Mudou o caminho do paciente: atualizar o fluxograma em
 // src/components/admin/tecnologia/botJourney.ts (Tecnologia › Jornada do bot).
 
@@ -73,6 +75,16 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     if (offerTap) await handleOfferTap(b, offerTap);
     else await handleReminderTap(b, reminderTap!, paused);
     return "handled";
+  }
+  // Número marcado como Pessoal ou Administrativo/outros (NA, decisões 2 e 4): o bot não responde. Só seguem os
+  // botões do lembrete e da oferta (acima) e o fluxo que eles abrem (cancelar, remarcar, lista de espera).
+  if (isClassifiedOut(convo)) {
+    if (!MANAGE_STATES.has(convo.state)) return "skipped";
+    if (isBackToMenu(extractSelection(message))) {
+      await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
+      await setConversationState(env.db, env.clinicId, phone, WELCOME, { context: {} }, env.now);
+      return "skipped";
+    }
   }
   if (paused) {
     // Assunto da transferência (jornada E4): a primeira resposta em texto depois da pergunta, guardada sem resposta do

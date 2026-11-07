@@ -147,6 +147,8 @@ const PATH_RULES: PathRule[] = [
   // Central de atendimento (CN9): a tela Conversas e as gravações dela (a tela também confere se está ligada).
   { prefix: "/admin/conversas", feature: "central_attendance" },
   { prefix: "/api/admin/conversas", feature: "central_attendance" },
+  // Marcar a conversa como não atendimento (NA): Conversas e Atendimento, com o bot (a clínica sem a Central também).
+  { prefix: "/api/admin/classificar-conversa", feature: "whatsapp_bot" },
   // Módulo financeiro (F11): menu Financeiro e as gravações dele.
   { prefix: "/admin/financeiro", feature: "finance" },
   { prefix: "/api/admin/financeiro", feature: "finance" },

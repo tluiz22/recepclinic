@@ -188,3 +188,72 @@ export async function finishAttendance(
   const after = await getConversation(db, clinicId, phone);
   return after?.humanHandoff ? "patient_wrote" : "already";
 }
+
+// ---------------------------------------------------------------------------
+// Pessoal e administrativo (NA5; cliente, 06/nov/2026, decisão 5): os números marcados, na tela Atendimento da clínica
+// sem a Central. Sem o texto (só a Central guarda): número, tipo, hora da última mensagem e o aviso de mensagem nova.
+// ---------------------------------------------------------------------------
+
+export type ClassifiedItem = {
+  phone: string;
+  contactId: string | null;
+  name: string | null;
+  classification: "personal" | "administrative";
+  classifiedAt: Date | null;
+  classifiedBy: string | null;
+  /** Última mensagem da conversa (do número ou da clínica). */
+  lastMessageAt: Date | null;
+  /** A última mensagem do número ainda sem resposta da clínica: "Mensagem nova". */
+  hasNew: boolean;
+};
+
+type ClassifiedRow = {
+  contact_phone: string;
+  contact_id: string | null;
+  classification: string;
+  classified_at: string | null;
+  classified_by: string | null;
+  contacts: { full_name: string } | null;
+};
+
+/** Números marcados como Pessoal ou Administrativo/outros, a mensagem mais nova primeiro. */
+export async function listClassifiedConversations(db: DbClient, clinicId: string): Promise<ClassifiedItem[]> {
+  const rows = unwrap(
+    await db
+      .from("conversation_state")
+      .select("contact_phone, contact_id, classification, classified_at, classified_by, contacts ( full_name )")
+      .eq("clinic_id", clinicId)
+      .neq("classification", "patient"),
+    "Pessoal e administrativo",
+  ) as unknown as ClassifiedRow[];
+  if (rows.length === 0) return [];
+  const phones = rows.map((row) => row.contact_phone);
+  const messages = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("contact_phone, direction, message_type, created_at")
+      .eq("clinic_id", clinicId)
+      .in("contact_phone", phones)
+      .order("created_at", { ascending: false })
+      .limit(2000),
+    "Pessoal e administrativo",
+  );
+  const items = rows.map((row): ClassifiedItem => {
+    const mine = messages.filter((m) => m.contact_phone === row.contact_phone);
+    const lastInbound = mine.find((m) => m.direction === "inbound");
+    const lastReply = mine.find((m) => m.direction === "outbound" && (m.message_type === "agent_reply" || m.message_type === "panel_reply"));
+    const classifiedAt = row.classified_at ? new Date(row.classified_at) : null;
+    const inboundAt = lastInbound ? new Date(lastInbound.created_at) : null;
+    return {
+      phone: row.contact_phone,
+      contactId: row.contact_id,
+      name: row.contacts?.full_name ?? null,
+      classification: row.classification === "administrative" ? "administrative" : "personal",
+      classifiedAt,
+      classifiedBy: row.classified_by,
+      lastMessageAt: mine[0] ? new Date(mine[0].created_at) : null,
+      hasNew: !!inboundAt && (!lastReply || inboundAt > new Date(lastReply.created_at)),
+    };
+  });
+  return items.sort((a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0));
+}

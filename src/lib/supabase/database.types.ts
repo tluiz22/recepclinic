@@ -725,14 +725,14 @@ isOneToOne: false
                   ]
                 },"conversation_state": {
                   Row: {
-                    "assigned_at": string | null,"assigned_to": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_changed_by": string | null,"handoff_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"handoff_subject_asked_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"last_message_at": string | null,"last_message_author": string | null,"last_message_preview": string | null,"last_patient_at": string | null,"not_understood_count": number,"profile_name": string | null,"state": string,"updated_at": string
+                    "assigned_at": string | null,"assigned_to": string | null,"classification": string,"classified_at": string | null,"classified_by": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_changed_by": string | null,"handoff_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"handoff_subject_asked_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"last_message_at": string | null,"last_message_author": string | null,"last_message_preview": string | null,"last_patient_at": string | null,"not_understood_count": number,"profile_name": string | null,"state": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_at"?: string | null,"assigned_to"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"last_message_at"?: string | null,"last_message_author"?: string | null,"last_message_preview"?: string | null,"last_patient_at"?: string | null,"not_understood_count"?: number,"profile_name"?: string | null,"state"?: string,"updated_at"?: string
+                    "assigned_at"?: string | null,"assigned_to"?: string | null,"classification"?: string,"classified_at"?: string | null,"classified_by"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"last_message_at"?: string | null,"last_message_author"?: string | null,"last_message_preview"?: string | null,"last_patient_at"?: string | null,"not_understood_count"?: number,"profile_name"?: string | null,"state"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "assigned_at"?: string | null,"assigned_to"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"last_message_at"?: string | null,"last_message_author"?: string | null,"last_message_preview"?: string | null,"last_patient_at"?: string | null,"not_understood_count"?: number,"profile_name"?: string | null,"state"?: string,"updated_at"?: string
+                    "assigned_at"?: string | null,"assigned_to"?: string | null,"classification"?: string,"classified_at"?: string | null,"classified_by"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"last_message_at"?: string | null,"last_message_author"?: string | null,"last_message_preview"?: string | null,"last_patient_at"?: string | null,"not_understood_count"?: number,"profile_name"?: string | null,"state"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -825,14 +825,14 @@ isOneToOne: false
                   ]
                 },"handoff_events": {
                   Row: {
-                    "actor_id": string | null,"assigned_from": string | null,"assigned_to": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"from_status": string,"handoff_id": string | null,"id": number,"kind": string,"occurred_at": string,"origin": string,"to_status": string
+                    "actor_id": string | null,"assigned_from": string | null,"assigned_to": string | null,"classification_from": string | null,"classification_to": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"from_status": string,"handoff_id": string | null,"id": number,"kind": string,"occurred_at": string,"origin": string,"to_status": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "actor_id"?: string | null,"assigned_from"?: string | null,"assigned_to"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"from_status": string,"handoff_id"?: string | null,"id"?: never,"kind"?: string,"occurred_at"?: string,"origin": string,"to_status": string
+                    "actor_id"?: string | null,"assigned_from"?: string | null,"assigned_to"?: string | null,"classification_from"?: string | null,"classification_to"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"from_status": string,"handoff_id"?: string | null,"id"?: never,"kind"?: string,"occurred_at"?: string,"origin": string,"to_status": string
                   }
                   Update: {
-                    "actor_id"?: string | null,"assigned_from"?: string | null,"assigned_to"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"from_status"?: string,"handoff_id"?: string | null,"id"?: never,"kind"?: string,"occurred_at"?: string,"origin"?: string,"to_status"?: string
+                    "actor_id"?: string | null,"assigned_from"?: string | null,"assigned_to"?: string | null,"classification_from"?: string | null,"classification_to"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"from_status"?: string,"handoff_id"?: string | null,"id"?: never,"kind"?: string,"occurred_at"?: string,"origin"?: string,"to_status"?: string
                   }
                   Relationships: [
                     {
@@ -2005,8 +2005,8 @@ isOneToOne: false
             }[]
                            },
 "central_conversations":
-{ Args: { "p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
-              "assigned_name": string,"assigned_to": string,"contact_id": string,"contact_phone": string,"handoff_id": string,"handoff_reason": string,"handoff_started_at": string,"handoff_status": string,"handoff_status_at": string,"handoff_subject": string,"human_handoff": boolean,"last_message_at": string,"last_message_author": string,"last_message_preview": string,"last_patient_at": string,"name": string,"profile_name": string,"unread": number
+{ Args: { "p_classified"?: boolean,"p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"classification": string,"classified_at": string,"classified_by_name": string,"contact_id": string,"contact_phone": string,"handoff_id": string,"handoff_reason": string,"handoff_started_at": string,"handoff_status": string,"handoff_status_at": string,"handoff_subject": string,"human_handoff": boolean,"last_message_at": string,"last_message_author": string,"last_message_preview": string,"last_patient_at": string,"name": string,"profile_name": string,"unread": number
             }[]
                            },
 "central_enabled":
@@ -2269,6 +2269,9 @@ isOneToOne: false
                            },
 "set_contact_bot_limits_exempt":
 { Args: { "p_clinic_id": string,"p_contact_id": string,"p_exempt": boolean }; Returns: undefined
+                           },
+"set_conversation_classification":
+{ Args: { "p_classification": string,"p_clinic_id": string,"p_contact_phone": string }; Returns: boolean
                            },
 "set_fiscal_certificate":
 { Args: { "p_clinic_id": string,"p_password": string,"p_pfx_base64": string,"p_subject_cnpj": string,"p_subject_name": string,"p_terms_version": string,"p_valid_from": string,"p_valid_until": string }; Returns: undefined

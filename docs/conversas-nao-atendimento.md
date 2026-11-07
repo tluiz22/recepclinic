@@ -1,7 +1,7 @@
 # Conversas que não são atendimento (NA)
 
-> **Retomar daqui (06/nov/2026).** Etapa 1 (análise), decisões 1 a 5 e **NA0 (telas) aprovados** pelo cliente.
-> **Próximo:** NA1 na branch `nao-atendimento` (criada da `main` em 07/nov, só local). Nada implementado.
+> **Retomar daqui (07/nov/2026).** NA0 a NA6 feitas (cliente, 07/nov: tudo sem parar, Playwright por etapa, staging no
+> fim). Na `main` e no staging; produção não. **Cliente valida no staging** (roteiro no fim deste arquivo).
 
 ## Objetivo
 
@@ -82,11 +82,45 @@ vierem, seguem a mesma exclusão.
 | Etapa | O quê |
 |---|---|
 | NA0 | Desenho das telas (canvas) e escolha do cliente. **Feito (06/nov)** |
-| NA1 | Migração, função e gatilho; testes de banco (clínica, perfil, auditoria) |
-| NA2 | Bot e webhook; testes (calado, eco, lembrete, reativação) |
-| NA3 | Métricas e contadores; testes (antigas iguais para operacionais) |
-| NA4 | Conversas: ação, selo, aba nova com não lidas |
-| NA5 | Atendimento: ação e seção |
-| NA6 | Jornada do bot, capturas pendentes, todos os testes (inclusive Playwright), staging |
+| NA1 | Migração, função e gatilho; testes de banco (clínica, perfil, auditoria). **Feito (07/nov)** |
+| NA2 | Bot e webhook; testes (calado, eco, lembrete, reativação). **Feito (07/nov)** |
+| NA3 | Métricas e contadores; testes (antigas iguais para operacionais). **Feito (07/nov)** |
+| NA4 | Conversas: ação, selo, aba nova com não lidas. **Feito (07/nov)** |
+| NA5 | Atendimento: ação e seção. **Feito (07/nov)** |
+| NA6 | Jornada do bot, capturas pendentes, todos os testes (inclusive Playwright), staging. **Feito (07/nov)** |
 
 Testes obrigatórios do pedido (1 a 11) distribuídos entre NA1 e NA3.
+
+## Implementação (07/nov/2026)
+
+- **Migrações** (staging aplicadas em 07/nov; produção não): `20261226120000` (classificação em `conversation_state`,
+  guarda, `set_conversation_classification`, evento `classified` em `handoff_events`), `20261226130000`
+  (`metrics_bot_sessions` sem o número marcado, inteiro), `20261226140000` (`central_conversations` com a aba nova e as
+  três funções de envio do painel sem abrir atendimento no número marcado).
+- **Banco:** a classificação só muda pela função (Administrador e Recepção); número marcado nunca fica com a clínica
+  (guarda no gatilho: nem o toque do lembrete nem o painel abrem atendimento). Ao marcar no meio de um fluxo do bot, a
+  tentativa do funil fecha como `abandoned` com `reason: classified`.
+- **Bot/webhook:** número marcado grava e não chama o bot; seguem os botões do lembrete e da oferta e o caminho que eles
+  abrem (estados do gerenciar); "Voltar ao menu" nesse caminho fecha sem menu. Eco do app não pausa nem conta no funil;
+  "#bot" não muda nada (a volta é pela tela). `pauseForHuman` não age em número marcado.
+- **Telas:** Conversas com três abas (Abertas com Todas/Minhas no lugar do "Mostrar"; Finalizadas; Pessoal e admin.
+  com as mensagens novas por pessoa), menu ⋯ (janela junto ao botão) com as duas marcações e confirmação, conversa
+  marcada com o selo, quem marcou e quando, um só botão "Voltar para atendimento" e a caixa de resposta. Atendimento:
+  "Não é atendimento" nos cartões e a aba "Pessoal e administrativo" ("Mensagem nova" = última mensagem do número ainda
+  sem resposta da clínica). Rota própria `/api/admin/classificar-conversa` (exige só o bot: vale sem a Central).
+- **Achados do Playwright, corrigidos:** menu ⋯ cortado pela borda da conversa; ⋯ esticado no celular; marcar pela
+  Atendimento caía em "acesso negado" (a volta para `/admin/atendimento` não era permitida e a rota ficava sob
+  `/api/admin/conversas`, que exige a Central).
+- **Testes:** `tests/db/nao-atendimento.test.ts` (NA1, NA2, NA3, NA5) e `tests/db/nao-atendimento-central.test.ts` (NA4).
+
+### Roteiro de validação no staging (cliente)
+
+1. **Conversas** (clínica com a Central): abrir uma conversa › ⋯ › "Marcar como Pessoal" › Marcar. Confere: vai para
+   "Pessoal e admin.", selo, "Marcada por … · data", aviso no histórico, sai das Abertas e do número do menu.
+2. Do celular de teste, mandar "Oi" para o número marcado: o bot **não** responde; a mensagem aparece na conversa e a aba
+   mostra a mensagem nova. Responder pelo painel: sai sem abrir atendimento.
+3. "Voltar para atendimento" › confirmar: a conversa vai para Finalizadas; mandar "Oi" de novo: o bot responde.
+4. **Atendimento** (clínica sem a Central): "Não é atendimento" num cartão › Pessoal ou Administrativo/outros › Marcar;
+   a aba "Pessoal e administrativo" lista o número; "Voltar para atendimento" desfaz.
+5. **Métricas › Agendamento digital:** o número marcado some das contagens; ao voltar, reaparece.
+6. **Lembrete:** num número marcado com consulta, "Confirmar presença" no lembrete continua confirmando.
