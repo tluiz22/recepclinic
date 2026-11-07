@@ -20,7 +20,7 @@ Rotinas na mão (no Terminal, na raiz do projeto):
 2. Com o Módulo financeiro liberado na Matriz, o texto tem "Emissão de nota fiscal" e o selo "Com emissão de nota
    fiscal"; sem ele, nenhuma menção a nota.
 3. Com contrato aceito, liberar ou desligar o Módulo financeiro: aparece um rascunho "Criado pelo sistema…".
-4. Texto: 2. Prazo e renovação automática, 4. Forma de pagamento, Reajuste (IPCA), Arrependimento, Cancelamento.
+4. Texto: 2. Prazo e renovação automática, 4. Mensagens do WhatsApp (cobrança da Meta, direto da clínica e fora da mensalidade), 5. Forma de pagamento, Reajuste (IPCA), Arrependimento, Cancelamento.
 
 ## 2. Passo a passo da Assinatura (F12.2e)
 1. Admin Odonto › Configurações › Assinatura: passos Contrato → WhatsApp → Pronto; resumo amarelo da renovação;

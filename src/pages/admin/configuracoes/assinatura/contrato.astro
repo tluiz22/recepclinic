@@ -48,9 +48,17 @@ const actors = contract ? await loadActorLabels(db, clinic.clinicId, [contract.a
             {sections.map((section) => (
               <section>
                 <h3 class="font-semibold text-ink">{section.title}</h3>
-                {section.paragraphs.map((p) => (
-                  <p class="mt-1">{p}</p>
-                ))}
+                {section.paragraphs.map((p) =>
+                  Array.isArray(p) ? (
+                    <ul class="mt-1 list-disc pl-5">
+                      {p.map((item) => (
+                        <li class="mt-0.5">{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p class="mt-1">{p}</p>
+                  ),
+                )}
               </section>
             ))}
           </div>

@@ -110,6 +110,12 @@
 > Asaas (a nossa segue esperando). **Pendências:** o token exige a tokenização liberada na conta de produção do Asaas
 > (pedir antes da F12.11, como já anotado); confirmar no sandbox, no vencimento, que a 1ª mensalidade (gerada antes
 > de ligar o cartão) é cobrada no cartão.
+> **Texto do contrato do cliente (07/nov/2026, versão `provisorio-2026-11-07`/`-nf`):** 13 seções (a 6, de notas
+> fiscais, só com nota), com a seção 4 "Mensagens do WhatsApp e cobranças da Meta" (a Meta cobra a clínica direto, fora
+> da mensalidade; repasse pelo RecepClinic recusado: Solution Partner na Meta, risco de inadimplência e imposto) e a 12
+> com lista. **Divergências com o sistema, a decidir:** (a) multa de 2% e juros de 1% ao mês: as cobranças no Asaas
+> são criadas sem multa e juros; (b) "alterar a forma de pagamento": a tela só troca o cartão (não passa a Pix);
+> (c) exportação dos dados por 60 dias: sem tela, só pelo Suporte.
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
