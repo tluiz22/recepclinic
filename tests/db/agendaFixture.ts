@@ -55,7 +55,7 @@ export async function setupAgendaClinic(name: string, phonePrefix: string): Prom
 
   const a = asDb(admin);
   const professional = (displayName: string) =>
-    createProfessional(a, clinicId, { userId: null, displayName, profession: "Médica", specialty: null, council: null, councilNumber: null, councilState: null });
+    createProfessional(a, clinicId, { userId: null, displayName, profession: "Médica", council: null, councilNumber: null, councilState: null });
   const dra = await professional("Dra. Agenda");
   const dra2 = await professional("Dr. Segundo");
   ids.agendaDra = (await createAgenda(a, clinicId, { kind: "professional", professionalId: dra.id, bufferMinutes: 0 })).id;

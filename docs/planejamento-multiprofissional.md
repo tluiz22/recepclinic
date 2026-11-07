@@ -1,9 +1,11 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
-> **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M8 decididas** (seção 6). Ordem: ME → MC → MI + MB; NFS-e por profissional
-> depois. **Próximo:** iniciar a ME com o OK do cliente (código direto na `main`). Implementação com a skill
-> `frontend-design`; testes de cada etapa com a skill `playwright-ui-form-best-practices` (cliente, 07/nov).
+> **Estado atual (retomar daqui), 07/nov/2026.** M1 a M8 decididas (seção 6). **ME feita na `main` local (sem push)**:
+> migração `20261229120000` (ligação N:N com a lista global, função de gravação, conversão do texto antigo), tela
+> Profissionais (busca, várias, principal, pendência "sem especialidade"), Base de Conhecimento pelas especialidades
+> ligadas; testes de unidade, banco e Playwright passando. **Próximo:** com o OK do cliente, conferir no staging e na
+> produção os textos que não casam com a lista (seção 2), aplicar a migração no staging e fazer o push. Depois, MC.
+> Telas com a skill `frontend-design`; testes de cada etapa com `playwright-ui-form-best-practices` (cliente, 07/nov).
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
 
@@ -44,6 +46,14 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 - **Leitura única:** uma função do banco/servidor devolve "profissionais ativos de uma especialidade" (e o inverso),
   usada pelo bot, pela marcação da Recepção e pela página pública de agendamento, para não espalhar consultas.
 - A Base de Conhecimento troca `p.specialty` pelas especialidades vinculadas (`answers.ts:135-159`).
+
+**Feito (07/nov, ME):** `professional_specialties` (posição 0 = principal), `set_professional_specialties` (lista
+inteira, ao menos uma, só ativas ou já ligadas, RLS do Administrador), leitura de `kb_specialties` pela equipe e pelo bot,
+bloqueio de clínica suspensa, `app.link_legacy_specialties()` (nome ou sinônimo, sem acento; partes por `,` `;` `/`).
+`professionals.specialty` fica só como histórico; `Professional.specialty` passa a ser os nomes ligados. Tela: lista com
+busca, "Especialidade principal" com duas ou mais, aviso e selo "sem especialidade" (jornada de configuração). Playwright:
+achados corrigidos na hora (aviso de busca vazia com uma marcada; principal perdida depois de erro em outro campo).
+Captura `config-profissionais` na fila.
 
 ## 3. Convênios por profissional (etapa MC)
 

@@ -113,9 +113,9 @@ begin
   insert into public.professionals (clinic_id, user_id, display_name, profession, specialty, council, council_number, council_state)
     values (c_a, u_a_ped, 'Dra. Helena Costa', 'Médica', 'Pediatria', 'CRM', '12345', 'RN') returning id into p_ped;
   insert into public.professionals (clinic_id, user_id, display_name, profession, specialty, council, council_number, council_state)
-    values (c_a, u_a_psi, 'Marina Alves', 'Psicóloga', 'Terapia cognitivo-comportamental', 'CRP', '17/0001', 'RN') returning id into p_psi;
+    values (c_a, u_a_psi, 'Marina Alves', 'Psicóloga', 'Psicologia', 'CRP', '17/0001', 'RN') returning id into p_psi;
   insert into public.professionals (clinic_id, user_id, display_name, profession, specialty, council, council_number, council_state)
-    values (c_a, u_a_fis, 'Rafael Lima', 'Fisioterapeuta', 'Fisioterapia respiratória', 'CREFITO', '1-000001', 'RN') returning id into p_fis;
+    values (c_a, u_a_fis, 'Rafael Lima', 'Fisioterapeuta', 'Fisioterapia', 'CREFITO', '1-000001', 'RN') returning id into p_fis;
 
   insert into public.locations (clinic_id, name, type, address)
     values (c_a, 'Consultório Centro', 'clinic', 'Rua das Flores, 100 – Centro') returning id into l_office;
@@ -425,7 +425,7 @@ begin
     (c_b, u_b_rec, '{reception}');
 
   insert into public.professionals (clinic_id, user_id, display_name, profession, specialty, council, council_number, council_state)
-    values (c_b, u_b_admin, 'Dra. Beatriz Nunes', 'Cirurgiã-dentista', 'Clínica geral', 'CRO', '4321', 'RN') returning id into p_dent;
+    values (c_b, u_b_admin, 'Dra. Beatriz Nunes', 'Cirurgiã-dentista', 'Odontologia (clínica geral)', 'CRO', '4321', 'RN') returning id into p_dent;
   insert into public.locations (clinic_id, name, type, address)
     values (c_b, 'Consultório Odonto', 'clinic', 'Av. Principal, 500') returning id into l_b;
   insert into public.agendas (clinic_id, name, kind, professional_id)
@@ -450,5 +450,7 @@ begin
   insert into public.platform_access_log (actor_user_id, clinic_id, method, path) values
     (u_support, c_a, 'GET', '/admin/agenda'),
     (u_support, c_b, 'GET', '/admin/pacientes');
+  -- ME (07/nov/2026): especialidades da lista global ligadas pelo texto.
+  perform app.link_legacy_specialties();
 end
 $$;

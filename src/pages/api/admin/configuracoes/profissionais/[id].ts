@@ -10,12 +10,13 @@ import {
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
-import { formOptionalText, formText } from "../../../../../lib/forms";
+import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Profissional (F4.3): criar (`novo`), salvar, desativar e reativar. O login
 // ligado ao profissional fica como está (é definido na equipe, F4.4). O
 // WhatsApp é obrigatório; quem recebe o resumo do dia é marcado em
-// Configurações › Lembretes (cliente, 09/out/2026).
+// Configurações › Lembretes (cliente, 09/out/2026). Especialidades (ME, 07/nov/2026):
+// as marcadas, com a principal (campo `principal`) na frente.
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
   const id = params.id!;
@@ -40,7 +41,7 @@ export const POST: APIRoute = async (context) => {
         userId: current?.userId ?? null,
         displayName: formText(form, "display_name"),
         profession: formText(form, "profession"),
-        specialty: formOptionalText(form, "specialty"),
+        specialtyIds: withPrincipalFirst(formAll(form, "specialties"), formOptionalText(form, "principal")),
         council: formOptionalText(form, "council"),
         councilNumber: formOptionalText(form, "council_number"),
         councilState: formOptionalText(form, "council_state"),
@@ -57,3 +58,8 @@ export const POST: APIRoute = async (context) => {
     page(id),
   );
 };
+
+/** A principal vai na frente; sem ela (ou desmarcada), vale a ordem da lista. */
+function withPrincipalFirst(ids: string[], principal: string | null): string[] {
+  return principal && ids.includes(principal) ? [principal, ...ids.filter((id) => id !== principal)] : ids;
+}

@@ -18,7 +18,7 @@ import { listServices, type Service } from "./services";
 // Itens desligados na matriz (D11) não contam: exames sem "Exames e
 // procedimentos", domiciliar sem "Atendimento domiciliar".
 
-export type Issue = "no_agenda" | "no_location" | "no_hours" | "no_service" | "no_address";
+export type Issue = "no_agenda" | "no_location" | "no_hours" | "no_service" | "no_address" | "no_specialty";
 
 export const ISSUE_LABELS: Record<Issue, string> = {
   no_agenda: "sem agenda",
@@ -26,6 +26,7 @@ export const ISSUE_LABELS: Record<Issue, string> = {
   no_hours: "sem horário",
   no_service: "sem serviço",
   no_address: "sem endereço",
+  no_specialty: "sem especialidade",
 };
 
 /** Explicação do selo (título ao passar o mouse e texto do guia). */
@@ -35,13 +36,15 @@ export const ISSUE_HINTS: Record<Issue, string> = {
   no_hours: "Sem horário de atendimento: não aparece no bot nem no link de agendar.",
   no_service: "Nenhum serviço ativo usa este cadastro.",
   no_address: "Consultório sem endereço: o bot e as mensagens não mostram onde é.",
+  no_specialty: "Sem especialidade: escolha ao menos uma no cadastro (o paciente vai escolher por ela no WhatsApp).",
 };
 
 /** Na agenda, "sem horário" quer dizer outra coisa que no serviço. */
 export const AGENDA_HINTS: Partial<Record<Issue, string>> = { no_hours: "Sem horário de atendimento: ninguém consegue marcar nela." };
 
 export type SetupInput = {
-  professionals: Pick<Professional, "id" | "displayName" | "isActive">[];
+  /** Sem `specialties`, a especialidade não é conferida (ME, 07/nov/2026). */
+  professionals: (Pick<Professional, "id" | "displayName" | "isActive"> & { specialties?: readonly unknown[] })[];
   agendas: Pick<Agenda, "id" | "name" | "professionalId" | "isActive">[];
   locations: Pick<Location, "id" | "name" | "type" | "address" | "isActive">[];
   services: Pick<Service, "id" | "name" | "category" | "schedulingMode" | "isActive" | "agendaIds" | "locations">[];
@@ -127,7 +130,11 @@ export function computeSetup(input: SetupInput): SetupStatus {
   const add = (map: Map<string, Issue[]>, id: string, issue: Issue) => map.set(id, [...(map.get(id) ?? []), issue]);
   const hoursReasons = new Map<string, string>();
 
-  for (const p of professionals) if (!agendas.some((a) => a.professionalId === p.id)) add(issues.professionals, p.id, "no_agenda");
+  for (const p of professionals) {
+    // Especialidade antes da agenda: é o primeiro campo do cadastro (ME, 07/nov/2026).
+    if (p.specialties && p.specialties.length === 0) add(issues.professionals, p.id, "no_specialty");
+    if (!agendas.some((a) => a.professionalId === p.id)) add(issues.professionals, p.id, "no_agenda");
+  }
   for (const l of locations) {
     if (l.type === "clinic" && !l.address?.trim()) add(issues.locations, l.id, "no_address");
     if (!services.some((s) => s.locations.some((sl) => sl.locationId === l.id))) add(issues.locations, l.id, "no_service");
@@ -175,8 +182,9 @@ export function computeSetup(input: SetupInput): SetupStatus {
   // serviço, já com eles marcados.
   const hasLocations = locations.length > 0;
   const inactiveAgendaOf = new Map<string, string>();
-  for (const a of input.agendas) if (!a.isActive && a.professionalId && issues.professionals.has(a.professionalId)) inactiveAgendaOf.set(a.professionalId, a.id);
-  const professionalHref = (p: { id: string }) => {
+  for (const a of input.agendas) if (!a.isActive && a.professionalId && issues.professionals.get(a.professionalId)?.includes("no_agenda")) inactiveAgendaOf.set(a.professionalId, a.id);
+  const professionalHref = (p: { id: string }, issue: Issue) => {
+    if (issue === "no_specialty") return `${BASE}/profissionais/${p.id}`;
     const inactive = inactiveAgendaOf.get(p.id);
     if (inactive) return `${BASE}/agendas/${inactive}?todos=1`;
     return hasLocations ? `${BASE}/agendas/novo?profissional=${p.id}` : `${BASE}/locais/novo?profissional=${p.id}`;

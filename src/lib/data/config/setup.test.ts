@@ -53,6 +53,20 @@ describe("jornada de configuração (F6.3b)", () => {
     });
   });
 
+  it("profissional sem especialidade fica pendente, com o link para o cadastro dele (ME, M2)", () => {
+    const input = base();
+    input.professionals = [{ id: "p1", displayName: "Thiago Luiz", isActive: true, specialties: [] }];
+    const setup = computeSetup(input);
+    expect(setup.issues.professionals.get("p1")).toEqual(["no_specialty"]);
+    expect(setup.steps.find((s) => s.key === "professionals")!.items).toEqual([
+      { text: "Thiago Luiz: sem especialidade: escolha ao menos uma no cadastro (o paciente vai escolher por ela no WhatsApp).", href: "/admin/configuracoes/profissionais/p1" },
+    ]);
+    // Com especialidade, nada pendente; sem o campo (cadastro antigo nos testes), não confere.
+    input.professionals = [{ id: "p1", displayName: "Thiago Luiz", isActive: true, specialties: [{}] }];
+    expect(computeSetup(input).issues.professionals.has("p1")).toBe(false);
+    expect(computeSetup(base()).issues.professionals.has("p1")).toBe(false);
+  });
+
   it("profissional sem agenda, consultório sem endereço, agenda e local sem serviço", () => {
     const input = base();
     input.professionals.push({ id: "p2", displayName: "Dra. Nova", isActive: true });

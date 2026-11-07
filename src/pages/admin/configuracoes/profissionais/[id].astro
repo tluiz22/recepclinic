@@ -1,16 +1,17 @@
 ---
 // Configurações › Profissionais › novo ou editar (F4.3, D4b): nome,
-// profissão, especialidade, conselho (número e UF) e o WhatsApp para o resumo
+// profissão, especialidades (uma ou mais da lista do Suporte, obrigatória; ME,
+// cliente, 07/nov/2026), conselho (número e UF) e o WhatsApp para o resumo
 // do dia dos próprios atendimentos (D2 revista, 05/out/2026).
 import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
 import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
-import { CARD, HINT, SECTION_TITLE, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import { CARD, CHECK, CHOICE, HINT, LEGEND, SECTION_TITLE, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
 import { createUserClient } from "../../../../lib/data/clients";
-import { listProfessionals, professionalRegistry } from "../../../../lib/data/config/professionals";
+import { listProfessionals, listSpecialtyOptions, professionalRegistry } from "../../../../lib/data/config/professionals";
 import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
@@ -31,9 +32,21 @@ const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.reques
 // Profissão, especialidade e registro embaixo do nome (R9).
 const subtitle = professional ? [professional.profession, professional.specialty, professionalRegistry(professional)].filter(Boolean).join(" · ") || undefined : undefined;
 const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
+// Especialidades: as do profissional primeiro (na ordem, a principal na frente),
+// depois as outras da lista; desativada pelo Suporte só aparece se já está ligada.
+const chosen = professional?.specialties ?? [];
+const chosenIds = new Set(chosen.map((s) => s.id));
+const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(createUserClient(Astro.request, Astro.cookies))).filter((s) => !chosenIds.has(s.id))];
+const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 ---
 
 <ConfigShell current="profissionais" title={isNew ? "Novo profissional" : professional!.displayName} back={{ href: list, label: "Profissionais" }} subtitle={subtitle}>
+  {
+    // Cadastrado antes da ME sem especialidade (M2): pendente até salvar com uma.
+    professionalIssues.includes("no_specialty") && (
+      <NextStep text={`Falta a especialidade de ${professional!.displayName}: marque ao menos uma abaixo e salve.`} />
+    )
+  }
   {
     professionalIssues.includes("no_agenda") &&
       (setup!.inactiveAgendaOf.has(id!) ? (
@@ -67,16 +80,48 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
         <label for="display_name" class={LABEL}>Nome (como aparece para o paciente)</label>
         <input id="display_name" name="display_name" required value={professional?.displayName ?? ""} class={INPUT} />
       </div>
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label for="profession" class={LABEL}>Profissão</label>
-          <input id="profession" name="profession" required placeholder="Médica, Dentista, Psicóloga…" value={professional?.profession ?? ""} class={INPUT} />
-        </div>
-        <div>
-          <label for="specialty" class={LABEL}>Especialidade (opcional)</label>
-          <input id="specialty" name="specialty" value={professional?.specialty ?? ""} class={INPUT} />
-        </div>
+      <div>
+        <label for="profession" class={LABEL}>Profissão</label>
+        <input id="profession" name="profession" required placeholder="Médica, Dentista, Psicóloga…" value={professional?.profession ?? ""} class={`${INPUT} sm:max-w-sm`} />
       </div>
+      <fieldset class="min-w-0" data-specialties>
+        <legend class={LEGEND}>Especialidades</legend>
+        <p id="specialties-orientacao" class={HINT}>
+          Marque uma ou mais. No WhatsApp, o paciente escolhe a especialidade antes do profissional. Falta alguma na lista? Peça ao Suporte.
+        </p>
+        <input
+          type="search"
+          aria-label="Buscar especialidade"
+          aria-controls="specialties-list"
+          placeholder="Buscar: pediatria, ortodontia…"
+          autocomplete="off"
+          class={`${INPUT} sm:max-w-sm`}
+          data-specialty-filter
+          hidden
+        />
+        <div id="specialties-list" class="mt-2 grid max-h-72 overflow-y-auto rounded-lg border border-line-strong px-3 py-2 sm:grid-cols-2 sm:gap-x-6">
+          {
+            specialtyOptions.map((s) => (
+              <label class={`${CHOICE} py-1`} data-specialty-option data-key={searchKey(s.name)}>
+                <input type="checkbox" name="specialties" value={s.id} checked={chosenIds.has(s.id)} class={CHECK} />
+                <span>
+                  {s.name}
+                  {!s.isActive && <span class="text-sm text-ink-soft"> (saiu da lista)</span>}
+                </span>
+              </label>
+            ))
+          }
+          <p class={`${HINT} col-span-full mt-0 py-1`} data-specialty-empty hidden>Nenhuma especialidade com esse nome. Peça ao Suporte para incluir.</p>
+        </div>
+        <div class="mt-3" data-principal hidden={chosen.length < 2}>
+          <label for="principal" class={LABEL}>Especialidade principal</label>
+          <select id="principal" name="principal" class={`${INPUT} sm:max-w-sm`}>
+            {/* Todas as opções (a volta depois de um erro acha a principal escolhida); o script esconde as desmarcadas. */}
+            {specialtyOptions.map((s, i) => <option value={s.id} selected={i === 0 && chosen.length > 0} hidden={!chosenIds.has(s.id)}>{s.name}</option>)}
+          </select>
+          <p class={HINT}>Aparece primeiro ao lado do nome.</p>
+        </div>
+      </fieldset>
       <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Registro profissional</h2>
       <div class="grid gap-4 sm:grid-cols-4">
         <div>
@@ -126,3 +171,46 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
     {!isNew && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
   </div>
 </ConfigShell>
+
+<script>
+  // Busca na lista (sem acento) e a escolha da principal entre as marcadas.
+  const box = document.querySelector<HTMLElement>("[data-specialties]");
+  if (box) {
+    const filter = box.querySelector<HTMLInputElement>("[data-specialty-filter]")!;
+    const options = [...box.querySelectorAll<HTMLLabelElement>("[data-specialty-option]")];
+    const empty = box.querySelector<HTMLElement>("[data-specialty-empty]")!;
+    const principalBox = box.querySelector<HTMLElement>("[data-principal]")!;
+    const principal = principalBox.querySelector<HTMLSelectElement>("select")!;
+    const key = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+    filter.hidden = false;
+    filter.addEventListener("input", () => {
+      const q = key(filter.value);
+      // As marcadas ficam à vista; o aviso conta só as que batem com a busca.
+      let found = 0;
+      for (const o of options) {
+        const match = !q || (o.dataset.key ?? "").includes(q);
+        o.hidden = !match && !o.querySelector("input")!.checked;
+        if (match) found++;
+      }
+      empty.hidden = found > 0;
+    });
+    const syncPrincipal = () => {
+      const marked = new Set(options.map((o) => o.querySelector("input")!).filter((c) => c.checked).map((c) => c.value));
+      for (const option of principal.options) {
+        option.hidden = !marked.has(option.value);
+        option.disabled = option.hidden;
+      }
+      if (!marked.has(principal.value)) {
+        const first = [...principal.options].find((o) => !o.disabled);
+        if (first) principal.value = first.value;
+      }
+      principalBox.hidden = marked.size < 2;
+    };
+    box.addEventListener("change", (event) => {
+      if ((event.target as HTMLElement).matches("input[name='specialties']")) syncPrincipal();
+    });
+    // Valores devolvidos depois de um erro (keepFormValues) também contam.
+    syncPrincipal();
+    window.addEventListener("load", syncPrincipal);
+  }
+</script>

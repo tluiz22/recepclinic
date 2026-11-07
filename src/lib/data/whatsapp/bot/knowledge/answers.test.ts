@@ -28,6 +28,7 @@ const professional = (id: string, displayName: string, extra: Partial<Profession
   userId: null,
   displayName,
   profession: "Médica",
+  specialties: [],
   specialty: null,
   council: "CRM",
   councilNumber: "12345",

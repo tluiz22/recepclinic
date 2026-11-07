@@ -1,9 +1,8 @@
 # RecepClinic
 
-> **Próxima sessão (cliente, 07/nov):** revisão multiprofissional planejada e **M1 a M8 decididas**
-> ([`planejamento-multiprofissional.md`](planejamento-multiprofissional.md)). Próximo: **etapa ME** (especialidades)
-> com o OK do cliente, depois MC e MI + MB. NFS-e e cobrança por profissional (seção 14 do
-> [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), N-P1 a N-P7 abertas) depois.
+> **Multiprofissional (07/nov):** M1 a M8 decididas; **etapa ME (especialidades) feita na `main` local, sem push**
+> (migração `20261229120000` ainda não aplicada no staging). Próximo: OK do cliente para staging. Retomar pelo
+> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md). NFS-e por profissional (N-P1 a N-P7) depois.
 >
 > **Próxima sessão (cliente, 07/nov):** **revisar o planejamento da NFS-e pelo Asaas** com o cliente
 > ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), bloco de retomada e seções 11 a 13). Sem código antes da revisão.

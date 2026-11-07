@@ -209,21 +209,21 @@ describe("configuração da clínica", () => {
 
 describe("cadastros simples", () => {
   it("profissional: obrigatórios e UF em maiúsculas", () => {
-    const row = validateProfessional({
+    const { row, specialtyIds } = validateProfessional({
       userId: null,
       displayName: " Dra. Helena ",
       profession: "Médica",
-      specialty: " ",
       council: "crm",
       councilNumber: "1234",
       councilState: "ce",
     });
-    expect(row).toMatchObject({ display_name: "Dra. Helena", specialty: null, council: "CRM", council_state: "CE" });
+    expect(row).toMatchObject({ display_name: "Dra. Helena", council: "CRM", council_state: "CE" });
+    expect(specialtyIds).toBeUndefined();
     expect(
       fieldsOf(() =>
-        validateProfessional({ userId: null, displayName: "", profession: "", specialty: null, council: null, councilNumber: null, councilState: "Ceará" }),
+        validateProfessional({ userId: null, displayName: "", profession: "", council: null, councilNumber: null, councilState: "Ceará", specialtyIds: [] }),
       ),
-    ).toEqual({ displayName: "Informe o nome", profession: "Informe a profissão", councilState: "UF com 2 letras" });
+    ).toEqual({ displayName: "Informe o nome", profession: "Informe a profissão", councilState: "UF com 2 letras", specialties: "Escolha ao menos uma especialidade" });
   });
 
   it("local: endereço opcional (como no piloto)", () => {

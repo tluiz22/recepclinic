@@ -30,7 +30,7 @@ import {
   listNotificationRecipients,
   setNotificationRecipientActive,
 } from "../../src/lib/data/config/notificationRecipients";
-import { createProfessional, listProfessionals, updateProfessional, type Professional } from "../../src/lib/data/config/professionals";
+import { createProfessional, listProfessionals, listSpecialtyOptions, updateProfessional, type Professional } from "../../src/lib/data/config/professionals";
 import {
   createService,
   listServices,
@@ -130,7 +130,6 @@ describe("profissionais, locais e agendas", () => {
       userId: professionalUser.id,
       displayName: "Dra. Teste",
       profession: "Médica",
-      specialty: "Pediatria",
       council: "crm",
       councilNumber: "1234",
       councilState: "ce",
@@ -189,7 +188,7 @@ describe("profissionais, locais e agendas", () => {
     await adminClient().from("agendas").update({ name: "Outro" }).eq("id", examsAgenda.id);
     await setAgendaActive(db(admin), clinicId, examsAgenda.id, true);
     expect((await listAgendas(db(admin), clinicId)).find((a) => a.id === examsAgenda.id)?.name).toBe("Exames");
-    const other = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dr. Extra", profession: "Médico", specialty: null, council: null, councilNumber: null, councilState: null });
+    const other = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dr. Extra", profession: "Médico", council: null, councilNumber: null, councilState: null });
     const extra = await createAgenda(db(admin), clinicId, { kind: "professional", professionalId: other.id, bufferMinutes: 0 });
     expect(extra.name).toBe("Dr. Extra");
     await setAgendaActive(db(admin), clinicId, extra.id, false);
@@ -197,12 +196,47 @@ describe("profissionais, locais e agendas", () => {
     expect((await listAgendas(db(admin), clinicId, { includeInactive: true })).map((a) => a.name)).toContain("Dr. Extra");
   });
 
+  it("especialidades (ME): lista do Suporte, uma ou mais, a primeira é a principal", async () => {
+    const options = await listSpecialtyOptions(db(reception));
+    const byName = (name: string) => options.find((o) => o.name === name)!.id;
+    const [ped, pneumo] = [byName("Pediatria"), byName("Pneumologia pediátrica")];
+    const { id, isActive: _a, specialties: _s, specialty: _t, ...stored } = professional;
+    const rest = { ...stored, phone: "(84) 99999-0000" };
+    const saved = await updateProfessional(db(admin), clinicId, id, { ...rest, specialtyIds: [pneumo, ped, pneumo] });
+    expect(saved.specialties.map((s) => s.name)).toEqual(["Pneumologia pediátrica", "Pediatria"]);
+    expect(saved.specialty).toBe("Pneumologia pediátrica, Pediatria");
+    // Sem o campo, ficam como estão; vazia não salva.
+    expect((await updateProfessional(db(admin), clinicId, id, rest)).specialties).toHaveLength(2);
+    expect(await codeOf(() => updateProfessional(db(admin), clinicId, id, { ...rest, specialtyIds: [] }))).toBe("invalid");
+    // Recepção lê, não grava (nem pela função).
+    expect((await listProfessionals(db(reception), clinicId)).find((p) => p.id === id)!.specialties).toHaveLength(2);
+    expect(
+      await db(reception).rpc("set_professional_specialties", { p_clinic_id: clinicId, p_professional_id: id, p_specialty_ids: [ped] }).then((r) => r.error?.code),
+    ).toBe("42501");
+    expect((await listProfessionals(db(admin), clinicId)).find((p) => p.id === id)!.specialties).toHaveLength(2);
+    // Fora da lista ou desativada pelo Suporte: não entra; a que já estava ligada fica.
+    expect(await codeOf(() => updateProfessional(db(admin), clinicId, id, { ...rest, specialtyIds: ["00000000-0000-4000-8000-000000000000"] }))).toBe("invalid");
+    await adminClient().from("kb_specialties").update({ is_active: false }).eq("id", pneumo);
+    try {
+      expect((await listSpecialtyOptions(db(admin))).some((o) => o.id === pneumo)).toBe(false);
+      expect((await updateProfessional(db(admin), clinicId, id, { ...rest, specialtyIds: [ped, pneumo] })).specialties.map((s) => [s.name, s.isActive])).toEqual([
+        ["Pediatria", true],
+        ["Pneumologia pediátrica", false],
+      ]);
+      expect(await codeOf(() => createProfessional(db(admin), clinicId, { userId: null, displayName: "Dr. Inativa", profession: "Médico", council: null, councilNumber: null, councilState: null, specialtyIds: [pneumo] }))).toBe("invalid");
+      expect((await listProfessionals(db(admin), clinicId, { includeInactive: true })).map((p) => p.displayName)).not.toContain("Dr. Inativa");
+    } finally {
+      await adminClient().from("kb_specialties").update({ is_active: true }).eq("id", pneumo);
+    }
+    // Especialidade em uso não é apagada.
+    expect((await adminClient().from("kb_specialties").delete().eq("id", ped)).error?.code).toBe("23503");
+  });
+
   it("renomear o profissional renomeia a agenda dele (06/nov)", async () => {
     await updateProfessional(db(admin), clinicId, professional.id, {
       userId: professionalUser.id,
       displayName: "Dra. Teste Renomeada",
       profession: "Médica",
-      specialty: "Pediatria",
       council: "crm",
       councilNumber: "1234",
       councilState: "ce",
@@ -214,7 +248,6 @@ describe("profissionais, locais e agendas", () => {
         userId: professionalUser.id,
         displayName: "Dra. Teste",
         profession: "Médica",
-        specialty: "Pediatria",
         council: "crm",
         councilNumber: "1234",
         councilState: "ce",

@@ -53,8 +53,8 @@ beforeAll(async () => {
   users.push(admin, reception, existing);
   await addMember(clinicId, admin.id, ["admin"]);
   await addMember(clinicId, reception.id, ["reception"]);
-  doctorA = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dra. A", profession: "Médica", specialty: null, council: null, councilNumber: null, councilState: null });
-  doctorB = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dr. B", profession: "Médico", specialty: null, council: null, councilNumber: null, councilState: null });
+  doctorA = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dra. A", profession: "Médica", council: null, councilNumber: null, councilState: null });
+  doctorB = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dr. B", profession: "Médico", council: null, councilNumber: null, councilState: null });
   agendaA = await createAgenda(db(admin), clinicId, { kind: "professional", professionalId: doctorA.id, bufferMinutes: 0 });
   agendaB = await createAgenda(db(admin), clinicId, { kind: "professional", professionalId: doctorB.id, bufferMinutes: 0 });
   office = await createLocation(db(admin), clinicId, { name: "Consultório", type: "clinic", address: null });

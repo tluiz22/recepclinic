@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `config-profissionais` — lista mostra as especialidades e o selo "sem especialidade" (ME, 07/11/2026)

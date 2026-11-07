@@ -20,7 +20,7 @@ const input = (name: string): ProfessionalInput => ({
   userId: null,
   displayName: name,
   profession: "Médica",
-  specialty: null,
+ 
   council: null,
   councilNumber: null,
   councilState: null,

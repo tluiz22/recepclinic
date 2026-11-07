@@ -147,6 +147,8 @@ function professionals({ data, terms, kb }: Input): KbAnswer | null {
   if (terms.specialties.length) {
     const phrases = kb.specialties.filter((s) => terms.specialties.includes(s.name)).flatMap((s) => s.phrases);
     const found = data.professionals.filter((p) => {
+      // Especialidade da lista do Suporte ligada ao profissional (ME, 07/nov/2026); senão, o texto.
+      if (p.specialties.some((s) => terms.specialties.includes(s.name))) return true;
       const own = ` ${normalizeText(`${p.specialty ?? ""} ${p.profession}`)} `;
       return phrases.some((phrase) => own.includes(` ${phrase} `));
     });

@@ -46,7 +46,7 @@ export const configuracoesArtigos = [
     related: ["config-agendas", "equipe-convidar", "ordem-de-configuracao"],
     order: 61,
     intro: "É o primeiro passo da jornada: sem profissional não há agenda.",
-    steps: ["Abra Configurações › Profissionais e toque em Novo profissional.", "Preencha o nome (como aparece para o paciente), a profissão e, se quiser, especialidade, conselho (número e UF) e RQE.", "Informe o WhatsApp se ele for receber o resumo do dia.", "Salve e crie a agenda dele, pelo aviso \"sem agenda\" ou em Agendas."],
+    steps: ["Abra Configurações › Profissionais e toque em Novo profissional.", "Preencha o nome (como aparece para o paciente), a profissão e marque uma ou mais especialidades (com mais de uma, escolha a principal). Falta alguma na lista? Peça ao Suporte.", "Se quiser, informe o conselho (número e UF) e o RQE.", "Informe o WhatsApp se ele for receber o resumo do dia.", "Salve e crie a agenda dele, pelo aviso \"sem agenda\" ou em Agendas."],
     fields: [
       { name: "RQE", text: "Registro de Qualificação de Especialista. Preencha só se tiver; o registro aparece só no painel." },
       { name: "WhatsApp", text: "Para ele receber, pelo WhatsApp da clínica, a lista dos atendimentos das agendas dele, como definido em Lembretes." },
