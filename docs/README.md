@@ -47,9 +47,9 @@
 >
 > **Central de Atendimento (CU2 a CN9) na `main` e no staging (05/nov):** a branch `central-atendimento` foi juntada
 > na `main`; migrações `20261214120000` a `20261224120000` aplicadas no staging (só lá). Parte **AA** do
-> [`staging.md`](staging.md) **validada (07/nov)**, menos o passo 10 (histórico e cadastro v4): configuração v4 criada na
-> Meta (07/nov, ID `3784178581733719`, v4 conferida no "Check a launch config"); falta o cliente pô-la no
-> `WHATSAPP_ES_CONFIG_ID` do staging (Redeploy) e testar a reconexão. Produção segue com a configuração antiga. Capturas da Central feitas e no
+> [`staging.md`](staging.md) **validada inteira (07/nov)**, com o cadastro v4: configuração `3784178581733719` no
+> `WHATSAPP_ES_CONFIG_ID` do staging, número de testes reconectado e histórico do app importado. **Produção:** trocar o
+> mesmo ID no projeto da produção na Vercel + Redeploy (só com autorização; sem reconectar as clínicas). Capturas da Central feitas e no
 > staging (06/nov, `55403e0`): `conversas` (nova), `config-whatsapp`, `config-mensagens`; `atendimento` mantida.
 > Produção só com autorização. Detalhe na seção 12 do plano da Central.
 > **Próxima sessão (cliente, 06/nov):** cliente traz ajustes. Etapas pedidas e ainda por fazer, uma por vez: (3) trazer a
