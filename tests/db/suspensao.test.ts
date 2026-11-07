@@ -80,7 +80,15 @@ describe("Suspensão da clínica (F12.3)", () => {
   });
 
   it("liberar exige texto e só o Suporte; com outro motivo ativo, segue suspensa", async () => {
-    const [first] = await activeIds();
+    const ended = (await activeIds()).find((s) => s.reason === "contract_ended")!;
+    // Cliente, 07/nov/2026: o fim do contrato só sai pelo contrato novo (cancelamento.test.ts), nem pelo Suporte.
+    const { error } = await support.client.rpc("release_clinic_suspension", { p_suspension_id: ended.id, p_note: "Liberando." });
+    expect(error?.hint).toBe("suspension_contract_ended_auto");
+    // O contrato novo liberaria; aqui, direto no banco, para seguir com o administrativo.
+    await adminClient().from("clinic_suspensions").update({ released_at: new Date().toISOString(), release_note: "Contrato novo (teste)." }).eq("id", ended.id);
+    await suspendClinic(asDb(support), clinicId, { reason: "contract_ended", note: "Contrato encerrado de novo.", noAppConfirmed: true });
+
+    const first = (await activeIds()).find((s) => s.reason === "administrative")!;
     expect(await codeOf(() => releaseClinicSuspension(asDb(fixture.admin), first.id, "Regularizado."))).toBe("forbidden");
     expect(await codeOf(() => releaseClinicSuspension(asDb(support), first.id, ""))).toBe("invalid");
     await releaseClinicSuspension(asDb(support), first.id, "Regularizado.");
@@ -89,7 +97,12 @@ describe("Suspensão da clínica (F12.3)", () => {
   });
 
   it("sem motivo ativo, volta à situação de antes (também em implantação)", async () => {
+    // Sobrou o fim do contrato: sai pelo contrato novo; aqui, direto no banco, e o último motivo é o administrativo.
+    const ended = (await activeIds()).find((s) => s.reason === "contract_ended")!;
+    await adminClient().from("clinic_suspensions").update({ released_at: new Date().toISOString(), release_note: "Contrato novo (teste)." }).eq("id", ended.id);
+    await suspendClinic(asDb(support), clinicId, { reason: "administrative", note: "Último motivo.", noAppConfirmed: true });
     const [last] = await activeIds();
+    expect(last.reason).toBe("administrative");
     await releaseClinicSuspension(asDb(support), last.id, "Novo contrato assinado.");
     expect(await status()).toEqual({ status: "active", status_before_suspension: null });
     expect((await listBillingAudit(asDb(support), clinicId))[0]).toMatchObject({ action: "suspension_released" });

@@ -66,6 +66,12 @@ const before = clinic?.status_before_suspension === "onboarding" ? "em implanta�
             <p class="mt-1 text-sm text-ink-mid">{suspension.note}</p>
             {suspension.reason === "non_payment" ? (
               <p class={HINT}>Liberada pelo pagamento das cobranças vencidas.</p>
+            ) : suspension.reason === "contract_ended" ? (
+              // Cliente, 07/nov/2026: só o contrato novo libera (o Suporte não libera à mão).
+              <p class={HINT}>
+                Liberada pelo contrato novo: ative um contrato na aba Faturamento; a clínica volta quando o Administrador aceitar e
+                cadastrar o cartão (ou pagar a implantação, no Pix). No Pix sem implantação ou na cobrança manual, volta no aceite.
+              </p>
             ) : (
               <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
                 <input type="hidden" name="acao" value="liberar_suspensao" />

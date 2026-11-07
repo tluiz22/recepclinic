@@ -64,3 +64,9 @@ Aparece na aba Faturamento 45 dias antes do aniversário (para ver, peça para e
 
 ## 7. Avisos (F12.7)
 `avisos-cobranca`; textos em `billingNoticeEmail` e `billingCancelEmail` (`src/lib/email.ts`): **revisar**.
+
+## 8. Fim do contrato (cliente, 07/nov/2026)
+Depois do cancelamento, a aba Suspensão não tem "Liberar" para o fim do contrato. A clínica só volta com o contrato
+novo: Suporte ativa um contrato; o Administrador aceita e cadastra o cartão (ou paga a implantação, no Pix). Manual ou
+Pix sem implantação: volta no aceite. A trilha mostra "Reativação automática: …".
+

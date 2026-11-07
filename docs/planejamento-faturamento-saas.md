@@ -116,6 +116,11 @@
 > com lista. **Divergências com o sistema, a decidir:** (a) multa de 2% e juros de 1% ao mês: as cobranças no Asaas
 > são criadas sem multa e juros; (b) "alterar a forma de pagamento": a tela só troca o cartão (não passa a Pix);
 > (c) exportação dos dados por 60 dias: sem tela, só pelo Suporte.
+> **Fim do contrato só sai pelo contrato novo (cliente, 07/nov/2026, migração `20261227120000`):** o Suporte não
+> libera a suspensão por fim do contrato (como a inadimplência, que sai pelo pagamento). Contrato novo ativo, aceito
+> depois da suspensão e não cancelado libera sozinho: cartão → com o cartão cadastrado; Pix com implantação → com a
+> implantação paga; Pix sem implantação ou cobrança manual → no aceite. Outro motivo aberto mantém a suspensão.
+> Correção junto: cobrança removida no Asaas (`deleted`) vira cancelada ao reler (antes voltava a pendente).
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por

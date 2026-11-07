@@ -117,4 +117,76 @@ describe("Cancelamento da assinatura (F12.2f)", () => {
     expect(await clinicStatus(fixture.clinicId)).toBe("suspended");
     expect(await openSuspensions(fixture.clinicId)).toEqual(["contract_ended"]);
   });
+
+  describe("fim do contrato só sai pelo contrato novo (cliente, 07/nov/2026)", () => {
+    async function withdrawn(name: string, phone: string) {
+      const fixture = await signedClinic(name, phone);
+      await cancelBillingSubscription(asDb(fixture.admin), fixture.clinicId, { reason: "other", comment: "Teste." });
+      expect(await openSuspensions(fixture.clinicId)).toEqual(["contract_ended"]);
+      return fixture;
+    }
+    async function newContract(fixture: AgendaFixture, draft: { billingMode: string; paymentMethod?: string; setup: string }) {
+      await saveBillingContractDraft(
+        asDb(support),
+        fixture.clinicId,
+        { monthly: "300", firstDueDate: plusDays(30), startsOn: today, invoicePrice: "0,80", allowanceKind: "ilimitada", ...draft },
+        {},
+        { invoicing: true },
+      );
+      const contract = await activateBillingContract(asDb(support), fixture.clinicId);
+      expect(await clinicStatus(fixture.clinicId)).toBe("suspended");
+      await acceptBillingContract(asDb(fixture.admin), fixture.clinicId, contract.id, BILLING_CONTRACT_TERMS_VERSION_NF, null, "Entendo que a mensalidade é cobrada todo mês, até o cancelamento.");
+      return contract.id;
+    }
+
+    it("o Suporte não libera à mão", async () => {
+      const fixture = await withdrawn("Clínica fim do contrato (Suporte)", "+55619866304");
+      const { data } = await adminClient().from("clinic_suspensions").select("id").eq("clinic_id", fixture.clinicId).is("released_at", null).single();
+      const { error } = await support.client.rpc("release_clinic_suspension", { p_suspension_id: data!.id, p_note: "Liberando." });
+      expect(error?.hint).toBe("suspension_contract_ended_auto");
+      expect(await clinicStatus(fixture.clinicId)).toBe("suspended");
+    });
+
+    it("cobrança manual: volta no aceite do contrato novo", async () => {
+      const fixture = await withdrawn("Clínica fim do contrato (manual)", "+55619866305");
+      await newContract(fixture, { billingMode: "manual", setup: "0" });
+      expect(await clinicStatus(fixture.clinicId)).toBe("active");
+      expect(await openSuspensions(fixture.clinicId)).toEqual([]);
+      const audit = await listBillingAudit(asDb(support), fixture.clinicId);
+      expect(audit.find((a) => a.action === "suspension_released")?.reason).toMatch(/contrato novo aceito/);
+    });
+
+    it("cartão: o aceite não basta; volta com o cartão cadastrado", async () => {
+      const fixture = await withdrawn("Clínica fim do contrato (cartão)", "+55619866306");
+      const contractId = await newContract(fixture, { billingMode: "asaas", paymentMethod: "credit_card", setup: "297" });
+      expect(await clinicStatus(fixture.clinicId)).toBe("suspended");
+      const { error } = await adminClient().rpc("billing_record_card_registered", { p_contract_id: contractId, p_last4: "8829", p_source: "setup" });
+      expect(error).toBeNull();
+      expect(await clinicStatus(fixture.clinicId)).toBe("active");
+    });
+
+    it("Pix com implantação: volta com a implantação paga; Pix sem implantação, no aceite", async () => {
+      const fixture = await withdrawn("Clínica fim do contrato (Pix)", "+55619866307");
+      const contractId = await newContract(fixture, { billingMode: "asaas", paymentMethod: "pix", setup: "297" });
+      expect(await clinicStatus(fixture.clinicId)).toBe("suspended");
+      const charge = { p_contract_id: contractId, p_payment_id: "pay_fim_contrato", p_kind: "setup", p_due_date: today, p_value_cents: 29700, p_billing_type: "PIX", p_invoice_url: "https://f" };
+      await adminClient().rpc("billing_upsert_asaas_charge", { ...charge, p_raw_status: "PENDING", p_paid_at: null });
+      expect(await clinicStatus(fixture.clinicId)).toBe("suspended");
+      expect((await adminClient().rpc("billing_upsert_asaas_charge", { ...charge, p_raw_status: "RECEIVED", p_paid_at: new Date().toISOString() })).error).toBeNull();
+      expect(await clinicStatus(fixture.clinicId)).toBe("active");
+
+      const noSetup = await withdrawn("Clínica fim do contrato (Pix sem implantação)", "+55619866308");
+      await newContract(noSetup, { billingMode: "asaas", paymentMethod: "pix", setup: "0" });
+      expect(await clinicStatus(noSetup.clinicId)).toBe("active");
+    });
+
+    it("outro motivo aberto (administrativo) mantém a clínica suspensa", async () => {
+      const fixture = await withdrawn("Clínica fim do contrato (dois motivos)", "+55619866309");
+      const { error } = await support.client.rpc("suspend_clinic", { p_clinic_id: fixture.clinicId, p_reason: "administrative", p_note: "Teste.", p_no_app_confirmed: true });
+      expect(error).toBeNull();
+      await newContract(fixture, { billingMode: "manual", setup: "0" });
+      expect(await openSuspensions(fixture.clinicId)).toEqual(["administrative"]);
+      expect(await clinicStatus(fixture.clinicId)).toBe("suspended");
+    });
+  });
 });
