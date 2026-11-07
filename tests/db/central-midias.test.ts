@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
-import { listConversationMedia, setCentralEnabled } from "../../src/lib/data/central";
+import { listConversationMedia, listConversationMessages, setCentralEnabled } from "../../src/lib/data/central";
 import { setWhatsappAccessToken } from "../../src/lib/data/whatsapp/connection";
 import { processPendingMedia } from "../../src/lib/data/whatsapp/media";
 import { recordInboundMessage } from "../../src/lib/data/whatsapp/messages";
@@ -142,5 +142,58 @@ describe("mídia recebida", () => {
       { resolveClinic: async () => clinicId, clientFor: () => service(), defer: (work) => deferred.push(work) },
     );
     expect(deferred).toHaveLength(0);
+  });
+
+  it("EC (cliente, 07/nov/2026): foto e localização enviadas pelo app: o tipo à parte, a foto baixada, a localização em texto", async () => {
+    files["meta-eco-foto"] = { mime: "image/jpeg", size: 1500 };
+    const echo = (type: string, content: Record<string, unknown>): WaMessage => ({
+      id: `wamid.ec.${Date.now()}.${seq++}`,
+      from: "558430000000",
+      to: PHONE.slice(1),
+      type,
+      timestamp: String(Math.floor(Date.now() / 1000)),
+      [type]: content,
+    });
+    const foto = echo("image", { id: "meta-eco-foto", mime_type: "image/jpeg" });
+    const local = echo("location", { latitude: -5.8, longitude: -35.2, name: "Clínica CN5", address: "Rua X, 123" });
+    const desconhecida = echo("poll", { name: "?" });
+    const deferred: Promise<unknown>[] = [];
+    await processWebhook(
+      { entry: [{ changes: [{ field: "smb_message_echoes", value: { metadata: { phone_number_id: "pn-cn5-webhook" }, message_echoes: [foto, local, desconhecida] } }] }] },
+      { resolveClinic: async () => clinicId, clientFor: () => service(), defer: (work) => deferred.push(work), mediaFetcher: fakeMeta },
+    );
+    expect(deferred).toHaveLength(1);
+    await Promise.all(deferred);
+    const rows = (await db().from("whatsapp_messages").select("id, wa_message_id, message_type, content_type, body, author").eq("clinic_id", clinicId).in("wa_message_id", [foto.id!, local.id!, desconhecida.id!])).data!;
+    const of = (id: string) => rows.find((r) => r.wa_message_id === id)!;
+    // (Segundos depois do paciente, a regra IS4 pode marcar como mensagem automática do app: o tipo à parte vale igual.)
+    expect(of(foto.id!)).toMatchObject({ content_type: "image", body: null });
+    expect(["agent_reply", "app_auto_reply"]).toContain(of(foto.id!).message_type);
+    expect(of(local.id!)).toMatchObject({ content_type: "location", body: "Localização: Clínica CN5, Rua X, 123" });
+    expect(of(desconhecida.id!)).toMatchObject({ content_type: "poll", body: null });
+    expect(await mediaOfMessage(of(foto.id!).id)).toMatchObject({ status: "stored" });
+    const { data: media } = await db().from("whatsapp_media").select("direction").eq("message_id", of(foto.id!).id).single();
+    expect(media!.direction).toBe("outbound");
+    // A tela recebe o tipo e se foi gravada com a Central ligada.
+    const { messages } = await listConversationMessages(asDb(admin), clinicId, PHONE);
+    expect(messages.find((m) => m.id === of(foto.id!).id)).toMatchObject({ contentType: "image", centralOn: true });
+    expect(messages.find((m) => m.id === of(desconhecida.id!).id)).toMatchObject({ contentType: "poll", centralOn: true, body: null });
+  });
+
+  it("EC: com a Central desligada, o eco do app não guarda texto nem anexo, e a tela diz \"anterior\"", async () => {
+    await setCentralEnabled(asDb(admin), clinicId, false);
+    // A troca usa a hora do banco e a mensagem, a do servidor: espera a diferença entre os relógios passar.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const msg: WaMessage = { id: `wamid.ec.off.${Date.now()}`, from: "558430000000", to: PHONE.slice(1), type: "image", image: { id: "meta-eco-off", mime_type: "image/jpeg", caption: "legenda" } };
+    await processWebhook(
+      { entry: [{ changes: [{ field: "smb_message_echoes", value: { metadata: { phone_number_id: "pn-cn5-webhook" }, message_echoes: [msg] } }] }] },
+      { resolveClinic: async () => clinicId, clientFor: () => service(), defer: () => {}, mediaFetcher: fakeMeta },
+    );
+    const { data } = await db().from("whatsapp_messages").select("id, body, content_type, media_id").eq("clinic_id", clinicId).eq("wa_message_id", msg.id!).single();
+    expect(data).toMatchObject({ body: null, content_type: "image", media_id: null });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await setCentralEnabled(asDb(admin), clinicId, true);
+    const { messages } = await listConversationMessages(asDb(admin), clinicId, PHONE);
+    expect(messages.find((m) => m.id === data!.id)?.centralOn).toBe(false);
   });
 });

@@ -59,10 +59,16 @@ export function mediaKindOf(messageType: string): IncomingMediaKind | null {
 }
 
 /**
- * Anota o anexo da mensagem recebida como pendente e liga à mensagem. Com a Central desligada o banco não grava
+ * Anota o anexo da mensagem recebida (ou do eco do app, EC) como pendente e liga à mensagem. Com a Central desligada o banco não grava
  * (nada acontece). Repetida pela Meta: não chega aqui (a mensagem já existia).
  */
-export async function queueIncomingMedia(db: DbClient, clinicId: string, messageId: string, msg: WaMessage): Promise<string | null> {
+export async function queueIncomingMedia(
+  db: DbClient,
+  clinicId: string,
+  messageId: string,
+  msg: WaMessage,
+  direction: "inbound" | "outbound" = "inbound",
+): Promise<string | null> {
   const media = incomingMedia(msg);
   if (!media) return null;
   const rows = unwrap(
@@ -71,7 +77,7 @@ export async function queueIncomingMedia(db: DbClient, clinicId: string, message
       .insert({
         clinic_id: clinicId,
         message_id: messageId,
-        direction: "inbound",
+        direction,
         meta_media_id: media.metaId,
         mime_type: media.mimeType?.slice(0, 120) ?? null,
         file_name: media.fileName?.slice(0, 255) ?? null,
@@ -119,7 +125,7 @@ export async function processPendingMedia(
   const messages = unwrap(
     await db
       .from("whatsapp_messages")
-      .select("id, contact_phone, message_type")
+      .select("id, contact_phone, message_type, content_type")
       .eq("clinic_id", clinicId)
       .in(
         "id",
@@ -132,7 +138,8 @@ export async function processPendingMedia(
   for (const item of pending) {
     const update = (values: MediaUpdate) => db.from("whatsapp_media").update(values).eq("clinic_id", clinicId).eq("id", item.id);
     const message = item.message_id ? messageOf.get(item.message_id) : undefined;
-    const kind = message ? mediaKindOf(message.message_type) : null;
+    // EC: no eco do app, o tipo do anexo está em content_type (a mensagem segue `agent_reply`).
+    const kind = message ? mediaKindOf(message.content_type ?? message.message_type) : null;
     if (!message?.contact_phone || !kind || !item.meta_media_id) {
       await update({ status: "failed", error: "mensagem do anexo não encontrada" });
       result.failed++;

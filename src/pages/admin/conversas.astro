@@ -503,7 +503,7 @@ const tabClass = (active: boolean) =>
                 }
                 const message = line.message;
                 const bubble = bubbleOf(message, names);
-                const attachment = message.mediaId ? attachmentOf(message.messageType, mediaOf.get(message.mediaId), coexistence) : null;
+                const attachment = message.mediaId ? attachmentOf(message.contentType ?? message.messageType, mediaOf.get(message.mediaId), coexistence) : null;
                 const delivery = message.direction === "outbound" ? deliveryLabel(message.status) : null;
                 return (
                   <>

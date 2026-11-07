@@ -1,6 +1,6 @@
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { deliveryRank, isDeliveryStatus, reachedPhone, storedText, toE164, waTimestamp, type WaMessage } from "./meta";
+import { deliveryRank, echoContentType, isDeliveryStatus, reachedPhone, storedText, toE164, waTimestamp, type WaMessage } from "./meta";
 import { COURTESY_MESSAGE_TYPE, isCourtesyMessage } from "./courtesy";
 import { markPatientWrote } from "./conversations";
 import { queueIncomingMedia } from "./media";
@@ -93,6 +93,8 @@ export async function recordAgentEcho(db: DbClient, clinicId: string, echo: WaMe
     contact_phone: phone,
     direction: "outbound",
     message_type: "agent_reply",
+    // EC (cliente, 07/nov/2026): o tipo real (foto, áudio, localização…) à parte; segue `agent_reply` para o resto.
+    content_type: echoContentType(echo),
     // Como na mensagem recebida (CN2): o texto só fica com a Central ligada.
     body: storedText(echo),
     wa_timestamp: waTimestamp(echo)?.toISOString() ?? null,
@@ -100,7 +102,10 @@ export async function recordAgentEcho(db: DbClient, clinicId: string, echo: WaMe
     wa_message_id: echo.id ?? null,
     created_at: now.toISOString(),
   });
-  return id ? { recorded: true, id, contactId } : { recorded: false, reason: "duplicate" };
+  if (!id) return { recorded: false, reason: "duplicate" };
+  // EC: o anexo enviado pelo app é baixado como o do paciente (só com a Central ligada; o banco confere).
+  await queueIncomingMedia(db, clinicId, id, echo, "outbound").catch((error) => logError("central: anexo do app não anotado", error, { clinica: clinicId }));
+  return { recorded: true, id, contactId };
 }
 
 /**

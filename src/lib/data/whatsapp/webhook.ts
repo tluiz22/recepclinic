@@ -334,6 +334,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         });
       });
     }
+    let echoMediaQueued = false;
     for (const echo of onboarding ? [] : (change.message_echoes ?? [])) {
       await attempt("eco da recepção", async () => {
         // Editada ou apagada no app (CN2): muda a original; não é resposta nova, não pausa o bot.
@@ -345,6 +346,8 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         if (echo.type === "edit" || echo.type === "revoke") return;
         const result = await recordAgentEcho(db, clinicId, echo, now);
         count(result, "echoes");
+        // EC (cliente, 07/nov/2026): anexo enviado pelo app, baixado como o do paciente.
+        if (result.recorded && echo.type && mediaKindOf(echo.type)) echoMediaQueued = true;
         if (isSupportPhone(toE164(echo.to), support.phone)) return;
         if (!result.recorded || !(await hasFeature(db, clinicId, "whatsapp_bot"))) return;
         // Número marcado como Pessoal ou Administrativo/outros (NA): a resposta fica no histórico e não abre atendimento.
@@ -359,6 +362,11 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         // A recepção respondeu pelo app (coexistência): pausa o bot naquela conversa; "#bot" devolve (F6.4).
         await handleAgentEcho(db, clinicId, echo, result.contactId, now);
       });
+    }
+    if (echoMediaQueued && !mediaQueued && deps.defer) {
+      deps.defer(
+        processPendingMedia(db, clinicId, { fetcher: deps.mediaFetcher }).catch((error) => logError("central: anexo do app não baixado na hora", error, { clinica: clinicId })),
+      );
     }
   }
 

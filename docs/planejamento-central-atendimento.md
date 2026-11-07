@@ -868,3 +868,13 @@ o `message_type`, para a legenda do app não ficar guardada com a Central deslig
 anexo (fila de mídias da CN5); (3) rótulos da conversa e da prévia da lista; (4) testes de unidade e de banco
 (guarda com a Central desligada, cada tipo de eco) e Playwright na tela Conversas; (5) staging; o cliente valida.
 Jornada do bot não muda; sem captura nova da Central de Ajuda (conferir na implementação).
+
+**Implementada (07/nov/2026, migração `20261228130000`):** o eco do app segue `agent_reply` (pausa do bot, métricas e a
+guarda do texto continuam iguais, **sem mexer na guarda**: ela já vale para o `agent_reply`) e ganha a coluna
+`content_type` com o tipo real; o anexo do app entra na fila de mídias (direção `outbound`) e é baixado logo depois do
+webhook. Localização, contato e reação viram texto também quando vêm do paciente (`storedText`). O histórico da
+conversa (`central_conversation_messages`) devolve `content_type` e `central_on` (gravada com a Central ligada, pela
+última troca em `central_switches`): sem texto e com a Central ligada → "A Central não mostra esta mensagem. Veja no app
+do WhatsApp."; desligada → "anterior à Central". As mensagens antigas (sem o tipo) não se recuperam. Testado com
+Playwright local (localização, reação e enquete pelo app; localização do paciente), em 390 e 1280 px. Captura
+`conversas` não muda (só texto). Jornada do bot não muda.

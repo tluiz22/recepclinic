@@ -26,6 +26,10 @@ export type CentralMessage = {
   editedAt: Date | null;
   revokedAt: Date | null;
   mediaId: string | null;
+  /** EC: no eco do app, o tipo real do conteúdo (image, location…); null = texto ou o próprio `messageType`. */
+  contentType: string | null;
+  /** EC: gravada com a Central ligada (sem texto, então, é um tipo que a Central não mostra; não "anterior"). */
+  centralOn: boolean;
 };
 
 export type MessageCursor = { sortAt: string; id: string };
@@ -78,6 +82,8 @@ export async function listConversationMessages(
     editedAt: row.edited_at ? new Date(row.edited_at) : null,
     revokedAt: row.revoked_at ? new Date(row.revoked_at) : null,
     mediaId: row.media_id,
+    contentType: row.content_type,
+    centralOn: row.central_on === true,
   }));
   const last = rows[rows.length - 1];
   return { messages, next: rows.length === limit && last ? { sortAt: last.sort_at, id: last.id } : null };

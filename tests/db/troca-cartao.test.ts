@@ -83,8 +83,8 @@ describe("Troca de cartão (F12.2g)", () => {
     expect(data!.payment_method).toBe("credit_card");
     expect(data!.card_registered_at).not.toBeNull();
     expect(data!.asaas_subscription_id).toBe("sub_card");
-    const last = (await listBillingAudit(asDb(support), fixture.clinicId))[0];
-    expect(last).toMatchObject({ action: "payment_method_changed", actorKind: "clinic", actorId: fixture.admin.id });
-    expect(last.after).toEqual({ payment_method: "credit_card" });
+    // "Cartão trocado" e "Forma de pagamento alterada" saem na mesma transação (mesmo instante): busca pela ação.
+    const changed = (await listBillingAudit(asDb(support), fixture.clinicId)).find((a) => a.action === "payment_method_changed" && (a.after as { payment_method?: string } | null)?.payment_method === "credit_card");
+    expect(changed).toMatchObject({ actorKind: "clinic", actorId: fixture.admin.id });
   });
 });

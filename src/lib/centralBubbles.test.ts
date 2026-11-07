@@ -19,6 +19,8 @@ const message = (over: Partial<CentralMessage>): CentralMessage => ({
   editedAt: null,
   revokedAt: null,
   mediaId: null,
+  contentType: null,
+  centralOn: false,
   ...over,
 });
 
@@ -38,6 +40,19 @@ describe("bolhas da conversa (CN3a)", () => {
     expect(bubbleOf(message({ body: null, messageType: "image" })).placeholder).toBe("Foto");
     expect(bubbleOf(message({ body: null })).placeholder).toBe("Mensagem anterior à Central de atendimento");
     expect(bubbleOf(message({ editedAt: new Date() })).edited).toBe(true);
+  });
+
+  it("EC (cliente, 07/nov/2026): com a Central ligada, nunca \"anterior\"; o app com o tipo real; o resto, ver no app", () => {
+    const app = { author: "agent_app" as const, direction: "outbound" as const, messageType: "agent_reply", body: null, centralOn: true };
+    expect(bubbleOf(message({ ...app, contentType: "image" }))).toMatchObject({ label: "Respondida pelo app do WhatsApp", placeholder: "Foto" });
+    expect(bubbleOf(message({ ...app, contentType: "audio" })).placeholder).toBe("Áudio");
+    expect(bubbleOf(message({ ...app, contentType: "location" })).placeholder).toBe("Localização");
+    expect(bubbleOf(message({ ...app, contentType: "poll" })).placeholder).toBe("A Central não mostra esta mensagem. Veja no app do WhatsApp.");
+    expect(bubbleOf(message({ ...app })).placeholder).toBe("A Central não mostra esta mensagem. Veja no app do WhatsApp.");
+    expect(bubbleOf(message({ body: null, messageType: "unsupported", centralOn: true })).placeholder).toBe("A Central não mostra esta mensagem. Veja no app do WhatsApp.");
+    // Gravada com a Central desligada: continua "anterior".
+    expect(bubbleOf(message({ ...app, centralOn: false })).placeholder).toBe("Mensagem anterior à Central de atendimento");
+    expect(bubbleOf(message({ ...app, body: "Localização: Rua X, 123", contentType: "location" })).text).toBe("Localização: Rua X, 123");
   });
 
   it("situação da entrega", () => {

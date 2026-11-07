@@ -4,7 +4,11 @@ import { capitalize } from "./vocabulary";
 
 // Como cada mensagem aparece na conversa da Central (CN3a; telas T1 e da conversa no celular, cliente, 05/nov/2026):
 // o paciente à esquerda; o assistente, os avisos automáticos e a equipe à direita, cada um com o seu rótulo; a
-// mensagem sem texto guardado diz o porquê (anterior à Central, apagada, anexo).
+// mensagem sem texto guardado diz o porquê (anterior à Central, apagada, anexo). EC (cliente, 07/nov/2026): sem texto e
+// gravada com a Central ligada, um tipo que a Central não mostra: sempre o mesmo aviso, para ver no app do WhatsApp.
+
+/** EC (cliente, 07/nov/2026): o aviso único para o que a Central não mostra. */
+export const NOT_SHOWN = "A Central não mostra esta mensagem. Veja no app do WhatsApp.";
 
 export type Bubble = {
   side: "left" | "right";
@@ -35,6 +39,7 @@ const MEDIA_WORDS: Record<string, string> = {
   sticker: "Figurinha",
   location: "Localização",
   contacts: "Contato",
+  reaction: "Reação",
   // Histórico do app (CN8): a Meta só manda os anexos das últimas 2 semanas.
   media_placeholder: "Anexo enviado antes da conexão (não disponível)",
 };
@@ -73,10 +78,12 @@ export function bubbleOf(message: CentralMessage, names: Map<string, string> = n
   }
   if (bubble.text) return bubble;
   if (message.revokedAt) return { ...bubble, placeholder: "Mensagem apagada" };
-  const media = MEDIA_WORDS[message.messageType];
+  // Foto, áudio, documento… (o anexo aparece embaixo); localização e contato sem descrição ficam com o nome do tipo.
+  const media = MEDIA_WORDS[message.contentType ?? message.messageType];
   if (media) return { ...bubble, placeholder: media };
   if (message.author === "system" && message.templateName) return { ...bubble, placeholder: "Texto do aviso não guardado" };
-  return { ...bubble, placeholder: "Mensagem anterior à Central de atendimento" };
+  // Gravada com a Central desligada: o texto não foi guardado (D12 revista). Com ela ligada, um tipo que ela não mostra.
+  return { ...bubble, placeholder: message.centralOn ? NOT_SHOWN : "Mensagem anterior à Central de atendimento" };
 }
 
 // ---------------------------------------------------------------------------

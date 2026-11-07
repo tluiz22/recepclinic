@@ -38,6 +38,10 @@ export interface WaMessage {
   document?: WaMedia & { caption?: string; filename?: string };
   audio?: WaMedia & { voice?: boolean };
   sticker?: WaMedia & { animated?: boolean };
+  /** EC (cliente, 07/nov/2026): localização, contato e reação viram texto na Central. */
+  location?: { latitude?: number; longitude?: number; name?: string; address?: string };
+  contacts?: { name?: { formatted_name?: string; first_name?: string }; phones?: { phone?: string }[] }[];
+  reaction?: { message_id?: string; emoji?: string };
   /** Eco de mensagem editada no app (smb_message_echoes, `type: "edit"`): o conteúdo novo da original. */
   edit?: { original_message_id?: string; message?: WaMessage };
   /** Eco de mensagem apagada no app (`type: "revoke"`). */
@@ -50,8 +54,32 @@ export interface WaMessage {
  */
 export function storedText(msg: WaMessage): string | null {
   const reply = msg.interactive?.list_reply ?? msg.interactive?.button_reply;
-  const text = msg.text?.body ?? reply?.title ?? msg.button?.text ?? msg.image?.caption ?? msg.video?.caption ?? msg.document?.caption ?? null;
+  const text = msg.text?.body ?? reply?.title ?? msg.button?.text ?? msg.image?.caption ?? msg.video?.caption ?? msg.document?.caption ?? describedText(msg);
   return text?.trim() ? text : null;
+}
+
+/**
+ * EC (cliente, 07/nov/2026): localização, contato e reação em texto ("Localização: …", "Contato: …", "Reagiu com …").
+ * Sem o que descrever, null (a tela mostra o tipo ou pede para ver no app do WhatsApp).
+ */
+function describedText(msg: WaMessage): string | null {
+  if (msg.type === "location" && msg.location) {
+    const place = [msg.location.name, msg.location.address].map((v) => v?.trim()).filter(Boolean).join(", ");
+    return place ? `Localização: ${place}` : null;
+  }
+  if (msg.type === "contacts" && msg.contacts?.length) {
+    const names = msg.contacts.map((c) => c.name?.formatted_name?.trim() || c.name?.first_name?.trim()).filter(Boolean);
+    return names.length ? `${names.length > 1 ? "Contatos" : "Contato"}: ${names.join(", ")}` : null;
+  }
+  if (msg.type === "reaction") return msg.reaction?.emoji ? `Reagiu com ${msg.reaction.emoji}` : null;
+  return null;
+}
+
+/** EC: o tipo do conteúdo do eco do app (null = texto), guardado à parte do `agent_reply`. */
+export function echoContentType(echo: WaMessage): string | null {
+  const type = echo.type?.trim().toLowerCase() ?? "";
+  if (!type || type === "text") return null;
+  return /^[a-z_]{1,40}$/.test(type) ? type : "unknown";
 }
 
 /** Hora do evento na Meta (segundos, em texto ou número) → instante; null se não vier ou não for válida. */
