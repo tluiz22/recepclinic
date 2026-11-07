@@ -326,13 +326,14 @@ async function handleConfirmReply(b: Bot, pending: PendingConfirm, selection: Se
 // ---------------------------------------------------------------------------
 
 /**
- * Pedido de recepção sem motivo ("atendente" digitado ou a opção do menu): pergunta o motivo, com "Falar com a
- * recepção" a um toque. Motivo na mesma mensagem ("atendente, quanto custa a consulta?"): vai direto para a base.
+ * Pedido de recepção: a opção do menu transfere direto, sem perguntar o motivo (cliente, 06/nov/2026). Digitado
+ * ("secretária", "atendente"): pergunta antes "Você quer falar com a recepção?" com Sim · Não (cliente, 06/nov/2026;
+ * o Sim transfere pelo router). Motivo na mesma mensagem ("atendente, quanto custa a consulta?"): vai direto para a base.
  */
 export async function askReceptionReason(b: Bot, origin: HandoffOrigin, text: string | null = null): Promise<void> {
   if (text && (await reasonInMessage(b, text))) return handleReceptionReason(b, text, origin);
-  await mergeContext(b, { [REASON_KEY]: { origin } satisfies PendingReason });
-  await sendButtons(b, "bot_reception_reason", t.RECEPTION_REASON_QUESTION, t.RECEPTION_NOW_BUTTONS);
+  if (origin === "typed") return askReception(b, "bot_reception_confirm", t.RECEPTION_CONFIRM);
+  await handoff(b, origin);
 }
 
 /** O pedido digitado já diz o que a pessoa precisa (e a base sabe responder ou abrir o fluxo). */

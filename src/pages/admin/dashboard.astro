@@ -67,7 +67,7 @@ const [counts, sendsAlert, toReview, certificate, connection, templates, attenti
   isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
   has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
   isSupport ? getDeliveredConnectionTest(db, clinic.clinicId) : Promise.resolve(null),
-  // IS4: mensagem automática do app nos últimos 7 dias (Administrador e Suporte).
+  // IS4: mensagem automática do app nas últimas 6 horas (Administrador e Suporte).
   has("whatsapp_bot") && (isSupport || clinic.roles.includes("admin")) ? latestAutomaticEcho(db, clinic.clinicId) : Promise.resolve(null),
 ]);
 // Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
@@ -203,6 +203,7 @@ const tagClass = "rounded-md px-2 py-0.5 text-[12.5px] font-bold whitespace-nowr
 // "Precisa de você": some a linha de quem não tem pendência; vazio mostra um texto de tudo em dia.
 // O menu usa este número (mesma conta de getMeuDiaCount) sem ler de novo.
 Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0) + toFix.length;
+Astro.locals.meuDiaConversations = awaiting.length + inProgress.length;
 const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0 || toFix.length > 0;
 const RESENDABLE = new Set(["appointment_confirmation", "appointment_reschedule"]);
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";

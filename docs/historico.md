@@ -984,3 +984,129 @@ ficava fora) e 131026 (número cadastrado errado, confirmação de 05/nov). Deci
 [`falhas-de-envio.md`](falhas-de-envio.md): conferência do número (A2), aviso de entrega na Agenda (C), "Corrigir
 número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. Migração
 `20261213120000_falhas_de_envio_descartadas`. Roteiro: `staging.md`, parte W.
+
+## CU2: preços da Meta e uso por categoria (05/nov/2026)
+
+Primeiro passo da implementação da Central de Atendimento (ordem da seção 12 do
+`planejamento-central-atendimento.md`). Branch `central-cu2`, criada da `main`.
+
+- **Tela (cliente, 05/nov): P1**, página própria Sistema › Preços da Meta (canvas, linha "CU2"), com o vigente em
+  destaque, "Nova vigência" (com confirmação), vigências futuras com Apagar e o Histórico. P2 (cartão no topo do
+  Uso) recusada.
+- **Migração `20261214120000_precos_da_meta.sql`:** tabela `meta_price_versions` (vigência no dia 1º, do mês atual em
+  diante; sem UPDATE; apaga só a futura; leitura de todos os logins, escrita só do Suporte) com a vigência de
+  01/out/2026 (R$ 0,0350; 1.000 grátis; câmbio R$ 5,15; preço em reais reconferido em 05/nov, fonte de terceiro, a
+  tabela oficial da Meta não foi aberta); função `meta_message_counts` (por clínica e mês no fuso da clínica:
+  modelos, serviço e pelo app; sem falhas e puladas; credencial de quem chama).
+- **Uso:** texto corrigido (a cobrança desde 01/out), colunas Modelos (cobrados), Assistente e avisos, Pelo app
+  (grátis) e Estimativa da Meta. Antes, as respostas pelo app (eco) entravam em "Bot e conversa".
+- **Testes:** `src/lib/data/metaPricing.test.ts` e `tests/db/precos-da-meta.test.ts`; `meta_price_versions` nas exceções
+  da varredura de isolamento (tabela da plataforma).
+
+## CU3: calculadora do custo da Meta (05/nov/2026)
+
+Na branch `central-atendimento` (era `central-cu2`; cliente, 05/nov: staging e produção só com a Central pronta).
+Aba Sistema › Vendas › Custo da Meta (tela K2, valores T11), sem migração. Contas em `src/lib/metaCostCalculator.ts`
+(as mesmas no servidor e no navegador): atendimentos = profissionais × dias × atendimentos por dia × 52/12; hoje =
+modelos + assistente acima da franquia; Central = respostas da recepção acima do que sobrar da franquia; IA de outra
+empresa = modelos + mensagens de IA acima da franquia + tokens da empresa de IA; IA da Meta = modelos + tokens da Meta
+(sem tarifa de serviço). O exemplo da T11 bate centavo a centavo (teste). Rótulo "Atendimentos por dia (média, por
+profissional)", para deixar claro que multiplica pelos profissionais. Parâmetros não gravam (recarregar volta ao padrão).
+
+## CN1: base de dados da Central de atendimento (05/nov/2026)
+
+Na branch `central-atendimento`. Migração `20261215120000_central_base.sql`, aditiva, sem mudar o bot nem as telas:
+
+- **Matriz:** item `central_attendance` ("Central de atendimento", depende do bot), fora da tabela de preços até a
+  decisão 9 (preço/pacote). **Liga/desliga pelo Administrador:** `set_central_enabled` grava cada troca em
+  `central_switches` (só por essa função; ligar exige o item); `app.central_active` = item liberado e última troca
+  ligada. A tela vem no CU4.
+- **Mensagens:** `author` (paciente, bot, sistema, pelo app, pelo painel; carga pelo tipo, e o gatilho preenche quando
+  quem grava não informa; a mensagem automática do app vira "sistema"), `sent_by`, `handoff_id`, `wa_timestamp`,
+  `sort_at` (ordem do histórico; carga = `created_at`), `source` (ao vivo/histórico), `edited_at`, `revoked_at`,
+  `media_id`, `client_key` (único por clínica). Índice do histórico `(clinic_id, contact_phone, sort_at desc, id desc)`.
+- **Anexos:** `whatsapp_media` (só a credencial da clínica lê e grava) e o bucket privado `whatsapp-media` (16 MB;
+  pasta da clínica; `clinic_service` passa a gravar e apagar no Storage, só nessa pasta).
+- **Conversa:** `assigned_to`/`assigned_at`, `last_message_at`, `last_message_preview`, `last_message_author`,
+  `last_patient_at`; de volta ao bot o responsável sai (gatilho). A prévia fica fora da leitura direta pela API
+  (`grant` por coluna na `conversation_state`).
+- **Eventos:** `handoff_events.kind` (situação, assumida, transferida, liberada, finalizada; os antigos de volta ao bot
+  viraram "finalizada") e o responsável de antes e de depois.
+- **Não lidas e registro:** `conversation_reads` (cada login só a própria linha) e `conversation_access_log` (quem abriu
+  e quem baixou; o Administrador da clínica e o Suporte leem).
+- **Leitura:** `central_conversation_messages` (paginada por `sort_at`+`id`; a 1ª página registra a abertura e marca como
+  lida, menos para o Suporte; mensagem apagada no app sem texto) e `central_media_access`; as duas exigem a Central
+  ligada e a regra da decisão 4 (`app.can_view_conversation`).
+- **Código:** `src/lib/data/central.ts`, item em `features.ts`, `plans.ts` (fora da tabela) e o texto do item na ajuda do
+  Suporte. Testes: `tests/db/central-base.test.ts`; `whatsapp_media` e `conversation_reads` nas exceções da varredura
+  de isolamento (teste próprio). Seed: Central ligada na Clínica Exemplo Saúde.
+- **Ao juntar com a `faturamento`:** as tabelas novas com `clinic_id` (`central_switches`, `whatsapp_media`,
+  `conversation_reads`, `conversation_access_log`) precisam do bloqueio de clínica suspensa (teste `suspensao-banco`).
+
+## Ajustes do bot após o staging (06/nov/2026)
+
+Pedido do cliente depois dos testes no staging:
+- **Fora "Obrigado! Já repassamos para a nossa equipe."**: a resposta ao assunto da transferência é guardada sem
+  resposta do bot (`router.ts`).
+- **Fora "Claro! 😊 Poderia me contar brevemente o que você precisa?…"**: "Falar com a recepção" do menu ou "atendente"
+  digitado transferem direto, com a pergunta do assunto depois. O motivo já na mesma mensagem ("atendente, qual o
+  endereço?") continua indo para a base (`askReceptionReason`, `respond.ts`). Decisão do cliente: transferir direto.
+- Jornada do bot (Tecnologia) atualizada; testes de banco do bot ajustados (165 passando).
+
+## Ajustes da tela Conversas após o staging (06/nov/2026)
+
+Pedido do cliente depois dos testes no staging:
+- **Celular:** o cabeçalho da conversa (nome, situação, Assumir/Transferir/Finalizar) e a faixa "Próxima · Ver paciente"
+  ficam presos no topo enquanto a conversa rola (`sticky` abaixo de 1024px).
+- **Atualização sozinha:** a cada 10 s, com a aba à vista, a tela busca a própria página e troca só a lista, as abas, a
+  conversa e a situação (`data-live`); a caixa de resposta, as janelas e os botões não mudam. Quem está no fim da
+  conversa segue no fim; com áudio tocando, a conversa espera. A recarga inteira de 1 minuto continua (fora de uso).
+- **Computador:** a tela Conversas sai da moldura de 1152px e vai até 1760px (`AdminLayout`, `wide`).
+- Captura `conversas` na fila de `capturas-pendentes.md`.
+
+## Nome da agenda e agenda Exames automática (06/nov/2026)
+
+Erro achado pelo cliente no staging: renomeado o profissional, a Agenda, o link de agendamento e as mensagens seguiam com
+o nome antigo ("Dr Fulano"). Causa: a agenda guardava um nome próprio, preenchido com o do profissional só na criação.
+Decisão do cliente (opção C): a agenda de profissional mostra sempre o nome do profissional; com o item "Exames e
+procedimentos", a agenda da equipe é criada sozinha; desligar o item desativa a agenda e religar reativa a mesma.
+- Migração `20261225120000_agenda_nome_do_profissional`: `app.check_team_agenda` grava o nome do profissional (ou
+  "Exames"); gatilho em `professionals` renomeia a agenda; gatilho em `clinic_features` cria, reativa ou desativa a
+  "Exames"; acerta os nomes que já existem e cria a "Exames" das clínicas com o item e sem ela.
+- Telas: sem o campo Nome na agenda; "Nova agenda" só de profissional; sem o botão da agenda da equipe. Ajuda e
+  artigo de Agendas e o item Exames da Matriz atualizados. `seed.sql` usa a "Exames" automática.
+- Testes de banco ajustados (`teamAgendaId`); casos novos: renomear o profissional e ligar/desligar o item.
+
+## Conversas como o WhatsApp, anexo e confirmação da recepção (06/nov/2026)
+
+Pedido do cliente depois do staging:
+- **Computador:** a tela Conversas ocupa a altura da janela (`AdminLayout`, `fill`), sem a barra de rolagem da página;
+  só a lista, a conversa e o painel rolam por dentro.
+- **Celular:** a conversa aberta ocupa a tela toda, como no app do WhatsApp: cabeçalho no topo, mensagens rolando no
+  meio e a caixa de resposta fixa embaixo (acompanha o teclado pelo `visualViewport`); a página atrás não rola, sem
+  barra horizontal. Sai o cabeçalho preso (`sticky`) da manhã.
+- **Anexo "Failed to fetch":** a CSP bloqueava a subida direta ao Storage; `connect-src 'self' https://*.supabase.co`
+  (`astro.config.mjs`).
+- **Bot:** pedido de recepção digitado sem motivo ("secretária", "atendente", ou um motivo que a base não responde)
+  pergunta "Você quer falar com a recepção?" com Sim · Não também com a base de conhecimento; a opção do menu continua
+  transferindo direto. Jornada do bot atualizada; testes do bot ajustados (154 passando).
+- Testes de tela (skill playwright-ui-form-best-practices): 1280, 1440 e 390 px; relatório entregue ao cliente.
+- **Foto do iPhone "Não enviada" (06/nov, staging):** erro 131053 da Meta ("Media upload error"); o print do iPhone é PNG
+  de 16 bits (Display P3), que o WhatsApp recusa. A tela converte toda foto para JPEG de 8 bits antes de subir (até
+  2560 px, fundo branco na transparência), como o app do WhatsApp. O arquivo de 3,2 MB virou 323 KB.
+- **Barra de carregamento sem parar no download (06/nov, staging):** o link do documento recebido baixava o arquivo sem
+  trocar de página, e a barra ligada no clique nunca desligava. A barra não liga mais em links de arquivo (`/api/`,
+  também o XML da nota no Financeiro) e o documento tem `download`.
+- **Aviso da mensagem automática do app (06/nov):** no Início e em Configurações › WhatsApp, vale por 6 horas depois da
+  última mensagem automática (antes, 7 dias). Pedido do cliente após o aviso de 05/11 seguir na produção.
+- **"Atendimento" é pedido de recepção (06/nov):** só quando a mensagem é o pedido ("Atendimento", "quero atendimento",
+  "atendimento humano", "falar com o atendimento"); pede a confirmação como os outros. "Horário de atendimento",
+  "atendimento domiciliar" e outras dúvidas seguem para a base (`input.ts`, `ATTENDANCE_REQUEST`). Jornada do bot
+  atualizada; 155 testes do bot passando.
+- **"O paciente escreveu de novo" ao finalizar, com a mensagem na tela (06/nov, staging):** duas causas. (1) A
+  conferência do banco comparava a hora da situação por igualdade: o banco grava microssegundos e a tela lê
+  milissegundos, então, com a hora gravada pelo banco, finalizar recusava sempre; agora compara o milissegundo inteiro
+  (`returnToBot`). (2) A atualização de 10 s da tela Conversas não renovava a hora guardada no botão (nem o responsável
+  visto de Assumir/Transferir/Enviar); agora renova. A proteção continua: mensagem que a tela ainda não mostrou recusa.
+  Teste de banco novo (falha sem a correção).
+

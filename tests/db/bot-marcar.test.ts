@@ -225,10 +225,10 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
       reply = await say(other, "Maria Secretária");
       expect(reply[0].body).toBe("Qual a data de nascimento do paciente? (formato dd/mm/aaaa)");
       expect((await conversation(other)).state).toBe("BOOK_PATIENT_NEW");
-      // Fora desses passos, o mesmo texto é um pedido de recepção: o motivo (EA, 02/nov/2026) e a recepção a um toque.
+      // Fora desses passos, o mesmo texto é um pedido de recepção: confirma e transfere (cliente, 06/nov/2026).
       reply = await say(other, "quero falar com a secretária");
-      expect(reply[0].body).toContain("Poderia me contar brevemente o que você precisa?");
-      reply = await say(other, { id: "reception_now" });
+      expect(reply.at(-1)!.body).toBe("Você quer falar com a recepção? A conversa passa para a nossa equipe.");
+      reply = await say(other, "sim");
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect((await conversation(other)).state).toBe("HUMAN_HANDOFF");
     } finally {
@@ -419,7 +419,7 @@ describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () 
       const { data: convo } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
       expect(convo!.human_handoff).toBe(true);
       // Pausado: a 1ª resposta é o assunto; depois, o bot não responde.
-      expect((await say(phone, "Queria um horário na sexta")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+      expect((await say(phone, "Queria um horário na sexta")).map((m) => m.body)).toEqual([]);
       expect(await say(phone, "Oi")).toEqual([]);
     } finally {
       await adminClient().from("schedule_blocks").delete().in("id", blocks);

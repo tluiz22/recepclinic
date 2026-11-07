@@ -2,7 +2,8 @@
 // Vendas (cliente, 11/out/2026): tudo da apresentação e da venda do
 // RecepClinic, só para o Suporte (nunca no site público). Uma aba por
 // assunto; os novos assuntos de venda entram aqui como abas. R10 (cliente,
-// 17/out/2026): as abas sublinhadas do painel.
+// 17/out/2026): as abas sublinhadas do painel. CU3 (cliente, 05/nov/2026): a
+// aba Custo da Meta, a calculadora do que a clínica paga à Meta.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
@@ -11,12 +12,14 @@ import PlanosTab from "../../../components/admin/vendas/PlanosTab.astro";
 import DemonstracaoTab from "../../../components/admin/vendas/DemonstracaoTab.astro";
 import RoteiroTab from "../../../components/admin/vendas/RoteiroTab.astro";
 import ImplantacaoTab from "../../../components/admin/vendas/ImplantacaoTab.astro";
+import CustoMetaTab from "../../../components/admin/vendas/CustoMetaTab.astro";
 
 const TABS = [
   { key: "planos", label: "Planos" },
   { key: "demonstracao", label: "Demonstração" },
   { key: "roteiro", label: "Roteiro de vendas" },
   { key: "implantacao", label: "Implantação" },
+  { key: "custo-meta", label: "Custo da Meta" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -32,4 +35,5 @@ const tab: TabKey = TABS.find((t) => t.key === requested)?.key ?? "planos";
   {tab === "demonstracao" && <DemonstracaoTab />}
   {tab === "roteiro" && <RoteiroTab />}
   {tab === "implantacao" && <ImplantacaoTab />}
+  {tab === "custo-meta" && <CustoMetaTab />}
 </AdminLayout>

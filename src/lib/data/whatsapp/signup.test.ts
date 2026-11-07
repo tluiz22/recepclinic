@@ -9,7 +9,7 @@ import { GraphRequestError } from "./graph";
 type Call = { method: string; url: string; body: unknown };
 
 /** Meta de mentira: responde por trecho do endereço; `fail` devolve erro para o trecho. */
-function fakeMeta(phone: Record<string, unknown> = {}, fail: string[] = []) {
+function fakeMeta(phone: Record<string, unknown> = {}, fail: string[] = [], numbers: string[] = ["9876543210"]) {
   const calls: Call[] = [];
   const fetcher = (async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
@@ -18,6 +18,7 @@ function fakeMeta(phone: Record<string, unknown> = {}, fail: string[] = []) {
     const failing = fail.find((part) => url.includes(part));
     if (failing) return new Response(JSON.stringify({ error: { code: 100, message: `falhou ${failing}` } }), { status: 400 });
     if (url.includes("/oauth/access_token")) return Response.json({ access_token: "token-da-clinica" });
+    if (url.includes("/phone_numbers")) return Response.json({ data: numbers.map((id) => ({ id, display_phone_number: "+55 84 99999-0000" })) });
     if (method === "GET") return Response.json({ display_phone_number: "+55 84 99999-0000", platform_type: "CLOUD_API", ...phone });
     return Response.json({ success: true });
   }) as typeof fetch;
@@ -125,9 +126,29 @@ describe("conexão pela janela da Meta", () => {
     const meta = fakeMeta();
     const { db } = fakeDb();
     await expect(connectWithSignup(db, "clinica", input("FINISH_ONLY_WABA"), deps(meta.fetcher))).rejects.toBeInstanceOf(DataError);
-    await expect(connectWithSignup(db, "clinica", { ...input("FINISH"), phoneNumberId: "" }, deps(meta.fetcher))).rejects.toBeInstanceOf(DataError);
+    await expect(connectWithSignup(db, "clinica", { ...input("FINISH"), phoneNumberId: "abc" }, deps(meta.fetcher))).rejects.toBeInstanceOf(DataError);
+    await expect(connectWithSignup(db, "clinica", { ...input("FINISH"), wabaId: "" }, deps(meta.fetcher))).rejects.toBeInstanceOf(DataError);
     await expect(connectWithSignup(db, "clinica", input("CANCEL"), deps(meta.fetcher))).rejects.toBeInstanceOf(DataError);
     expect(meta.calls).toEqual([]);
+  });
+});
+
+describe("cadastro v4 (CN8)", () => {
+  it("fim da coexistência só com a conta: busca o número na conta e segue", async () => {
+    const meta = fakeMeta({ is_on_biz_app: true });
+    const { db, rpcs } = fakeDb();
+    await connectWithSignup(db, "clinica", { ...input("FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING"), phoneNumberId: "" }, deps(meta.fetcher));
+    expect(meta.calls.map(path).slice(0, 3)).toEqual(["GET /oauth/access_token", "GET /1234567890/phone_numbers", "GET /9876543210"]);
+    expect(rpcs[0].args.p_phone_number_id).toBe("9876543210");
+  });
+
+  it("conta com nenhum ou com mais de um número: recusa sem gravar", async () => {
+    for (const numbers of [[], ["111111", "222222"]]) {
+      const meta = fakeMeta({}, [], numbers);
+      const { db, rpcs } = fakeDb();
+      await expect(connectWithSignup(db, "clinica", { ...input("FINISH"), phoneNumberId: "" }, deps(meta.fetcher))).rejects.toBeInstanceOf(DataError);
+      expect(rpcs).toEqual([]);
+    }
   });
 });
 

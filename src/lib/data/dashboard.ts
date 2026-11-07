@@ -97,6 +97,8 @@ export async function getMeuDiaCount(
   features: readonly string[],
   onError: (label: string, error: unknown) => void,
   now: Date = new Date(),
+  /** `conversations: false`: sem as conversas (Central ligada: elas têm o número próprio no item Conversas). */
+  { conversations = true }: { conversations?: boolean } = {},
 ): Promise<number> {
   const safe = async (label: string, read: () => Promise<number>) => {
     try {
@@ -109,7 +111,7 @@ export async function getMeuDiaCount(
   const bot = features.includes("whatsapp_bot");
   const pendingSince = new Date(now.getTime() - PENDING_ATTENDANCE_DAYS * 24 * 60 * 60_000);
   const parts = await Promise.all([
-    bot ? safe("conversas", async () => (await listHumanAttention(db, clinicId)).length) : 0,
+    bot && conversations ? safe("conversas", async () => (await listHumanAttention(db, clinicId)).length) : 0,
     safe("presença", async () => {
       const { count, error } = await db
         .from("appointments")

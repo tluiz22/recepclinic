@@ -1,6 +1,6 @@
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
-import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors";
+import { DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors";
 
 // Agendas (D2): de um profissional ou da equipe (ex.: "Exames"), e o
 // acesso de cada membro a elas (D6 revista). A listagem já vem filtrada pelo
@@ -19,7 +19,9 @@ export type Agenda = {
   isActive: boolean;
 };
 
-export type AgendaInput = Omit<Agenda, "id" | "isActive">;
+// Sem nome (cliente, 06/nov/2026): a de um profissional tem sempre o nome dele e a da equipe, "Exames"; quem grava o
+// nome é o banco (app.check_team_agenda), também quando o profissional é renomeado.
+export type AgendaInput = Omit<Agenda, "id" | "isActive" | "name">;
 
 const COLUMNS = "id, name, kind, professional_id, buffer_minutes, is_active";
 
@@ -44,12 +46,12 @@ const toAgenda = (row: Row): Agenda => ({
 export function validateAgenda(input: AgendaInput) {
   const v = new Validation();
   const row = {
-    name: cleanText(input.name) ?? "",
+    // O banco troca pelo nome do profissional (ou "Exames"); fica um texto para a coluna obrigatória.
+    name: TEAM_AGENDA_NAME,
     kind: input.kind,
     professional_id: input.kind === "professional" ? input.professionalId : null,
     buffer_minutes: input.bufferMinutes,
   };
-  v.check(row.name.length > 0, "name", "Informe o nome da agenda");
   v.check(row.kind === "professional" || row.kind === "resource", "kind", "Tipo de agenda inválido");
   v.check(row.kind !== "professional" || !!row.professional_id, "professionalId", "Escolha o profissional da agenda");
   v.check(
@@ -93,7 +95,7 @@ export const TEAM_AGENDA_NAME = "Exames";
 export const TEAM_AGENDA_LABEL = "Equipe";
 
 export async function createAgenda(db: DbClient, clinicId: string, input: AgendaInput): Promise<Agenda> {
-  const row = validateAgenda(input.kind === "resource" ? { ...input, name: TEAM_AGENDA_NAME } : input);
+  const row = validateAgenda(input);
   if (row.kind === "resource") {
     const existing = unwrap(await db.from("agendas").select("id, is_active").eq("clinic_id", clinicId).eq("kind", "resource").limit(1), "Agenda")[0];
     if (existing) {
@@ -129,16 +131,9 @@ export async function createAgenda(db: DbClient, clinicId: string, input: Agenda
   return toAgenda(unwrapOne(await db.from("agendas").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Agenda"));
 }
 
-/** O tipo e o profissional da agenda não mudam (os atendimentos já feitos são dele). */
-export async function updateAgenda(
-  db: DbClient,
-  clinicId: string,
-  id: string,
-  input: Pick<AgendaInput, "name" | "bufferMinutes">,
-): Promise<Agenda> {
+/** O tipo e o profissional da agenda não mudam (os atendimentos já feitos são dele); o nome vem do profissional. */
+export async function updateAgenda(db: DbClient, clinicId: string, id: string, input: Pick<AgendaInput, "bufferMinutes">): Promise<Agenda> {
   const v = new Validation();
-  const name = cleanText(input.name) ?? "";
-  v.check(name.length > 0, "name", "Informe o nome da agenda");
   v.check(
     Number.isInteger(input.bufferMinutes) && input.bufferMinutes >= 0,
     "bufferMinutes",
@@ -149,7 +144,7 @@ export async function updateAgenda(
     unwrapOne(
       await db
         .from("agendas")
-        .update({ name, buffer_minutes: input.bufferMinutes })
+        .update({ buffer_minutes: input.bufferMinutes })
         .eq("clinic_id", clinicId)
         .eq("id", id)
         .select(COLUMNS)

@@ -2,6 +2,20 @@
 // webhook (F6) e a camada de mensagens e conversas usam estas funções.
 
 /** Mensagem recebida (ou eco da recepção) no webhook, só com o que usamos. */
+/** Anexo no webhook: o id para baixar da Meta, o tipo e o hash (o tamanho só vem na consulta da mídia). */
+export type WaMedia = { id?: string; mime_type?: string; sha256?: string };
+
+export type IncomingMediaKind = "image" | "audio" | "document" | "video" | "sticker";
+
+/** Anexo da mensagem recebida (null = sem anexo, ou um tipo que a Central não trata, como localização). */
+export function incomingMedia(msg: WaMessage): { kind: IncomingMediaKind; metaId: string; mimeType: string | null; fileName: string | null } | null {
+  for (const kind of ["image", "audio", "document", "video", "sticker"] as const) {
+    const media = msg[kind] as (WaMedia & { filename?: string }) | undefined;
+    if (msg.type === kind && media?.id) return { kind, metaId: media.id, mimeType: media.mime_type ?? null, fileName: media.filename?.trim() || null };
+  }
+  return null;
+}
+
 export interface WaMessage {
   id?: string;
   from?: string;
@@ -17,7 +31,43 @@ export interface WaMessage {
   /** Mensagem respondida: num toque de lista ou botão, a mensagem que tinha as opções. */
   context?: { id?: string };
   /** Hora do evento na Meta, em segundos (IS4: a hora do eco do app). */
-  timestamp?: string;
+  timestamp?: string | number;
+  /** Anexos: a legenda vira o texto (CN2); o arquivo, pelo id da mídia na Meta (CN5). */
+  image?: WaMedia & { caption?: string };
+  video?: WaMedia & { caption?: string };
+  document?: WaMedia & { caption?: string; filename?: string };
+  audio?: WaMedia & { voice?: boolean };
+  sticker?: WaMedia & { animated?: boolean };
+  /** Eco de mensagem editada no app (smb_message_echoes, `type: "edit"`): o conteúdo novo da original. */
+  edit?: { original_message_id?: string; message?: WaMessage };
+  /** Eco de mensagem apagada no app (`type: "revoke"`). */
+  revoke?: { original_message_id?: string };
+}
+
+/**
+ * Texto guardado no histórico da Central (CN2): o que a pessoa escreveu ou tocou, ou a legenda do anexo; sem os
+ * marcadores "[image]". O banco só guarda com a Central ligada (D12 revista).
+ */
+export function storedText(msg: WaMessage): string | null {
+  const reply = msg.interactive?.list_reply ?? msg.interactive?.button_reply;
+  const text = msg.text?.body ?? reply?.title ?? msg.button?.text ?? msg.image?.caption ?? msg.video?.caption ?? msg.document?.caption ?? null;
+  return text?.trim() ? text : null;
+}
+
+/** Hora do evento na Meta (segundos, em texto ou número) → instante; null se não vier ou não for válida. */
+export function waTimestamp(msg: WaMessage): Date | null {
+  const seconds = Number(msg.timestamp);
+  if (msg.timestamp == null || msg.timestamp === "" || !Number.isFinite(seconds) || seconds <= 0) return null;
+  return new Date(seconds * 1000);
+}
+
+/** Eco que muda uma mensagem já enviada pelo app (edição ou exclusão), em vez de ser uma resposta nova. */
+export function echoChange(echo: WaMessage): { kind: "edit"; originalId: string; text: string | null } | { kind: "revoke"; originalId: string } | null {
+  if (echo.type === "edit" && echo.edit?.original_message_id) {
+    return { kind: "edit", originalId: echo.edit.original_message_id, text: echo.edit.message ? storedText(echo.edit.message) : null };
+  }
+  if (echo.type === "revoke" && echo.revoke?.original_message_id) return { kind: "revoke", originalId: echo.revoke.original_message_id };
+  return null;
 }
 
 /**

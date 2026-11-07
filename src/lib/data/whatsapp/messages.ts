@@ -1,8 +1,10 @@
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { deliveryRank, isDeliveryStatus, reachedPhone, toE164, type WaMessage } from "./meta";
+import { deliveryRank, isDeliveryStatus, reachedPhone, storedText, toE164, waTimestamp, type WaMessage } from "./meta";
 import { COURTESY_MESSAGE_TYPE, isCourtesyMessage } from "./courtesy";
 import { markPatientWrote } from "./conversations";
+import { queueIncomingMedia } from "./media";
+import { logError } from "../../log";
 import { MAX_ATTEMPTS, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext, type SendFailure } from "./retryRules";
 
 // Registro das mensagens do WhatsApp (F3.9a), com a credencial da clínica.
@@ -61,13 +63,16 @@ export async function recordInboundMessage(db: DbClient, clinicId: string, msg: 
     direction: "inbound",
     // Cortesia ("ok", "obrigado", 👍) vira o tipo `courtesy` (C27): o atendimento humano não volta para "Aguardando".
     message_type: courtesy ? COURTESY_MESSAGE_TYPE : (msg.type ?? "unknown"),
-    // O texto fica só no app do WhatsApp (cliente, 28/out/2026, D12).
-    body: null,
+    // Texto e hora da Meta (CN2): o banco só guarda o texto com a Central ligada (D12 revista, cliente, 05/nov/2026).
+    body: storedText(msg),
+    wa_timestamp: waTimestamp(msg)?.toISOString() ?? null,
     status: "received",
     wa_message_id: msg.id ?? null,
     created_at: now.toISOString(),
   });
   if (!id) return { recorded: false, reason: "duplicate" };
+  // Anexo (CN5): anotado como pendente para a rotina baixar; só com a Central ligada (o banco confere).
+  await queueIncomingMedia(db, clinicId, id, msg).catch((error) => logError("central: anexo não anotado", error, { clinica: clinicId }));
   // Atendimento humano (CA): o paciente escreveu (sem ser cortesia) e a conversa volta para "Aguardando a clínica".
   if (!courtesy) await markPatientWrote(db, clinicId, phone, now);
   return { recorded: true, id, contactId };
@@ -88,12 +93,38 @@ export async function recordAgentEcho(db: DbClient, clinicId: string, echo: WaMe
     contact_phone: phone,
     direction: "outbound",
     message_type: "agent_reply",
-    body: null,
+    // Como na mensagem recebida (CN2): o texto só fica com a Central ligada.
+    body: storedText(echo),
+    wa_timestamp: waTimestamp(echo)?.toISOString() ?? null,
     status: "sent",
     wa_message_id: echo.id ?? null,
     created_at: now.toISOString(),
   });
   return id ? { recorded: true, id, contactId } : { recorded: false, reason: "duplicate" };
+}
+
+/**
+ * Mensagem editada ou apagada no app do WhatsApp (CN2; smb_message_echoes `edit`/`revoke`): muda a linha original,
+ * sem gravar mensagem nova. Apagada: o texto sai. false = a original não está no histórico.
+ */
+export async function applyEchoChange(
+  db: DbClient,
+  clinicId: string,
+  change: { kind: "edit"; originalId: string; text: string | null } | { kind: "revoke"; originalId: string },
+  now: Date = new Date(),
+): Promise<boolean> {
+  const values = change.kind === "edit" ? { body: change.text, edited_at: now.toISOString() } : { body: null, revoked_at: now.toISOString() };
+  const rows = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .update(values)
+      .eq("clinic_id", clinicId)
+      .eq("direction", "outbound")
+      .eq("wa_message_id", change.originalId)
+      .select("id"),
+    "Mensagem editada no app",
+  );
+  return rows.length > 0;
 }
 
 export type OutboundMessage = {
@@ -317,4 +348,11 @@ export async function listLatestWhatsappMessages(db: DbClient, clinicId: string,
     appointmentId: row.appointment_id,
     createdAt: new Date(row.created_at),
   }));
+}
+
+/** Nome no perfil do WhatsApp na conversa (T4): o banco só guarda com a Central ligada. */
+export async function saveProfileName(db: DbClient, clinicId: string, phone: string | null, name: string): Promise<void> {
+  const clean = name.trim().slice(0, 120);
+  if (!phone || !clean) return;
+  unwrap(await db.from("conversation_state").update({ profile_name: clean }).eq("clinic_id", clinicId).eq("contact_phone", phone).select("id"), "Nome do perfil");
 }

@@ -46,13 +46,14 @@ export function describeDataError(error: DataError, generic: Record<string, stri
 
 export async function runFormAction(
   { cookies, redirect }: Pick<APIContext, "cookies" | "redirect">,
-  action: () => Promise<{ redirectTo: string; message: string }>,
+  /** `tone: "error"`: deu errado, mas o que foi enviado já ficou guardado (o formulário volta vazio). */
+  action: () => Promise<{ redirectTo: string; message: string; tone?: "error" }>,
   /** Para onde voltar com o erro; função = decidido na hora (ex.: o cadastro já foi criado). */
   failureTo: string | (() => string),
 ): Promise<Response> {
   try {
-    const { redirectTo, message } = await action();
-    setFlash(cookies, { tone: "success", text: message });
+    const { redirectTo, message, tone } = await action();
+    setFlash(cookies, tone === "error" ? { tone: "error", text: message, noRestore: true } : { tone: "success", text: message });
     return redirect(redirectTo, 303);
   } catch (error) {
     if (!(error instanceof DataError)) logError("formulário", error);

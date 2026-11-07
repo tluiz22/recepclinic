@@ -19,6 +19,7 @@ export type FeatureKey =
   | "reminders"
   | "waitlist"
   | "knowledge_base"
+  | "central_attendance"
   | "daily_summary"
   | "team_summary"
   | "custom_messages"
@@ -44,6 +45,9 @@ export const FEATURES: readonly Feature[] = [
   { key: "waitlist", area: "whatsapp", label: "Lista de espera", dependsOn: ["whatsapp_bot"] },
   // Base de Conhecimento Global (cliente, 31/out/2026): o bot responde as perguntas frequentes.
   { key: "knowledge_base", area: "whatsapp", label: "Perguntas frequentes no bot", dependsOn: ["whatsapp_bot"] },
+  // Central de Atendimento (decisão 9, cliente, 05/nov/2026): conversas no painel; só com o bot. O texto só é guardado
+  // depois que o Administrador liga a Central em Configurações (seção 14).
+  { key: "central_attendance", area: "whatsapp", label: "Central de atendimento", dependsOn: ["whatsapp_bot"] },
   // Lembretes (cliente, 09/out/2026): o resumo do dia por público.
   { key: "daily_summary", area: "whatsapp", label: "Lembrete ao profissional (resumo do dia)", dependsOn: [] },
   { key: "team_summary", area: "whatsapp", label: "Lembrete à equipe (resumo do dia)", dependsOn: [] },
@@ -140,6 +144,9 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/api/admin/configuracoes/contatos", feature: "team_summary" },
   { prefix: "/api/admin/configuracoes/lembrete", feature: "reminders" },
   // Resumo do dia: o item do público (profissional ou equipe) é conferido na rota.
+  // Central de atendimento (CN9): a tela Conversas e as gravações dela (a tela também confere se está ligada).
+  { prefix: "/admin/conversas", feature: "central_attendance" },
+  { prefix: "/api/admin/conversas", feature: "central_attendance" },
   // Módulo financeiro (F11): menu Financeiro e as gravações dele.
   { prefix: "/admin/financeiro", feature: "finance" },
   { prefix: "/api/admin/financeiro", feature: "finance" },

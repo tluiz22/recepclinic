@@ -19,7 +19,9 @@ const flash = Astro.props.flash !== undefined ? Astro.props.flash : pageFlash(As
 
 {
   flash && (
-    <div data-flash={flash.tone} data-fields={flash.fields?.join(" ")} data-field-messages={flash.fieldMessages ? JSON.stringify(flash.fieldMessages) : undefined}>
+    <div data-flash={flash.tone} data-fields={flash.fields?.join(" ")} data-field-messages={flash.fieldMessages ? JSON.stringify(flash.fieldMessages) : undefined}
+      data-no-restore={flash.noRestore ? "" : undefined}
+    >
       <FormMessage tone={flash.tone}>{flash.text}</FormMessage>
     </div>
   )

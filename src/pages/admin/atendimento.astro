@@ -24,6 +24,7 @@ import { formatInstant, localDateOf } from "../../lib/clinicTime";
 import { relacionamento } from "../../lib/ajuda/relacionamento";
 import { formatPhoneBR, whatsappAppHref, whatsappHref } from "../../lib/phone";
 import { createUserClient } from "../../lib/data/clients";
+import { isCentralActive } from "../../lib/data/central";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
 import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
 import { platformEnv } from "../../lib/env";
@@ -32,6 +33,11 @@ const clinic = Astro.locals.clinic!;
 if (!clinic.features.includes("whatsapp_bot")) return Astro.redirect("/admin/dashboard?aviso=acesso_negado");
 
 const db = createUserClient(Astro.request, Astro.cookies);
+// Central de atendimento ligada (CN3a): a tela Conversas toma o lugar desta (links do Meu dia e das notificações).
+if (clinic.features.includes("central_attendance") && (await isCentralActive(db, clinic.clinicId).catch(() => false))) {
+  const phone = Astro.url.searchParams.get("conversa");
+  return Astro.redirect(phone ? `/admin/conversas?conversa=${encodeURIComponent(phone)}` : "/admin/conversas");
+}
 const now = new Date();
 const [items, devices] = await Promise.all([
   listHumanAttention(db, clinic.clinicId),

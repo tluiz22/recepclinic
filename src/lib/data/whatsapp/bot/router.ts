@@ -27,7 +27,6 @@ import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffN
 import {
   BLOCKED_HANDOFF,
   BLOCKED_RECEPTION_WILL_CONTACT,
-  HANDOFF_SUBJECT_THANKS,
   IDLE_CLOSED,
   NOT_UNDERSTOOD_OFFER,
   RECEPTION_CONFIRM,
@@ -76,11 +75,9 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     return "handled";
   }
   if (paused) {
-    // Assunto da transferência (jornada E4): a primeira resposta em texto depois da pergunta; o resto fica com a recepção.
-    if (message.type === "text" && (await recordHandoffSubject(env.db, env.clinicId, convo, messageBody(message)))) {
-      await say(await createBot(env, convo, message.id ?? null), "bot_handoff_subject_thanks", HANDOFF_SUBJECT_THANKS);
-      return "handled";
-    }
+    // Assunto da transferência (jornada E4): a primeira resposta em texto depois da pergunta, guardada sem resposta do
+    // bot (cliente, 06/nov/2026); o resto fica com a recepção.
+    if (message.type === "text" && (await recordHandoffSubject(env.db, env.clinicId, convo, messageBody(message)))) return "handled";
     return "skipped";
   }
 

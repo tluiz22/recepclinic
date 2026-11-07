@@ -1,0 +1,174 @@
+---
+// Vendas › Custo da Meta (CU3; plano da Central, seção 14; tela K2 e valores T11, cliente, 05/nov/2026): quanto a
+// clínica pagaria à Meta por mês, hoje (avisos e assistente), com a Central e no total, e a comparação com
+// atendimento por IA (de outra empresa e da Meta). Estimativa: os parâmetros têm valor padrão e o Suporte muda na
+// tela, sem gravar; preço, franquia e câmbio vêm dos Preços da Meta vigentes. Recalcula a cada campo.
+import { CARD, HINT, INPUT, LABEL, SECTION_TITLE } from "../config/formStyles";
+import { DEFAULT_TIMEZONE, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listMetaPriceVersions, priceForMonth } from "../../../lib/data/metaPricing";
+import { CALCULATOR_DEFAULTS, calculateMetaCost, estimateNotice, formatBrl, type CalculatorInput } from "../../../lib/metaCostCalculator";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const today = todayIn(DEFAULT_TIMEZONE);
+const price = priceForMonth(await listMetaPriceVersions(db), `${today.slice(0, 7)}-01`);
+const input: CalculatorInput = {
+  ...CALCULATOR_DEFAULTS,
+  priceBrl: price?.utilityBrl ?? 0,
+  freeServicePerMonth: price?.freeServicePerMonth ?? 0,
+  usdBrl: price?.usdBrl ?? 0,
+};
+const result = calculateMetaCost(input);
+const notice = estimateNotice(input, price?.validFrom ?? null);
+const max = Math.max(result.totalBrl, result.otherAiBrl, result.metaAiBrl, 1);
+const width = (value: number) => `${Math.max(2, Math.round((value / max) * 100))}%`;
+
+type Field = { key: keyof CalculatorInput; label: string; source: string; step: string };
+const clinicFields: Field[] = [
+  { key: "professionals", label: "Profissionais", source: "", step: "1" },
+  { key: "daysPerWeek", label: "Dias de atendimento por semana", source: "", step: "1" },
+  { key: "appointmentsPerDay", label: "Atendimentos por dia (média, por profissional)", source: "", step: "1" },
+];
+const priceSource = price ? "Preços da Meta, vigente" : "cadastre em Sistema › Preços da Meta";
+const parameterFields: Field[] = [
+  { key: "priceBrl", label: "Preço por mensagem (R$)", source: priceSource, step: "0.0001" },
+  { key: "freeServicePerMonth", label: "Mensagens de serviço grátis por mês", source: "Meta, por número", step: "1" },
+  { key: "usdBrl", label: "Câmbio (R$ por US$)", source: "Preços da Meta", step: "0.01" },
+  { key: "templatesPerAppointment", label: "Modelos por atendimento", source: "suposição: confirmação e lembrete", step: "0.1" },
+  { key: "assistantPerAppointment", label: "Mensagens do assistente por atendimento", source: "suposição", step: "0.1" },
+  { key: "receptionPercent", label: "% que vão para a recepção", source: "suposição", step: "1" },
+  { key: "repliesPerHandoff", label: "Respostas por atendimento humano", source: "suposição", step: "0.1" },
+  { key: "messagesPerAiConversation", label: "Mensagens por conversa com IA", source: "suposição", step: "1" },
+  { key: "aiInputTokens", label: "Tokens por mensagem de IA (entrada)", source: "suposição", step: "100" },
+  { key: "aiOutputTokens", label: "Tokens por mensagem de IA (saída)", source: "suposição", step: "10" },
+  { key: "aiInputUsdPerMillion", label: "Empresa de IA: US$ por milhão de tokens (entrada)", source: "Claude Sonnet 5.5, Anthropic", step: "0.01" },
+  { key: "aiOutputUsdPerMillion", label: "Empresa de IA: US$ por milhão de tokens (saída)", source: "Claude Sonnet 5.5, Anthropic", step: "0.01" },
+  { key: "metaAiUsdPerMillion", label: "IA da Meta: US$ por milhão de tokens", source: "Meta, desde 01/ago/2026", step: "0.01" },
+  { key: "metaAiTokensPerMessage", label: "IA da Meta: tokens por mensagem", source: "Meta: 20 a 25 mil", step: "100" },
+];
+const appointmentsText = (value: number) => `Cerca de ${value.toLocaleString("pt-BR")} atendimentos por mês.`;
+---
+
+<div class="mt-5 flex flex-col gap-4" data-meta-calculator data-valid-from={price?.validFrom ?? ""}>
+  {
+    !price && (
+      <p class="rounded-xl border border-pend-200 bg-pend-50 px-4 py-3 text-[15px] text-pend-800">
+        Nenhuma vigência dos Preços da Meta neste mês: informe o preço nos parâmetros ou cadastre em <a href="/admin/sistema/precos-meta" class="font-semibold underline">Sistema › Preços da Meta</a>.
+      </p>
+    )
+  }
+  <div class="flex flex-wrap items-start gap-4">
+    <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-3 lg:max-w-[400px]">
+      <section class={`${CARD} flex flex-col gap-3 p-4 sm:p-5`} aria-labelledby="calc-clinica">
+        <h2 id="calc-clinica" class={SECTION_TITLE}>A clínica</h2>
+        {
+          clinicFields.map((field) => (
+            <div>
+              <label for={`calc-${field.key}`} class={LABEL}>
+                {field.label}
+              </label>
+              <input id={`calc-${field.key}`} type="number" min="0" step={field.step} inputmode="decimal" value={input[field.key]} data-field={field.key} class={INPUT} />
+            </div>
+          ))
+        }
+        <p class="text-sm text-ink-soft" data-out="appointments" aria-live="polite">{appointmentsText(result.appointmentsPerMonth)}</p>
+      </section>
+      <details class={`${CARD} px-4 py-3 sm:px-5`}>
+        <summary class="cursor-pointer text-[15px] font-bold text-brand">Parâmetros (o Suporte muda aqui; não grava)</summary>
+        <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          {
+            parameterFields.map((field) => (
+              <div>
+                <label for={`calc-${field.key}`} class={LABEL}>
+                  {field.label}
+                </label>
+                <input id={`calc-${field.key}`} type="number" min="0" step={field.step} inputmode="decimal" value={input[field.key]} data-field={field.key} class={INPUT} />
+                <p class={HINT}>{field.source}</p>
+              </div>
+            ))
+          }
+        </div>
+      </details>
+    </div>
+
+    <div class="flex min-w-0 flex-[999_1_520px] flex-col gap-3">
+      <div class="grid gap-3 sm:grid-cols-3">
+        <div class={`${CARD} flex flex-col gap-0.5 p-4`}>
+          <span class="text-sm text-ink-soft">Hoje (avisos e assistente)</span>
+          <strong class="font-display text-[26px] text-ink" data-out="today">{formatBrl(result.todayBrl)}</strong>
+          <span class="text-[13px] text-ink-soft">por mês</span>
+        </div>
+        <div class={`${CARD} flex flex-col gap-0.5 p-4`}>
+          <span class="text-sm text-ink-soft">Central de atendimento</span>
+          <strong class="font-display text-[26px] text-ink" data-out="central">+ {formatBrl(result.centralBrl)}</strong>
+          <span class="text-[13px] text-ink-soft">por mês</span>
+        </div>
+        <div class="flex flex-col gap-0.5 rounded-xl border border-brand bg-brand-soft p-4">
+          <span class="text-sm font-semibold text-brand-ink">Total</span>
+          <strong class="font-display text-[26px] text-brand-ink" data-out="total">{formatBrl(result.totalBrl)}</strong>
+          <span class="text-[13px] text-brand-ink">por mês</span>
+        </div>
+      </div>
+
+      <section class={`${CARD} flex flex-col gap-3 p-4 sm:p-5`} aria-labelledby="calc-ia">
+        <h2 id="calc-ia" class={SECTION_TITLE}>Comparação com atendimento por IA</h2>
+        {
+          [
+            { key: "total", label: "RecepClinic com a Central", value: result.totalBrl, bar: "bg-brand" },
+            { key: "otherAi", label: "IA de outra empresa (Meta + Claude Sonnet 5.5)", value: result.otherAiBrl, bar: "bg-pend-500" },
+            { key: "metaAi", label: "IA da Meta (Meta Business Agent)", value: result.metaAiBrl, bar: "bg-pend-800" },
+          ].map((row) => (
+            <div class="flex flex-col gap-1">
+              <span class="flex justify-between gap-3 text-[15px]">
+                <span>{row.label}</span>
+                <strong class="whitespace-nowrap" data-out={`${row.key}-bar-value`}>{formatBrl(row.value)}</strong>
+              </span>
+              <div class="h-3.5 overflow-hidden rounded-full bg-canvas-deep" aria-hidden="true">
+                <div class={`h-3.5 ${row.bar}`} style={`width: ${width(row.value)}`} data-out={`${row.key}-bar`} />
+              </div>
+            </div>
+          ))
+        }
+        <div role="note" class="flex flex-col gap-1.5 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3">
+          <strong class="text-[15px] text-pend-800">Estes valores são uma estimativa, não uma medição</strong>
+          {
+            notice.map((text, index) => (
+              <p class="text-sm leading-snug text-ink-mid" data-out={`notice-${index}`}>
+                {text}
+              </p>
+            ))
+          }
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { calculateMetaCost, estimateNotice, formatBrl, type CalculatorInput } from "../../../lib/metaCostCalculator";
+
+  for (const root of document.querySelectorAll<HTMLElement>("[data-meta-calculator]")) {
+    const fields = [...root.querySelectorAll<HTMLInputElement>("[data-field]")];
+    const out = (name: string) => root.querySelector<HTMLElement>(`[data-out="${name}"]`);
+    const validFrom = root.dataset.validFrom || null;
+    const update = () => {
+      const input = Object.fromEntries(fields.map((field) => [field.dataset.field!, Number(field.value.replace(",", "."))])) as CalculatorInput;
+      const result = calculateMetaCost(input);
+      out("appointments")!.textContent = `Cerca de ${result.appointmentsPerMonth.toLocaleString("pt-BR")} atendimentos por mês.`;
+      out("today")!.textContent = formatBrl(result.todayBrl);
+      out("central")!.textContent = `+ ${formatBrl(result.centralBrl)}`;
+      out("total")!.textContent = formatBrl(result.totalBrl);
+      const bars = { total: result.totalBrl, otherAi: result.otherAiBrl, metaAi: result.metaAiBrl };
+      const max = Math.max(...Object.values(bars), 1);
+      for (const [key, value] of Object.entries(bars)) {
+        out(`${key}-bar-value`)!.textContent = formatBrl(value);
+        out(`${key}-bar`)!.style.width = `${Math.max(2, Math.round((value / max) * 100))}%`;
+      }
+      estimateNotice(input, validFrom).forEach((text, index) => {
+        const paragraph = out(`notice-${index}`);
+        if (paragraph) paragraph.textContent = text;
+      });
+    };
+    fields.forEach((field) => field.addEventListener("input", update));
+  }
+</script>

@@ -86,6 +86,10 @@ describe("mensagem automática do app", () => {
     expect(await paused(phone)).toBe(false);
     expect(await lastEchoType(phone)).toBe(APP_AUTO_REPLY_TYPE);
     expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId)).not.toBeNull();
+    // O aviso vale por 6 horas (cliente, 06/nov/2026): 5 h depois ainda aparece; 7 h depois, não.
+    const later = (hours: number) => new Date(Date.now() + hours * 60 * 60_000);
+    expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId, later(5))).not.toBeNull();
+    expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId, later(7))).toBeNull();
   });
 
   it("a recepção responde um minuto depois: pausa como sempre", async () => {

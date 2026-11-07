@@ -37,7 +37,7 @@ import { formatAge } from "../../../lib/age";
 import { formatCalendarDate } from "../../../lib/clinicTime";
 import { setFlash } from "../../../lib/flash";
 import { formChecked, formOptionalText, formText } from "../../../lib/forms";
-import { formatPhoneBR } from "../../../lib/phone";
+import { formatPhoneBR, normalizePhone } from "../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -92,6 +92,16 @@ const values = {
   card_valid_until: "",
   confirmed_contact_id: "",
 };
+// Da tela Conversas (CN3b, T3 e T4): o telefone da conversa e o nome no perfil do WhatsApp já preenchidos.
+if (!fixedContact) {
+  const prefillPhone = normalizePhone(params.get("telefone") ?? "");
+  const prefillName = (params.get("nome") ?? "").trim().slice(0, 120);
+  if (prefillPhone) values.phone = formatPhoneBR(prefillPhone);
+  if (prefillName) {
+    values.full_name = prefillName;
+    values.contact_name = prefillName;
+  }
+}
 let error: string | null = null;
 // Erro de validação junto do campo (teste da R6, QA-03): o nome na camada de
 // dados vira o nome do campo do formulário; o primeiro recebe o foco.

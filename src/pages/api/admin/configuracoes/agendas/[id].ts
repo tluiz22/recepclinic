@@ -32,11 +32,9 @@ export const POST: APIRoute = async (context) => {
         await setAgendaActive(db, clinicId, id, acao === "reativar");
         return { redirectTo: page(id), message: acao === "reativar" ? "Agenda reativada." : "Agenda desativada." };
       }
-      const name = formText(form, "name");
       const bufferMinutes = formInt(form, "buffer_minutes");
       if (id === "novo") {
         const created = await createAgenda(db, clinicId, {
-          name,
           kind: formText(form, "kind") as AgendaKind,
           professionalId: formOptionalText(form, "professional_id"),
           bufferMinutes,
@@ -46,7 +44,7 @@ export const POST: APIRoute = async (context) => {
         }
         return { redirectTo: page(created.id), message: "Agenda cadastrada." };
       }
-      await updateAgenda(db, clinicId, id, { name, bufferMinutes });
+      await updateAgenda(db, clinicId, id, { bufferMinutes });
       return { redirectTo: page(id), message: "Agenda salva." };
     },
     page(id),

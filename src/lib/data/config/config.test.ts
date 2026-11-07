@@ -236,11 +236,11 @@ describe("cadastros simples", () => {
   });
 
   it("agenda de profissional precisa do profissional; de recurso, não guarda profissional", () => {
-    expect(fieldsOf(() => validateAgenda({ name: "Agenda", kind: "professional", professionalId: null, bufferMinutes: 0 }))).toHaveProperty(
+    expect(fieldsOf(() => validateAgenda({ kind: "professional", professionalId: null, bufferMinutes: 0 }))).toHaveProperty(
       "professionalId",
     );
-    expect(validateAgenda({ name: "Exames", kind: "resource", professionalId: "p1", bufferMinutes: 10 }).professional_id).toBeNull();
-    expect(fieldsOf(() => validateAgenda({ name: "Exames", kind: "resource", professionalId: null, bufferMinutes: -5 }))).toHaveProperty(
+    expect(validateAgenda({ kind: "resource", professionalId: "p1", bufferMinutes: 10 }).professional_id).toBeNull();
+    expect(fieldsOf(() => validateAgenda({ kind: "resource", professionalId: null, bufferMinutes: -5 }))).toHaveProperty(
       "bufferMinutes",
     );
   });

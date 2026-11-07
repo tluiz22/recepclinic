@@ -1,0 +1,240 @@
+---
+// Painel do paciente na tela Conversas (CN3b; T1 opção C, T2 C1, T3 e T4, cliente, 05/nov/2026). Um paciente que é o
+// próprio contato: o painel normal (convênio, Abrir ficha, próxima consulta com Remarcar ou Marcar consulta, anotações,
+// atendimentos anteriores). Responsável: "Quem fala com a clínica" no topo e um cartão por paciente. Número sem
+// cadastro: "Cadastrar paciente" e "É de um paciente já cadastrado" (busca e liga o número, com confirmação).
+import { formatAge } from "../../../lib/age";
+import { formatInstant, localDateOf, todayIn, addDays } from "../../../lib/clinicTime";
+import { finishedText, type ConversationPanel } from "../../../lib/data/centralPanel";
+import type { PatientWithContact } from "../../../lib/data/patients";
+import { formatPhoneBR } from "../../../lib/phone";
+import { withReturn } from "../../../lib/returnPath";
+import { capitalize } from "../../../lib/vocabulary";
+
+interface Props {
+  panel: ConversationPanel;
+  phone: string;
+  profileName: string | null;
+  timeZone: string;
+  /** Tela de volta (a conversa) para os links. */
+  here: string;
+  /** Pode cadastrar e ligar o número (Administrador e Recepção). */
+  canEdit: boolean;
+  /** "É de um paciente já cadastrado" (T3): abrir, fechar, os campos da busca e, aberta, o resultado. */
+  link: { openHref: string; closeHref: string; params: Record<string, string>; open: { query: string; results: PatientWithContact[] } | null };
+}
+
+const { panel, phone, profileName, timeZone, here, canEdit, link } = Astro.props;
+const search = link.open;
+const today = todayIn(timeZone);
+const when = (instant: Date) => {
+  const day = localDateOf(instant, timeZone);
+  const word = day === today ? "Hoje" : day === addDays(today, 1) ? "Amanhã" : capitalize(formatInstant(instant, timeZone, "EEE, dd/MM"));
+  return `${word}, ${formatInstant(instant, timeZone, "HH:mm")}`;
+};
+const single = panel.patients.length === 1 ? panel.patients[0] : null;
+const showResponsible = !!panel.contact && !panel.selfPatient;
+const finished = panel.events.filter((event) => event.kind === "finished").slice(-5).reverse();
+const head = "text-xs font-bold tracking-[.04em] text-ink-mid uppercase";
+const section = "flex flex-col gap-2 border-t border-canvas-deep pt-3.5";
+const button =
+  "inline-flex min-h-10 items-center justify-center rounded-lg border border-line-strong bg-white px-3 text-sm font-semibold text-ink no-underline hover:bg-canvas";
+const newPatientHref = withReturn(
+  `/admin/pacientes/novo?${new URLSearchParams({ telefone: phone, ...(profileName ? { nome: profileName } : panel.contact ? { nome: panel.contact.fullName } : {}) })}`,
+  here,
+);
+---
+
+<div class="flex flex-col gap-4">
+  {
+    !panel.contact ? (
+      <div class="flex flex-col gap-2">
+        <span class={head}>Número sem cadastro</span>
+        <strong class="text-[17px] text-ink tabular-nums">{formatPhoneBR(phone)}</strong>
+        {profileName && <span class="text-sm text-ink-soft">Nome no WhatsApp: {profileName}</span>}
+        {canEdit && (
+          <div class="flex flex-wrap gap-2">
+            <a href={newPatientHref} class={button}>
+              Cadastrar paciente
+            </a>
+            {!search && (
+              <a href={link.openHref} class={button}>
+                É de um paciente já cadastrado
+              </a>
+            )}
+          </div>
+        )}
+        {canEdit && search && (
+          <div class="flex flex-col gap-2 rounded-[10px] border border-line p-3">
+            <form method="get" action="/admin/conversas" class="flex flex-col gap-1.5">
+              {Object.entries(link.params).map(([key, value]) => (
+                <input type="hidden" name={key} value={value} />
+              ))}
+              <label for="ligar_busca" class="text-sm font-semibold text-ink">
+                Buscar o paciente
+              </label>
+              <div class="flex gap-2">
+                <input id="ligar_busca" name="paciente" type="search" value={search.query} placeholder="Nome ou telefone" class="h-10 min-w-0 flex-1 rounded-lg border border-line-strong px-3 text-[15px]" autofocus />
+                <button type="submit" class={button}>
+                  Buscar
+                </button>
+              </div>
+            </form>
+            {search.query && search.results.length === 0 && <p class="text-sm text-ink-soft">Nenhum paciente com esse nome ou telefone.</p>}
+            <ul class="flex flex-col gap-2">
+              {search.results.slice(0, 8).map((result) => (
+                <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-canvas px-2.5 py-2">
+                  <span class="flex min-w-0 flex-col">
+                    <strong class="truncate text-[15px] text-ink">{result.fullName}</strong>
+                    <span class="text-[13px] text-ink-soft">
+                      {result.isContactSelf ? "" : `${result.contact.fullName} · `}
+                      {formatPhoneBR(result.contact.phone)}
+                    </span>
+                  </span>
+                  <form method="POST" action="/api/admin/conversas/ligar">
+                    <input type="hidden" name="telefone" value={phone} />
+                    <input type="hidden" name="paciente" value={result.id} />
+                    <input type="hidden" name="return_to" value={here} />
+                    <button
+                      type="submit"
+                      class={`${button} js-confirm-delete`}
+                      data-confirm-title="Ligar o número a este paciente?"
+                      data-confirm-message={`O WhatsApp de ${result.contact.fullName} muda de ${formatPhoneBR(result.contact.phone)} para ${formatPhoneBR(phone)}. Se o contato tem outros pacientes, muda para todos. Lembretes e confirmações passam a ir para o número novo.`}
+                      data-confirm-label="Ligar o número"
+                    >
+                      É este
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+            <a href={link.closeHref} class="self-start text-sm font-semibold text-brand-ink">
+              Cancelar
+            </a>
+          </div>
+        )}
+      </div>
+    ) : (
+      showResponsible && (
+        <div class="flex flex-col gap-1">
+          <span class={head}>Quem fala com a clínica</span>
+          <strong class="text-[17px] text-ink">{panel.contact.fullName}</strong>
+          <span class="text-sm text-ink-soft">
+            {panel.patients.length > 0 ? "Responsável · " : ""}
+            {formatPhoneBR(panel.contact.phone)}
+          </span>
+          {profileName && <span class="text-sm text-ink-soft">Nome no WhatsApp: {profileName}</span>}
+          <a href={withReturn(`/admin/pacientes/contato/${panel.contact.id}`, here)} class="self-start text-sm font-semibold text-brand-ink">
+            Abrir contato
+          </a>
+          {panel.patients.length === 0 && canEdit && (
+            <a href={withReturn(`/admin/pacientes/novo?contato=${panel.contact.id}`, here)} class={`${button} mt-1 self-start`}>
+              Cadastrar paciente
+            </a>
+          )}
+        </div>
+      )
+    )
+  }
+
+  {
+    panel.patients.length > 1 ? (
+      <div class={section}>
+        <span class={head}>Pacientes deste contato ({panel.patients.length})</span>
+        {panel.patients.map(({ patient, next }) => (
+          <div class="flex flex-col gap-1.5 rounded-[10px] border border-line p-3">
+            <span class="flex items-baseline justify-between gap-2">
+              <strong class="text-base text-ink">{patient.fullName}</strong>
+              <span class="text-[13px] text-ink-soft">{formatAge(patient.birthdate, today)}</span>
+            </span>
+            {next ? (
+              <span class="text-sm text-ink-mid">
+                <strong>{when(next.scheduledAt)}</strong>
+                <br />
+                {next.agendaName} · {next.serviceName}
+              </span>
+            ) : (
+              <span class="text-sm text-ink-mid">Sem consulta marcada.</span>
+            )}
+            <div class="flex flex-wrap gap-2">
+              {next ? (
+                <a href={`/admin/agenda/remarcar?id=${next.id}&return_to=${encodeURIComponent(here)}`} class={button}>
+                  Remarcar
+                </a>
+              ) : (
+                <a href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} class={button}>
+                  Marcar consulta
+                </a>
+              )}
+              <a href={withReturn(`/admin/pacientes/${patient.id}`, here)} class={button}>
+                Abrir ficha
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      single && (
+        <>
+          <div class:list={["flex flex-col gap-1", showResponsible && section]}>
+            <span class={head}>Paciente</span>
+            <strong class="text-[17px] text-ink">{single.patient.fullName}</strong>
+            <span class="text-sm text-ink-soft">{[formatAge(single.patient.birthdate, today), single.planName].filter(Boolean).join(" · ")}</span>
+            {!showResponsible && profileName && <span class="text-sm text-ink-soft">Nome no WhatsApp: {profileName}</span>}
+            <a href={withReturn(`/admin/pacientes/${single.patient.id}`, here)} class="self-start text-sm font-semibold text-brand-ink">
+              Abrir ficha
+            </a>
+          </div>
+          <div class={section}>
+            <span class={head}>Próxima consulta</span>
+            {single.next ? (
+              <>
+                <span class="text-[15px] text-ink">
+                  <strong>{when(single.next.scheduledAt)}</strong>
+                  <br />
+                  {single.next.agendaName} · {single.next.serviceName}
+                </span>
+                {(single.next.status === "confirmed" || single.next.patientConfirmedAt) && (
+                  <span class="self-start rounded-full bg-conf-100 px-2 py-0.5 text-[13px] font-semibold text-conf-800">Confirmada</span>
+                )}
+              </>
+            ) : (
+              <span class="text-sm text-ink-mid">Sem consulta marcada.</span>
+            )}
+            <div class="flex flex-wrap gap-2">
+              {single.next && (
+                <a href={`/admin/agenda/remarcar?id=${single.next.id}&return_to=${encodeURIComponent(here)}`} class={button}>
+                  Remarcar
+                </a>
+              )}
+              <a href={withReturn(`/admin/agenda/marcar?patient_id=${single.patient.id}`, here)} class={button}>
+                Marcar consulta
+              </a>
+            </div>
+          </div>
+          {panel.notes.length > 0 && (
+            <div class={section}>
+              <span class={head}>Anotações</span>
+              {panel.notes.map((note) => (
+                <p class="line-clamp-3 text-sm whitespace-pre-line text-ink-mid">{note.body}</p>
+              ))}
+            </div>
+          )}
+        </>
+      )
+    )
+  }
+
+  {
+    finished.length > 0 && (
+      <div class={section}>
+        <span class={head}>Atendimentos anteriores</span>
+        {finished.map((event) => (
+          <span class="text-sm text-ink-mid">
+            {formatInstant(event.at, timeZone, "dd/MM")} · {finishedText(event, panel.names).replace(/^Atendimento /, "")}
+          </span>
+        ))}
+      </div>
+    )
+  }
+</div>

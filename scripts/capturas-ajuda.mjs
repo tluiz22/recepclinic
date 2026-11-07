@@ -35,6 +35,10 @@ export const CAPTURAS = [
   ["paciente-novo", "/admin/pacientes/novo", [], ["button[type=submit]"]],
   ["resumo-do-dia", "/admin/consultas", ["Lembretes", "A registrar"], []],
   ["atendimento", "/admin/atendimento", [], []],
+  // Conversa da Júlia aberta (criada num teste local, fora do seed; se faltar, usar outra só com mensagem do
+  // paciente: a do Carlos, no seed, mostra "Não enviada"). Com a Central ligada, /admin/atendimento abre Conversas:
+  // a captura "atendimento" é da tela sem a Central (refazer desligando a Central da clínica do seed).
+  ["conversas", "/admin/conversas?conversa=%2B5584977001122", [], []],
   ["relacionamento", "/admin/pacientes/para-contatar", ["Retomar contato"], []],
   ["metricas", "/admin/metricas", [], []],
   ["financeiro", "/admin/financeiro", ["Falta CPF"], []],

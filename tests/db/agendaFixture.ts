@@ -6,7 +6,7 @@ import { createProfessional } from "../../src/lib/data/config/professionals";
 import { createService, setServiceAgendas, setServiceLocations, type ServiceInput } from "../../src/lib/data/config/services";
 import { DataError } from "../../src/lib/data/errors";
 import { registerPatient } from "../../src/lib/data/patients";
-import { addMember, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
+import { addMember, createClinic, createUser, deleteClinics, deleteUsers, teamAgendaId, type TestUser } from "./helpers";
 
 // Clínica de teste da agenda (F3.6): duas agendas de profissional, uma de
 // exames, consultório e domiciliar, consulta/retorno/exame/turma, horários
@@ -58,9 +58,9 @@ export async function setupAgendaClinic(name: string, phonePrefix: string): Prom
     createProfessional(a, clinicId, { userId: null, displayName, profession: "Médica", specialty: null, council: null, councilNumber: null, councilState: null });
   const dra = await professional("Dra. Agenda");
   const dra2 = await professional("Dr. Segundo");
-  ids.agendaDra = (await createAgenda(a, clinicId, { name: "Dra. Agenda", kind: "professional", professionalId: dra.id, bufferMinutes: 0 })).id;
-  ids.agendaDra2 = (await createAgenda(a, clinicId, { name: "Dr. Segundo", kind: "professional", professionalId: dra2.id, bufferMinutes: 0 })).id;
-  ids.agendaExams = (await createAgenda(a, clinicId, { name: "Exames", kind: "resource", professionalId: null, bufferMinutes: 0 })).id;
+  ids.agendaDra = (await createAgenda(a, clinicId, { kind: "professional", professionalId: dra.id, bufferMinutes: 0 })).id;
+  ids.agendaDra2 = (await createAgenda(a, clinicId, { kind: "professional", professionalId: dra2.id, bufferMinutes: 0 })).id;
+  ids.agendaExams = await teamAgendaId(clinicId);
   ids.office = (await createLocation(a, clinicId, { name: "Consultório", type: "clinic", address: "Rua A, 1" })).id;
   ids.home = (await createLocation(a, clinicId, { name: "Domiciliar", type: "home_visit", address: null })).id;
 

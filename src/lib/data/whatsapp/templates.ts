@@ -140,6 +140,15 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: `${GREETING}\nOs avisos de agendamento (lembretes, confirmações e remarcações) da clínica pelo WhatsApp estão ativos neste número.\n\nEsta é uma mensagem automática do RecepClinic. Não é preciso responder.`,
     examples: ["Ana", "da Clínica Sorriso"],
   },
+  {
+    // "Retomar conversa" da Central de atendimento (CN4b; decisão 7, texto aprovado pelo cliente em 05/nov/2026, opção
+    // A, sem botão): fora das 24 h, a equipe volta a falar com o paciente; a resposta dele reabre a janela. {{1}} = "da
+    // Clínica X"; {{2}} = dia da última mensagem do paciente.
+    key: "conversation_resume",
+    name: "rc_retomar_conversa_v1",
+    body: "Olá! Aqui é {{1}}.\nVi que a nossa conversa de {{2}} ficou pendente.\nQuer continuar de onde paramos?",
+    examples: ["da Clínica Sorriso", "04/11"],
+  },
 ];
 
 /** Texto da v2 do preparo (com o link), para quem ainda só tem ela aprovada (C7.4). */
@@ -158,7 +167,8 @@ export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate
       (!t.key.startsWith("daily_summary") || has("daily_summary")) &&
       (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
       (t.key !== "waitlist_offer" || has("waitlist")) &&
-      (t.key !== "nfse_document" || has("finance")),
+      (t.key !== "nfse_document" || has("finance")) &&
+      (t.key !== "conversation_resume" || has("central_attendance")),
   );
 }
 
@@ -283,7 +293,8 @@ export function appointmentParams(clinic: string, a: AppointmentForMessage): str
 export function templateCreationPayload(template: DefaultTemplate, headerHandle?: string): Record<string, unknown> {
   const components: Record<string, unknown>[] = [];
   if (template.documentHeader) components.push({ type: "HEADER", format: "DOCUMENT", example: { header_handle: [headerHandle ?? ""] } });
-  components.push({ type: "BODY", text: template.body, example: { body_text: [template.examples] } });
+  // Sem variáveis (ex.: "Retomar conversa"), a Meta não aceita exemplo.
+  components.push({ type: "BODY", text: template.body, ...(template.examples.length ? { example: { body_text: [template.examples] } } : {}) });
   if (template.quickReplies?.length) {
     components.push({ type: "BUTTONS", buttons: template.quickReplies.map((text) => ({ type: "QUICK_REPLY", text })) });
   }

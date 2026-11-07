@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "05/11/2026";
+export const JOURNEY_UPDATED = "06/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -244,31 +244,17 @@ export const JOURNEY: JourneySection[] = [
         [
           "O paciente pede",
           [
-            patient("Toca em \"Falar com a recepção\" no menu (ou escreve \"atendente\")", "O botão de saída de uma resposta não entendida e as ações do agendamento transferem direto."),
-            bot(
-              "\"Claro! 😊 Poderia me contar brevemente o que você precisa? Assim, talvez eu consiga ajudar você agora. Se preferir, toque abaixo e passo para a recepção.\" com Falar com a recepção",
-              "Com \"Perguntas frequentes no bot\" (evolução do assistente, 02/nov/2026); sem ele, \"Você quer falar com a recepção?\". O motivo já dito na mesma mensagem (\"atendente, qual o endereço?\") não é perguntado de novo.",
-            ),
-            check("O que o paciente responde?"),
+            patient("Toca em \"Falar com a recepção\" no menu (ou escreve \"atendente\", \"secretária\" ou \"atendimento\")", "O botão de saída de uma resposta não entendida e as ações do agendamento transferem direto. \"Atendimento\" só quando a mensagem é o pedido (\"quero atendimento\"); \"horário de atendimento\" vai para a base (cliente, 06/nov/2026)."),
+            check("O pedido já traz o motivo (\"atendente, qual o endereço?\")?", "Só com \"Perguntas frequentes no bot\". Digitado sem motivo (\"secretária\", \"atendente\"), com ou sem a base: pergunta \"Você quer falar com a recepção?\" com Sim · Não (cliente, 06/nov/2026)."),
             branch(
-              ["Toca no botão ou pede de novo (ou manda áudio)", [bot("Transfere direto (abaixo)", "Nunca uma barreira para falar com uma pessoa.")]],
+              ["Não", [bot("Pelo menu: transfere direto (abaixo). Digitado: \"Você quer falar com a recepção?\" Sim · Não", "Sem perguntar o motivo antes (cliente, 06/nov/2026). Sim transfere; Não: \"Tudo bem, seguimos por aqui.\" e o menu.")]],
               [
-                "Conta o motivo",
+                "Sim, e a base de conhecimento tem resposta",
                 [
-                  check("A base de conhecimento tem resposta segura?"),
+                  bot("Responde (ou abre o caminho: marcar, remarcar, cancelar) e pergunta \"Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?\"", "Botões: Resolvido · Falar com a recepção · Agendar Atendimento (pergunta Consulta · Retorno · Exame, só o que a clínica marca pelo bot; um tipo só vai direto; serviço citado na resposta abre ele). No meio de uma marcação, ela para (pediu a recepção)."),
                   branch(
-                    [
-                      "Sim",
-                      [
-                        bot("Responde (ou abre o caminho: marcar, remarcar, cancelar) e pergunta \"Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?\"", "Botões: Resolvido · Falar com a recepção · Agendar Atendimento (pergunta Consulta · Retorno · Exame, só o que a clínica marca pelo bot; um tipo só vai direto; serviço citado na resposta abre ele). No meio de uma marcação, ela para (pediu a recepção)."),
-                        branch(
-                          ["Resolvido", [bot("\"Que bom! Se precisar, é só escrever por aqui.\"", "Sem pendência para a recepção; conta como resolvida nas Métricas.")]],
-                          ["Falar com a recepção", [bot("Transfere com o motivo como assunto", "Não pergunta o assunto de novo.")]],
-                        ),
-                      ],
-                    ],
-                    ["Não", [bot("\"Não encontrei uma informação segura para responder sua dúvida. Vou encaminhar sua solicitação para a recepção, que poderá ajudar você.\"", "Transfere com o motivo como assunto; fora do horário, diz quando a recepção responde.")]],
-                    ["Precisa de uma pessoa", [bot("Transfere direto, com o motivo como assunto", "Entradas da base do tipo \"recepção\" (ex.: resultado de exame), mantidas pelo Suporte. Pergunta de saúde: o aviso de saúde antes.")]],
+                    ["Resolvido", [bot("\"Que bom! Se precisar, é só escrever por aqui.\"", "Sem pendência para a recepção; conta como resolvida nas Métricas.")]],
+                    ["Falar com a recepção", [bot("Transfere com o motivo como assunto", "Não pergunta o assunto de novo.")]],
                   ),
                 ],
               ],
@@ -286,11 +272,15 @@ export const JOURNEY: JourneySection[] = [
       bot("\"Vou te transferir para a recepção…\"; o bot fica pausado nessa conversa", "Fora do horário da recepção (Configurações › Clínica), acrescenta que responde a partir da próxima abertura. Em recesso da clínica (bloqueio marcado como recesso), envia a mensagem de recesso no lugar, com a data de retorno."),
       bot(
         "\"Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?\"",
-        "Uma vez por transferência, e só quando o motivo ainda não foi contado. A primeira resposta em texto (antes de a recepção responder) aparece na tela Atendimento; sem resposta: \"Assunto ainda não informado\".",
+        "Uma vez por transferência, e só quando o motivo ainda não foi contado. A primeira resposta em texto (antes de a recepção responder) aparece na tela Atendimento, sem resposta do bot (cliente, 06/nov/2026); sem resposta: \"Assunto ainda não informado\".",
       ),
       reception(
         "Responde pelo app WhatsApp Business, no celular ou no computador",
         "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera. Exceção: mensagem que sai do app até 5 segundos depois da do paciente ou do bot (saudação ou ausência automática) não pausa; o Início e Configurações › WhatsApp avisam para desligar.",
+      ),
+      reception(
+        "Com a Central de atendimento ligada: responde pela tela Conversas, dentro das 24 h da última mensagem do paciente",
+        "Quem responde assume a conversa; pode mandar texto, foto (JPG ou PNG, até 5 MB) ou PDF (até 10 MB) com legenda. Responder numa conversa finalizada pausa o bot, como pelo app. Se a equipe assume enquanto o bot ainda está respondendo, o bot para ali e não manda mais nada. Passadas 24 h, só o modelo \"Retomar conversa\" (\"Olá! Aqui é da Clínica X. Vi que a nossa conversa de 04/11 ficou pendente. Quer continuar de onde paramos?\"), um por vez; a resposta do paciente reabre a conversa. Paciente esperando 30 min sem resposta, no horário da clínica: a conversa volta para \"Sem responsável\", sem aviso (Central, cliente, 05/nov/2026).",
       ),
       reception(
         "Manda #bot ou toca em \"Finalizar atendimento\" no painel: o bot volta a atender essa conversa, sem mandar nada nem mostrar o menu",

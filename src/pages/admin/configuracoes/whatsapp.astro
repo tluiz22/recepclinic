@@ -8,13 +8,15 @@
 // padrão recusado. F8a.2: templates do RecepClinic sem uso na conta, para
 // excluir (a busca na Meta só roda com "Procurar", para a tela não esperar).
 // F8.2: no cartão Conexão, a situação dos templates em uso, para todos.
+// CU4 (tela W2, cliente, 05/nov/2026): "Custo da Meta" do mês para todas as clínicas e a Central de atendimento
+// (ligar e desligar pelo Administrador), quando o Suporte libera o item.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import WhatsappConnectionCard from "../../../components/admin/WhatsappConnectionCard.astro";
 import { HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
-import { formatInstant } from "../../../lib/clinicTime";
+import { dayBounds, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { createUserClient } from "../../../lib/data/clients";
 import { platformEnv } from "../../../lib/env";
@@ -26,10 +28,28 @@ import { listLatestWhatsappMessages } from "../../../lib/data/whatsapp/messages"
 import { getLatestConnectionTest } from "../../../lib/data/whatsapp/connectionTest";
 import { latestAutomaticEcho } from "../../../lib/data/whatsapp/conversations";
 import { formatPhoneBR } from "../../../lib/phone";
+import CentralCard from "../../../components/admin/config/CentralCard.astro";
+import MetaCostCard from "../../../components/admin/config/MetaCostCard.astro";
+import { getCentralSwitch } from "../../../lib/data/central";
+import { countServiceByOrigin, listMessageCounts, listMetaPriceVersions, priceForMonth } from "../../../lib/data/metaPricing";
+import { lastMonths } from "../../../lib/data/usage";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const isSupport = clinic.isPlatformStaff;
+// Custo da Meta (CU4): do dia 1º do mês até agora, no fuso da clínica.
+const today = todayIn(clinic.timezone);
+const [month] = lastMonths(today, 1);
+const centralOffered = clinic.features.includes("central_attendance");
+const [monthCounts, serviceSplit, prices, centralState] = await Promise.all([
+  listMessageCounts(db, month, clinic.clinicId),
+  countServiceByOrigin(db, clinic.clinicId, dayBounds(month, clinic.timezone).start, new Date()),
+  listMetaPriceVersions(db),
+  centralOffered ? getCentralSwitch(db, clinic.clinicId) : Promise.resolve(null),
+]);
+const monthRow = monthCounts.find((row) => row.month === month);
+const counts = { templates: monthRow?.templates ?? 0, service: monthRow?.service ?? 0, appReplies: monthRow?.appReplies ?? 0 };
+const currentPrice = priceForMonth(prices, month);
 const [connection, latest, templates, lastTest, autoReplyAt] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
   isSupport ? listLatestWhatsappMessages(db, clinic.clinicId, 10) : Promise.resolve([]),
@@ -91,6 +111,10 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 
   <div class="flex max-w-2xl flex-col gap-4">
     <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection), templates: templateApproval(templatesInUse(clinic.features), templates), isSupport, canTest: isSupport || clinic.roles.includes("admin"), test: lastTest, autoReplyAt }} />
+
+    <MetaCostCard month={month} today={today} counts={counts} split={serviceSplit} price={currentPrice} />
+
+    {centralState && <CentralCard state={centralState} price={currentPrice} canSwitch={clinic.roles.includes("admin")} timeZone={clinic.timezone} />}
 
     {
       isSupport && (

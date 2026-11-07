@@ -5,6 +5,42 @@ import { article } from "./helper";
 
 export const atendimentoArtigos = [
   article({
+    id: "central-de-atendimento",
+    title: "Conversas: a Central de atendimento",
+    summary: "Ver e responder as conversas do WhatsApp no RecepClinic: assumir, transferir, enviar foto ou PDF e finalizar.",
+    category: "atendimento",
+    module: "Conversas",
+    where: "Conversas (com a Central de atendimento ligada em Configurações › WhatsApp)",
+    screen: { path: "/admin/conversas" },
+    keywords: ["conversas", "central de atendimento", "responder", "assumir", "transferir", "anexo", "foto", "pdf", "retomar conversa", "não lidas", "finalizadas"],
+    synonyms: ["responder paciente pelo sistema", "chat", "caixa de entrada", "atender pelo painel", "mandar arquivo para o paciente"],
+    related: ["atendimento-humano", "config-whatsapp", "como-funciona-o-bot"],
+    order: 39,
+    intro:
+      "Com a Central ligada, as conversas do WhatsApp aparecem no RecepClinic, com o que o assistente já conversou. A equipe responde por aqui, sem precisar do celular da clínica.",
+    fields: [
+      { name: "Abertas e Finalizadas", text: "Abertas: com a clínica (Aguardando a clínica ou Em atendimento). Finalizadas: voltaram ao assistente. Busca por nome ou telefone e o filtro Mostrar (Todas, Não atribuídas, Minhas, Aguardando paciente)." },
+      { name: "Responsável", text: "Quem responde assume a conversa. Assumir e Transferir ficam no alto da conversa (Administrador e Recepção). Se ninguém responder em 30 minutos, no horário da clínica, a conversa volta para Sem responsável." },
+      { name: "Responder", text: "Até 24 horas depois da última mensagem do paciente (regra do WhatsApp). Ctrl+Enter envia. Se a mensagem não sair, aparece \"Não enviada · Tentar de novo\"." },
+      { name: "Foto ou PDF", text: "O clipe ao lado da caixa de resposta envia uma foto (JPG ou PNG, até 5 MB) ou um PDF (até 10 MB), com legenda opcional." },
+      { name: "Retomar conversa", text: "Passadas as 24 horas, só o modelo aprovado pela Meta, um por vez; a Meta cobra este envio. Quando o paciente responde, a caixa de resposta volta." },
+      { name: "Anexos do paciente", text: "Foto, áudio e documento (até 16 MB) aparecem na conversa. Vídeo, figurinha e arquivo grande mostram um aviso; com o app do WhatsApp Business no mesmo número, \"Abrir no WhatsApp\"." },
+      { name: "Painel do paciente", text: "À direita (no computador) ou em \"Ver paciente\": quem fala com a clínica, os pacientes do contato e as próximas consultas. Número sem cadastro: Cadastrar paciente ou ligar a um paciente já cadastrado." },
+    ],
+    steps: [
+      "Abra Conversas e escolha a conversa na lista (as não lidas têm o número ao lado).",
+      "Responda pela caixa no fim da conversa; para mandar um arquivo, toque no clipe.",
+      "Ao terminar, toque em \"Finalizar atendimento\": o assistente volta a responder na próxima mensagem do paciente, sem mandar nada.",
+    ],
+    notes: [
+      "O Profissional vê só as conversas transferidas para ele.",
+      "Cada abertura de conversa e de anexo fica registrada.",
+      "Guarda: o texto por 5 anos e os anexos por 12 meses. A anonimização do paciente apaga o texto e os anexos na hora.",
+      "Clínica que conecta o número com o app do WhatsApp Business já com a Central ligada: as conversas do app (até 180 dias) entram no histórico quando o paciente escrever de novo.",
+    ],
+    contextual: ["/admin/conversas"],
+  }),
+  article({
     id: "atendimento-humano",
     title: "Atendimento: conversas que esperam a clínica",
     summary: "Quando o bot para, como acompanhar a conversa e como finalizar o atendimento.",
@@ -36,6 +72,7 @@ export const atendimentoArtigos = [
       "Aguardando a clínica (o paciente espera resposta), a conversa não volta sozinha ao bot.",
       "O número do suporte do RecepClinic nunca passa pelo bot nem entra nesta lista.",
       "Clínica em implantação não recebe nem registra conversas; a lista começa ao ativar.",
+      "Com a Central de atendimento ligada, Atendimento abre a tela Conversas, onde a equipe responde pelo RecepClinic (artigo \"Conversas: a Central de atendimento\").",
     ],
     contextual: ["/admin/atendimento"],
   }),

@@ -1,0 +1,159 @@
+---
+// Preços da Meta (CU2; plano da Central, seção 14; tela P1, cliente, 05/nov/2026): a tabela da Meta para o Brasil,
+// em reais, por vigência. Usada na estimativa do Uso, na medição das clínicas (CU4) e na calculadora (CU3). Mudou o
+// preço, o Suporte cadastra uma vigência nova (do mês atual em diante); os meses passados ficam com o preço da
+// época. Vigência já começada não muda; uma futura pode ser apagada. Só o Suporte (menu Sistema).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import DataTable from "../../../components/admin/ui/DataTable.astro";
+import { CARD, HINT, INPUT, LABEL, PANEL, SECTION_TITLE } from "../../../components/admin/config/formStyles";
+import { DEFAULT_TIMEZONE, formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listMetaPriceVersions, priceForMonth } from "../../../lib/data/metaPricing";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const today = todayIn(DEFAULT_TIMEZONE);
+const versions = await listMetaPriceVersions(db);
+const current = priceForMonth(versions, `${today.slice(0, 7)}-01`);
+const future = versions.filter((version) => version.validFrom > today);
+const action = "/api/admin/sistema/precos-meta";
+const brl = (value: number, digits = 4) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+const input = (value: number, digits = 4) => value.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
+const since = (date: string) => formatCalendarDate(date, "dd/MM/yyyy");
+const base = future[0] ?? current;
+const nextMonth = (() => {
+  const [year, month] = today.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+})();
+const fields = [
+  { name: "utilidade", label: "Utilidade (R$)", value: base ? input(base.utilityBrl) : "", hint: "Modelos: confirmações, lembretes." },
+  { name: "autenticacao", label: "Autenticação (R$)", value: base ? input(base.authenticationBrl) : "", hint: "" },
+  { name: "servico", label: "Serviço (R$)", value: base ? input(base.serviceBrl) : "", hint: "Assistente, avisos e a Central." },
+  { name: "gratis", label: "Serviço grátis por mês", value: base ? String(base.freeServicePerMonth) : "", hint: "Por número." },
+  { name: "cambio", label: "Câmbio (R$ por US$)", value: base ? input(base.usdBrl, 2) : "", hint: "Só a calculadora usa." },
+];
+const historyRows = versions.map((version) => [
+  since(version.validFrom),
+  brl(version.utilityBrl),
+  brl(version.authenticationBrl),
+  brl(version.serviceBrl),
+  version.freeServicePerMonth.toLocaleString("pt-BR"),
+  brl(version.usdBrl, 2),
+  version.source,
+  `${version.createdBy ? "Suporte" : "Sistema"}, ${formatInstant(version.createdAt, DEFAULT_TIMEZONE, "dd/MM/yyyy")}`,
+]);
+---
+
+<AdminLayout title="Preços da Meta" platform>
+  <SystemHeader
+    title="Preços da Meta"
+    subtitle="Tabela da Meta para o Brasil, em reais. Usada na estimativa do Uso, na medição das clínicas e na calculadora. Quando a Meta muda os preços, cadastre uma vigência nova: os meses anteriores continuam com o preço da época."
+  />
+  <FlashMessage />
+
+  <div class="mt-5 flex flex-col gap-4">
+    {
+      current ? (
+        <section class={`${CARD} flex flex-col gap-3 border-brand p-4 sm:p-5`} aria-labelledby="vigente">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <h2 id="vigente" class={SECTION_TITLE}>
+              Vigente desde {since(current.validFrom)}
+            </h2>
+            <span class="rounded-full bg-brand-soft px-2.5 py-0.5 text-[13px] font-bold text-brand-ink">Em uso</span>
+          </div>
+          <dl class="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
+            {[
+              ["Utilidade (modelos)", brl(current.utilityBrl)],
+              ["Autenticação", brl(current.authenticationBrl)],
+              ["Serviço", brl(current.serviceBrl)],
+              ["Serviço grátis por mês", current.freeServicePerMonth.toLocaleString("pt-BR")],
+              ["Câmbio (só calculadora)", brl(current.usdBrl, 2)],
+            ].map(([label, value]) => (
+              <div class="flex flex-col gap-0.5">
+                <dt class="text-sm text-ink-soft">{label}</dt>
+                <dd class="text-[21px] font-bold text-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p class="text-sm text-ink-soft">Fonte: {current.source}.</p>
+        </section>
+      ) : (
+        <p class="rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Nenhuma vigência começou ainda.</p>
+      )
+    }
+
+    {
+      future.map((version) => (
+        <section class={`${CARD} flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5`}>
+          <p class="text-[15px] text-ink">
+            <strong>Vigência futura, a partir de {since(version.validFrom)}:</strong> utilidade {brl(version.utilityBrl)}, serviço {brl(version.serviceBrl)}, {version.freeServicePerMonth.toLocaleString("pt-BR")} grátis.
+          </p>
+          <form method="POST" action={action}>
+            <input type="hidden" name="acao" value="excluir" />
+            <input type="hidden" name="id" value={version.id} />
+            <Button
+              type="submit"
+              size="sm"
+              class="js-confirm-delete text-danger"
+              data-confirm-title="Apagar esta vigência futura?"
+              data-confirm-message={`Os preços a partir de ${since(version.validFrom)} saem. Continua valendo a vigência anterior.`}
+              data-confirm-label="Apagar"
+            >
+              Apagar
+            </Button>
+          </form>
+        </section>
+      ))
+    }
+
+    <details class={PANEL}>
+      <summary class="cursor-pointer text-[15px] font-bold text-brand">Nova vigência</summary>
+      <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value="salvar" />
+        <div class="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
+          <div>
+            <label for="vigencia" class={LABEL}>Vale a partir de</label>
+            <input id="vigencia" name="vigencia" type="month" min={today.slice(0, 7)} value={nextMonth} required class={INPUT} />
+            <p class={HINT}>Sempre no dia 1º do mês.</p>
+          </div>
+          {
+            fields.map((field) => (
+              <div>
+                <label for={field.name} class={LABEL}>
+                  {field.label}
+                </label>
+                <input id={field.name} name={field.name} inputmode="decimal" value={field.value} required class={INPUT} />
+                {field.hint && <p class={HINT}>{field.hint}</p>}
+              </div>
+            ))
+          }
+        </div>
+        <div>
+          <label for="fonte" class={LABEL}>Fonte</label>
+          <input id="fonte" name="fonte" required maxlength="300" placeholder="Ex.: Meta, página de preços, tabela em reais" class={INPUT} />
+        </div>
+        <Button
+          type="submit"
+          variant="primary"
+          class="js-confirm-delete self-start"
+          data-confirm-tone="primary"
+          data-confirm-title="Salvar esta vigência?"
+          data-confirm-message="A partir do mês escolhido, as estimativas usam estes preços. Depois que o mês começa, a vigência não muda."
+          data-confirm-label="Salvar vigência"
+        >
+          Salvar vigência
+        </Button>
+      </form>
+    </details>
+
+    <section class={`${CARD} flex flex-col gap-3 p-4 sm:p-5`} aria-labelledby="historico">
+      <h2 id="historico" class={SECTION_TITLE}>Histórico</h2>
+      <DataTable label="Histórico dos preços da Meta" headers={["Desde", "Utilidade", "Autenticação", "Serviço", "Grátis", "Câmbio", "Fonte", "Quem cadastrou"]} rows={historyRows} />
+    </section>
+  </div>
+  <ConfirmDeleteDialog />
+</AdminLayout>

@@ -81,6 +81,17 @@ export async function fetchPhoneNumberInfo(phoneNumberId: string, token: string,
   };
 }
 
+/** Números da conta (cadastro v4, CN8: o fim da coexistência às vezes vem só com a conta). */
+export async function fetchWabaPhoneNumbers(wabaId: string, token: string, fetcher: Fetcher = fetch): Promise<{ id: string; displayPhoneNumber: string | null }[]> {
+  const body = await call<{ data?: { id?: string; display_phone_number?: string }[] }>(
+    fetcher,
+    "Números da conta",
+    `${GRAPH}/${encodeURIComponent(wabaId)}/phone_numbers?fields=id,display_phone_number`,
+    token,
+  );
+  return (body.data ?? []).filter((n): n is { id: string; display_phone_number?: string } => !!n.id).map((n) => ({ id: n.id, displayPhoneNumber: n.display_phone_number ?? null }));
+}
+
 /**
  * Desvio da conta (F10.0a): a Meta manda os eventos da conta para `url` (o
  * webhook do staging) no lugar do webhook principal do app. Antes, confere o
@@ -164,7 +175,7 @@ export async function exchangeSignupCode(appId: string, appSecret: string, code:
 /**
  * Coexistência: pede à Meta a sincronização dos contatos (`smb_app_state_sync`)
  * ou do histórico (`history`) do app. A Meta exige as duas em até 24 horas
- * depois da conexão, uma vez cada; o que chega no webhook é descartado.
+ * depois da conexão, uma vez cada; o histórico só é guardado com a Central ligada (CN8).
  */
 export async function requestCoexistenceSync(
   phoneNumberId: string,
@@ -284,6 +295,30 @@ export async function deleteTemplate(wabaId: string, name: string, token: string
 // Documentos (F11.5): o PDF da nota sobe para a Meta na hora do envio; o PDF
 // de exemplo do template da nota sobe pelo envio retomável do app.
 // ---------------------------------------------------------------------------
+
+export type MediaInfo = { url: string; mimeType: string | null; sizeBytes: number | null; sha256: string | null };
+
+/** Dados de uma mídia recebida (GET /{media-id}): a URL vale 5 minutos e exige o token (CN5). */
+export async function fetchMediaInfo(mediaId: string, token: string, fetcher: Fetcher = fetch): Promise<MediaInfo> {
+  const body = await call<{ url?: string; mime_type?: string; file_size?: number | string; sha256?: string }>(
+    fetcher,
+    "Anexo do WhatsApp",
+    `${GRAPH}/${encodeURIComponent(mediaId)}`,
+    token,
+  );
+  if (!body.url) throw new GraphRequestError("Anexo do WhatsApp", { code: null, message: "sem o endereço da mídia" });
+  const size = Number(body.file_size);
+  return { url: body.url, mimeType: body.mime_type ?? null, sizeBytes: Number.isFinite(size) && size >= 0 ? size : null, sha256: body.sha256 ?? null };
+}
+
+/** Baixa o arquivo da URL da mídia (com o token), até `maxBytes`. */
+export async function downloadMedia(url: string, token: string, maxBytes: number, fetcher: Fetcher = fetch): Promise<Uint8Array> {
+  const response = await fetcher(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) throw new GraphRequestError("Anexo do WhatsApp", { code: null, message: `HTTP ${response.status}`, httpStatus: response.status });
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > maxBytes) throw new GraphRequestError("Anexo do WhatsApp", { code: null, message: "arquivo acima do limite" });
+  return bytes;
+}
 
 /** Sobe o arquivo para o número da clínica (POST /{phone}/media) e devolve o id da mídia. */
 export async function uploadMedia(

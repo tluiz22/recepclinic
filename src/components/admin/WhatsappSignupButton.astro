@@ -129,7 +129,8 @@ const { appId, configId, graphVersion, label = "Conectar WhatsApp" } = Astro.pro
           config_id: configId,
           response_type: "code",
           override_default_response_type: true,
-          extras: { setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" },
+          // Cadastro v4 (CN8): a versão vem da configuração (config_id), sem sessionInfoVersion.
+          extras: { setup: {}, featureType: "whatsapp_business_app_onboarding" },
         },
       );
     });

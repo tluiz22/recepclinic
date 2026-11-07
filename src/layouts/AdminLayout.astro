@@ -11,6 +11,7 @@ import { canAccessArea, inSuspendedView, roleLabel as describeRoles, SUSPENDED_A
 import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
 import { getMeuDiaCount } from "../lib/data/dashboard";
+import { countWaitingConversations, isCentralActive } from "../lib/data/central";
 import { logError } from "../lib/log";
 import { articleForPath } from "../lib/central";
 import { canSeeArticle } from "../lib/central/access";
@@ -21,17 +22,22 @@ interface Props {
   platform?: boolean;
   /** Recarrega sozinha a cada 1 minuto, com a aba à vista (src/scripts/autoRefresh.ts). */
   autoRefresh?: boolean;
+  /** Tela larga (Conversas, cliente, 06/nov/2026): ocupa a largura toda no computador, sem a moldura de 6xl. */
+  wide?: boolean;
+  /** Tela que ocupa a altura da janela no computador, sem rolar a página (Conversas, cliente, 06/nov/2026): o conteúdo
+   * rola por dentro dos quadros. */
+  fill?: boolean;
   /** Nome da área cujas seções vêm no slot "side" (ex.: "Configurações"), no lugar do menu principal. */
   sideTitle?: string;
 }
 
 // Uma largura só para todas as telas (cliente, 16/out/2026: a Agenda e o Resumo do Dia
 // deixaram a largura de 1600px da R1 para ficar como as outras).
-const { title, platform = false, autoRefresh = false, sideTitle } = Astro.props;
+const { title, platform = false, autoRefresh = false, wide = false, fill = false, sideTitle } = Astro.props;
 // Seções de uma área na lateral (M5, Configurações; cliente, 30/out/2026): elas aparecem no lugar do menu
 // principal, que volta pelo "‹ Menu principal" sem sair da tela.
 const hasSide = Astro.slots.has("side");
-const frame = "max-w-6xl";
+const frame = wide ? "max-w-[1760px]" : "max-w-6xl";
 
 // `match`: outras rotas que deixam o item marcado (o Atendimento é do Meu dia; o Relatório do dia, da Agenda; o
 // Relacionamento antigo, de Pacientes).
@@ -63,15 +69,38 @@ const roleLabel = describeRoles(access);
 // Contador do Meu dia (RX6, decisão 5.1; cliente, 02/nov/2026): conversas aguardando atendimento humano, conversas
 // que a clínica assumiu e ainda não devolveu ao bot, consultas sem presença registrada e contatos a conferir. A tela
 // do Meu dia informa o número que já leu; nas outras, ele é lido aqui. Falha na contagem não derruba o menu.
+// Central de atendimento (CN3a; tela T6, cliente, 05/nov/2026): com ela ligada, o item Conversas logo abaixo do Meu dia,
+// com as conversas que aguardam a clínica, e o Meu dia deixa de contar conversas. Falha na leitura: menu sem o item.
+const db = clinic && !platform ? createUserClient(Astro.request, Astro.cookies) : null;
+const centralRoles = clinic && (clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception" || role === "professional"));
+const centralOn =
+  !suspendedView && !!db && !!clinic && !!centralRoles && clinic.features.includes("central_attendance")
+    ? await isCentralActive(db, clinic.clinicId).catch((error) => (logError("conversas: menu", error, { clinica: clinic.clinicId }), false))
+    : false;
+const conversationsWaiting = centralOn ? await countWaitingConversations(db!, clinic!.clinicId).catch(() => 0) : 0;
 const meuDiaCount =
-  clinic && !platform && !suspendedView
-    ? (Astro.locals.meuDiaCount ??
-      (await getMeuDiaCount(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features, (label, error) =>
-        logError(`meu dia: contador do menu (${label})`, error, { clinica: clinic.clinicId }),
-      )))
+  clinic && db && !suspendedView
+    ? Astro.locals.meuDiaCount !== undefined
+      ? Math.max(0, Astro.locals.meuDiaCount - (centralOn ? (Astro.locals.meuDiaConversations ?? 0) : 0))
+      : await getMeuDiaCount(
+          db,
+          clinic.clinicId,
+          clinic.features,
+          (label, error) => logError(`meu dia: contador do menu (${label})`, error, { clinica: clinic.clinicId }),
+          new Date(),
+          { conversations: !centralOn },
+        )
     : 0;
 
 const [homeItem, agendaItem, reportItem, patientsItem] = primaryNavItems;
+const conversationsItem: NavItem | null = centralOn
+  ? {
+      label: "Conversas",
+      href: "/admin/conversas",
+      icon: "chat-bubble",
+      ...(conversationsWaiting > 0 ? { badge: conversationsWaiting, badgeLabel: `${conversationsWaiting} aguardando a clínica` } : {}),
+    }
+  : null;
 // Grupo "Mais" (RX-D1): o que a pessoa tem acesso, na ordem do desenho; sem acesso, o item some.
 const moreItems: NavItem[] = [
   // Módulo financeiro (F11): Administrador e Recepção, com o item liberado.
@@ -95,6 +124,7 @@ const systemNavItems: NavItem[] =
         { label: "Base de conhecimento", href: "/admin/sistema/conhecimento", icon: "chat-bubble" },
         { label: "Vendas", href: "/admin/sistema/vendas", icon: "tag" },
         { label: "Uso", href: "/admin/sistema/uso", icon: "chart-bar" },
+        { label: "Preços da Meta", href: "/admin/sistema/precos-meta", icon: "banknotes" },
         { label: "Erros", href: "/admin/sistema/erros", icon: "warning" },
         { label: "Problemas conhecidos", href: "/admin/sistema/problemas", icon: "life-buoy" },
         { label: "Tecnologia", href: "/admin/sistema/tecnologia", icon: "cpu" },
@@ -115,7 +145,7 @@ const sideGroups: NavGroup[] = (
     : suspendedView
       ? [{ items: suspendedItems }]
       : [
-        { items: [withCount(homeItem), agendaItem, reportItem, patientsItem] },
+          { items: [withCount(homeItem), ...(conversationsItem ? [conversationsItem] : []), agendaItem, reportItem, patientsItem] },
         { title: "Mais", items: [...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
@@ -123,14 +153,22 @@ const sideGroups: NavGroup[] = (
 
 // Celular e tablet (M6): a barra inferior de sempre e o "Mais" com os mesmos grupos,
 // sem os itens que já estão na barra.
-const tabBarItems = platform ? systemNavItems.slice(0, 4) : suspendedView ? suspendedItems : primaryNavItems.map(withCount);
+// Com a Central (M1): Conversas entra na barra no lugar do Relatório do dia, que vai para o "Mais". Clínica suspensa: só
+// os itens da suspensão.
+const tabBarItems = platform
+  ? systemNavItems.slice(0, 4)
+  : suspendedView
+    ? suspendedItems
+    : conversationsItem
+      ? [withCount(homeItem), conversationsItem, agendaItem, patientsItem]
+      : primaryNavItems.map(withCount);
 const moreGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems.slice(4) }, { title: "Ajuda", items: [helpItem] }]
     : suspendedView
       ? []
       : [
-        { items: [...moreItems, helpItem] },
+          { items: [...(conversationsItem ? [reportItem] : []), ...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
 ).filter((group) => group.items.length > 0);
@@ -298,7 +336,7 @@ const sideLinkClass = (active: boolean) =>
       </div>
     </aside>
 
-    <div class="flex min-h-screen min-w-0 flex-1 flex-col">
+    <div class:list={["flex min-h-screen min-w-0 flex-1 flex-col", fill && "lg:h-dvh lg:min-h-0"]}>
       <!-- Celular e tablet: cabeçalho curto (o menu fica na barra inferior). -->
       <header class="border-b border-line bg-white pt-[env(safe-area-inset-top)] lg:hidden">
         <div class="flex min-h-16 items-center justify-between gap-4 px-4 py-2.5">
@@ -366,7 +404,11 @@ const sideLinkClass = (active: boolean) =>
         )
       }
 
-      <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pt-8 lg:px-6 lg:pb-12 ${frame}`}>
+      <main
+        id="conteudo"
+        tabindex="-1"
+        class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pt-8 lg:px-6 ${fill ? "lg:flex lg:min-h-0 lg:flex-col lg:pb-6" : "lg:pb-12"} ${frame}`}
+      >
         {
           helpArticle && (
             <div class="mb-2 flex justify-end">
@@ -504,6 +546,8 @@ const sideLinkClass = (active: boolean) =>
         if (!link || !link.href || link.target || link.hasAttribute("download")) return;
         const url = new URL(link.href, location.href);
         if (url.origin !== location.origin) return;
+        // Arquivo (anexo da conversa, XML da nota): baixa sem sair da página, então a barra ficaria girando (06/nov/2026).
+        if (url.pathname.startsWith("/api/")) return;
         if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
         // Deixa outros handlers do mesmo clique decidirem antes.
         setTimeout(() => {

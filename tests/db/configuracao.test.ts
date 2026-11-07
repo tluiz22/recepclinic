@@ -8,6 +8,7 @@ import {
   deleteClinics,
   deleteUsers,
   type TestUser,
+  teamAgendaId,
 } from "./helpers";
 
 // Clínica A: admin, recepção (todas as agendas), recepção restrita (só a agenda
@@ -72,7 +73,7 @@ beforeAll(async () => {
   a.home = await insert("locations", { clinic_id: clinicA, name: "Domiciliar", type: "home_visit" });
   a.agendaJoao = await insert("agendas", { clinic_id: clinicA, name: "Dr. João", kind: "professional", professional_id: a.joao });
   a.agendaAna = await insert("agendas", { clinic_id: clinicA, name: "Dra. Ana", kind: "professional", professional_id: a.ana });
-  a.agendaExams = await insert("agendas", { clinic_id: clinicA, name: "Exames", kind: "resource" });
+  a.agendaExams = await teamAgendaId(clinicA);
   a.consultation = await insert("services", {
     clinic_id: clinicA, name: "Consulta", category: "consultation", duration_minutes: 30, price_cents: 25000,
   });

@@ -161,7 +161,7 @@ Itens (A = automático, S = Suporte marca; R = recomendado, não bloqueia):
 Feito: no webhook, o eco do app com a hora da Meta (`timestamp`, sempre presente nos eventos reais) até 5 s depois
 (ou 2 s antes) de uma mensagem do paciente ou do bot naquela conversa vira `app_auto_reply`
 (`isLikelyAutomaticEcho`/`markAutomaticEcho` em `conversations.ts`): não pausa e não conta como resposta da recepção.
-"#bot" e eco sem `timestamp` seguem a regra de antes. Aviso (`latestAutomaticEcho`, últimos 7 dias) no Início
+"#bot" e eco sem `timestamp` seguem a regra de antes. Aviso (`latestAutomaticEcho`, últimas 6 horas; eram 7 dias até 06/nov/2026) no Início
 (Administrador e Suporte) e em Configurações › WhatsApp, com o link do guia; o item "teste do bot" da checklist não
 fica feito se houve mensagem automática depois da conexão. Jornada do bot: nota no item 8 e regra geral. Sem
 migração. Teste: `tests/db/mensagem-automatica.test.ts`.

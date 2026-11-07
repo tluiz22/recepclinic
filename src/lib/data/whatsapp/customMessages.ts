@@ -40,9 +40,10 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
 /**
  * Templates sem texto próprio: o da nota fiscal e o do arquivo do preparo (C7)
  * levam o arquivo no topo, que a versão personalizada (criada sem o documento)
- * perderia (F11.5).
+ * perderia (F11.5). O "Retomar conversa" (CN4b) fica com o texto aprovado pelo cliente: a Meta só o aceita como
+ * utilidade se falar do atendimento em andamento.
  */
-export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file"];
+export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file", "conversation_resume"];
 
 export const MARKER_LABELS: Record<string, string> = {
   nome: "primeiro nome de quem recebe",

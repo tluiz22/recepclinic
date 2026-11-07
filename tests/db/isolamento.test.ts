@@ -39,7 +39,19 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 //   está em tests/db/base-de-conhecimento.test.ts.
 const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log", "system_errors"]);
 const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly", "system_errors", "kb_unmatched"]);
-const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log", "system_errors", "push_subscriptions", "patient_documents", "kb_unmatched"]);
+// whatsapp_media: o login não lê (só pela central_media_access); conversation_reads: cada login só a própria linha
+// (CN1, 05/nov/2026). Os dois têm teste próprio em central-base.test.ts. whatsapp_history_events: o login não lê
+// (só a rotina da clínica; CN8), teste em central-historico.test.ts.
+const NOT_IN_DATA_SWEEP = new Set([
+  "platform_audit_log",
+  "system_errors",
+  "push_subscriptions",
+  "patient_documents",
+  "kb_unmatched",
+  "whatsapp_media",
+  "conversation_reads",
+  "whatsapp_history_events",
+]);
 const KNOWLEDGE_BASE = ["kb_categories", "kb_entries", "kb_synonyms", "kb_specialties", "kb_clinical_terms", "kb_revisions", "kb_publications"];
 
 let clinicTables: string[] = [];
@@ -197,7 +209,20 @@ describe("varredura de isolamento (dados de teste)", () => {
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
     // known_issues: Problemas conhecidos (IS5, 03/nov/2026), da plataforma (sem clinic_id); só o Suporte lê e grava.
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "platform_settings", "features", "cron_heartbeats", "billing_settings", "billing_provider_events", "known_issues"]);
+    // meta_price_versions: Preços da Meta (CU2, 05/nov/2026), da plataforma (sem clinic_id); todos leem, só o Suporte grava.
+    const covered = new Set([
+      ...dataTables,
+      ...NOT_IN_DATA_SWEEP,
+      ...KNOWLEDGE_BASE,
+      "platform_staff",
+      "platform_settings",
+      "features",
+      "cron_heartbeats",
+      "billing_settings",
+      "billing_provider_events",
+      "known_issues",
+      "meta_price_versions",
+    ]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });

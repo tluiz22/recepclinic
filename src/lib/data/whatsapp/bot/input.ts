@@ -28,15 +28,23 @@ const RECEPTION_MAX_LENGTH = 60;
 const RECEPTION_WORDS =
   /\b(atendente|recepcao|recepcionista|secretaria|humano)\b|falar com (alguem|uma pessoa|a clinica)|pessoa de verdade/;
 
+/**
+ * "Atendimento" (cliente, 06/nov/2026): pedido de recepção só quando a mensagem é o pedido ("Atendimento", "quero
+ * atendimento", "atendimento humano", "falar com o atendimento"). "Horário de atendimento", "atendimento domiciliar" e
+ * outras dúvidas seguem para a base de conhecimento.
+ */
+const ATTENDANCE_REQUEST =
+  /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[\s,!.]+)?(?:(?:quero|queria|gostaria de|preciso de|preciso)\s+(?:de\s+)?)?(?:um\s+|o\s+)?atendimento(?:\s+(?:humano|pessoal))?(?:[\s,]+por favor)?[\s!.?]*$|falar com (?:o |um )?atendimento\b/;
+
 export function asksForReception(selection: Selection): boolean {
   if (selection.id) return false;
   const text = normalized(selection.text);
-  return text.length > 0 && text.length <= RECEPTION_MAX_LENGTH && RECEPTION_WORDS.test(text);
+  return text.length > 0 && text.length <= RECEPTION_MAX_LENGTH && (RECEPTION_WORDS.test(text) || ATTENDANCE_REQUEST.test(text));
 }
 
 /** Pedido de recepção sem as palavras do pedido ("atendente, quanto custa?" → "quanto custa?"): o motivo, se houver (EA). */
 const RECEPTION_PHRASES =
-  /\b(?:(?:quero|queria|gostaria de|preciso|posso|pode)\s+)?(?:falar\s+com\s+(?:o|a|um|uma)?\s*)?(?:atendente|recepcao|recepcionista|secretaria|humano|alguem|uma pessoa|a clinica|pessoa de verdade)\b/g;
+  /\b(?:(?:quero|queria|gostaria de|preciso|posso|pode)\s+)?(?:falar\s+com\s+(?:o|a|um|uma)?\s*)?(?:atendente|recepcao|recepcionista|secretaria|humano|alguem|uma pessoa|a clinica|pessoa de verdade|(?:o |um )?atendimento(?: humano| pessoal)?)\b/g;
 
 export function withoutReceptionWords(text: string): string {
   return normalized(text)

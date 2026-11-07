@@ -53,6 +53,8 @@ export type ClinicSender = {
   ): Promise<SendOutcome>;
   /** Documento com legenda, só na janela de 24h (como o texto). */
   document?(to: string, document: { mediaId: string; filename: string }, caption: string): Promise<SendOutcome>;
+  /** Foto com legenda opcional (Central, CN6), só na janela de 24h. */
+  image?(to: string, image: { mediaId: string }, caption: string | null): Promise<SendOutcome>;
   /** Reenvio automático (cliente, 23/out): o mesmo pedido de uma tentativa anterior. */
   resend?(request: Record<string, unknown>, body: string): Promise<SendOutcome>;
 };
@@ -174,9 +176,12 @@ export async function createClinicSender(
     },
     document(to, document, caption) {
       return post(
-        { to: toWaNumber(to), type: "document", document: { id: document.mediaId, filename: document.filename, caption } },
+        { to: toWaNumber(to), type: "document", document: { id: document.mediaId, filename: document.filename, ...(caption ? { caption } : {}) } },
         `[${document.filename}] ${caption}`,
       );
+    },
+    image(to, image, caption) {
+      return post({ to: toWaNumber(to), type: "image", image: { id: image.mediaId, ...(caption ? { caption } : {}) } }, caption ?? "[foto]");
     },
   };
 }

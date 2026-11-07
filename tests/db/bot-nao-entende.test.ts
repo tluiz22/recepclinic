@@ -125,7 +125,7 @@ describe("bot que não entende (F8.5d)", () => {
     expect(accepted[1]).toBe("Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?");
     expect(await conversation(phone)).toEqual({ state: "HUMAN_HANDOFF", human_handoff: true, handoff_reason: "not_understood", not_understood_count: 0 });
     // Pausada: a 1ª resposta é o assunto; depois, o bot fica calado.
-    expect(await message(phone, "alô?")).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+    expect(await message(phone, "alô?")).toEqual([]);
     expect(await message(phone, "alguém?")).toEqual([]);
   });
 

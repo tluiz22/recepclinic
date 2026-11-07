@@ -5,6 +5,23 @@
 > **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
 > aplicadas nos dois; base publicada). **Validada pelo cliente (05/nov).**
 >
+> **Ajustes do bot (06/nov):** sem "Obrigado! Já repassamos…" e sem a pergunta do motivo antes da recepção (transfere
+> direto). Na `main` (staging); cliente valida. Detalhe no `historico.md`.
+>
+> **Ajustes da tela Conversas (06/nov):** cabeçalho preso no topo no celular, conversa e lista atualizando a cada 10 s,
+> tela mais larga no computador. Na `main` (staging); cliente valida. Captura `conversas` refeita.
+>
+> **Nome da agenda (06/nov):** agenda de profissional sempre com o nome dele; "Exames" automática com o item
+> (migração `20261225120000` aplicada no staging; produção não). Na `main` (staging); cliente valida. Captura
+> `config-agendas` refeita. **Push na `main` só com autorização do cliente (06/nov).**
+>
+> **Conversas como o WhatsApp + anexo + bot (06/nov):** tela na altura da janela no computador, conversa em tela cheia
+> no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
+> no staging (06/nov). Captura `conversas` refeita.
+>
+> **Aviso da mensagem automática do app em 6 h (06/nov):** era 7 dias. Vai para a produção **junto com a Central**
+> (cliente, 06/nov), não sozinho.
+>
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
 >
@@ -12,14 +29,14 @@
 > Atendimento e encerramento silencioso em 12 h. No **staging e na produção** (`1bfd20f`, 05/nov; migração
 > `20261211120000` aplicada nos dois). **Validada (05/nov).** Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
 >
-> **Central de Atendimento Humano (05/nov):** só planejamento, em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
+> **Central de Atendimento Humano (05/nov):** planejamento em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
 > Decisões 1 a 12 respondidas (D12 revista); CN0 feito. **Alertas para a produção (seção 5.1):** a Meta cobra as
 > mensagens de serviço desde 01/out (1.000 grátis/mês por número; sem pagamento, para de entregar) e descontinuou o
 > Embedded Signup v3 (o botão de conexão usa a v3) em 15/out. **Cliente (05/nov):** sem medição (só a clínica piloto na produção); o cliente confere a
 > forma de pagamento da piloto na Meta; cadastro v3 → v4 vai junto com a Central (cliente, 05/nov).
 > **Pós-implantação:** rotina semanal que acompanha as mudanças da Meta (plano, seção 5.1).
 > Custo da Meta, ativação pelo Administrador e calculadora: seção 14 do plano (decidida).
-> **Revisão do plano (05/nov):** texto alinhado e lacunas incluídas (seção 12, ordem única). R1 a R3 respondidas. Telas T1 a T10 decididas (seção 15), desenho concluído. Valores da calculadora conferidos (T11). **Próximo:** implementação a partir do CU1, quando o cliente autorizar.
+> **Revisão do plano (05/nov):** R1 a R3 respondidas, telas T1 a T10 decididas, calculadora conferida (T11). Implementação abaixo.
 >
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
 > número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging e na produção**
@@ -28,9 +45,18 @@
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
-> **Próxima sessão (cliente, 05/nov):** começar a implementação da Central de Atendimento pelo **CU2** (plano, seções 12,
-> 14 e 15; desenho T1 a T11 no canvas), em branch curta criada da `main`. Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está
-> com a `main` até a CA (05/nov).
+> **Central de Atendimento (CU2 a CN9) na `main` e no staging (05/nov):** a branch `central-atendimento` foi juntada
+> na `main`; migrações `20261214120000` a `20261224120000` aplicadas no staging (só lá). **Cliente valida** pela parte
+> **AA** do [`staging.md`](staging.md). Antes: liberar o item na Matriz da clínica de testes, criar o modelo "Retomar
+> conversa", conferir os campos do webhook e criar a configuração v4 (`WHATSAPP_ES_CONFIG_ID`). Capturas da Central feitas e no
+> staging (06/nov, `55403e0`): `conversas` (nova), `config-whatsapp`, `config-mensagens`; `atendimento` mantida.
+> Produção só com autorização. Detalhe na seção 12 do plano da Central.
+> **Próxima sessão (cliente, 06/nov):** cliente traz ajustes. Etapas pedidas e ainda por fazer, uma por vez: (3) trazer a
+> `main` para a `faturamento` (conflitos da forma recomendada); (4) todos os testes na `faturamento`, inclusive Playwright.
+> Seguem pendentes: passos do cliente antes da parte AA, desenho do envio de foto/PDF (padrão), resposta que falha
+> contando no uso do mês (CN4a), `ACCOUNT_RECONNECTED` só no log e produção da Central.
+>
+> Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está com a `main` até a FE e as capturas (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
@@ -44,11 +70,12 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 05/nov (até a CA). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
->   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
+>   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov) + **Central de Atendimento** (05/nov, 11 migrações aplicadas).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `534bdf8`
->   (a produção com a CA, 05/nov; merge `4b45e18`, 1048 testes de unidade e 928 de banco passando; o `contexto` já falhava
->   antes; migrações próprias `20261207120000`, `20261210120000` e `20261212120000`, bloqueio de suspensa na `handoff_events`).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `55216d2`
+>   (FE e capturas da Central, 05/nov; merge `ba36cd6`, 1055 testes de unidade e 939 de banco passando; o `contexto` já falhava
+>   antes; migrações próprias `20261207120000`, `20261210120000`, `20261212120000` e `20261213130000`, bloqueio de suspensa
+>   na `handoff_events` e na `send_failure_dismissals`).
 >   Na publicação, as migrações da branch são anteriores às da produção: `db push --include-all`. Atualizar só quando o cliente pedir.
 >
 > **Frentes**

@@ -9,7 +9,14 @@ import type { AstroCookies } from "astro";
  * `fieldMessages`: a mensagem de cada um, para aparecer embaixo do campo (ajuda
  * contextual, 23/out/2026); `text` continua com todas, para a tela sem JavaScript.
  */
-export type Flash = { tone: "success" | "error"; text: string; fields?: string[]; fieldMessages?: Record<string, string> };
+export type Flash = {
+  tone: "success" | "error";
+  text: string;
+  fields?: string[];
+  fieldMessages?: Record<string, string>;
+  /** Erro em que o que foi digitado já ficou guardado (ex.: a mensagem que não saiu, CN4a): o formulário volta vazio. */
+  noRestore?: boolean;
+};
 
 const FIELD_NAME = /^[A-Za-z0-9_]{1,60}$/;
 
@@ -41,6 +48,7 @@ export function takeFlash(cookies: AstroCookies, path = "/admin"): Flash | null 
         text: flash.text.slice(0, 500),
         ...(fields.length ? { fields } : {}),
         ...(messages.length ? { fieldMessages: Object.fromEntries(messages) } : {}),
+        ...(flash.noRestore === true ? { noRestore: true } : {}),
       };
     }
   } catch {
