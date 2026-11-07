@@ -5,7 +5,7 @@
 > Central não mostra, com a localização só por coordenadas e "Ver no mapa") e o item 5 (F8.1, F8.2, F8.2b, F8.3,
 > ajuda contextual e menu lateral). **Na produção (07/nov, `47e086d`)**, com as 22 migrações; saúde `ok`. **Asaas de
 > produção configurado (07/nov):** chave (conta aprovada), 3 variáveis na Vercel + Redeploy, webhook no painel (ativo,
-> não sequencial, com token, 31 eventos; token certo 200, errado 401). Falta (cliente): **tokenização do cartão**
+> não sequencial, com token, 31 eventos; token certo 200, errado 401). Falta: **tokenização do cartão** (pedida por e-mail ao Asaas em 07/nov)
 > pedida ao Asaas (sem ela, o cartão pago na implantação não liga à assinatura; Pix e cartão sem implantação já
 > funcionam); liberada, o Claude confere antes do 1º contrato com implantação no cartão. Depois, "Pendências".
 > **Staging = produção = `main` (`47e086d`, 07/nov)**, com o financeiro e a EC.
