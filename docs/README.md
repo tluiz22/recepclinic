@@ -19,6 +19,9 @@
 > no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
 > local, sem push (aguarda o cliente). Captura `conversas` pendente.
 >
+> **Aviso da mensagem automática do app em 6 h (06/nov):** era 7 dias. Vai para a produção **junto com a Central**
+> (cliente, 06/nov), não sozinho.
+>
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
 >
