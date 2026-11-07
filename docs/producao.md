@@ -50,7 +50,11 @@ Em [resend.com](https://resend.com) › *API Keys* › **Create API Key**: nome 
 domínio `recepclinic.com.br`. Colar no `SMTP_PASSWORD` do `.env.production` (a chave aparece uma vez só). O
 `WHATSAPP_ES_CONFIG_ID` do `.env.production` é o mesmo da Vercel do staging (*Settings › Environment Variables*).
 **Cadastro v4 (07/nov/2026):** configuração nova `3784178581733719` (v4, conferida e testada no staging). A antiga
-(v3) era `2369473416923657`: para voltar atrás, pôr esse ID no `WHATSAPP_ES_CONFIG_ID` da Vercel e fazer o Redeploy. **Trocado na produção (cliente, 07/nov, Redeploy; saúde `ok`)**; `.env.production` atualizado.
+(v3) era `2369473416923657`: para voltar atrás, pôr esse ID no `WHATSAPP_ES_CONFIG_ID` da Vercel e fazer o Redeploy. **Trocado na produção (cliente, 07/nov)**; `.env.production` atualizado. O 1º Redeploy foi cancelado pelo Ignored Build Step (mesmo commit = "nada mudou"); vale desde o Redeploy depois da correção do comando (07/nov, abaixo).
+
+**Ignored Build Step (07/nov/2026):** o comando antigo cancelava todo Redeploy (compara o commit anterior com o atual, iguais no Redeploy). Novo, nos dois projetos (limite de 256 caracteres; aqui com `producao`, no staging com `main`):
+`[ "$VERCEL_GIT_COMMIT_REF" != producao ] && exit 0; P=$VERCEL_GIT_PREVIOUS_SHA; [ -n "$P" ] && [ "$P" != "$VERCEL_GIT_COMMIT_SHA" ] && git diff --quiet $P HEAD -- . ':!docs' ':!*.md' && exit 0; exit 1`.
+Push só de docs segue sem build; Redeploy constrói. Troca de variável na Vercel exige Redeploy (o Astro grava os valores no build).
 
 ## 4. Banco da produção (Claude)
 

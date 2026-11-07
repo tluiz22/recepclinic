@@ -4,7 +4,9 @@
 > `main` (F12.1 a F12.8, F12.2b a F12.2i) depois de trazer a `main` para ela; 1087 de unidade, 1034 de banco, check e
 > build passando; Playwright nas telas do financeiro. 18 migrações da branch aplicadas no staging (`--include-all`,
 > simuladas e conferidas); rotinas `faturamento-eventos`, `conciliacao-asaas` e `avisos-cobranca` chamadas, saúde `ok`.
-> **Cliente valida no staging** pelo `roteiro-validacao-faturamento.md` (Asaas sandbox na Vercel do staging). Produção:
+> **Cliente valida no staging** pelo `roteiro-validacao-faturamento.md`. Asaas sandbox no staging (07/nov): as 3
+> variáveis na Vercel e o webhook no painel (token conferido: 200). Ignored Build Step corrigido nos dois projetos
+> (cancelava todo Redeploy; `producao.md`). Produção:
 > não; **atenção:** a próxima publicação da `main` leva o financeiro e as 18 migrações (`db push --include-all`).
 > 13 capturas `config-*`/`equipe` na fila (item Assinatura no menu).
 >

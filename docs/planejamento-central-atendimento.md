@@ -384,7 +384,7 @@ autorização (mesmo ID, no projeto da produção).
 **Passo 10 no staging (07/nov/2026):** ID trocado na Vercel do staging + Redeploy; número de testes desconectado (painel
 e app) e conectado de novo às 07h27 (Brasília). O `history` chegou em segundos: fases 0, 1 e 2 processadas pela rotina
 (`done`, sem falha), 696 mensagens com `source = history`; anexos do histórico baixando em lotes pela rotina `midias`.
-Na produção não é preciso reconectar: o `config_id` só vale na janela de conexão; reconectar só traz o histórico
+**Correção (07/nov):** o Redeploy do staging foi cancelado pelo Ignored Build Step, então essa reconexão usou a configuração **antiga** (a Meta já a atende como v4); a nova vale desde o Redeploy depois da correção do comando (`producao.md`). Na produção não é preciso reconectar: o `config_id` só vale na janela de conexão; reconectar só traz o histórico
 antigo do app (opcional).
 
 **Pendência pós-implantação (cliente, 05/nov): acompanhar as mudanças da Meta.** Depois da Central (e da v4) na
