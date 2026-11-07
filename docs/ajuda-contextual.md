@@ -285,4 +285,4 @@ O número do suporte nunca passa pelo bot nem entra em Atendimento (`webhook.ts`
 **Posição da "Ajuda desta tela" (cliente, 07/nov/2026, opção B do [canvas](https://claude.ai/artifact/QBjZthzRDyH8knWx9W13tz)):**
 saiu da faixa própria acima do título (ocupava uma linha e empurrava a tela para baixo). No computador, item no pé do
 menu lateral (visível também com as seções de Configurações abertas); no celular e no tablet, ícone "?" no cabeçalho, ao
-lado de Sair. Mesmo painel lateral (`data-help-open`). As 26 capturas ficaram na fila (`capturas-pendentes.md`).
+lado de Sair. Mesmo painel lateral (`data-help-open`). As 26 capturas ficaram na fila (`capturas-pendentes.md`). Validada pelo cliente no staging (07/nov/2026).

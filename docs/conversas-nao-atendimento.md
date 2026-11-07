@@ -115,6 +115,8 @@ Testes obrigatórios do pedido (1 a 11) distribuídos entre NA1 e NA3.
 
 ### Roteiro de validação no staging (cliente)
 
+**Validado pelo cliente (07/nov/2026).**
+
 1. **Conversas** (clínica com a Central): abrir uma conversa › ⋯ › "Marcar como Pessoal" › Marcar. Confere: vai para
    "Pessoal e admin.", selo, "Marcada por … · data", aviso no histórico, sai das Abertas e do número do menu.
 2. Do celular de teste, mandar "Oi" para o número marcado: o bot **não** responde; a mensagem aparece na conversa e a aba
