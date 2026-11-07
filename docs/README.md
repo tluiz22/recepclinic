@@ -1,5 +1,12 @@
 # RecepClinic
 
+> **Próxima sessão (cliente, 07/nov):** (1) **troca cartão ↔ Pix pela tela, pelo Administrador** (decidida; desenhar as
+> opções no canvas antes de implementar; plano do faturamento, "Divergências"); (2) item 5 da lista: validar F8.1,
+> F8.2, F8.2b, F8.3, ajuda contextual e menu lateral no staging; depois, os pendentes de "Pendências", abaixo.
+> **Staging = `main` (`5f9537f`)**, com o financeiro e as migrações `20261227120000` (fim do contrato) e `20261227130000`
+> (endereço do pagador). **Produção (`d4aff65`) sem o financeiro:** a próxima publicação leva o financeiro e 20
+> migrações (`db push --include-all`) e precisa das variáveis do Asaas de produção; só com autorização.
+>
 > **Faturamento na `main` e no staging (07/nov, `3919ca4`, a pedido do cliente):** branch `faturamento` juntada na
 > `main` (F12.1 a F12.8, F12.2b a F12.2i) depois de trazer a `main` para ela; 1087 de unidade, 1034 de banco, check e
 > build passando; Playwright nas telas do financeiro. 18 migrações da branch aplicadas no staging (`--include-all`,
