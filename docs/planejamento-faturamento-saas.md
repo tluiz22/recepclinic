@@ -138,6 +138,11 @@
 > implantação) pede o telefone financeiro antes do botão; o card Forma de pagamento (Pix → cartão) e o "Trocar o
 > cartão" avisam e levam a Contatos financeiros; o servidor recusa sem celular do Brasil e atualiza e-mail e celular
 > do cliente no Asaas antes de cada Checkout.
+> **Troca de cartão aberta (cliente, 07/nov/2026, validação no staging):** a mudança para Pix bloqueava até a rotina
+> diária descartar o pedido. Decidido: liberar na hora: a mudança para Pix descarta a troca aberta (trilha "Troca de
+> cartão não concluída") e segue; se o Checkout acabou de criar a assinatura nova no cartão, recusa e pede para
+> atualizar a tela. Risco aceito pelo cliente: concluir a página do Asaas (vale 60 min) depois do descarte cria uma
+> assinatura no cartão que o sistema não liga ao contrato.
 > **Fim do contrato só sai pelo contrato novo (cliente, 07/nov/2026, migração `20261227120000`):** o Suporte não
 > libera a suspensão por fim do contrato (como a inadimplência, que sai pelo pagamento). Contrato novo ativo, aceito
 > depois da suspensão e não cancelado libera sozinho: cartão → com o cartão cadastrado; Pix com implantação → com a

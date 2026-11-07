@@ -75,15 +75,12 @@ const pixLine = "A cobrança de cada mês chega por e-mail e fica em Cobranças,
         </label>
         <div class="hidden flex-col gap-3 group-has-[.js-forma-alt:checked]:flex" data-forma-detalhe>
           {card ? (
-            contract.cardCheckoutOpen ? (
-              <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
-                Há uma troca de cartão em andamento na página do Asaas. Conclua ou espere até amanhã para mudar para Pix.
-              </p>
-            ) : (
+            (
               <>
                 <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
                   Mudando para Pix: {nextDue ? `a mensalidade de ${date(nextDue)} já vem em Pix` : "as próximas mensalidades vêm em Pix"}
                   {otherOpen ? ", e as outras cobranças em aberto também passam a Pix" : ""}. O cartão{last4} deixa de ser cobrado.
+                  {contract.cardCheckoutOpen ? " A troca de cartão aberta na página do Asaas é cancelada." : ""}
                 </p>
                 <button
                   type="submit"

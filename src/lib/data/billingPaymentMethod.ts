@@ -23,10 +23,23 @@ export async function switchToPix(
   }
   if (contract.paymentMethod === "pix") return { status: "unchanged" };
   if (!contract.subscriptionId) throw new DataError("invalid", "Forma de pagamento: a assinatura ainda não foi criada no Asaas. Tente de novo em instantes.");
-  if (await store.loadCardChange(contractId)) {
-    throw new DataError("invalid", "Forma de pagamento: há uma troca de cartão em andamento. Conclua ou espere 1 dia e tente de novo.");
-  }
   if (!api) throw new DataError("invalid", "Forma de pagamento: Asaas não configurado neste ambiente");
+  // Troca de cartão aberta e não concluída (cliente, 07/nov/2026): a mudança para Pix a descarta na hora. Se o
+  // Checkout acabou de criar a assinatura nova no cartão, não descarta: a tela é atualizada primeiro.
+  const request = await store.loadCardChange(contractId);
+  if (request) {
+    const customer = snapshot.account?.customerId ?? null;
+    const requestedOn = request.requestedAt.toISOString().slice(0, 10);
+    const created = customer
+      ? (await api.listCustomerSubscriptions(customer)).find(
+          (sub) => sub.id !== contract.subscriptionId && sub.billingType === "CREDIT_CARD" && sub.dateCreated.slice(0, 10) >= requestedOn && sub.nextDueDate >= request.nextDue,
+        )
+      : undefined;
+    if (created) {
+      throw new DataError("invalid", "Forma de pagamento: a troca de cartão acabou de ser concluída no Asaas. Atualize a tela em instantes e tente de novo.");
+    }
+    await store.finishCardChange(contractId, null, "Descartada: a forma de pagamento mudou para Pix.");
+  }
 
   await api.setSubscriptionBillingType(contract.subscriptionId, "PIX");
   const open = await store.openCharges(contractId);

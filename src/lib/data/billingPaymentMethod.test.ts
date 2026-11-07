@@ -26,7 +26,7 @@ const snapshot = (method: "credit_card" | "pix" = "credit_card", subscriptionId:
 
 type Open = { paymentId: string; kind: "monthly" | "setup" | "other"; status: string; dueDate: string };
 
-function setup(options: { snap?: BillingSyncSnapshot; open?: Open[]; request?: CardChangeRequest | null; types?: Record<string, string> } = {}) {
+function setup(options: { snap?: BillingSyncSnapshot; open?: Open[]; request?: CardChangeRequest | null; types?: Record<string, string>; subs?: { id: string; billingType: string; nextDueDate: string; dateCreated: string }[] } = {}) {
   const log: string[] = [];
   const types = { ...(options.types ?? {}) };
   const store: BillingPaymentMethodStore = {
@@ -34,9 +34,11 @@ function setup(options: { snap?: BillingSyncSnapshot; open?: Open[]; request?: C
     upsertCharge: async (c) => void log.push(`upsert ${c.paymentId} ${c.billingType}`),
     openCharges: async () => options.open ?? [],
     loadCardChange: async () => options.request ?? null,
+    finishCardChange: async (_c, sub, error) => void log.push(`descarta ${sub ?? "-"} ${error ?? ""}`.trim()),
     setPaymentMethod: async (_c, method, actor, kind) => (log.push(`contrato ${method} ${actor} ${kind}`), true),
   };
   const api = {
+    listCustomerSubscriptions: async () => options.subs ?? [],
     setSubscriptionBillingType: async (id: string, type: string) => {
       log.push(`assinatura ${id} ${type}`);
       // updatePendingPayments: as pendentes da assinatura mudam juntas.
@@ -89,9 +91,17 @@ describe("troca cartão → Pix", () => {
     expect(log).toEqual([]);
   });
 
-  it("com troca de cartão em andamento, recusa sem mexer no Asaas", async () => {
-    const { store, api, log } = setup({ request: { checkoutId: "chk", requestedAt: new Date(), nextDue: "2026-12-10" } });
-    await expect(switchToPix(store, api, "c1", input)).rejects.toThrow("troca de cartão em andamento");
+  it("troca de cartão aberta e não concluída (cliente, 07/nov/2026): descartada na hora e segue para o Pix", async () => {
+    const request = { checkoutId: "chk", requestedAt: new Date("2026-12-01T12:00:00Z"), nextDue: "2026-12-10" };
+    const { store, api, log } = setup({ request, subs: [{ id: "sub_1", billingType: "CREDIT_CARD", nextDueDate: "2026-12-10", dateCreated: "2026-11-01" }] });
+    expect(await switchToPix(store, api, "c1", input)).toMatchObject({ status: "changed" });
+    expect(log).toEqual(["descarta - Descartada: a forma de pagamento mudou para Pix.", "assinatura sub_1 PIX", "contrato pix u1 clinic"]);
+  });
+
+  it("troca de cartão que acabou de ser concluída no Asaas: não descarta nem muda", async () => {
+    const request = { checkoutId: "chk", requestedAt: new Date("2026-12-01T12:00:00Z"), nextDue: "2026-12-10" };
+    const { store, api, log } = setup({ request, subs: [{ id: "sub_new", billingType: "CREDIT_CARD", nextDueDate: "2026-12-10", dateCreated: "2026-12-01" }] });
+    await expect(switchToPix(store, api, "c1", input)).rejects.toThrow("acabou de ser concluída");
     expect(log).toEqual([]);
   });
 

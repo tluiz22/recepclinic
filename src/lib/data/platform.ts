@@ -538,7 +538,7 @@ export function platformBillingCardChangeStore(env: ServiceEnv = platformEnv()):
 }
 
 // Troca cartão → Pix (cliente, 07/nov/2026): o contrato muda depois do Asaas.
-export type BillingPaymentMethodStore = Pick<BillingCardChangeStore, "load" | "upsertCharge" | "openCharges" | "loadCardChange"> & {
+export type BillingPaymentMethodStore = Pick<BillingCardChangeStore, "load" | "upsertCharge" | "openCharges" | "loadCardChange" | "finishCardChange"> & {
   setPaymentMethod(contractId: string, method: "pix" | "credit_card", actorId: string | null, actorKind: "clinic" | "support"): Promise<boolean>;
 };
 
@@ -550,6 +550,7 @@ export function platformBillingPaymentMethodStore(env: ServiceEnv = platformEnv(
     upsertCharge: change.upsertCharge,
     openCharges: change.openCharges,
     loadCardChange: change.loadCardChange,
+    finishCardChange: change.finishCardChange,
     async setPaymentMethod(contractId, method, actorId, actorKind) {
       const { data, error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: boolean | null; error: unknown }>)(
         "billing_set_payment_method",
