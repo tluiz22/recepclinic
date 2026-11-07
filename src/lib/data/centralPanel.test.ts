@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeHandoffEvent, finishedText, type HandoffEvent } from "./centralPanel";
+import { classifiedText, describeHandoffEvent, finishedText, type HandoffEvent } from "./centralPanel";
 
 const event = (over: Partial<HandoffEvent>): HandoffEvent => ({
   kind: "status",
@@ -31,5 +31,13 @@ describe("eventos do atendimento na conversa (CN3b)", () => {
     expect(finishedText(event({ kind: "finished", origin: "reception", actorId: "u1" }), names)).toBe("Atendimento finalizado por Ana");
     expect(finishedText(event({ kind: "finished", origin: "system" }), names)).toBe("Atendimento encerrado: 12 h sem mensagem");
     expect(finishedText(event({ kind: "finished", origin: "reception" }), names)).toBe("Atendimento finalizado pelo app do WhatsApp");
+  });
+});
+
+describe("marcação como não atendimento (NA)", () => {
+  it("o texto no histórico: marcada (com quem) e de volta para atendimento", () => {
+    expect(classifiedText({ classificationTo: "personal" }, "Ana")).toBe("Marcada como Pessoal por Ana · o bot não responde este número");
+    expect(classifiedText({ classificationTo: "administrative" }, null)).toBe("Marcada como Administrativo/outros · o bot não responde este número");
+    expect(classifiedText({ classificationTo: "patient" }, "Ana")).toBe("Voltou para atendimento por Ana");
   });
 });

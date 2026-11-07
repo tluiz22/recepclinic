@@ -17,7 +17,7 @@ export type PanelPatient = {
 };
 
 export type HandoffEvent = {
-  kind: "status" | "assigned" | "transferred" | "released" | "finished";
+  kind: "status" | "assigned" | "transferred" | "released" | "finished" | "classified";
   from: string;
   to: string;
   origin: string;
@@ -26,6 +26,9 @@ export type HandoffEvent = {
   assignedTo: string | null;
   handoffId: string | null;
   at: Date;
+  /** Marcação (NA): de/para da classificação. */
+  classificationFrom?: string | null;
+  classificationTo?: string | null;
 };
 
 export type ConversationPanel = {
@@ -46,7 +49,7 @@ export async function listHandoffEvents(db: DbClient, clinicId: string, phone: s
   const rows = unwrap(
     await db
       .from("handoff_events")
-      .select("kind, from_status, to_status, origin, actor_id, assigned_from, assigned_to, handoff_id, occurred_at")
+      .select("kind, from_status, to_status, origin, actor_id, assigned_from, assigned_to, handoff_id, occurred_at, classification_from, classification_to")
       .eq("clinic_id", clinicId)
       .eq("contact_phone", phone)
       .order("occurred_at", { ascending: false })
@@ -65,6 +68,8 @@ export async function listHandoffEvents(db: DbClient, clinicId: string, phone: s
       assignedTo: row.assigned_to,
       handoffId: row.handoff_id,
       at: new Date(row.occurred_at),
+      classificationFrom: row.classification_from,
+      classificationTo: row.classification_to,
     }))
     .reverse();
 }
@@ -119,7 +124,19 @@ export function describeHandoffEvent(event: HandoffEvent, names: Map<string, str
       return "Voltou para sem responsável (sem resposta em 30 min)";
     case "finished":
       return finishedText(event, names);
+    case "classified":
+      return classifiedText(event, name(event.actorId));
   }
+}
+
+const CLASSIFIED_AS: Record<string, string> = { personal: "Pessoal", administrative: "Administrativo/outros" };
+
+/** "Marcada como Pessoal por Ana · o bot não responde este número" e "Voltou para atendimento por Ana" (NA0). */
+export function classifiedText(event: Pick<HandoffEvent, "classificationTo">, by: string | null): string {
+  const who = by ? ` por ${by}` : "";
+  const to = event.classificationTo ?? "patient";
+  if (to === "patient") return `Voltou para atendimento${who}`;
+  return `Marcada como ${CLASSIFIED_AS[to] ?? "não atendimento"}${who} · o bot não responde este número`;
 }
 
 /** "finalizado por Ana", "encerrado após 12 h sem mensagem", "finalizado pelo app (#bot)". */

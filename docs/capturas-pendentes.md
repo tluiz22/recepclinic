@@ -35,3 +35,5 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 - `config-whatsapp` — sem a faixa "Ajuda desta tela" acima do título (agora no menu lateral) (07/11/2026)
 - `config-nota-fiscal` — sem a faixa "Ajuda desta tela" acima do título (agora no menu lateral) (07/11/2026)
 - `equipe` — sem a faixa "Ajuda desta tela" acima do título (agora no menu lateral) (07/11/2026)
+- `conversas` — aba "Pessoal e admin.", filtro Todas/Minhas no lugar do "Mostrar" e menu ⋯ (NA4) (07/11/2026)
+- `atendimento` — aba "Pessoal e administrativo" e botão "Não é atendimento" (NA5) (07/11/2026)

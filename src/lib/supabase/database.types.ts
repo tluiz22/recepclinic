@@ -2005,8 +2005,8 @@ isOneToOne: false
             }[]
                            },
 "central_conversations":
-{ Args: { "p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
-              "assigned_name": string,"assigned_to": string,"contact_id": string,"contact_phone": string,"handoff_id": string,"handoff_reason": string,"handoff_started_at": string,"handoff_status": string,"handoff_status_at": string,"handoff_subject": string,"human_handoff": boolean,"last_message_at": string,"last_message_author": string,"last_message_preview": string,"last_patient_at": string,"name": string,"profile_name": string,"unread": number
+{ Args: { "p_classified"?: boolean,"p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"classification": string,"classified_at": string,"classified_by_name": string,"contact_id": string,"contact_phone": string,"handoff_id": string,"handoff_reason": string,"handoff_started_at": string,"handoff_status": string,"handoff_status_at": string,"handoff_subject": string,"human_handoff": boolean,"last_message_at": string,"last_message_author": string,"last_message_preview": string,"last_patient_at": string,"name": string,"profile_name": string,"unread": number
             }[]
                            },
 "central_enabled":
