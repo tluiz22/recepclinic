@@ -1,8 +1,8 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **decisões
-> M1 a M8 abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
+> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 decidida** (lista global fechada); **M2 a M8
+> abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
 
@@ -31,14 +31,13 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 
 ## 2. Especialidades (etapa ME)
 
-- **Cadastro da clínica:** tabela `specialties` (clínica, nome, ativo). Ao criar, a tela sugere os nomes do dicionário
-  global `kb_specialties` (o bot já reconhece como o paciente fala: "cardiologista", "médico do coração"); nome fora do
-  dicionário é aceito e entra numa lista para o Suporte acrescentar ao dicionário. **[Hipótese]** melhor que lista
-  fechada global (cada clínica tem as suas) e que texto livre (o bot não reconheceria).
-- **Vínculo:** `professional_specialties` (profissional × especialidade, N:N), **pelo menos uma** por profissional
+- **Lista global fechada (decidido, cliente, 07/nov, M1):** só o Suporte cadastra as especialidades, no dicionário
+  global `kb_specialties` (nome canônico + como o paciente fala: "cardiologista", "médico do coração"), que ganha
+  `is_active`. A clínica só escolhe da lista; especialidade nova é pedida ao Suporte. Sem tabela por clínica.
+- **Vínculo:** `professional_specialties` (profissional × especialidade do dicionário global, N:N), **pelo menos uma** por profissional
   ativo (conferida no banco e na tela). Ordem: a primeira é a principal (aparece nas listas).
-- **Profissional existente:** a migração converte o texto atual de `specialty` para a especialidade de mesmo nome
-  (criando-a na clínica); quem não tem especialidade fica **pendente**: a tela Profissionais e a lista de
+- **Profissional existente:** a migração liga o texto atual de `specialty` à especialidade do dicionário de mesmo nome
+  ou sinônimo (texto sem correspondência: lista para o Suporte decidir antes da publicação); quem não tem especialidade fica **pendente**: a tela Profissionais e a lista de
   configuração da clínica mostram "falta a especialidade", e salvar o profissional passa a exigir. Não bloqueia agenda
   nem bot no dia da publicação. **Ver M2.**
 - **Leitura única:** uma função do banco/servidor devolve "profissionais ativos de uma especialidade" (e o inverso),
@@ -84,7 +83,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 
 | # | Pergunta | Recomendação |
 |---|---|---|
-| M1 | Especialidades: lista da clínica sugerida pelo dicionário global, ou lista global fechada do Suporte? | Lista da clínica com sugestão do dicionário |
+| M1 | Especialidades: lista da clínica ou lista global fechada do Suporte? | **Decidido (07/nov): lista global fechada** |
 | M2 | Profissional sem especialidade na publicação: pendência visível (sem bloquear agenda/bot) ou bloqueio? | Pendência visível; salvar exige |
 | M3 | Exceções de convênio de hoje: converter para a associação positiva (todos menos as exceções)? | Converter |
 | M4 | Recepção mantém convênios e associações (hoje só o Administrador)? | Sim, com trilha |
@@ -97,7 +96,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 
 | Etapa | Entrega | Depende de |
 |---|---|---|
-| ME | Especialidades da clínica, vínculo N:N, obrigatória, migração do texto atual, Base de Conhecimento | M1, M2, M6 |
+| ME | Especialidades (lista global do Suporte), vínculo N:N, obrigatória, migração do texto atual, Base de Conhecimento | M1, M2, M6 |
 | MC | Convênios por profissional (associação positiva, Recepção mantém, telas, consulta única) | M3, M4, ME |
 | MI | Informações do bot por profissional | M5, MC |
 | MB | Especialidade → profissional no bot, na marcação e na página pública | ME, MC, M8 |
