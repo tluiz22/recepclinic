@@ -188,7 +188,7 @@ por agenda: com um dono só, o "Com quem" do serviço deixa de existir (já é d
 
 | # | Pergunta | Recomendação |
 |---|---|---|
-| S1 | Quem cadastra o serviço do profissional? | Administrador e o próprio profissional (só os dele) |
-| S2 | Serviço de vários profissionais hoje | Copiar para cada um, com as mesmas características |
-| S3 | Exames da agenda da equipe | Ficam como serviços da equipe (sem profissional) |
+| S1 | Quem cadastra o serviço do profissional? | **Decidido (07/nov): Administrador e o próprio profissional (só os dele)** |
+| S2 | Serviço de vários profissionais hoje | **Decidido (07/nov): copiar para cada um**, com as mesmas características; atendimentos e horários próprios do serviço vão para a cópia do profissional da agenda |
+| S3 | Exames da agenda da equipe | **Decidido (07/nov): serviços da equipe** (sem profissional; só o Administrador; no bot, em "Exames") |
 | S4 | Lista de Serviços com vários profissionais | Desenhar as opções antes de decidir |
