@@ -5,7 +5,7 @@ import { createClinicServiceClient } from "../../src/lib/data/clinicService";
 import type { DbClient } from "../../src/lib/data/clients";
 import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import { getConversation, setConversationClassification } from "../../src/lib/data/whatsapp/conversations";
-import { countAwaitingClinic, listHumanAttention } from "../../src/lib/data/whatsapp/attention";
+import { countAwaitingClinic, listClassifiedConversations, listHumanAttention } from "../../src/lib/data/whatsapp/attention";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -352,5 +352,30 @@ describe("NA3: métricas e contadores", () => {
     await setConversationClassification(reception(), f.clinicId, A, "patient");
     const rows = await sessions();
     expect(of(rows, A)).toEqual(of(rows, B));
+  });
+});
+
+describe("NA5: aba Pessoal e administrativo do Atendimento (sem a Central)", () => {
+  const S = "+5584991244021";
+
+  it("lista o número marcado com o tipo, quem marcou e o aviso de mensagem nova, que some com a resposta da clínica", async () => {
+    await say(S, "Oi");
+    await setConversationClassification(reception(), f.clinicId, S, "administrative");
+    let item = (await listClassifiedConversations(reception(), f.clinicId)).find((i) => i.phone === S)!;
+    expect(item).toMatchObject({ classification: "administrative", classifiedBy: f.reception.id });
+    await say(S, "Segue o boleto");
+    item = (await listClassifiedConversations(reception(), f.clinicId)).find((i) => i.phone === S)!;
+    expect(item.hasNew).toBe(true);
+    expect(item.lastMessageAt).toBeInstanceOf(Date);
+    await agentReply(S, "Recebido, obrigada");
+    item = (await listClassifiedConversations(reception(), f.clinicId)).find((i) => i.phone === S)!;
+    expect(item.hasNew).toBe(false);
+    // Fora do Aguardando/Em atendimento.
+    expect((await listHumanAttention(reception(), f.clinicId)).map((i) => i.phone)).not.toContain(S);
+  });
+
+  it("de volta para atendimento: sai da lista", async () => {
+    await setConversationClassification(reception(), f.clinicId, S, "patient");
+    expect((await listClassifiedConversations(reception(), f.clinicId)).map((i) => i.phone)).not.toContain(S);
   });
 });

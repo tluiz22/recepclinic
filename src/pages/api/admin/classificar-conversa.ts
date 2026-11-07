@@ -1,10 +1,10 @@
 import type { APIRoute } from "astro";
-import { createUserClient } from "../../../../lib/data/clients";
-import { DataError } from "../../../../lib/data/errors";
-import { runFormAction } from "../../../../lib/data/formAction";
-import { setConversationClassification, type ConversationClassification } from "../../../../lib/data/whatsapp/conversations";
-import { formOptionalText, formText } from "../../../../lib/forms";
-import { safeReturnPath } from "../../../../lib/returnPath";
+import { createUserClient } from "../../../lib/data/clients";
+import { DataError } from "../../../lib/data/errors";
+import { runFormAction } from "../../../lib/data/formAction";
+import { setConversationClassification, type ConversationClassification } from "../../../lib/data/whatsapp/conversations";
+import { formOptionalText, formText } from "../../../lib/forms";
+import { safeReturnPath } from "../../../lib/returnPath";
 
 // Conversas que não são atendimento (NA4 e NA5; cliente, 06/nov/2026, decisões 2, 3 e 5): marcar o número como Pessoal
 // ou Administrativo/outros, ou devolver para atendimento. Pela tela Conversas (menu ⋯) e pela Atendimento (clínica sem a
@@ -15,12 +15,16 @@ const MESSAGES: Record<ConversationClassification, string> = {
   patient: "A conversa voltou para atendimento: o bot responde a próxima mensagem.",
 };
 
+/** Volta para a tela de onde veio: além das telas de sempre, a Atendimento (clínica sem a Central). */
+const ATTENDANCE = /^\/admin\/atendimento(\?[^\s#]*)?$/;
+const returnOf = (value: string | null | undefined, fallback: string) => (value && value.length <= 1500 && ATTENDANCE.test(value) ? value : safeReturnPath(value, fallback));
+
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const clinic = locals.clinic!;
   const form = await request.formData().catch(() => null);
-  const back = safeReturnPath(formOptionalText(form, "return_to"), "/admin/conversas");
-  const done = safeReturnPath(formOptionalText(form, "depois"), back);
+  const back = returnOf(formOptionalText(form, "return_to"), "/admin/conversas");
+  const done = returnOf(formOptionalText(form, "depois"), back);
   return runFormAction(
     context,
     async () => {

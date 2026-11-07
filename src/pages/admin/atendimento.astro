@@ -7,7 +7,10 @@
 // pelo app): o bot volta sem mandar nada ao paciente; "Em atendimento" volta
 // sozinha ao bot 12 h depois da última mensagem (CA, cliente, 04/nov/2026).
 // Três abas (CA): Aguardando a clínica, Em atendimento e Notificações; em cada
-// conversa, só "Abrir no WhatsApp" e "Finalizar atendimento".
+// conversa, só "Abrir no WhatsApp" e "Finalizar atendimento". NA5 (cliente,
+// 06/nov/2026; tela NA0): "Não é atendimento" nos cartões (Pessoal ou
+// Administrativo/outros, com confirmação) e a aba "Pessoal e administrativo",
+// com "Voltar para atendimento". Só Administrador e Recepção marcam.
 import { currentPath, withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
@@ -25,7 +28,8 @@ import { relacionamento } from "../../lib/ajuda/relacionamento";
 import { formatPhoneBR, whatsappAppHref, whatsappHref } from "../../lib/phone";
 import { createUserClient } from "../../lib/data/clients";
 import { isCentralActive } from "../../lib/data/central";
-import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
+import { handoffReasonLabel, listClassifiedConversations, listHumanAttention } from "../../lib/data/whatsapp/attention";
+import { loadActorLabels } from "../../lib/data/agenda/trail";
 import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
 import { platformEnv } from "../../lib/env";
 
@@ -39,31 +43,52 @@ if (clinic.features.includes("central_attendance") && (await isCentralActive(db,
   return Astro.redirect(phone ? `/admin/conversas?conversa=${encodeURIComponent(phone)}` : "/admin/conversas");
 }
 const now = new Date();
-const [items, devices] = await Promise.all([
+// Quem marca e vê os números marcados: Administrador e Recepção (decisão 3).
+const canMark = clinic.roles.some((role) => role === "admin" || role === "reception");
+const [items, devices, classified] = await Promise.all([
   listHumanAttention(db, clinic.clinicId),
   listMyDevices(db, clinic.clinicId, clinic.userId),
+  canMark ? listClassifiedConversations(db, clinic.clinicId) : Promise.resolve([]),
 ]);
+const markers = await loadActorLabels(db, clinic.clinicId, classified.map((item) => item.classifiedBy));
+const markerName = (id: string | null) => {
+  const label = id ? markers.get(id) : null;
+  if (!label) return null;
+  if (label.isSupport) return "Suporte";
+  const clean = label.name.trim();
+  return clean.includes("@") ? clean.split("@")[0] : clean.split(/\s+/)[0];
+};
+const newCount = classified.filter((item) => item.hasNew).length;
 const waiting = items.filter((item) => item.status === "waiting");
 const inProgress = items.filter((item) => item.status === "in_progress");
 const here = currentPath(Astro.url);
 // Vindo da notificação (F8.5c): a conversa em destaque e, no celular, o WhatsApp em seguida.
 const highlighted = Astro.url.searchParams.get("conversa");
 // Aba (CA): a da conversa em destaque; senão, a pedida; senão, Aguardando a clínica.
-type Tab = "aguardando" | "atendimento" | "notificacoes";
+type Tab = "aguardando" | "atendimento" | "pessoal" | "notificacoes";
 const asked = Astro.url.searchParams.get("aba");
 const tab: Tab = highlighted
   ? inProgress.some((item) => item.phone === highlighted)
     ? "atendimento"
-    : "aguardando"
-  : asked === "atendimento" || asked === "notificacoes"
+    : classified.some((item) => item.phone === highlighted)
+      ? "pessoal"
+      : "aguardando"
+  : asked === "atendimento" || asked === "notificacoes" || (asked === "pessoal" && canMark)
     ? asked
     : "aguardando";
 const tabHref = (id: Tab) => (id === "aguardando" ? "/admin/atendimento" : `/admin/atendimento?aba=${id}`);
 const tabs = [
   { label: "Aguardando a clínica", shortLabel: "Aguardando", href: tabHref("aguardando"), active: tab === "aguardando", count: waiting.length, countTone: "alert" as const, countLabel: `${waiting.length} aguardando a clínica` },
   { label: "Em atendimento", shortLabel: "Atendimento", href: tabHref("atendimento"), active: tab === "atendimento", count: inProgress.length, countTone: "info" as const, countLabel: `${inProgress.length} em atendimento` },
+  ...(canMark
+    ? [{ label: "Pessoal e administrativo", shortLabel: "Pessoal", href: tabHref("pessoal"), active: tab === "pessoal", count: newCount, countTone: "neutral" as const, countLabel: `${newCount} com mensagem nova` }]
+    : []),
   { label: "Notificações", href: tabHref("notificacoes"), active: tab === "notificacoes" },
 ];
+const CLASSIFICATION = {
+  personal: { label: "Pessoal", tone: "bg-[#ece6f6] text-[#4b3680]" },
+  administrative: { label: "Administrativo", tone: "bg-[#e3ecf7] text-[#1f4e86]" },
+} as const;
 
 // Selo da espera: amarelo até 15 minutos, vermelho depois.
 const LATE_MINUTES = 15;
@@ -81,6 +106,14 @@ const whenLabel = (instant: Date) =>
     ? `às ${formatInstant(instant, clinic.timezone, "HH:mm")}`
     : `em ${formatInstant(instant, clinic.timezone, "dd/MM 'às' HH:mm")}`;
 const displayName = (item: (typeof items)[number]) => item.name ?? "Número sem cadastro";
+const lastLabel = (instant: Date | null) =>
+  !instant
+    ? "Sem mensagens"
+    : localDateOf(instant, clinic.timezone) === today
+      ? `Última mensagem hoje às ${formatInstant(instant, clinic.timezone, "HH:mm")}`
+      : `Última mensagem ${formatInstant(instant, clinic.timezone, "dd/MM 'às' HH:mm")}`;
+const classifyButton =
+  "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[10px] border border-line-strong bg-white px-4 text-base font-semibold text-ink hover:bg-canvas";
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 const countPill = "rounded-full px-2.5 py-0.5 font-sans text-sm font-semibold";
 const whatsappButton =
@@ -94,7 +127,7 @@ const whatsappButton =
     <p class="text-[15px] text-ink-soft">Conversas pendentes de atendimento humano. Ao terminar, finalize o atendimento.</p>
   </HowItWorks>
 
-  <Tabs tabs={tabs} label="Situação das conversas" fit class="mt-4" />
+  <Tabs tabs={tabs} label="Situação das conversas" fit={tabs.length <= 3} class="mt-4" />
 
   {
     tab === "aguardando" && (
@@ -155,6 +188,11 @@ const whatsappButton =
                         </a>
                       )}
                       <FinishForm item={item} primary={false} />
+                      {canMark && (
+                        <button type="button" class={`${classifyButton} sm:col-span-2`} data-classify-open data-phone={item.phone} data-label={formatPhoneBR(item.phone)}>
+                          Não é atendimento
+                        </button>
+                      )}
                     </div>
                   </li>
                 );
@@ -223,6 +261,11 @@ const whatsappButton =
                       </a>
                     )}
                     <FinishForm item={item} primary={true} />
+                    {canMark && (
+                      <button type="button" class={`${classifyButton} sm:col-span-2`} data-classify-open data-phone={item.phone} data-label={formatPhoneBR(item.phone)}>
+                        Não é atendimento
+                      </button>
+                    )}
                   </div>
                 </li>
               ))}
@@ -230,6 +273,109 @@ const whatsappButton =
           </>
         )}
       </section>
+    )
+  }
+
+  {
+    tab === "pessoal" && (
+      <section aria-label="Pessoal e administrativo" class="mt-4 flex flex-col gap-3">
+        <p class="text-[15px] text-ink-soft">
+          Números que a equipe marcou como não sendo de paciente. O bot não responde e eles não contam nos pendentes nem nas métricas. Responda pelo WhatsApp.
+        </p>
+        {classified.length === 0 ? (
+          <EmptyState
+            title="Nenhum número marcado"
+            text="Conversa pessoal ou com fornecedor? No cartão da conversa, toque em &quot;Não é atendimento&quot;: o número vem para cá."
+          />
+        ) : (
+          <ul class="flex flex-col gap-3">
+            {classified.map((item) => (
+              <li
+                data-conversa={item.phone}
+                class:list={["flex flex-wrap items-center gap-4 rounded-xl border border-line bg-white px-4 py-4 sm:px-5", item.phone === highlighted && "ring-2 ring-brand ring-offset-2"]}
+              >
+                <div class="flex min-w-0 flex-[999_1_420px] flex-col gap-1.5">
+                  <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <span class="text-[17px] font-bold text-ink">{item.name ?? formatPhoneBR(item.phone)}</span>
+                    {item.name && <span class="text-[15px] text-ink-soft tabular-nums">{formatPhoneBR(item.phone)}</span>}
+                    <span class={`rounded-md px-2 py-0.5 text-[13px] font-bold ${CLASSIFICATION[item.classification].tone}`}>{CLASSIFICATION[item.classification].label}</span>
+                    {item.hasNew && <span class="rounded-md bg-brand px-2 py-0.5 text-[13px] font-bold text-white">Mensagem nova</span>}
+                  </div>
+                  <p class="text-[15px] text-ink-mid">
+                    {lastLabel(item.lastMessageAt)}
+                    {item.classifiedAt && ` · marcada${markerName(item.classifiedBy) ? ` por ${markerName(item.classifiedBy)}` : ""} em ${formatInstant(item.classifiedAt, clinic.timezone, "dd/MM")}`}
+                  </p>
+                </div>
+                <div class="grid flex-[1_1_440px] grid-cols-1 gap-2 sm:grid-cols-2">
+                  {!isAnonymizedPhone(item.phone) && (
+                    <a
+                      href={whatsappHref(item.phone)}
+                      data-whatsapp-app={whatsappAppHref(item.phone)}
+                      target="_blank"
+                      rel="noopener"
+                      class={`${whatsappButton} bg-conf-500 text-white hover:bg-conf-800 focus-visible:outline-conf-500`}
+                    >
+                      <Icon name="chat-bubble" class="h-5 w-5" /> Abrir no WhatsApp
+                    </a>
+                  )}
+                  <form method="POST" action="/api/admin/classificar-conversa" class="flex">
+                    <input type="hidden" name="telefone" value={item.phone} />
+                    <input type="hidden" name="classificacao" value="patient" />
+                    <input type="hidden" name="return_to" value="/admin/atendimento?aba=pessoal" />
+                    <button
+                      type="submit"
+                      class={`${classifyButton} js-confirm-delete w-full`}
+                      data-confirm-title="Voltar para atendimento?"
+                      data-confirm-message={`O bot volta a responder ${formatPhoneBR(item.phone)} na próxima mensagem, e o número volta a contar nas métricas. Nada é enviado agora.`}
+                      data-confirm-label="Voltar para atendimento"
+                    >
+                      Voltar para atendimento
+                    </button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    )
+  }
+
+  {
+    canMark && (
+      <dialog
+        id="classify_dialog"
+        aria-labelledby="classify_title"
+        class="m-auto w-[calc(100%-2rem)] max-w-[420px] rounded-[14px] border border-line bg-white p-0 text-ink shadow-[0_20px_50px_rgba(18,48,42,.22)] backdrop:bg-ink/40"
+      >
+        <div class="flex flex-col gap-3 p-[22px]">
+          <h2 id="classify_title" class="font-display text-xl leading-tight font-bold text-ink">Não é atendimento</h2>
+          <p class="text-[15px] text-ink-mid">
+            O número <strong data-classify-phone></strong> é de quê? O bot para de responder esse número, que sai dos pendentes e das métricas e vai para a aba
+            "Pessoal e administrativo".
+          </p>
+          {(["personal", "administrative"] as const).map((value) => (
+            <form method="POST" action="/api/admin/classificar-conversa" class="flex">
+              <input type="hidden" name="telefone" value="" data-classify-input />
+              <input type="hidden" name="classificacao" value={value} />
+              <input type="hidden" name="return_to" value={here} />
+              <input type="hidden" name="depois" value="/admin/atendimento?aba=pessoal" />
+              <button
+                type="submit"
+                class={`${classifyButton} js-confirm-delete w-full`}
+                data-confirm-title={`Marcar como ${value === "personal" ? "Pessoal" : "Administrativo/outros"}?`}
+                data-confirm-label="Marcar"
+                data-classify-confirm
+              >
+                {value === "personal" ? "Pessoal" : "Administrativo/outros"}
+              </button>
+            </form>
+          ))}
+          <button type="button" class="min-h-11 self-end rounded-[10px] px-4 text-base font-semibold text-ink-mid hover:bg-canvas" data-classify-close>
+            Cancelar
+          </button>
+        </div>
+      </dialog>
     )
   }
 
@@ -248,6 +394,27 @@ const whatsappButton =
       link.href = link.dataset.whatsappApp!;
       link.removeAttribute("target");
     });
+  }
+  // "Não é atendimento" (NA5): a janela com Pessoal ou Administrativo/outros; cada um pede confirmação.
+  const classify = document.getElementById("classify_dialog") as HTMLDialogElement | null;
+  if (classify) {
+    document.querySelectorAll<HTMLButtonElement>("[data-classify-open]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const phone = button.dataset.phone ?? "";
+        const label = button.dataset.label ?? phone;
+        classify.querySelectorAll<HTMLInputElement>("[data-classify-input]").forEach((input) => (input.value = phone));
+        classify.querySelector("[data-classify-phone]")!.textContent = label;
+        classify.querySelectorAll<HTMLButtonElement>("[data-classify-confirm]").forEach((confirm) =>
+          confirm.setAttribute(
+            "data-confirm-message",
+            `O bot para de responder ${label}. A conversa sai dos pendentes e das métricas e vai para "Pessoal e administrativo". Dá para desfazer depois.`,
+          ),
+        );
+        classify.showModal();
+      }),
+    );
+    classify.querySelector("[data-classify-close]")?.addEventListener("click", () => classify.close());
+    classify.querySelectorAll("[data-classify-confirm]").forEach((confirm) => confirm.addEventListener("click", () => classify.close()));
   }
   // Vindo da notificação: a conversa no meio da tela e, no celular, o WhatsApp aberto em seguida (um toque só).
   const params = new URLSearchParams(location.search);
