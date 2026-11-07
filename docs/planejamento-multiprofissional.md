@@ -1,7 +1,7 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 e M2 decididas**; **M3 a M8
+> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1, M2 e M6 decididas** (ME pronta para planejar o código); **M3 a M5, M7 e M8
 > abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
@@ -88,7 +88,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 | M3 | Exceções de convênio de hoje: converter para a associação positiva (todos menos as exceções)? | Converter |
 | M4 | Recepção mantém convênios e associações (hoje só o Administrador)? | Sim, com trilha |
 | M5 | Informações do bot: por profissional com o texto da clínica como padrão, ou só por profissional? | Padrão da clínica + texto do profissional |
-| M6 | Especialidade obrigatória para todas as profissões (psicólogo, fisioterapeuta) ou só para médico? | Todas (a especialidade é o que o paciente escolhe no bot) |
+| M6 | Especialidade obrigatória para todas as profissões ou só para médico? | **Decidido (07/nov): todas** (o Suporte cadastra as de cada profissão) |
 | M7 | Ordem das etapas | ME → MC → MI → MB; NFS-e por profissional (seção 14 da NFS-e) em paralelo ao planejamento, código depois da ME |
 | M8 | Agenda de exame/equipamento (sem profissional): entra na escolha por especialidade (ex.: "Exames") ou segue no menu de exames? | Segue no menu de exames |
 
