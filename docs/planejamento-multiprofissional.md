@@ -1,9 +1,10 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
-> **Estado atual (retomar daqui), 07/nov/2026.** M1 a M8 decididas (seção 6). **ME, MC e MI + MB feitas e no
-> staging** (migrações `20261229120000`, `20261229130000` e `20261229140000`). O cliente valida a frente no staging
-> (roteiro na seção 8). Produção: só com autorização (as três migrações juntas). Colunas `clinic_settings.bot_*` saem
-> depois da validação. Próximo: a NFS-e por profissional (seção 14 do plano da NFS-e, N-P1 a N-P7).
+> **Estado atual (retomar daqui), 07/nov/2026.** ME, MC e MI + MB no staging (cliente valida pelo roteiro da seção 8).
+> **Próxima sessão: implementar a MS (serviços por profissional, seção 9; S1 a S4 decididas)**, no mesmo padrão:
+> código direto na `main`, telas com `frontend-design`, testes de cada etapa com `playwright-ui-form-best-practices`,
+> migração no staging (dry-run → aplicar → conferir) e push; o cliente valida no staging depois. Pensar sempre em clínicas
+> com mais de 10 profissionais. Produção só com autorização. Depois: NFS-e por profissional (N-P1 a N-P7).
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
 
