@@ -1,3 +1,4 @@
+import { setErrorSink } from "../../src/lib/log";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { disconnectWhatsapp, getWhatsappConnection, setWhatsappAccessToken, setWhatsappPaymentChecked } from "../../src/lib/data/whatsapp/connection";
@@ -154,6 +155,28 @@ describe("desconexão avisada pela Meta (F8.3)", () => {
     // Conectar de novo limpa a desconexão.
     await connect(clinicB, PHONE_A, WABA_A);
     expect(await rowOf(clinicB)).toMatchObject({ status: "connected", disconnected_via: null, disconnected_at: null });
+  });
+
+  it("ACCOUNT_RECONNECTED (cliente, 07/nov/2026): o Suporte fica sabendo por Sistema › Erros, com a clínica", async () => {
+    const recorded: { scope: string; clinicId: string | null; ids: Record<string, string> }[] = [];
+    setErrorSink(async (entry) => void recorded.push({ scope: entry.scope, clinicId: entry.clinicId, ids: entry.ids }));
+    try {
+      const deps: WebhookDeps = {
+        resolveClinic: async () => null,
+        clientFor: (clinicId) => asDb(clinicServiceClient(clinicId)),
+        resolveClinicsByWaba: async (waba) => {
+          const { data } = await adminClient().rpc("resolve_whatsapp_clinics_by_waba", { p_waba_id: waba });
+          return (data ?? []) as string[];
+        },
+      };
+      const event = { object: "whatsapp_business_account", entry: [{ id: WABA_A, changes: [{ field: "account_update", value: { event: "ACCOUNT_RECONNECTED" } }] }] };
+      await processWebhook(event, deps);
+      const reconnect = recorded.filter((r) => r.scope === "whatsapp: conta religada na Meta");
+      expect(reconnect.length).toBeGreaterThan(0);
+      expect(reconnect.every((r) => r.ids.waba_id === WABA_A && !!r.clinicId)).toBe(true);
+    } finally {
+      setErrorSink(null);
+    }
   });
 
   it("só a credencial da clínica marca a desconexão da Meta", async () => {

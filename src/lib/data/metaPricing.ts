@@ -183,8 +183,8 @@ export async function countServiceByOrigin(db: DbClient, clinicId: string, start
         .eq("author", author)
         .is("template_name", null)
         .not("message_type", "in", "(agent_reply,app_auto_reply)")
-        // Saiu: nem falha, nem pulada (status vazio conta, como no banco).
-        .or("status.is.null,and(status.neq.failed,status.not.like.skipped*)")
+        // Saiu: nem falha, nem pulada, nem parada em "enviando" (status vazio conta, como no banco; cliente, 07/nov/2026).
+        .or("status.is.null,and(status.neq.failed,status.neq.sending,status.not.like.skipped*)")
         .gte("created_at", start.toISOString())
         .lt("created_at", end.toISOString());
       if (error) throw fromDbError(error, "Mensagens por origem");

@@ -120,6 +120,8 @@ describe("serviço por origem (CU4)", () => {
         { ...base, message_type: "waitlist_offer", status: "delivered" },
         { ...base, message_type: "panel_reply", author: "agent_panel", status: "sent" },
         { ...base, message_type: "panel_reply", author: "agent_panel", status: "skipped_window" },
+        // Parada em "enviando" (o servidor caiu no meio): não saiu, não conta (CN4a; cliente, 07/nov/2026).
+        { ...base, message_type: "panel_reply", author: "agent_panel", status: "sending" },
         { ...base, message_type: "agent_reply", status: "sent" },
         { ...base, message_type: "appointment_reminder", template_name: "lembrete", status: "sent" },
         // Mês passado: fora.

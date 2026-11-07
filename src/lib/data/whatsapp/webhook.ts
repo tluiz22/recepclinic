@@ -417,8 +417,12 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     });
   }
   // A clínica voltou a ligar a conta (CN8): a conexão no RecepClinic é refeita pela tela (o token antigo não vale).
+  // Cliente, 07/nov/2026: o Suporte fica sabendo por Sistema › Erros, como na desconexão, com a clínica.
   for (const wabaId of accountReconnections(payload)) {
-    logWarn("whatsapp: a Meta avisou ACCOUNT_RECONNECTED; se a clínica está desconectada, conectar de novo em Configurações › WhatsApp", { waba_id: wabaId });
+    const clinics = deps.resolveClinicsByWaba ? await deps.resolveClinicsByWaba(wabaId).catch(() => [] as string[]) : [];
+    const message = "A Meta avisou ACCOUNT_RECONNECTED: a clínica religou a conta do WhatsApp. Para voltar a enviar, conectar de novo em Configurações › WhatsApp.";
+    if (!clinics.length) logError("whatsapp: conta religada na Meta", new Error(message), { waba_id: wabaId });
+    for (const clinicId of clinics) logError("whatsapp: conta religada na Meta", new Error(message), { clinica: clinicId, waba_id: wabaId });
   }
   return summary;
 }

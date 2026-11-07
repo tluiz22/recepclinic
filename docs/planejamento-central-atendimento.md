@@ -881,3 +881,9 @@ Playwright local (localização, reação e enquete pelo app; localização do p
 **Localização atual (validação no staging, 07/nov/2026):** a "localização atual" vem só com as coordenadas; agora o texto
 guarda as coordenadas ("Localização: -5.795000, -35.209000", ou com nome e endereço antes) e a Central mostra "Ver no
 mapa" (Google Maps, outra aba). A localização mandada antes desta correção segue só com "Localização".
+
+**Pendentes da Central (cliente, 07/nov/2026):** envio de foto/PDF: validar como está (sem rodada de telas).
+`ACCOUNT_RECONNECTED`: aviso ao Suporte em Sistema › Erros, por clínica ("conectar de novo em Configurações ›
+WhatsApp"). Uso do mês (CN4a): a resposta parada em "enviando" deixa de contar (migração `20261228140000`).
+**Feitos e commitados na `main` (sem push):** falta aplicar a migração no staging, push e o cliente validar.
+
