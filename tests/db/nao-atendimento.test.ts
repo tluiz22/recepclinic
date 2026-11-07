@@ -1,11 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { bookAppointment } from "../../src/lib/data/agenda/appointments";
+import { reminderButtonPayload } from "../../src/lib/data/whatsapp/reminders";
 import { createClinicServiceClient } from "../../src/lib/data/clinicService";
 import type { DbClient } from "../../src/lib/data/clients";
 import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import { getConversation, setConversationClassification } from "../../src/lib/data/whatsapp/conversations";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
 
 // NA — Conversas que não são atendimento (cliente, 06/nov/2026; docs/conversas-nao-atendimento.md). NA1: a marcação no
@@ -51,11 +53,16 @@ async function webhook(value: Record<string, unknown>) {
   return summary;
 }
 
-async function say(phone: string, input: string | { id: string }): Promise<string[]> {
+async function say(phone: string, input: string | { id: string } | { payload: string }): Promise<string[]> {
   sent = [];
   const from = phone.slice(1);
   const id = `wamid.na.in.${++seq}`;
-  const message = typeof input === "string" ? { id, from, type: "text", text: { body: input } } : { id, from, type: "interactive", interactive: { list_reply: { id: input.id, title: "" } } };
+  const message =
+    typeof input === "string"
+      ? { id, from, type: "text", text: { body: input } }
+      : "payload" in input
+        ? { id, from, type: "button", button: { payload: input.payload, text: "botão" } }
+        : { id, from, type: "interactive", interactive: { list_reply: { id: input.id, title: "" } } };
   await webhook({ messages: [message] });
   return sent.map((m) => m.body);
 }
@@ -200,5 +207,96 @@ describe("NA1: marcar a conversa como não atendimento", () => {
     expect(await codeOf(() => setConversationClassification(reception(), f.clinicId, "+5584991244099", "personal"))).not.toBe("ok");
     const { count } = await adminClient().from("conversation_state").select("id", { count: "exact", head: true }).eq("clinic_id", f.clinicId).eq("contact_phone", "+5584991244099");
     expect(count).toBe(0);
+  });
+});
+
+describe("NA2: bot e webhook no número marcado", () => {
+  const P = "+5584991244003";
+  const R = "+5584991244001"; // contato do Paciente Um (tem consulta marcada)
+  let consult: string;
+
+  const lastMessage = async (phone: string) => {
+    const { data } = await adminClient()
+      .from("whatsapp_messages")
+      .select("direction, message_type")
+      .eq("clinic_id", f.clinicId)
+      .eq("contact_phone", phone)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    return data!;
+  };
+  const handoffFunnel = async (phone: string) => {
+    const { count } = await adminClient().from("bot_funnel_events").select("id", { count: "exact", head: true }).eq("clinic_id", f.clinicId).eq("contact_phone", phone).eq("flow", "handoff");
+    return count ?? 0;
+  };
+
+  beforeAll(async () => {
+    consult = (
+      await bookAppointment(asDb(f.reception), f.clinicId, { patientId: f.ids.p1, serviceId: f.ids.consulta, agendaId: f.ids.agendaDra, start: at(MON1, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null }, NOW)
+    ).appointment.id;
+    await adminClient().from("appointments").update({ reminder_sent_at: new Date().toISOString() }).eq("id", consult);
+  });
+
+  it("calado: o bot não responde ao número marcado; a mensagem fica no histórico e não abre atendimento", async () => {
+    await say(P, "Oi");
+    await setConversationClassification(reception(), f.clinicId, P, "personal");
+    const before = await messageCount(P);
+    expect(await say(P, "Oi, chego às 19h")).toEqual([]);
+    expect(await say(P, "4")).toEqual([]); // "Falar com a recepção" do menu: nada
+    expect(await say(P, "quero falar com a atendente")).toEqual([]);
+    expect(await messageCount(P)).toBe(before + 3);
+    expect(await lastMessage(P)).toMatchObject({ direction: "inbound" });
+    expect(await conversation(P)).toMatchObject({ human_handoff: false, handoff_status: null, state: "WELCOME", classification: "personal" });
+  });
+
+  it("eco: a resposta da equipe pelo app fica no histórico, não pausa, não abre atendimento nem conta no funil", async () => {
+    const before = await messageCount(P);
+    const funnel = await handoffFunnel(P);
+    await agentReply(P, "Combinado, deixo a chave");
+    expect(await messageCount(P)).toBe(before + 1);
+    expect(await lastMessage(P)).toMatchObject({ direction: "outbound", message_type: "agent_reply" });
+    expect(await conversation(P)).toMatchObject({ human_handoff: false, handoff_status: null });
+    expect(await handoffFunnel(P)).toBe(funnel);
+    // "#bot" no número marcado também não muda nada (a volta é pela tela).
+    await agentReply(P, "#bot");
+    expect((await conversation(P)).classification).toBe("personal");
+  });
+
+  it("lembrete: Confirmar e Cancelar do lembrete seguem valendo no número marcado, com o caminho que abrem", async () => {
+    await say(R, "Oi");
+    await setConversationClassification(reception(), f.clinicId, R, "administrative");
+    let reply = await say(R, { payload: reminderButtonPayload("confirm", consult) });
+    expect(reply[0]).toContain("Presença confirmada ✓");
+    await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consult);
+    reply = await say(R, { payload: reminderButtonPayload("cancel", consult) });
+    expect(reply[0]).toContain("Confirma o cancelamento da consulta de *Paciente Um*");
+    reply = await say(R, "não");
+    expect(reply[0]).toBe("Ok, mantivemos sua consulta marcada.\n\nDeseja confirmar sua presença?");
+    reply = await say(R, { id: "yes" });
+    expect(reply[0]).toContain("Presença confirmada ✓");
+    // Fim do caminho do lembrete: o resto volta a ficar sem bot.
+    expect(await say(R, "Oi")).toEqual([]);
+    expect(await conversation(R)).toMatchObject({ human_handoff: false, classification: "administrative" });
+  });
+
+  it("\"Voltar ao menu\" no caminho do lembrete, num número marcado: sem menu, o caminho fecha", async () => {
+    await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consult);
+    await say(R, { payload: reminderButtonPayload("cancel", consult) });
+    expect(await say(R, "0")).toEqual([]);
+    expect((await conversation(R)).state).toBe("WELCOME");
+  });
+
+  it("reativação: de volta para atendimento, a próxima mensagem é do bot (do começo), sem mensagem na hora", async () => {
+    sent = [];
+    await setConversationClassification(reception(), f.clinicId, P, "patient");
+    expect(sent).toEqual([]);
+    const reply = await say(P, "Oi");
+    expect(reply[0]).toMatch(/^Olá! 👋/);
+    await say(P, "4");
+    expect(await conversation(P)).toMatchObject({ human_handoff: true, handoff_status: "waiting_clinic" });
+    // E o eco volta a pausar como sempre.
+    await agentReply(P, "Oi, aqui é a recepção");
+    expect((await conversation(P)).handoff_status).toBe("in_progress");
   });
 });

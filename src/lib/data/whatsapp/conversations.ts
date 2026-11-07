@@ -386,6 +386,8 @@ export async function pauseForHuman(
   now: Date = new Date(),
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);
+  // Número marcado como não atendimento (NA): nunca abre atendimento (nem conta no funil).
+  if (current && isClassifiedOut(current)) return;
   const pauseActive = !!current?.humanHandoff;
   // Situação (CA): pausa nova pela resposta da clínica já nasce "Em atendimento"; as outras, "Aguardando a clínica".
   // Na pausa em andamento, só a resposta da clínica muda: "Aguardando a clínica" vira "Em atendimento".
