@@ -244,9 +244,15 @@ describe("quem altera a configuração", () => {
     for (const user of [receptionA, drJoao]) {
       const { error } = await user.client.from("insurance_plans").insert({ clinic_id: clinicA, name: `Plano ${user.email}` });
       expect(error?.code).toBe("42501");
-      const { data } = await user.client.from("services").update({ price_cents: 1 }).eq("id", a.consultation).select("id");
+      // Serviço de outra profissional (MS, S1: o Dr. João só altera os dele).
+      const { data } = await user.client.from("services").update({ price_cents: 1 }).eq("id", a.consultationAna).select("id");
       expect(data).toEqual([]);
     }
+    // O profissional com login altera o serviço dele (MS, S1); a Recepção, não.
+    const { data: own } = await drJoao.client.from("services").update({ price_cents: 25000 }).eq("id", a.consultation).select("id");
+    expect(own).toHaveLength(1);
+    const { data: notReception } = await receptionA.client.from("services").update({ price_cents: 1 }).eq("id", a.consultation).select("id");
+    expect(notReception).toEqual([]);
   });
 });
 

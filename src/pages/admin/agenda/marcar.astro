@@ -59,6 +59,7 @@ import { snapshotOf, whenText } from "../../../lib/appointmentChanges";
 import { setFlash } from "../../../lib/flash";
 import { onlyServiceOf, openType } from "../../../lib/servicePicker";
 import ServicePicker from "../../../components/admin/agenda/ServicePicker.astro";
+import OwnerPicker from "../../../components/admin/OwnerPicker.astro";
 import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
@@ -621,36 +622,12 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
                 {ownerSpecialty && <span class="text-ink-soft">{` (${ownerSpecialty})`}</span>}
               </p>
             ) : (
-              <div class="flex flex-col gap-2.5" data-owner-picker>
-                <label for="busca-profissional" class="text-[15px] font-semibold text-ink-mid">
-                  Profissional ou especialidade
-                </label>
-                <input id="busca-profissional" type="search" autocomplete="off" placeholder="Digite o nome ou a especialidade" class={CONTROL} data-owner-filter />
-                <div class="overflow-hidden rounded-[10px] border border-line">
-                  {ownerGroups.map((group) => (
-                    <section data-owner-group aria-label={group.label}>
-                      <p class="bg-canvas-deep px-3 py-1.5 text-[13px] font-semibold text-ink-mid">{group.label}</p>
-                      <ul>
-                        {group.options.map((o) => {
-                          const count = servicesByOwner.get(o.value) ?? 0;
-                          return (
-                            <li data-owner-option data-search={`${o.label} ${group.label}`}>
-                              <a
-                                href={link({ prof: o.value, service_id: "", agenda_id: "", tipo: "", de: "" })}
-                                class="flex min-h-12 items-center justify-between gap-3 border-t border-line px-3 py-2 text-[15px] font-semibold text-ink no-underline hover:bg-[#e7f4ef] focus-visible:bg-[#e7f4ef]"
-                              >
-                                {o.label}
-                                <span class="shrink-0 text-sm font-normal text-ink-soft">{count === 1 ? "1 serviço" : `${count} serviços`}</span>
-                              </a>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </section>
-                  ))}
-                  <p hidden class="px-3 py-2.5 text-sm text-ink-soft" data-owner-empty>Ninguém encontrado com esse nome ou especialidade.</p>
-                </div>
-              </div>
+              <OwnerPicker
+                id="busca-profissional"
+                groups={ownerGroups}
+                counts={servicesByOwner}
+                href={(value) => link({ prof: value, service_id: "", agenda_id: "", tipo: "", de: "" })}
+              />
             )}
           </StepCard>
         )
@@ -1004,25 +981,6 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
     import { SERIES_SKIP_NOTE, seriesEndText, seriesWhenText, type SeriesEnd } from "../../../lib/confirmText";
     import { changesSchedule, compareSnapshots, type AppointmentSnapshot } from "../../../lib/appointmentChanges";
     import { paymentChangeNote } from "../../../lib/confirmText";
-    // Com quem (MS): a busca filtra os profissionais pelo nome ou pela especialidade, sem acento.
-    const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const ownerFilter = document.querySelector<HTMLInputElement>("[data-owner-filter]");
-    ownerFilter?.addEventListener("input", () => {
-      const terms = fold(ownerFilter.value).split(/\s+/).filter(Boolean);
-      let shown = 0;
-      document.querySelectorAll<HTMLElement>("[data-owner-group]").forEach((group) => {
-        let inGroup = 0;
-        group.querySelectorAll<HTMLElement>("[data-owner-option]").forEach((option) => {
-          const text = fold(option.dataset.search ?? "");
-          option.hidden = !terms.every((t) => text.includes(t));
-          if (!option.hidden) inGroup++;
-        });
-        group.hidden = inGroup === 0;
-        shown += inGroup;
-      });
-      const empty = document.querySelector<HTMLElement>("[data-owner-empty]");
-      if (empty) empty.hidden = shown > 0;
-    });
     // Resumo: o horário escolhido (quando e onde) e o endereço, só para local domiciliar.
     const box = document.querySelector<HTMLElement>("[data-home-address]");
     // O botão só se habilita com o horário escolhido (proposta aprovada da R4;

@@ -1,10 +1,8 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** ME, MC e MI + MB no staging (cliente valida pelo roteiro da seção 8).
-> **Próxima sessão: implementar a MS (serviços por profissional, seção 9; S1 a S4 decididas)**, no mesmo padrão:
-> código direto na `main`, telas com `frontend-design`, testes de cada etapa com `playwright-ui-form-best-practices`,
-> migração no staging (dry-run → aplicar → conferir) e push; o cliente valida no staging depois. Pensar sempre em clínicas
-> com mais de 10 profissionais. Produção só com autorização. Depois: NFS-e por profissional (N-P1 a N-P7).
+> **MS (S2, S3, S1, S4) feita** (seção 10; migrações `20261230120000` e `20261230130000`), no staging para o cliente
+> validar pelo roteiro no fim da seção 10. Produção só com autorização. Depois: NFS-e por profissional (N-P1 a N-P7).
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
 
@@ -232,3 +230,21 @@ desativar; o novo já é dele). Sem Desativar no cadastro e na agenda, sem Migra
 cadastro, agenda ou serviço de outro voltam para o dele. No banco: políticas `*_own` (só o que é dele) e o gatilho que
 barra desativar o cadastro, mudar o login e mudar a agenda além do intervalo. Equipe, Locais, Feriados e o resto da
 clínica seguem só com o Administrador.
+
+**S4, lista de Serviços com busca de profissional (opção D):** com mais de um dono, a lista abre em "De qual
+profissional?" (busca por nome ou especialidade, grupos pela especialidade principal, quantos serviços cada um tem,
+"Equipe (exames)" e "Sem profissional (desativados)" quando houver); escolhido, só os serviços dele, com "Trocar de
+profissional"; a escolha fica lembrada neste navegador (cookie de 180 dias) e "Novo serviço" já vem com ele. Clínica com
+um dono só: a lista direto. O profissional com login vê só os dele (S1). A busca é o componente `OwnerPicker`, o mesmo
+da Marcar.
+
+**Roteiro de validação no staging (MS):**
+1. Configurações › Serviços (Administrador): "De qual profissional?", busca por especialidade, escolher, Trocar; a
+   escolha lembrada ao voltar; "Novo serviço" já com o profissional; "Equipe (exames)" só no tipo Exame.
+2. Serviço que era de vários profissionais: uma cópia em cada, com os atendimentos de cada agenda.
+3. Agenda › Marcar: "Com quem" (busca) antes do serviço; só os serviços do escolhido; Trocar.
+4. Agendas › Migrar: a prévia diz o serviço que recebe ou "cria a cópia".
+5. Profissional com login (Equipe › pessoa ligada a um profissional): Configurações com Meu cadastro, Minha agenda,
+   Horários e Meus serviços; serviço novo já dele; sem Desativar nem Migrar.
+6. WhatsApp: clínica com vários profissionais — "Exames" só com os exames da equipe; clínica de um profissional — igual
+   a antes.

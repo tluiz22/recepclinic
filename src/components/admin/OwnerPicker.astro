@@ -1,0 +1,72 @@
+---
+// Busca de profissional (MS, 07/nov/2026): um campo que filtra, sem acento, a
+// lista de profissionais agrupada pela especialidade principal, cada um com
+// quantos serviços tem. Pensada para clínicas com 10+ profissionais. Usada na
+// Marcar ("Com quem", opção A) e na lista de Serviços (S4, opção D). Cada
+// opção é um link (a tela recarrega com a escolha, sem estado escondido).
+import type { OwnerOptionGroup } from "../../lib/serviceOwner";
+import { CONTROL } from "./ui/styles";
+
+interface Props {
+  id: string;
+  groups: OwnerOptionGroup[];
+  /** Quantos serviços cada opção tem (pelo valor da opção). */
+  counts: Map<string, number>;
+  /** Link de cada opção. */
+  href: (value: string) => string;
+}
+
+const { id, groups, counts, href } = Astro.props;
+const countText = (n: number) => (n === 1 ? "1 serviço" : `${n} serviços`);
+---
+
+<div class="flex flex-col gap-2.5" data-owner-picker>
+  <label for={id} class="text-[15px] font-semibold text-ink-mid">Profissional ou especialidade</label>
+  <input id={id} type="search" autocomplete="off" placeholder="Digite o nome ou a especialidade" class={CONTROL} data-owner-filter />
+  <div class="overflow-hidden rounded-[10px] border border-line bg-white">
+    {
+      groups.map((group) => (
+        <section data-owner-group aria-label={group.label}>
+          <p class="bg-canvas-deep px-3 py-1.5 text-[13px] font-semibold text-ink-mid">{group.label}</p>
+          <ul>
+            {group.options.map((o) => (
+              <li data-owner-option data-search={`${o.label} ${group.label}`}>
+                <a
+                  href={href(o.value)}
+                  class="flex min-h-12 items-center justify-between gap-3 border-t border-line px-3 py-2 text-[15px] font-semibold text-ink no-underline hover:bg-[#e7f4ef] focus-visible:bg-[#e7f4ef]"
+                >
+                  {o.label}
+                  <span class="shrink-0 text-sm font-normal text-ink-soft">{countText(counts.get(o.value) ?? 0)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+    <p hidden class="px-3 py-2.5 text-sm text-ink-soft" data-owner-empty>Ninguém encontrado com esse nome ou especialidade.</p>
+  </div>
+</div>
+
+<script>
+  // A busca filtra pelo nome ou pela especialidade, sem acento; o grupo vazio some.
+  const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  document.querySelectorAll<HTMLElement>("[data-owner-picker]").forEach((picker) => {
+    const input = picker.querySelector<HTMLInputElement>("[data-owner-filter]");
+    input?.addEventListener("input", () => {
+      const terms = fold(input.value).split(/\s+/).filter(Boolean);
+      let shown = 0;
+      picker.querySelectorAll<HTMLElement>("[data-owner-group]").forEach((group) => {
+        let inGroup = 0;
+        group.querySelectorAll<HTMLElement>("[data-owner-option]").forEach((option) => {
+          option.hidden = !terms.every((t) => fold(option.dataset.search ?? "").includes(t));
+          if (!option.hidden) inGroup++;
+        });
+        group.hidden = inGroup === 0;
+        shown += inGroup;
+      });
+      const empty = picker.querySelector<HTMLElement>("[data-owner-empty]");
+      if (empty) empty.hidden = shown > 0;
+    });
+  });
+</script>

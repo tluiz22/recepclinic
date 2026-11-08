@@ -12,5 +12,5 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 - `config-profissionais` — lista mostra as especialidades e o selo "sem especialidade" (ME, 07/11/2026)
 - `config-convenios` — coluna "Quem atende" e o selo "nenhum profissional" (MC, 07/11/2026)
 - `config-clinica` — "Informações que o bot responde" virou um aviso apontando para Profissionais (MI, 07/11/2026)
-- `config-servicos` — coluna "Profissional" no lugar de "Agendas que atendem" (MS, S2, 07/11/2026)
+- `config-servicos` — coluna "Profissional" no lugar de "Agendas que atendem" e a busca "De qual profissional?" (MS, S2 e S4, 07/11/2026)
 - `marcar` — passo 2 "Com quem" (profissional) antes do serviço (MS, S2, 07/11/2026)

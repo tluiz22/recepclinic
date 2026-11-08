@@ -16,8 +16,11 @@ import Pill from "../../../components/admin/ui/Pill.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { listProfessionals } from "../../../lib/data/config/professionals";
-import { hasOwner, listServices } from "../../../lib/data/config/services";
-import { ownerLabel } from "../../../lib/serviceOwner";
+import { hasOwner, listServices, TEAM_OWNER } from "../../../lib/data/config/services";
+import { ownerLabel, ownerOptionGroups } from "../../../lib/serviceOwner";
+import OwnerPicker from "../../../components/admin/OwnerPicker.astro";
+
+const OWNER_COOKIE = "rc_servicos_profissional";
 import { loadSetupStatus } from "../../../lib/data/config/setup";
 import { formatCentsBRL } from "../../../lib/money";
 import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
@@ -33,12 +36,34 @@ const [all, professionals, setup] = await Promise.all([
 ]);
 // Profissional com login (MS, S1): só os serviços dele.
 const ownOnly = ownSettingsOnly(clinic);
-const mine = ownOnly ? all.filter((s) => s.professionalId === clinic.ownProfessionalId) : all;
+// Busca de profissional (MS, S4, opção D; cliente, 07/nov/2026): com mais de um dono, a lista mostra só os serviços
+// do escolhido; a última escolha fica lembrada neste navegador. Agrupada pela especialidade (10+ profissionais).
+const NO_OWNER = "sem";
+const keyOf = (s: { professionalId: string | null; isTeam: boolean }) => (s.isTeam ? TEAM_OWNER : (s.professionalId ?? NO_OWNER));
+const counts = new Map<string, number>();
+for (const s of all) counts.set(keyOf(s), (counts.get(keyOf(s)) ?? 0) + 1);
+const ownerGroups = [
+  ...ownerOptionGroups(professionals.filter((p) => counts.has(p.id)), { team: counts.has(TEAM_OWNER) }),
+  ...(counts.has(NO_OWNER) ? [{ label: "Sem profissional", options: [{ value: NO_OWNER, label: "Sem profissional (desativados)" }] }] : []),
+];
+const ownerKeys = ownerGroups.flatMap((g) => g.options.map((o) => o.value));
+const usePicker = !ownOnly && ownerKeys.length > 1;
+const asked = Astro.url.searchParams.get("profissional");
+const remembered = Astro.cookies.get(OWNER_COOKIE)?.value ?? null;
+const chosenKey = usePicker ? ([asked, asked === null ? remembered : null].find((k) => k && ownerKeys.includes(k)) ?? null) : null;
+if (usePicker) {
+  if (chosenKey) Astro.cookies.set(OWNER_COOKIE, chosenKey, { path: "/admin/configuracoes/servicos", maxAge: 180 * 24 * 60 * 60, sameSite: "lax", httpOnly: true });
+  else if (asked !== null) Astro.cookies.delete(OWNER_COOKIE, { path: "/admin/configuracoes/servicos" });
+}
+const chosenLabel = chosenKey === NO_OWNER ? "Sem profissional" : chosenKey ? ownerLabel({ professionalId: chosenKey === TEAM_OWNER ? null : chosenKey, isTeam: chosenKey === TEAM_OWNER }, professionals) : "";
+const mine = ownOnly ? all.filter((s) => s.professionalId === clinic.ownProfessionalId) : usePicker ? all.filter((s) => keyOf(s) === chosenKey) : all;
+const clinicActive = (ownOnly ? mine : all).filter((s) => s.isActive);
 const active = mine.filter((s) => s.isActive);
+const newHref = chosenKey && chosenKey !== NO_OWNER ? `/admin/configuracoes/servicos/novo?profissional=${chosenKey}` : "/admin/configuracoes/servicos/novo";
 // Aba "Desativados" (cliente, 21/out/2026): só os desativados.
 const services = showInactive ? mine.filter((s) => !s.isActive) : active;
 // Sem retorno com horário, o bot não mostra "Marcar retorno" (cliente, 18/out/2026).
-const returns = active.filter((s) => s.category === "return_visit");
+const returns = clinicActive.filter((s) => s.category === "return_visit");
 const returnReady = returns.some((s) => !setup.issues.services.get(s.id)?.length);
 const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
@@ -46,12 +71,12 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="servicos" title={ownOnly ? "Meus serviços" : "Serviços"} subtitle={ownOnly ? "O que você oferece para marcar, com duração e preço." : "O que cada profissional oferece para marcar, com duração e preço."} setup={setup}>
-  <Button slot="actions" href="/admin/configuracoes/servicos/novo" variant="primary">
+  <Button slot="actions" href={newHref} variant="primary">
     <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo serviço
   </Button>
 
   {
-    active.length > 0 &&
+    clinicActive.length > 0 &&
       !returnReady &&
       (returns.length ? (
         <Notice tone="info">
@@ -68,6 +93,32 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
     <p class="text-[15px] text-ink-soft">O que o paciente pode marcar e do que o serviço depende.</p>
   </HowItWorks>
 
+  {
+    usePicker && !chosenKey && (
+      <section aria-labelledby="busca-titulo" class="mb-4 flex max-w-2xl flex-col gap-3 rounded-xl border border-line bg-white p-4 sm:p-5">
+        <div>
+          <h2 id="busca-titulo" class="font-display text-[19px] font-bold text-ink">De qual profissional?</h2>
+          <p class="text-[15px] text-ink-soft">Cada profissional tem os próprios serviços. Escolha para ver e editar os dele.</p>
+        </div>
+        <OwnerPicker id="busca-profissional" groups={ownerGroups} counts={counts} href={(value) => `?profissional=${value}`} />
+      </section>
+    )
+  }
+  {
+    usePicker && chosenKey && (
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-line bg-white px-4 py-3">
+        <p class="text-[15px] text-ink">
+          <span class="text-ink-soft">Profissional: </span>
+          <strong class="font-semibold">{chosenLabel}</strong>
+        </p>
+        <a href="?profissional=" class="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand no-underline hover:underline">
+          Trocar de profissional
+        </a>
+      </div>
+    )
+  }
+
+  {(!usePicker || chosenKey) && (<>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
       {services.length} {services.length === 1 ? "serviço" : "serviços"}{services.length === 1 ? (showInactive ? " desativado" : " ativo") : showInactive ? " desativados" : " ativos"}
@@ -132,9 +183,10 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
         showingInactive={showInactive}
         none="Nenhum serviço"
         text="Sem serviço, nada aparece para marcar."
-        href="/admin/configuracoes/servicos/novo"
+        href={newHref}
         label="Cadastrar o primeiro serviço"
       />
     )
   }
+  </>)}
 </ConfigShell>
