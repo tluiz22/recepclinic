@@ -246,6 +246,20 @@ begin
   insert into public.fiscal_audit_log (clinic_id, event, details)
     values (c_a, 'certificate_uploaded', '{"subject_name": "CLINICA EXEMPLO SAUDE LTDA", "cnpj": "11222333000181"}');
 
+  -- Emissores fiscais (N2a): o da clínica (sem subconta ainda), o da psicóloga
+  -- (CNPJ próprio, fictício) e a fisioterapia (Rafael Lima) sem CNPJ, que não emite (N-P1).
+  insert into public.fiscal_issuers (clinic_id, kind, cnpj, legal_name, fiscal_email, mobile_phone, postal_code, street, street_number, district,
+      municipality_ibge, municipal_registration, simples_nacional, service_list_item, service_code, service_name, nbs_code, iss_rate, cnae)
+    values (c_a, 'clinic', '11222333000181', 'Clínica Exemplo Saúde Ltda', 'fiscal@exemplo-saude.local', '84988880000', '59600000', 'Rua Coronel Gurgel', '100', 'Centro',
+      '2408003', '123456', true, '04.01', '04.01.01', 'Medicina e biomedicina', '1.2301.22.00', 2.00, '8630503');
+  insert into public.fiscal_issuers (clinic_id, kind, professional_id, cnpj, legal_name, fiscal_email, mobile_phone, postal_code, street, street_number, district,
+      municipality_ibge, simples_nacional, service_list_item, service_code, service_name, iss_rate, company_type)
+    values (c_a, 'professional', p_psi, '45723174000110', 'Marina Alves Psicologia Ltda', 'marina@exemplo-saude.local', '84988881111', '59600000', 'Rua Coronel Gurgel', '100', 'Centro',
+      '2408003', true, '04.16', '04.16.01', 'Psicologia', 2.00, 'LIMITED');
+  insert into public.professional_fiscal_routes (clinic_id, professional_id, mode) values (c_a, p_fis, 'none');
+  insert into public.fiscal_issuer_service_codes (clinic_id, issuer_id, service_id, service_code)
+    select c_a, id, s_psi, '04.16.01' from public.fiscal_issuers where clinic_id = c_a and kind = 'clinic';
+
   -- Conta de cobrança no RecepClinic (F12.1, faturamento do SaaS) e a trilha.
   insert into public.billing_accounts (clinic_id, payer_name, payer_document, finance_email, finance_phone)
     values (c_a, 'Clínica Exemplo Saúde Ltda', '11222333000181', 'financeiro@exemplo-saude.local', '+5584988880100');
