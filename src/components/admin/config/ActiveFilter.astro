@@ -8,13 +8,15 @@ interface Props {
   inactive: number;
   /** "Ativas | Desativadas" (agendas). */
   feminine?: boolean;
+  /** Outros parâmetros que as abas mantêm (ex.: `profissional=…` de Serviços). */
+  keep?: string;
   class?: string;
 }
 
-const { showInactive, active, inactive, feminine = false, class: className = "" } = Astro.props;
+const { showInactive, active, inactive, feminine = false, keep = "", class: className = "" } = Astro.props;
 const items = [
-  { label: feminine ? "Ativas" : "Ativos", href: "?", count: active, current: !showInactive },
-  { label: feminine ? "Desativadas" : "Desativados", href: "?todos=1", count: inactive, current: showInactive },
+  { label: feminine ? "Ativas" : "Ativos", href: `?${keep}`, count: active, current: !showInactive },
+  { label: feminine ? "Desativadas" : "Desativados", href: keep ? `?${keep}&todos=1` : "?todos=1", count: inactive, current: showInactive },
 ];
 ---
 

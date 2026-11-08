@@ -2,16 +2,17 @@
 // Busca de profissional (MS, 07/nov/2026): um campo que filtra, sem acento, a
 // lista de profissionais agrupada pela especialidade principal, cada um com
 // quantos serviços tem. Pensada para clínicas com 10+ profissionais. Usada na
-// Marcar ("Com quem", opção A) e na lista de Serviços (S4, opção D). Cada
-// opção é um link (a tela recarrega com a escolha, sem estado escondido).
+// Marcar ("Com quem", opção A), na lista de Serviços (S4, opção D) e em
+// Horários (cliente, 08/nov/2026). Cada opção é um link (a tela recarrega com a
+// escolha, sem estado escondido). A especialidade (o grupo) fica em negrito.
 import type { OwnerOptionGroup } from "../../lib/serviceOwner";
 import { CONTROL } from "./ui/styles";
 
 interface Props {
   id: string;
   groups: OwnerOptionGroup[];
-  /** Quantos serviços cada opção tem (pelo valor da opção). */
-  counts: Map<string, number>;
+  /** Quantos serviços cada opção tem (pelo valor da opção); sem ele, a contagem não aparece. */
+  counts?: Map<string, number>;
   /** Link de cada opção. */
   href: (value: string) => string;
 }
@@ -27,16 +28,16 @@ const countText = (n: number) => (n === 1 ? "1 serviço" : `${n} serviços`);
     {
       groups.map((group) => (
         <section data-owner-group aria-label={group.label}>
-          <p class="bg-canvas-deep px-3 py-1.5 text-[13px] font-semibold text-ink-mid">{group.label}</p>
+          <p class="bg-canvas-deep px-3 py-1.5 text-[14px] font-bold text-ink">{group.label}</p>
           <ul>
             {group.options.map((o) => (
               <li data-owner-option data-search={`${o.label} ${group.label}`}>
                 <a
                   href={href(o.value)}
-                  class="flex min-h-12 items-center justify-between gap-3 border-t border-line px-3 py-2 text-[15px] font-semibold text-ink no-underline hover:bg-[#e7f4ef] focus-visible:bg-[#e7f4ef]"
+                  class="flex min-h-12 items-center justify-between gap-3 border-t border-line px-3 py-2 text-[15px] font-medium text-ink no-underline hover:bg-[#e7f4ef] focus-visible:bg-[#e7f4ef]"
                 >
                   {o.label}
-                  <span class="shrink-0 text-sm font-normal text-ink-soft">{countText(counts.get(o.value) ?? 0)}</span>
+                  {counts && <span class="shrink-0 text-sm font-normal text-ink-soft">{countText(counts.get(o.value) ?? 0)}</span>}
                 </a>
               </li>
             ))}

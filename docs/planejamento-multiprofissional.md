@@ -249,3 +249,20 @@ da Marcar.
    Horários e Meus serviços; serviço novo já dele; sem Desativar nem Migrar.
 6. WhatsApp: clínica com vários profissionais — "Exames" só com os exames da equipe; clínica de um profissional — igual
    a antes.
+
+## 11. Ajuste da validação (cliente, 08/nov/2026): escolha do profissional em Configurações
+
+- **Serviços e Horários**, com mais de um profissional: a mesma busca de profissional (`OwnerPicker`), com a
+  especialidade (o grupo) em negrito. Pelo menu, nada vem escolhido: a escolha é obrigatória. Só vem escolhido quando
+  outra tela manda para um profissional (`?profissional=` em Serviços, `?agenda=` em Horários), como a volta de um
+  serviço, "Cadastrar os horários" da agenda ou do serviço. A escolha **não fica mais lembrada** (o cookie de 180 dias
+  da S4 saiu). Em Horários, a lista suspensa de agendas virou "De qual profissional?" e a barra "Profissional: … ·
+  Trocar de profissional"; agenda de profissional desativado fica em "Outras agendas".
+- **Agendas e Profissionais:** a lista fica como estava, com "Buscar agenda" / "Buscar profissional" acima dela a partir
+  de 6 cadastros (`LIST_FILTER_FROM`), filtrando sem acento pelo nome, profissional, especialidade ou registro.
+- As abas Ativos/Desativados de Serviços mantêm o profissional escolhido.
+
+**Roteiro (staging):** Serviços e Horários pelo menu pedem o profissional; escolher, abrir um serviço e voltar (volta no
+mesmo profissional); sair e entrar pelo menu (pede de novo); Agenda › "Cadastrar os horários" abre Horários já
+escolhido; grupos da busca em negrito; em clínica com 6+ profissionais, o filtro de Agendas e Profissionais.
+

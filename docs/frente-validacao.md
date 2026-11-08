@@ -35,4 +35,6 @@ Não são validação de tela; ficam aqui para não se perderem.
 
 ## 4. Registro
 
-(vazio: cada validação entra aqui com a data, o resultado e o que foi corrigido)
+- **08/nov:** ajuste pedido pelo cliente ao validar o item 1/2: escolha do profissional em Serviços e Horários (sem
+  lembrar a escolha; só vem escolhido vindo de outra tela), especialidade em negrito e filtro em Agendas e
+  Profissionais. Detalhe e roteiro: seção 11 do [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md).

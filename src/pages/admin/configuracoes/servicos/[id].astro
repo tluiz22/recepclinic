@@ -63,7 +63,9 @@ const locationOptions = locations.filter((l) => (l.isActive || offered.has(l.id)
 const hiddenHomeVisit = !homeVisitOn && locations.some((l) => l.type === "home_visit" && offered.has(l.id));
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
-const list = withAllFilter("/admin/configuracoes/servicos", all);
+// A lista volta no profissional do serviço (cliente, 08/nov/2026: a lista não lembra a escolha).
+const listOwner = ownOnly ? null : service ? (service.isTeam ? TEAM_OWNER : (service.professionalId ?? "sem")) : Astro.url.searchParams.get("profissional");
+const list = withAllFilter(listOwner ? `/admin/configuracoes/servicos?profissional=${encodeURIComponent(listOwner)}` : "/admin/configuracoes/servicos", all);
 const action = withAllFilter(`/api/admin/configuracoes/servicos/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
