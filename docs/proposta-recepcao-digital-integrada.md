@@ -598,5 +598,5 @@ mandado em mensagem de WhatsApp. Desenho no canvas: início do profissional (fot
 horário, "Agendar consulta com a Dra. Ana", valores e convênios, local, orientações) → P5 → P6 → P7 → P8 → P9 → P10,
 "Passo n de 4" (3 com um só atendimento), sem "Trocar médico". Clínica de um só profissional (como o piloto): o
 endereço da clínica abre direto nessa página. Link compartilhado (Instagram, site, mensagem de WhatsApp) é entrada
-direta: pede celular e código; só o link do bot na conversa dispensa o código. Decisões pendentes: endereço do link,
-quem cria o apelido do profissional, se mostra os outros médicos da clínica.
+direta: pede celular e código; só o link do bot na conversa dispensa o código. **Endereço (cliente, 08/nov): `agendar.recepclinic.com.br/{apelido-da-clínica}/{apelido-do-profissional}`** (ex.:
+`/vila-serena/dra-ana-lima`). Pendentes: quem cria o apelido do profissional, se mostra os outros médicos da clínica.
