@@ -7,7 +7,9 @@
 > números de WhatsApp fora desta entrega** (seção 10, F4, RD11: pendentes); link no Meu dia e no perfil do profissional;
 > aba Métricas › Portal e origens em Desempenho; links marcados por lugar. Especificação das telas
 > atualizada (08/nov). **Etapa 3: plano da implementação em [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)**
-> (08/nov), aguardando a validação do cliente; retomar por lá. Nenhum código mudou.
+> (08/nov), **aprovado**; retomar por lá. **Revisões do cliente no plano (08/nov):** regra da Matriz (o item Portal só
+> decide os links; o bot depende dele e tem uma jornada só, levando ao portal; telas da recepção para todas as clínicas),
+> RD3 (remarcar no portal, I7), RD5 (retorno e exames também no portal, I8) e prazo do retorno sem dias bloqueados (I9).
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:

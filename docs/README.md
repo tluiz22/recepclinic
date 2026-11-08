@@ -5,8 +5,9 @@
 > - **Feito:** Etapa 1 (proposta, RD1 a RD14) e Etapa 2 (design: portal P1 a P13, link do profissional, painel da
 >   recepção R1 a R7), aprovadas; especificação em `especificacao-telas-portal-e-recepcao.md`. Nenhum código mudou.
 > - **Fora desta entrega:** vários números de WhatsApp (F4, RD11), pendente.
-> - **Etapa 3 (implementação): plano escrito** em [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)
->   (F1, F2a a F2c, F3, F5a, F5b, F6). **Próximo passo:** validação do plano e decisões I1 a I5, uma por vez.
+> - **Etapa 3 (implementação): plano aprovado** em [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)
+>   (F1, D4, F2a a F2d, F3, F5a, F5b, F6; decisões I1 a I9). **Próximo passo: F1 (fundação)**, em branch curta; staging
+>   e validação do cliente a cada etapa.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

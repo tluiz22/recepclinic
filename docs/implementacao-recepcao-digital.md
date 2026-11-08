@@ -1,9 +1,11 @@
 # Implementação: recepção digital integrada (Etapa 3)
 
-> **Estado atual (retomar daqui), 08/nov/2026.** Plano da implementação escrito (este arquivo), **aguardando a
-> validação do cliente** e as decisões da seção 6 (uma por vez). Nenhum código mudou. Base:
-> [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md) (regras, RD1 a RD14, design) e
-> [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md) (telas P1 a P13, PP, R1 a R8).
+> **Estado atual (retomar daqui), 08/nov/2026.** Plano da implementação **aprovado pelo cliente** com as decisões I1 a I9
+> (seção 6) e a regra nova da Matriz, bot e portal (seção 1.1). Nenhum código mudou. **Próximo passo: F1 (fundação)**,
+> em branch curta criada da `main`; no fim, testes, merge, staging e parada para a validação (I3). Pedir cedo ao
+> cliente: CNAME de `agendar-teste` e `agendar`, chaves do Turnstile (seção 4). Base:
+> [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md) e
+> [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
@@ -12,7 +14,20 @@ Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do clien
 
 Entra: F1 (fundação), F2 (portal + segurança, em três etapas), F3 (bot e links → portal), F5 (painel da recepção,
 em duas etapas) e F6 (métricas e recuperação). **Fora:** F4, vários números de WhatsApp (cliente, 08/nov: pendente).
-Tudo atrás do item **Portal de agendamento** da Matriz (D11): com o item desligado, a clínica não vê diferença.
+
+### 1.1 Matriz, bot e portal (cliente, 08/nov) [Cliente]
+
+Muda a regra da proposta ("com os itens desligados, a clínica não vê diferença", seção 1):
+
+- **Item "Portal de agendamento"** na Matriz: decide **só** se a clínica tem os links que levam ao portal (link da
+  clínica, links dos profissionais, "Copiar link para…", QR).
+- **Bot com uma jornada só:** marcar pelo WhatsApp sempre leva ao portal. Acaba a marcação dentro do chat; não há
+  duas jornadas de agendamento no bot.
+- **Bot depende do portal:** sem o item Portal ligado, a clínica não pode ligar o bot.
+- **Clínica sem bot:** recebe só os lembretes; a clínica marca os atendimentos no painel.
+- **Telas da recepção (R1 a R8) para todas as clínicas:** implementadas sem depender do item Portal (o que só existe
+  com o portal, como o atalho do link no Meu dia, aparece só com ele).
+- Consequências a decidir com o cliente: seção 6 (I6 em diante).
 
 ## 2. Como cada etapa é feita (cliente, 08/nov)
 
@@ -28,25 +43,29 @@ Tudo atrás do item **Portal de agendamento** da Matriz (D11): com o item deslig
 
 ## 3. Etapas
 
-| Etapa | O que entrega | Telas | Banco | Depende de |
-|---|---|---|---|---|
-| **F1 Fundação** | Base de dados e regras únicas, sem tela pública | Cadastro do profissional: "Atende particular" (só convênio) e observação por convênio | Item da Matriz `portal`; `professionals.accepts_private`, `portal_slug` (automático e fixo, `-2` se repetido), `show_in_portal`; observação em `professional_insurance_plans`; `clinics.portal_slug` (Suporte); prazos da clínica (reserva 3 a 10 min, padrão 5; antecedência para cancelar/remarcar, padrão 24 h); `booking_channel` ganha `portal`; `appointments.access_origin` e sessão; fila `notification_outbox` (chave única atendimento + tipo); funções únicas do motor (especialidades com profissional ativo, profissionais da especialidade, aceita o plano, horários livres) usadas pelo bot, pela Marcar e pelo portal | — |
-| **F2a Portal: escolher** | Paciente navega e escolhe o horário (ainda sem marcar) | P1, P2, P3 (cartão até 5, lista com 6+), P5, P6, PP (link do profissional), P11, P13; computador (1280) e celular (390) | Funil anônimo por sessão (eventos); fotos públicas por URL assinada curta | F1, endereço do portal (seção 6) |
-| **F2b Identificação e segurança** | Telefone comprovado e proteção contra abuso | P7 (celular + código; P8 com "Usar outro número" no caminho do link) | Sessão do portal (cookie `HttpOnly`); código de 6 dígitos (10 min, 5 tentativas, 3 por hora); limites por IP/sessão/telefone em contador no Postgres; bloqueio progressivo 15 min → 1 h → 24 h; `slot_holds` + `reserve_slot` (lock por agenda) | F2a, template de autenticação aprovado na Meta, chaves do Turnstile |
-| **F2c Marcar** | Consulta marcada pelo portal, confirmação pela fila | P8, P8b (duplicado por nome + data, as três respostas), P9 (contador da reserva), P10 (.ics); R2 (origem no atendimento); R4 (quadro "Data de nascimento a conferir") | `confirm_portal_booking` (mesmo lock + trava de sobreposição); limites do bot valem no portal; fila envia a confirmação | F2b |
-| **F3 Bot e links → portal** | WhatsApp e links levam ao portal | P12 Minhas consultas (remarcar, cancelar, antecedência); R7 Configurações › Portal, Meu perfil do profissional com o link, "Copiar link para…" (`?de=`), janela do QR (Baixar, Imprimir cartaz) | Token `/s/{token}` com finalidade (`agendar`, `remarcar`, `cancelar`, `minhas_consultas`); bot: "Agendar" manda o link com o item ligado; "Ver no portal" nas informações; "Veio do portal" na Central (P11) | F2c |
-| **F5a Agenda da clínica grande** | 18 agendas sem 18 telas | R3 Agenda em colunas (até 7 sem rolagem; 8+ com Especialidade/Profissional e barra de rolagem), atendimento aberto na coluna à direita, Próximos horários livres; celular com uma agenda por vez | Consulta de horários de várias agendas de uma vez (meta < 2 s com 18 no staging) | F1 (reserva do portal tracejada depois da F2b) |
-| **F5b Meu dia, Conversas e celular** | Recepção trabalha num lugar só | R5 Meu dia (atalho do link, "Precisa de você", tabela por profissional; profissional com o próprio link); R1 Conversas (aguardando primeiro, botão "Aguardando" com contador, painel do paciente com "Com quem ele já consulta"); R8 barra embaixo no celular | Sem tabela nova [Hipótese] | F2c, F3 |
-| **F6 Métricas e recuperação** | Medir e recuperar | Métricas › Portal (funil, Entrada, bloqueios); Desempenho › "De onde vêm as marcações"; monitor do Suporte | Agregado diário do funil (eventos brutos 90 dias); aviso de abandono em 15 min (janela de 24 h, uma vez por sessão) | F2c, F3 |
+Revistas com as decisões I1, I6 a I9 (cliente, 08/nov). Telas da recepção para todas as clínicas (seção 1.1).
 
-Ordem proposta: F1 → F2a → F2b → F2c → F3 → F5a → F5b → F6 (a da proposta, com a F2 em três). A F5a só depende da F1
-e pode ser antecipada se a demonstração para a clínica de 18 pedir.
+| Etapa | O que entrega | Para quem |
+|---|---|---|
+| **F1 Fundação** | Banco e regras únicas, sem tela pública: item Portal na Matriz e o bot dependendo dele (liga o Portal onde já há bot, I6); apelidos da clínica e do profissional; "Atende particular" (só convênio) e observação por convênio no cadastro; canal `portal` e origem no atendimento; fila de confirmação (sem envio duplicado); funções únicas de horários para bot, Marcar e portal; **prazo do retorno sem os dias bloqueados inteiros** (I9; já vale no bot e no "Marcar retorno" da Agenda) | Todas (o prazo do retorno); o resto sem efeito visível |
+| **D4 Desenho: retorno e exames** | Rodada 4 no canvas (sem código): botão Retorno no início do portal, lista das consultas com direito a retorno, aviso "o prazo do retorno acabou", caminho dos exames | — |
+| **F2a Portal: escolher** | P1 (Agendar, Retorno, Minhas consultas), P2, P3, P5, P6, link do profissional, P11 e P13, celular e computador; o paciente escolhe o horário, ainda sem marcar | Com Portal; só staging |
+| **F2b Identificação e segurança** | Código pelo WhatsApp, CAPTCHA, limites contra abuso, bloqueio progressivo, reserva do horário por 5 min | Com Portal; só staging |
+| **F2c Marcar consulta** | P8, P8b, P9, P10 (.ics); confirmação pela fila; origem no atendimento aberto; quadro "Data de nascimento a conferir" | Com Portal; portal pode ir à produção depois desta |
+| **F2d Retorno e exames no portal** | Telas da D4: retorno pelas regras do bot (I8) e exames | Com Portal |
+| **F3 Bot com jornada única e links** | Bot: Agendar, Retorno e Exames levam ao portal; acaba a marcação no chat; Remarcar abre o portal; Cancelar segue no chat (I7); P12 Minhas consultas; Configurações › Portal, "Copiar link para…", QR; jornada do bot atualizada. **Muda o bot das clínicas em produção** | Com bot (todas com bot têm Portal) |
+| **F5a Agenda da clínica grande** | Agenda em colunas (até 7 sem rolagem; 8+ com Especialidade/Profissional e barra de rolagem), atendimento aberto na coluna à direita, Próximos horários livres, celular com uma agenda por vez | Todas |
+| **F5b Meu dia, Conversas, Meu perfil e celular** | Meu dia novo ("Precisa de você", tabela por profissional; atalho do link só com Portal); Conversas com aguardando primeiro, botão "Aguardando" e "Com quem ele já consulta" (com a Central); Meu perfil do profissional (link e QR só com Portal); barra embaixo no celular | Todas |
+| **F6 Métricas e recuperação** | Métricas › Portal, Desempenho › "De onde vêm as marcações", aviso a quem não terminou de marcar (15 min), monitor do Suporte | Com Portal (origens em Desempenho: todas) |
+
+Ordem proposta: F1 → D4 → F2a → F2b → F2c → F2d → F3 → F5a → F5b → F6. A F5a só depende da F1 e pode ser antecipada.
+Em cada etapa: unidade e banco; Playwright em 390 e 1280 px; `security-review` na F2b, F2c e F3.
 
 ## 4. Pendências fora do código (pedir cedo)
 
 | O quê | Quem | Quando precisa |
 |---|---|---|
-| Endereço `agendar.recepclinic.com.br` (produção) e o equivalente do staging: DNS + domínio na Vercel | Cliente (DNS) e Claude (configuração) | Início da F2a |
+| Endereços `agendar.recepclinic.com.br` (produção) e `agendar-teste.recepclinic.com.br` (staging, I2): CNAME no DNS + domínio na Vercel | Cliente (DNS) e Claude (configuração) | Início da F2a |
 | Template de autenticação na Meta (código com "Copiar código"), por conta | Claude envia; Meta aprova | Antes da F2b |
 | Conta e chaves do Cloudflare Turnstile (staging e produção) | Cliente | Antes da F2b |
 | Termo, política e menores (LGPD) revisados | Advogado | Antes da produção |
@@ -65,10 +84,14 @@ e pode ser antecipada se a demonstração para a clínica de 18 pedir.
 
 | # | Pergunta | Recomendação |
 |---|---|---|
-| I1 | A F1 prepara o banco para vários números (conexão em cada conversa)? | Não: fica tudo na F4, quando ela for planejada |
-| I2 | Endereço do portal no staging | A definir na pergunta |
-| I3 | Branches, staging e validação | A definir na pergunta |
-| I4 | O .ics (agenda do celular) leva o nome do médico? | A definir na pergunta |
-| I5 | Ordem das etapas (seção 3) | A definir na pergunta |
+| I1 | A F1 prepara o banco para vários números (conexão em cada conversa)? | **Decidido (cliente, 08/nov): não**; fica tudo na F4, quando ela for planejada |
+| I2 | Endereço do portal no staging | **Decidido (cliente, 08/nov): `agendar-teste.recepclinic.com.br`** (CNAME pelo cliente; domínio na Vercel pelo Claude) |
+| I3 | Branches, staging e validação | **Decidido (cliente, 08/nov): staging e validação a cada etapa.** Fim de cada etapa: testes + Playwright, merge na `main`, staging e parada até a validação do cliente; na D4, revisão tela por tela |
+| I4 | O .ics (agenda do celular) leva o nome do médico? | **Decidido (cliente, 08/nov): sim**: "Consulta com {médico} — {Clínica}" e o endereço; sem especialidade nem convênio |
+| I5 | Ordem das etapas (seção 3) | **Decidido (cliente, 08/nov): portal primeiro**, como na seção 3 (F5a depois da F3) |
+| I6 | Clínicas que já têm o bot (ex.: piloto na produção) | **Decidido (cliente, 08/nov): a migração liga o item Portal em toda clínica com o bot** |
+| I7 | Remarcar e cancelar pelo WhatsApp (revê a RD3) | **Decidido (cliente, 08/nov): Remarcar abre o portal nos horários do mesmo médico e modalidade (troca o link de hoje); Cancelar segue na conversa, com confirmação** |
+| I8 | Retorno e exames (revê a RD5) | **Decidido (cliente, 08/nov): os dois também no portal.** Botão **Retorno** no início do portal; o portal confere quais consultas dão direito a retorno (mesmas regras do bot, Fase 17: última consulta na agenda, não domiciliar, um retorno por consulta, sem atendimento futuro na agenda, dentro do prazo); sem nenhuma, avisa que o prazo do retorno acabou e, se precisar, falar com a recepção. **No prazo do retorno, os dias em que a agenda do profissional está bloqueada não contam** (hoje: data da consulta + N dias corridos, `returnLastDate`, `appointments.ts:267`). Telas de retorno e exames ainda sem desenho: rodada 4 no canvas antes de implementar |
+| I9 | Quais dias bloqueados saem do prazo do retorno | **Decidido (cliente, 08/nov): só dias bloqueados inteiros** (o bloqueio cobre todo o horário de atendimento da agenda naquele dia); bloqueio de parte do dia não muda o prazo; feriados não entram. Vale no portal, no bot e no "Marcar retorno" da Agenda (uma função só) |
 
 A decidir na F3 (proposta, seção 17): se a antecedência da RD10 vale também para cancelar pelo WhatsApp.
