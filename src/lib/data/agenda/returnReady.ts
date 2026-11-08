@@ -1,7 +1,8 @@
-import { localDateOf, todayIn } from "../../clinicTime";
+import { addDays, localDateOf, todayIn } from "../../clinicTime";
 import type { DbClient } from "../clients";
 import { unwrap, unwrapAllIn } from "../errors";
 import { findBlockingAppointment, listUpcomingAppointments, returnLastDate } from "./appointments";
+import { BLOCKED_DAYS_SLACK, loadWholeBlockedDays } from "./blockedDays";
 import type { AgendaAppointment } from "./view";
 
 // "Marcar retorno" no cartão da Consulta realizada (cliente, 19/out/2026): o
@@ -89,13 +90,19 @@ export async function listReturnReady(
   }
   const used = new Set(usedRows.map((row) => row.origin_appointment_id));
   const today = todayIn(timeZone, now);
+  // Dias bloqueados inteiros não contam no prazo (I9): uma consulta só para as agendas da tela.
+  const dates = candidates.map((a) => localDateOf(a.scheduledAt, timeZone)).sort();
+  const longest = Math.max(0, ...services.map((s) => s.return_deadline_days ?? 0));
+  const blocked = longest
+    ? await loadWholeBlockedDays(db, clinicId, agendaIds, addDays(dates[0], 1), addDays(dates[dates.length - 1], longest + BLOCKED_DAYS_SLACK), timeZone)
+    : new Map<string, Set<string>>();
 
   for (const a of candidates) {
     if (latest.get(`${a.patientId}:${a.agendaId}`) !== a.id || used.has(a.id)) continue;
     const returns = returnsByAgenda.get(a.agendaId)!;
     const date = localDateOf(a.scheduledAt, timeZone);
     const inTime = returns.filter((s) => {
-      const lastDate = returnLastDate(date, s.deadlineDays);
+      const lastDate = returnLastDate(date, s.deadlineDays, blocked.get(a.agendaId));
       return lastDate === null || today <= lastDate;
     });
     if (!inTime.length) continue;

@@ -30,7 +30,7 @@ const events = async (phone: string) =>
   (await db().from("handoff_events").select("kind, from_status, to_status, assigned_from, assigned_to").eq("clinic_id", clinicId).eq("contact_phone", phone).order("id")).data ?? [];
 
 beforeAll(async () => {
-  [clinicId, noFeatureClinicId] = await Promise.all([createClinic("Clínica CN1"), createClinic("Clínica CN1 sem Central", ["whatsapp_bot"])]);
+  [clinicId, noFeatureClinicId] = await Promise.all([createClinic("Clínica CN1"), createClinic("Clínica CN1 sem Central", ["portal", "whatsapp_bot"])]);
   [admin, reception, professional, support] = await Promise.all([
     createUser("cn1-admin"),
     createUser("cn1-recepcao"),

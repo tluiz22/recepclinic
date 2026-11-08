@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { bookAppointment, cancelAppointment, recordAttendance } from "../../src/lib/data/agenda/appointments";
+import { bookAppointment, cancelAppointment, findReturnOrigin, recordAttendance } from "../../src/lib/data/agenda/appointments";
+import { createBlock } from "../../src/lib/data/agenda/blocks";
 import { listReturnReady } from "../../src/lib/data/agenda/returnReady";
 import { listAgendaAppointmentsByIds } from "../../src/lib/data/agenda/view";
 import { registerPatient } from "../../src/lib/data/patients";
@@ -104,5 +105,22 @@ describe("Marcar retorno: Consulta apta", () => {
     await complete(second);
     const result = await ready([c.p1, second], later);
     expect([...result.keys()]).toEqual([second]);
+  });
+});
+
+describe("prazo do retorno sem os dias bloqueados inteiros (I9, cliente, 08/nov/2026)", () => {
+  it("segunda inteira bloqueada empurra o fim; bloqueio só da manhã, não", async () => {
+    const { ids, clinicId } = fixture;
+    const block = (date: string, from: string, to: string) =>
+      createBlock(db(), clinicId, { agendaId: ids.agendaDra, startsAt: at(date, from), endsAt: at(date, to), reason: "Férias", cancelAppointmentIds: [], actorId: fixture.admin.id }, AFTER);
+    const origin = () =>
+      findReturnOrigin(asDb(fixture.reception), clinicId, { patientId: ids.p1, agendaId: ids.agendaDra, returnServiceId: ids.retorno, originAppointmentId: c.p1 }, AFTER);
+
+    expect((await origin())?.lastDate).toBe("2031-04-09");
+    // A agenda da Dra. atende às segundas (08–12 no consultório e 14–15 domiciliar).
+    await block("2031-03-24", "00:00", "23:59");
+    await block("2031-03-31", "07:00", "16:00");
+    await block("2031-04-07", "08:00", "12:00");
+    expect((await origin())?.lastDate).toBe("2031-04-11");
   });
 });

@@ -3,6 +3,7 @@ import type { Enums, Json } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
 import { checkFreeTime, getFreeSlots, loadSchedulingPlan, pastLimit } from "./slots";
+import { BLOCKED_DAYS_SLACK, loadWholeBlockedDays } from "./blockedDays";
 import { logError } from "../../log";
 
 // Marcar, remarcar, cancelar, presença e comparecimento (F3.6a), para a tela
@@ -263,9 +264,30 @@ export type ReturnOrigin = {
   alreadyUsed: boolean;
 };
 
-/** Último dia do retorno: data da consulta + prazo do serviço (Fase 17). */
-export function returnLastDate(originDate: string, deadlineDays: number | null): string | null {
-  return deadlineDays === null ? null : addDays(originDate, deadlineDays);
+/**
+ * Último dia do retorno: data da consulta + prazo do serviço (Fase 17), sem contar os dias em que a agenda do
+ * profissional está bloqueada o dia inteiro (I9, cliente, 08/nov/2026). Ex.: 30 dias a partir de 01/12 com
+ * 10/12 a 14/12 bloqueados vai até 05/01 (e não 31/12).
+ */
+export function returnLastDate(originDate: string, deadlineDays: number | null, blockedDays: ReadonlySet<string> = new Set()): string | null {
+  if (deadlineDays === null) return null;
+  let date = originDate;
+  for (let counted = 0; counted < deadlineDays; ) {
+    date = addDays(date, 1);
+    if (!blockedDays.has(date)) counted++;
+  }
+  return date;
+}
+
+/** O último dia do retorno de uma consulta da agenda, já com os dias bloqueados inteiros. */
+export async function returnLastDateFor(
+  db: DbClient,
+  clinicId: string,
+  { agendaId, originDate, deadlineDays, timeZone }: { agendaId: string; originDate: string; deadlineDays: number | null; timeZone: string },
+): Promise<string | null> {
+  if (deadlineDays === null) return null;
+  const blocked = await loadWholeBlockedDays(db, clinicId, [agendaId], addDays(originDate, 1), addDays(originDate, deadlineDays + BLOCKED_DAYS_SLACK), timeZone);
+  return returnLastDate(originDate, deadlineDays, blocked.get(agendaId));
 }
 
 /**
@@ -292,7 +314,7 @@ export async function findReturnOrigin(
 
   let query = db
     .from("appointments")
-    .select("id, scheduled_at, locations ( type ), services!inner ( category )")
+    .select("id, agenda_id, scheduled_at, locations ( type ), services!inner ( category )")
     .eq("clinic_id", clinicId);
   if (originAppointmentId) {
     query = query.eq("id", originAppointmentId);
@@ -307,6 +329,7 @@ export async function findReturnOrigin(
   }
   const origin = unwrap(await query.order("scheduled_at", { ascending: false }).limit(1).maybeSingle(), "Consulta de origem") as unknown as {
     id: string;
+    agenda_id: string;
     scheduled_at: string;
     locations: { type: string } | null;
   } | null;
@@ -317,10 +340,16 @@ export async function findReturnOrigin(
   const usedRows = unwrap(await used.limit(1), "Retornos da consulta");
 
   const date = localDateOf(new Date(origin.scheduled_at), settings.timezone);
+  const lastDate = await returnLastDateFor(db, clinicId, {
+    agendaId: origin.agenda_id,
+    originDate: date,
+    deadlineDays: returnService.return_deadline_days,
+    timeZone: settings.timezone,
+  });
   return {
     id: origin.id,
     date,
-    lastDate: returnLastDate(date, returnService.return_deadline_days),
+    lastDate,
     isHomeVisit: origin.locations?.type === "home_visit",
     alreadyUsed: usedRows.length > 0,
   };

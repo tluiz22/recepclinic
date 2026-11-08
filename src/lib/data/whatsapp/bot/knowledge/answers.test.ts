@@ -37,6 +37,9 @@ const professional = (id: string, displayName: string, extra: Partial<Profession
   phone: null,
   receivesDailySummary: false,
   isActive: true,
+  acceptsPrivate: true,
+  portalSlug: id,
+  showInPortal: true,
   ...extra,
 });
 

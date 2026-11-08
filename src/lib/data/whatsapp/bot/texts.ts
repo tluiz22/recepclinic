@@ -242,6 +242,9 @@ export const planAccepted = (planName: string) => `Atendemos pelo convênio *${p
 /** Plano fora da lista, não encontrado ou não atendido pelo(s) profissional(is) do caminho escolhido. */
 export const planNotAccepted = (planName: string | null, d: Designation, forThisService: boolean) =>
   `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}.\n\nQuer seguir com o atendimento particular?`;
+/** O mesmo, quando o caminho atende só por convênio: sem oferecer particular. */
+export const planNotAcceptedNoPrivate = (planName: string | null, d: Designation, forThisService: boolean) =>
+  `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}, e o atendimento é só por convênio.`;
 export function priceInfo(category: "consultation" | "exam", cents: number, paymentInfo: string | null): string {
   const value = `O valor ${category === "exam" ? "do exame" : "da consulta"} é ${formatCentsBRL(cents)}.`;
   return paymentInfo ? `${value}\n\nFormas de pagamento: ${paymentInfo}` : value;

@@ -26,7 +26,8 @@ const METRICS = FEATURES.filter((feature) => feature.area === "metrics" && featu
 const single = (key: FeatureKey): PlanItem => ({ id: key, label: featureLabel(key), features: [key], priceCents: null });
 
 /** Incluído no Básico (e no Completo). */
-export const BASIC_ITEMS: PlanItem[] = [single("whatsapp_bot"), single("reminders"), single("daily_summary")];
+// Portal de agendamento (cliente, 08/nov/2026, I10): item próprio no Básico, sem mudar o preço; o bot depende dele.
+export const BASIC_ITEMS: PlanItem[] = [single("whatsapp_bot"), single("portal"), single("reminders"), single("daily_summary")];
 
 /** Adicionais avulsos, do maior valor ao menor; todos juntos formam o Completo. */
 export const ADDONS: PlanItem[] = [
