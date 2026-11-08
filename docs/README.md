@@ -1,5 +1,7 @@
 # RecepClinic
 
+> **Próxima sessão (cliente, 07/nov): começar pela frente da nota fiscal.**
+>
 > **Duas frentes (cliente, 07/nov):**
 > - **Validação do que está pendente:** [`frente-validacao.md`](frente-validacao.md) (multiprofissional ME, MC, MI, MB
 >   e MS no staging; o ajuste `9b22e00` da Central; depois, produção com autorização).
