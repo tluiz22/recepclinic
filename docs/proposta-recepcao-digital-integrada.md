@@ -1,9 +1,9 @@
 # Proposta: recepção digital integrada (WhatsApp, Portal e Painel)
 
-> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17). **Etapa 2 (design)
-> autorizada em 08/nov**: 1ª rodada, portal no celular (P1 a P10, 13 telas) no canvas
-> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). P3 mista, ficha aprovada, P4 retirada; **P1 a P8 aprovadas** (P7 do WhatsApp retirada); avaliando P8b, P9 e P10. Depois: portal em
-> 1280 px, P11 a P13 e o painel da recepção (R1 a R7). Nenhum código mudou.
+> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 revista).
+> **Etapa 2 (design):** rodada 1 (portal no celular, P1 a P10) **aprovada** no canvas
+> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Próximo: rodada 2 (portal em 1280 px, P11 a P13),
+> com o OK do cliente; depois o painel da recepção (R1 a R7). Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
@@ -574,4 +574,4 @@ data cadastrada; a consulta vai para o cadastro existente e a recepção vê o s
 (R4) para conferir com o paciente. **Terceira opção (cliente, 08/nov):** "É ele, mas a data certa é {digitada}" → aviso
 "Vamos marcar a consulta no cadastro de {nome completo}. Para corrigir a data de nascimento do cadastro, fale com a
 recepção no dia da consulta. Avisamos a recepção que você informou {data}." (o portal não altera o cadastro; o selo
-leva a data informada). Aguardando a conferência do cliente.
+leva a data informada). **Rodada 1 aprovada pelo cliente (08/nov): P1 a P10 no celular.**
