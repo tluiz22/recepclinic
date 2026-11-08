@@ -3,7 +3,7 @@
 > **MS, serviços por profissional (07/nov):** S2, S3, S1 e S4 feitas e **no staging** (`02d17e3`; migrações
 > `20261230120000` e `20261230130000` aplicadas lá). O cliente valida pelo roteiro no fim da seção 10 do
 > [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md). Produção só com autorização. Capturas na fila:
-> `config-profissionais`, `config-convenios` e `config-clinica` (`config-servicos` e `marcar` refeitas).
+> nenhuma (as 5 da ME, MC, MI e MS refeitas).
 >
 > **Multiprofissional (07/nov):** ME, MC e MI + MB no staging (migrações `20261229120000`, `20261229130000` e
 > `20261229140000`); o cliente valida pelo roteiro da seção 8. Produção só com autorização. 3 capturas na fila. Depois:
