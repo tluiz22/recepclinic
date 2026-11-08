@@ -17,9 +17,13 @@ import { EMPTY_BOT_INFO, getProfessionalBotInfo } from "../../../../lib/data/con
 import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
+import { ownSettingsOnly } from "../../../../lib/clinicAccess";
 
 const clinic = Astro.locals.clinic!;
 const { id } = Astro.params;
+// Profissional com login (MS, S1): só o próprio cadastro, sem desativar nem criar outro.
+const ownOnly = ownSettingsOnly(clinic);
+if (ownOnly && id !== clinic.ownProfessionalId) return Astro.redirect(`/admin/configuracoes/profissionais/${clinic.ownProfessionalId}`);
 const isNew = id === "novo";
 const professional = isNew
   ? null
@@ -53,7 +57,7 @@ const botInfo = botOn ? await getProfessionalBotInfo(createUserClient(Astro.requ
 const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 ---
 
-<ConfigShell current="profissionais" title={isNew ? "Novo profissional" : professional!.displayName} back={{ href: list, label: "Profissionais" }} subtitle={subtitle}>
+<ConfigShell current="profissionais" title={isNew ? "Novo profissional" : professional!.displayName} back={ownOnly ? undefined : { href: list, label: "Profissionais" }} subtitle={subtitle}>
   {
     // Cadastrado antes da ME sem especialidade (M2): pendente até salvar com uma.
     professionalIssues.includes("no_specialty") && (
@@ -62,7 +66,9 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
   }
   {
     professionalIssues.includes("no_agenda") &&
-      (setup!.inactiveAgendaOf.has(id!) ? (
+      (ownOnly ? (
+        <NextStep text="Sua agenda ainda não está ativa: sem ela, não recebe atendimentos. Fale com o Administrador da clínica." />
+      ) : setup!.inactiveAgendaOf.has(id!) ? (
         // Uma agenda por profissional (cliente, 21/out/2026): reativa-se a antiga.
         <NextStep
           text={`A agenda de ${professional!.displayName} está desativada: sem ela, não recebe atendimentos.`}
@@ -178,7 +184,7 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
       </div>
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
         <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
-        <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
+        <a href={ownOnly ? `/admin/configuracoes/profissionais/${id}` : list} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
     {
@@ -193,7 +199,8 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
           </div>
           {plans.length === 0 ? (
             <p class={HINT}>
-              Nenhum convênio cadastrado. Cadastre em <a href="/admin/configuracoes/convenios" class="text-brand hover:underline">Convênios</a>.
+              Nenhum convênio cadastrado.{" "}
+              {ownOnly ? "Peça ao Administrador da clínica." : <>Cadastre em <a href="/admin/configuracoes/convenios" class="text-brand hover:underline">Convênios</a>.</>}
             </p>
           ) : (
             <fieldset class="min-w-0">
@@ -252,7 +259,7 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
         </form>
       )
     }
-    {!isNew && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
+    {!isNew && !ownOnly && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
   </div>
 </ConfigShell>
 

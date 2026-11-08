@@ -1,4 +1,5 @@
 ---
+import { ownSettingsOnly } from "../../../../../lib/clinicAccess";
 // Configurações › Agendas › Migrar para outra agenda (cliente, 02/nov/2026): passa os horários e os atendimentos
 // futuros de uma agenda para outra (ex.: ao trocar a agenda de exames). O histórico fica na antiga. Prévia antes.
 import ConfigShell from "../../../../../components/admin/config/ConfigShell.astro";
@@ -11,6 +12,8 @@ import { describeDataError } from "../../../../../lib/data/formAction";
 import { formatInstant } from "../../../../../lib/clinicTime";
 
 const clinic = Astro.locals.clinic!;
+// Migrar é do Administrador (o banco confere); o profissional volta à agenda dele.
+if (ownSettingsOnly(clinic)) return Astro.redirect("/admin/configuracoes/agendas");
 const db = createUserClient(Astro.request, Astro.cookies);
 const { id } = Astro.params;
 const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });

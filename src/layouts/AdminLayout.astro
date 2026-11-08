@@ -7,7 +7,7 @@ import "../styles/global.css";
 import AppInstallHead from "../components/admin/AppInstallHead.astro";
 import Icon from "../components/admin/Icon.astro";
 import type { IconName } from "../components/admin/Icon.astro";
-import { canAccessArea, inSuspendedView, roleLabel as describeRoles, SUSPENDED_ADMIN_PAGE } from "../lib/clinicAccess";
+import { canAccessArea, inSuspendedView, ownSettingsOnly, roleLabel as describeRoles, SUSPENDED_ADMIN_PAGE } from "../lib/clinicAccess";
 import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
 import { getMeuDiaCount } from "../lib/data/dashboard";
@@ -108,6 +108,8 @@ const moreItems: NavItem[] = [
   // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
   ...(canAccessArea(access, "metrics") ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }] : []),
   ...(canAccessArea(access, "settings") ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }] : []),
+  // Profissional com login (MS, S1): Configurações com só o que é dele, abrindo nos serviços.
+  ...(!canAccessArea(access, "settings") && ownSettingsOnly(access) ? [{ label: "Configurações", href: "/admin/configuracoes/servicos", icon: "settings" as IconName }] : []),
   // Quem só tem a permissão de convênios (Equipe; MC, 07/nov/2026) vai direto à tela dela.
   ...(!canAccessArea(access, "settings") && canAccessArea(access, "insurance") && (clinic?.features ?? []).includes("insurance")
     ? [{ label: "Convênios", href: "/admin/configuracoes/convenios", icon: "credit-card" as IconName }]

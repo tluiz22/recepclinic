@@ -1,4 +1,5 @@
 ---
+import { ownSettingsOnly } from "../../../lib/clinicAccess";
 // Configurações › Horários (F4.4b): dias e horários de atendimento de cada
 // agenda, por local. Um horário pode valer só para um serviço (ex.: exame só
 // na terça) e, se o serviço for em turma, define as vagas. A sobreposição
@@ -23,12 +24,15 @@ import ServiceChoice from "../../../components/admin/config/ServiceChoice.astro"
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
-const [agendas, locations, services, serviceRefs] = await Promise.all([
+// Profissional com login (MS, S1): só os horários da própria agenda.
+const ownOnly = ownSettingsOnly(clinic);
+const [allAgendas, locations, services, serviceRefs] = await Promise.all([
   listAgendas(db, clinic.clinicId),
   listLocations(db, clinic.clinicId, { includeInactive: true }),
   listServices(db, clinic.clinicId, { includeInactive: true }),
   listServiceRefs(db, clinic.clinicId),
 ]);
+const agendas = ownOnly ? allAgendas.filter((a) => a.professionalId === clinic.ownProfessionalId) : allAgendas;
 // Cor de cada serviço, a mesma da Agenda (cliente, 19/out/2026).
 const tints = serviceTints(serviceRefs);
 // Com mais de uma agenda, a pessoa escolhe qual vai incluir ou alterar (cliente, 02/nov/2026): sem escolha, nenhuma vem

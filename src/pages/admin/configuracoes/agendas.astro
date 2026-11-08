@@ -1,4 +1,5 @@
 ---
+import { ownSettingsOnly } from "../../../lib/clinicAccess";
 // Configurações › Agendas (F4.3, D2): de um profissional ou da equipe
 // ("Exames": exames que não são feitos por um dos profissionais cadastrados).
 // Redesign R9 (cliente, 17/out/2026): uma linha por agenda, "Ativas | Todos".
@@ -18,6 +19,13 @@ import { listServices } from "../../../lib/data/config/services";
 import { AGENDA_HINTS, loadSetupStatus } from "../../../lib/data/config/setup";
 
 const clinic = Astro.locals.clinic!;
+// Profissional com login (MS, S1): vai direto à própria agenda (sem ela, aos serviços).
+if (ownSettingsOnly(clinic)) {
+  const own = (await listAgendas(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find(
+    (a) => a.professionalId === clinic.ownProfessionalId,
+  );
+  return Astro.redirect(own ? `/admin/configuracoes/agendas/${own.id}` : "/admin/configuracoes/servicos");
+}
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
 const [all, professionals, services, setup] = await Promise.all([

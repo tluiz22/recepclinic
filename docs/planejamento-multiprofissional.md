@@ -224,3 +224,11 @@ Importação da agenda: nome repetido leva a agenda. Arquivo do preparo comparti
 equipe ao trocar o tipo); na Marcar, "Equipe (exames)" mostra só os exames dela; no bot, "Exames" lista só os exames
 da equipe (o exame de um profissional fica no menu dele). Só o Administrador grava (a RLS do S1 libera ao profissional
 só os serviços dele).
+
+**S1, o profissional configura o que é dele** (migração `20261230130000`): o profissional com login (cadastro ligado
+em Equipe) entra em Configurações (item no "Mais") com Meu cadastro (dados, especialidades, convênios que atende,
+informações do bot), Minha agenda (o intervalo), Horários (só os da agenda dele) e Meus serviços (cadastrar, editar,
+desativar; o novo já é dele). Sem Desativar no cadastro e na agenda, sem Migrar, sem criar profissional ou agenda;
+cadastro, agenda ou serviço de outro voltam para o dele. No banco: políticas `*_own` (só o que é dele) e o gatilho que
+barra desativar o cadastro, mudar o login e mudar a agenda além do intervalo. Equipe, Locais, Feriados e o resto da
+clínica seguem só com o Administrador.

@@ -1,4 +1,5 @@
 ---
+import { ownSettingsOnly } from "../../../lib/clinicAccess";
 // Configurações › Serviços (F4.3, D4c): consulta, retorno e exame, com o
 // profissional dono (MS, 07/nov/2026) e os locais em que são oferecidos.
 // Redesign R9 (cliente, 17/out/2026): uma linha por serviço, "Ativos | Todos".
@@ -30,9 +31,12 @@ const [all, professionals, setup] = await Promise.all([
   // Pendências da jornada de configuração (F6.3b), nos selos.
   loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
-const active = all.filter((s) => s.isActive);
+// Profissional com login (MS, S1): só os serviços dele.
+const ownOnly = ownSettingsOnly(clinic);
+const mine = ownOnly ? all.filter((s) => s.professionalId === clinic.ownProfessionalId) : all;
+const active = mine.filter((s) => s.isActive);
 // Aba "Desativados" (cliente, 21/out/2026): só os desativados.
-const services = showInactive ? all.filter((s) => !s.isActive) : active;
+const services = showInactive ? mine.filter((s) => !s.isActive) : active;
 // Sem retorno com horário, o bot não mostra "Marcar retorno" (cliente, 18/out/2026).
 const returns = active.filter((s) => s.category === "return_visit");
 const returnReady = returns.some((s) => !setup.issues.services.get(s.id)?.length);
@@ -41,7 +45,7 @@ import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
-<ConfigShell current="servicos" title="Serviços" subtitle="O que cada profissional oferece para marcar, com duração e preço." setup={setup}>
+<ConfigShell current="servicos" title={ownOnly ? "Meus serviços" : "Serviços"} subtitle={ownOnly ? "O que você oferece para marcar, com duração e preço." : "O que cada profissional oferece para marcar, com duração e preço."} setup={setup}>
   <Button slot="actions" href="/admin/configuracoes/servicos/novo" variant="primary">
     <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo serviço
   </Button>
@@ -68,7 +72,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
     <p class="text-sm text-ink-soft" role="status">
       {services.length} {services.length === 1 ? "serviço" : "serviços"}{services.length === 1 ? (showInactive ? " desativado" : " ativo") : showInactive ? " desativados" : " ativos"}
     </p>
-    <ActiveFilter showInactive={showInactive} active={active.length} inactive={all.length - active.length} />
+    <ActiveFilter showInactive={showInactive} active={active.length} inactive={mine.length - active.length} />
   </div>
 
   {
@@ -124,7 +128,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
       </section>
     ) : (
       <ConfigEmpty
-        onlyInactive={all.length > 0}
+        onlyInactive={mine.length > 0}
         showingInactive={showInactive}
         none="Nenhum serviço"
         text="Sem serviço, nada aparece para marcar."

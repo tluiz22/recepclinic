@@ -49,6 +49,8 @@ export type ClinicContext = {
   canSwitchClinic: boolean;
   /** Cadastra e associa convênios sem ser Administrador (MC, cliente, 07/nov/2026). */
   canManageInsurance: boolean;
+  /** O profissional ligado ao login (MS, S1): configura só o que é dele. Null sem cadastro ligado. */
+  ownProfessionalId: string | null;
 };
 
 /**
@@ -101,7 +103,7 @@ export function chooseActiveClinic(input: {
 
 type RoleHolder = Pick<ClinicContext, "roles" | "isPlatformStaff">;
 /** Sem `features`, nenhum item da matriz está liberado. */
-type AccessHolder = RoleHolder & { features?: readonly FeatureKey[]; canManageInsurance?: boolean };
+type AccessHolder = RoleHolder & { features?: readonly FeatureKey[]; canManageInsurance?: boolean; ownProfessionalId?: string | null };
 
 /** Tem algum dos papéis na clínica ativa. O Suporte vale por todos, como no banco. */
 export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
@@ -121,12 +123,22 @@ export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
 //     abre nenhuma rota das Métricas.
 //   - Convênios (MC, cliente, 07/nov/2026, M4): o Administrador e quem ele
 //     autoriza em Equipe ("Cadastrar e associar convênios").
-export type PanelArea = "settings" | "insurance" | "metrics" | "finance" | "relationship" | "shared";
+//   - Profissionais, Agendas, Horários e Serviços (MS, S1; cliente, 07/nov/2026):
+//     o Administrador e o profissional com login, que vê e altera só o que é
+//     dele (as telas filtram; o banco confere).
+export type PanelArea = "settings" | "own_settings" | "insurance" | "metrics" | "finance" | "relationship" | "shared";
+
+/** As seções de Configurações do profissional com login (MS, S1). */
+export const OWN_SETTINGS_SECTIONS = ["profissionais", "agendas", "horarios", "servicos"] as const;
 
 // A primeira que casa vale: Convênios antes de Configurações.
 const AREA_PREFIXES: [string, PanelArea][] = [
   ["/admin/configuracoes/convenios", "insurance"],
   ["/api/admin/configuracoes/convenios", "insurance"],
+  ...OWN_SETTINGS_SECTIONS.flatMap((section): [string, PanelArea][] => [
+    [`/admin/configuracoes/${section}`, "own_settings"],
+    [`/api/admin/configuracoes/${section}`, "own_settings"],
+  ]),
   ["/admin/configuracoes", "settings"],
   ["/api/admin/configuracoes", "settings"],
   ["/admin/metricas", "metrics"],
@@ -141,6 +153,7 @@ const AREA_PREFIXES: [string, PanelArea][] = [
 
 const AREA_ROLES: Record<PanelArea, ClinicRole[]> = {
   settings: ["admin"],
+  own_settings: ["admin"],
   insurance: ["admin"],
   metrics: ["admin", "professional"],
   finance: ["admin", "reception"],
@@ -157,10 +170,16 @@ const METRICS_TABS = FEATURES.filter((feature) => feature.area === "metrics" && 
 
 export function canAccessArea(context: AccessHolder, area: PanelArea): boolean {
   if (area === "insurance") return hasRole(context, "admin") || !!context.canManageInsurance;
+  if (area === "own_settings") return hasRole(context, "admin") || ownSettingsOnly(context);
   if (area === "finance" || area === "relationship") return hasRole(context, ...AREA_ROLES[area]) && (context.features ?? []).includes(area);
   if (area !== "metrics") return hasRole(context, ...AREA_ROLES[area]);
   const features = context.features ?? [];
   return metricsScope({ ...context, features }) !== "none" && METRICS_TABS.some((key) => features.includes(key));
+}
+
+/** Profissional com login sem ser Administrador: em Configurações, só o que é dele (MS, S1). */
+export function ownSettingsOnly(context: AccessHolder): boolean {
+  return !hasRole(context, "admin") && context.roles.includes("professional") && !!context.ownProfessionalId;
 }
 
 /** Pode abrir a rota: papel da área (D6) e item da matriz liberado para a clínica (D11). */

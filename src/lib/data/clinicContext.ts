@@ -45,7 +45,7 @@ export async function loadClinicContext(
   if (choice.kind === "choose") return { status: "choose_clinic" };
 
   const { clinicId } = choice;
-  const [clinic, settings, agendas, features] = await Promise.all([
+  const [clinic, settings, agendas, features, own] = await Promise.all([
     db.from("clinics").select("id, name, status").eq("id", clinicId).maybeSingle().then((r) => check("clínica", r)),
     db
       .from("clinic_settings")
@@ -55,6 +55,15 @@ export async function loadClinicContext(
       .then((r) => check("configuração", r)),
     db.from("agendas").select("id").eq("clinic_id", clinicId).order("name").then((r) => check("agendas", r)),
     db.from("clinic_features").select("feature_key").eq("clinic_id", clinicId).then((r) => check("matriz de acesso", r)),
+    // O profissional ativo ligado ao login (MS, S1): configura só o que é dele.
+    db
+      .from("professionals")
+      .select("id")
+      .eq("clinic_id", clinicId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .limit(1)
+      .then((r) => check("profissional do login", r)),
   ]);
 
   if (!clinic || !settings) {
@@ -82,6 +91,7 @@ export async function loadClinicContext(
       features: (features ?? []).map((row) => row.feature_key).filter(isFeatureKey),
       canSwitchClinic: isPlatformStaff || memberships.filter((membership) => membership.roles.length > 0).length > 1,
       canManageInsurance: memberships.find((membership) => membership.clinicId === clinicId)?.canManageInsurance ?? false,
+      ownProfessionalId: own?.[0]?.id ?? null,
     },
   };
 }

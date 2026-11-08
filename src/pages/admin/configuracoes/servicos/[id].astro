@@ -1,4 +1,5 @@
 ---
+import { ownSettingsOnly } from "../../../../lib/clinicAccess";
 // Configurações › Serviços › novo ou editar (F4.3, D4c): dados do serviço,
 // o profissional dono (MS, 07/nov/2026: um profissional ou a equipe, fixo
 // depois de criado) e locais em que é oferecido, com preço próprio opcional
@@ -40,6 +41,9 @@ const [services, agendas, locations, professionals] = await Promise.all([
 ]);
 const service = isNew ? null : (services.find((s) => s.id === id) ?? null);
 if (!isNew && !service) return Astro.redirect("/admin/configuracoes/servicos");
+// Profissional com login (MS, S1): só os serviços dele; o novo já é dele.
+const ownOnly = ownSettingsOnly(clinic);
+if (ownOnly && !isNew && service!.professionalId !== clinic.ownProfessionalId) return Astro.redirect("/admin/configuracoes/servicos");
 
 const examsOn = clinic.features.includes("exams");
 const categories = (["consultation", "return_visit", "exam"] as const).filter((c) => c !== "exam" || examsOn);
@@ -49,7 +53,7 @@ const fromTeamAgenda = isNew && examsOn && agendas.some((a) => a.kind === "resou
 const presetCategory = isNew && Astro.url.searchParams.get("tipo") === "retorno" ? "return_visit" : fromTeamAgenda ? "exam" : null;
 // Profissional dono (MS): escolhido ao criar (ou no serviço sem dono) e fixo
 // depois. Agrupado pela especialidade principal (clínicas com 10+ profissionais).
-const chooseOwner = isNew || !hasOwner(service!);
+const chooseOwner = !ownOnly && (isNew || !hasOwner(service!));
 const teamAgenda = agendas.find((a) => a.kind === "resource" && a.isActive) ?? null;
 const ownerGroups = ownerOptionGroups(professionals, { team: examsOn && !!teamAgenda });
 const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.priceCents]));
@@ -104,7 +108,11 @@ for (const w of serviceWindows) {
     ) : !isNew && !hasOwner(service!) ? (
       <NextStep text="Este serviço ficou sem profissional (era de nenhuma agenda). Escolha abaixo o profissional e salve; depois, reative." />
     ) : serviceIssues.includes("no_agenda") ? (
-      <NextStep text={`${ownerLabel(service!, professionals)} ainda não tem agenda: crie a agenda para o serviço aparecer para marcar.`} href={`/admin/configuracoes/agendas/novo?servico=${id}`} label="Criar a agenda" />
+      ownOnly ? (
+        <NextStep text="Sua agenda ainda não está ativa: o serviço só aparece para marcar com ela. Fale com o Administrador da clínica." />
+      ) : (
+        <NextStep text={`${ownerLabel(service!, professionals)} ainda não tem agenda: crie a agenda para o serviço aparecer para marcar.`} href={`/admin/configuracoes/agendas/novo?servico=${id}`} label="Criar a agenda" />
+      )
     ) : serviceIssues.includes("no_location") ? (
       <NextStep text="Marque abaixo o local deste serviço e salve. Depois, cadastre os horários." />
     ) : serviceIssues.includes("no_hours") && setup?.hoursReasons.has(id!) ? (
@@ -210,7 +218,10 @@ for (const w of serviceWindows) {
                 ))}
               </select>
             ) : (
-              <p class="mt-1 text-sm text-ink">{ownerLabel(service!, professionals)}</p>
+              <>
+                {ownOnly && isNew && <input type="hidden" name="owner" value={clinic.ownProfessionalId!} />}
+                <p class="mt-1 text-sm text-ink">{ownerLabel(service ?? { professionalId: clinic.ownProfessionalId, isTeam: false }, professionals)}</p>
+              </>
             )
           }
         </Field>

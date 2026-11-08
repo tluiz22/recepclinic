@@ -3,6 +3,7 @@ import type { FeatureKey } from "./features";
 import {
   areaOfPath,
   canAccessArea,
+  ownSettingsOnly,
   canAccessPath,
   chooseActiveClinic,
   expectsPage,
@@ -110,7 +111,7 @@ describe("papéis e áreas do painel (D6)", () => {
     expect(areaOfPath("/admin/configuracoes/convenios")).toBe("insurance");
     expect(areaOfPath("/api/admin/configuracoes/convenios/novo")).toBe("insurance");
     expect(areaOfPath("/admin/configuracoes")).toBe("settings");
-    expect(areaOfPath("/api/admin/configuracoes/servicos/1")).toBe("settings");
+    expect(areaOfPath("/api/admin/configuracoes/locais/1")).toBe("settings");
     expect(canAccessArea(as("admin"), "settings")).toBe(true);
     expect(canAccessArea(as("professional"), "settings")).toBe(false);
     expect(canAccessArea(as("reception"), "settings")).toBe(false);
@@ -126,6 +127,25 @@ describe("papéis e áreas do painel (D6)", () => {
     expect(canAccessPath({ ...as("reception"), features: on }, "/admin/configuracoes/convenios", new URLSearchParams())).toBe(false);
     expect(canAccessPath({ ...as("admin"), features: on }, "/admin/configuracoes/convenios", new URLSearchParams())).toBe(true);
     expect(canAccessPath({ ...allowed, features: [] }, "/admin/configuracoes/convenios", new URLSearchParams())).toBe(false);
+  });
+
+  it("o profissional com login configura o que é dele (MS, S1): Profissionais, Agendas, Horários e Serviços", () => {
+    expect(areaOfPath("/admin/configuracoes/servicos")).toBe("own_settings");
+    expect(areaOfPath("/api/admin/configuracoes/servicos/1")).toBe("own_settings");
+    expect(areaOfPath("/admin/configuracoes/horarios")).toBe("own_settings");
+    const linked = { ...as("professional"), ownProfessionalId: "p1" };
+    expect(ownSettingsOnly(linked)).toBe(true);
+    for (const path of ["/admin/configuracoes/profissionais/p1", "/admin/configuracoes/agendas", "/admin/configuracoes/horarios", "/admin/configuracoes/servicos/novo"]) {
+      expect(canAccessPath(linked, path, new URLSearchParams())).toBe(true);
+    }
+    expect(canAccessPath(linked, "/admin/configuracoes/locais", new URLSearchParams())).toBe(false);
+    expect(canAccessPath(linked, "/admin/configuracoes/equipe", new URLSearchParams())).toBe(false);
+    // Sem cadastro ligado ao login, ou na Recepção: nada de Configurações.
+    expect(canAccessPath(as("professional"), "/admin/configuracoes/servicos", new URLSearchParams())).toBe(false);
+    expect(canAccessPath({ ...as("reception"), ownProfessionalId: "p1" }, "/admin/configuracoes/servicos", new URLSearchParams())).toBe(false);
+    // Administrador que também é profissional: Configurações inteira.
+    expect(ownSettingsOnly({ ...as("admin", "professional"), ownProfessionalId: "p1" })).toBe(false);
+    expect(canAccessPath(as("admin"), "/admin/configuracoes/servicos", new URLSearchParams())).toBe(true);
   });
 
   it("Métricas e relatórios (D11): Administrador com aba liberada; Profissional só com as métricas pessoais", () => {
