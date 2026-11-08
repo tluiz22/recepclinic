@@ -673,6 +673,22 @@ exceção à regra de 07/nov do financeiro direto na `main`), uma etapa por vez,
 e Playwright ao fim de cada etapa; tudo contra o Sandbox do Asaas; **nada no staging** (validação local pelo cliente
 no fim). N6 depois da N0.
 
+## 15. Implementação N1 a N5 (branch `nota-fiscal`, 07/nov/2026)
+
+Cada etapa: código + migração local + testes de unidade e de banco + Playwright no `npm run dev` (390 px e 1280 px),
+commit na branch. Asaas falso (`src/lib/asaas/fake.ts`) nos testes; Sandbox só em conferência manual.
+
+| Etapa | Entrega |
+|---|---|
+| **N1** | `src/lib/asaas/http.ts` (cliente comum: timeout 60 s, erros, máscara de chave/CPF/CNPJ nos logs) usado pelo faturamento; `accountsApi.ts` (conta principal: criar subconta, situação, transferência para a subconta); `fiscalApi.ts` (chave da subconta: `municipalOptions`, `fiscalInfo`, tomador, nota, autorizar, cancelar, consultar, saldo); Asaas falso para os testes. Sem tela. |
+| **N2a** | Banco: `fiscal_issuers` (emissor da clínica e dos profissionais com CNPJ; dados fiscais, subconta, chave e token do webhook no Vault, `municipal_options`, situação, emissão ligada, pagador `clinic`/`professional`, suspensão por inadimplência), `professional_fiscal_routes` (N-P1: profissional sem CNPJ emite pela clínica ou não emite), `fiscal_issuer_service_codes` (código por serviço e emissor); cópia da `clinic_fiscal_settings` para o emissor da clínica; RLS: Administrador e o próprio profissional (N-P2), Suporte cria a subconta. |
+| **N2b** | Servidor e telas: Configurações › Nota fiscal com a lista de emissores (busca e filtro, clínica grande), escolha por profissional (próprio CNPJ, pela clínica, não emite), página do emissor (dados fiscais, regras do município, certificado direto ao Asaas, situação, habilitar), selo do Asaas; Suporte cria a subconta; o profissional com login vê só o emissor dele. |
+| **N3a** | Tomador: e-mail e endereço de quem paga (decisão de 29/out) no cartão Financeiro do contato/paciente, na pessoa "outra" e no pagamento. |
+| **N3b** | Emissão pelo Asaas: emissor do atendimento (`agendas.professional_id` → rota), reposição do saldo da subconta, tomador na subconta, nota com `externalReference`, autorizar; cancelamento (Administrador e profissional dono); webhook `/api/asaas/notas` (token por subconta, `nfse_provider_events`, confirmação por `GET`); conciliação na rotina `notas-fiscais`; tela do pagamento. |
+| **N4** | PDF e XML do Asaas copiados para o bucket privado; entrega só pelo WhatsApp (`rc_nota_fiscal_v1`) pela saída de entregas, idempotente. |
+| **N4b** | Contrato de notas do profissional pagador (taxa mensal + preço por nota + franquia, N-P4; aceite com login, N-P6), conta de cobrança dele; apuração mensal por pagador (dono "junto da clínica" soma na franquia da clínica, N-P3); cobrança avulsa (clínica: excedente; profissional: taxa + excedente); inadimplência suspende só aquele emissor (N-P5); telas "Minhas notas e cobranças", Assinatura (detalhamento por emissor) e Suporte (valores do contrato do profissional). |
+| **N5** | Desligar e remover o emissor antigo (DPS, assinatura, Sefin, simulação, certificado no Vault, contador da DPS); `EXECUTE` revogado; teste que barra import de `src/lib/nfse/client.ts`. |
+
 ## Fontes (consultadas em 29/out/2026)
 
 - Asaas: [Notas fiscais](https://docs.asaas.com/docs/notas-fiscais), [FAQ](https://docs.asaas.com/docs/faq-de-notas-fiscais),
