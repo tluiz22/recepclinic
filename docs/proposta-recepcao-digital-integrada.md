@@ -2,7 +2,7 @@
 
 > **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17). **Etapa 2 (design)
 > autorizada em 08/nov**: 1ª rodada, portal no celular (P1 a P10, 13 telas) no canvas
-> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). P3 mista, ficha aprovada, P4 retirada (dados do médico na P5 e P6); aguardando a conferência do cliente. Depois: portal em
+> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). P3 mista, ficha aprovada, P4 retirada; **P1 a P6 aprovadas**; avaliando P7 em diante com o cliente. Depois: portal em
 > 1280 px, P11 a P13 e o painel da recepção (R1 a R7). Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
@@ -557,4 +557,4 @@ Escolhas do cliente (08/nov): **P3 mista** (cartão A até 5 médicos na especia
 "Avisar a recepção" (médico sem horário fica visível só com "Sem horário nos próximos 60 dias", sem toque); **P4
 retirada da jornada** (P3 → P5); os dados do profissional da P4 (foto, nome, CRM, especialidades, local com "Ver no
 mapa", orientações) entram no topo da P5 e da P6, com "Trocar"; a P6 também mostra a observação do convênio escolhido
-e "Ver valores e convênios aceitos" (fechado).
+e "Ver valores e convênios aceitos" (fechado). **P1 a P6 aprovadas pelo cliente (08/nov).** P7 em diante: em avaliação.
