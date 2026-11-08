@@ -64,7 +64,7 @@ describe("API do Asaas (F12.4)", () => {
   it("erro do Asaas vira mensagem legível", async () => {
     const api = asaasBillingApi(env, fakeFetch({ "/payments": { errors: [{ code: "invalid_dueDate", description: "Data de vencimento inválida" }] } }, [], 400));
     await expect(api.createPayment({ customer: "c", billingType: "PIX", valueCents: 100, dueDate: "2020-01-01", description: "d", externalReference: "e" })).rejects.toThrow(
-      new AsaasApiError(400, "Asaas recusou (400): Data de vencimento inválida"),
+      new AsaasApiError(400, "Asaas recusou (400): Data de vencimento inválida", ["invalid_dueDate"]),
     );
   });
 });
