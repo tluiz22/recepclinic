@@ -2,7 +2,7 @@
 
 > **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17). **Etapa 2 (design)
 > autorizada em 08/nov**: 1ª rodada, portal no celular (P1 a P10, 13 telas) no canvas
-> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). P3 mista, ficha aprovada, P4 retirada; **P1 a P6 aprovadas**; avaliando P7 em diante com o cliente. Depois: portal em
+> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). P3 mista, ficha aprovada, P4 retirada; **P1 a P8 aprovadas** (P7 do WhatsApp retirada); avaliando P8b, P9 e P10. Depois: portal em
 > 1280 px, P11 a P13 e o painel da recepção (R1 a R7). Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
@@ -563,4 +563,4 @@ e código. "Usar outro número" no caminho do WhatsApp manda o código ao númer
 final 4321" para quem não está com aquele celular (volta ao número da conversa sem perder as escolhas).
 **P7 do WhatsApp retirada (cliente, 08/nov):** quem vem pelo link vai da P6 direto à P8, que mostra no topo
 "Confirmação no WhatsApp final 4321" com "Usar outro número" (abre a tela do código para o número novo). A P7 com
-celular e código fica só para a entrada direta.
+celular e código fica só para a entrada direta. **P7, "Outro número" e P8 aprovadas (08/nov).**
