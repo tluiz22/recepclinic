@@ -2,8 +2,8 @@
 
 > **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 revista).
 > **Etapa 2 (design):** rodada 1 (portal no celular, P1 a P10) **aprovada** no canvas
-> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Próximo: rodada 2 (portal em 1280 px, P11 a P13),
-> com o OK do cliente; depois o painel da recepção (R1 a R7). Nenhum código mudou.
+> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Rodada 2 (1280 px, P11 a P13) no canvas, aguardando o
+> cliente; depois o painel da recepção (R1 a R7). Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
@@ -575,3 +575,12 @@ data cadastrada; a consulta vai para o cadastro existente e a recepção vê o s
 "Vamos marcar a consulta no cadastro de {nome completo}. Para corrigir a data de nascimento do cadastro, fale com a
 recepção no dia da consulta. Avisamos a recepção que você informou {data}." (o portal não altera o cadastro; o selo
 leva a data informada). **Rodada 1 aprovada pelo cliente (08/nov): P1 a P10 no celular.**
+
+**Rodada 2 (08/nov/2026), portal no computador + P11 a P13 no celular.** Mesmo canvas. Computador (1280 px): P1, P3,
+P6 e P9 numa coluna de 1040 px; a ficha vira a coluna "Seu agendamento" à direita (itens a escolher em itálico), que
+leva também o botão de seguir (no lugar da barra fixa do celular); P3 em duas colunas de cartões; P6 com 7 dias na
+faixa e 6 horários por linha; P9 com o cartão de data e hora ao lado das linhas, e o tempo, as orientações e o
+Confirmar na coluna da direita. Celular: P11 em folha sobre a tela (mensagem pronta com o código da sessão, botão
+"Abrir conversa no WhatsApp", telefone da recepção em texto); P12 com as consultas do número (nome completo,
+Remarcar/Cancelar; dentro do prazo, só "Falar com a recepção") e a confirmação do cancelamento; P13 "já usado" (só
+primeiro nome e data, porque o telefone não foi comprovado) e "vencido". Escolhas do cliente: pendentes.
