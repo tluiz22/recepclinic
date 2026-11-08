@@ -170,10 +170,14 @@ export async function getService(db: DbClient, clinicId: string, id: string): Pr
   );
 }
 
+export const EXAM_TEAM_ONLY = "Serviços do tipo exame ficam na agenda de Exames (Equipe), não na agenda do profissional.";
+
 export function validateOwner(owner: ServiceOwner | null, category: ServiceCategory) {
   const v = new Validation();
   v.check(owner !== null, "owner", "Escolha o profissional do serviço");
   v.check(!owner || !("team" in owner) || category === "exam", "owner", "A equipe só atende exames");
+  // Exame só na agenda de Exames (cliente, 08/nov/2026): a equipe e os profissionais se organizam juntos nos exames.
+  v.check(!owner || "team" in owner || category !== "exam", "category", EXAM_TEAM_ONLY);
   v.throwIfInvalid("Serviço");
   return ownerColumns(owner!);
 }

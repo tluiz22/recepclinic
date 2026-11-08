@@ -44,7 +44,7 @@ Não são validação de tela; ficam aqui para não se perderem.
      Teste `tests/db/horarios-com-o-servico.test.ts`. Validar: serviço com horário próprio › Desativar (o aviso diz
      quantos horários) › Horários (sumiram) › Reativar (voltam).
   2. Boas-vindas do bot com o nome de quem já é cadastrado: **feito** (main). Decisões do cliente (08/nov): primeiro nome do contato; no texto próprio da clínica, o campo `{nome}` (sem cadastro, some com a vírgula da frente); número sem cadastro, a mensagem de antes.
-  3. Menu do profissional sem exames e Informações gerais sem exames (com vários profissionais): a fazer.
+  3. Menu do profissional sem exames e Informações gerais sem exames: **feito** (main, migração 20270101150000). Regra do cliente: exame sempre na agenda de Exames, em todas as clínicas. Detalhe: `planejamento-multiprofissional.md`, seção 13.
   4. Perfil, prazo para oferecer horários e idade limite por profissional: **feito** (main, migração 20270101140000). Decisões e roteiro: `planejamento-multiprofissional.md`, seção 12.
 - **08/nov, fotos (pedido do cliente):** cartão "Foto" no cadastro do profissional e no da pessoa da Equipe (PNG, JPG
   ou WebP até 4 MB; bucket privado `profile-photos`; o Administrador envia para todos, o profissional com login a

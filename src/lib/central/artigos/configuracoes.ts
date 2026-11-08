@@ -94,7 +94,7 @@ export const configuracoesArtigos = [
     fields: [{ name: "Migrar para outra agenda", text: "Na agenda aberta, o botão Migrar horários e atendimentos passa os horários de atendimento e os atendimentos de hoje em diante para outra agenda ativa (só o Administrador). Você marca os serviços que migram (já vêm marcados os que a nova agenda atende; o resto, como Consulta e Retorno numa agenda de exames, fica na antiga) e vê quantos são antes de confirmar. O histórico fica na antiga, o paciente não recebe aviso e cada atendimento guarda a troca no Histórico." }],
     notes: [
       "A agenda tem sempre o nome do profissional: renomeado em Profissionais, ela muda junto (na Agenda, no link de agendamento e nas mensagens).",
-      "A agenda da equipe atende os exames que não são de um profissional cadastrado; a clínica só pode ter uma, e ela só atende serviços do tipo exame. Seu nome é sempre \"Exames\". Ela é criada sozinha quando o item \"Exames e procedimentos\" é liberado, e fica desativada quando o item é desligado.",
+      "Todo exame fica na agenda da equipe (cliente, 08/nov/2026: nenhum exame na agenda de um profissional); a clínica só pode ter uma, e ela só atende serviços do tipo exame. Seu nome é sempre \"Exames\". Ela é criada sozinha quando o item \"Exames e procedimentos\" é liberado, e fica desativada quando o item é desligado.",
       "O tipo e o profissional não mudam depois de criada.",
       "Perfil e prazo para oferecer horários: os do profissional ficam no cadastro dele (cartão Atendimento); os da Equipe, no cartão Atendimento da agenda \"Exames\".",
       "Se um atendimento migrado cairia sobre outro já marcado na agenda nova (exame não conflita), ele fica na antiga e a tela avisa quem é, para você remarcar ou alterar.",
@@ -123,7 +123,7 @@ export const configuracoesArtigos = [
       { name: "Prazo do retorno (dias)", text: "Contado da última consulta na mesma agenda. Vazio é sem prazo." },
       { name: "Como é marcado (exame)", text: "Individual (um paciente por horário) ou Em turma (vários no mesmo horário, até o número de vagas, definido em Horários)." },
       { name: "Preparo", text: "Texto e/ou arquivo. Vai uma vez só pelo WhatsApp, logo depois que a confirmação da marcação chega ao paciente; o bot também manda quando ele pede. Se não chegou, use Reenviar preparo na Agenda." },
-      { name: "Profissional", text: "Dono do serviço: duração, valor e locais valem só para ele. \"Equipe (exames)\" só no tipo Exame. Não muda depois de criado; para outro profissional, cadastre um serviço novo. O profissional com login cadastra e edita os serviços dele." },
+      { name: "Profissional", text: "Dono do serviço: duração, valor e locais valem só para ele. Exame é sempre da \"Equipe (exames)\", na agenda de Exames: a equipe e os profissionais se organizam juntos nos exames (o profissional que tenta cadastrar exame recebe o aviso). Não muda depois de criado; para outro profissional, cadastre um serviço novo. O profissional com login cadastra e edita os serviços dele." },
       { name: "Locais", text: "O serviço aparece para marcar na agenda do profissional dele, nos locais marcados aqui." },
     ],
     notes: [

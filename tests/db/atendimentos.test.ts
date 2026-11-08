@@ -139,14 +139,15 @@ describe("trava de horário por agenda (D2)", () => {
 });
 
 describe("exame em paralelo (cliente, 28/out/2026)", () => {
-  it("exame individual e consulta no mesmo horário da mesma agenda; dois exames também", async () => {
+  it("dois exames no mesmo horário da agenda de Exames; consulta no mesmo horário segue livre (exame só na agenda de Exames, 08/nov/2026)", async () => {
+    const { data: team } = await adminClient().from("agendas").select("id").eq("clinic_id", clinicA).eq("kind", "resource").single();
     const examJoao = await insert("services", { clinic_id: clinicA, name: "Eletrocardiograma", category: "exam", duration_minutes: 20, price_cents: 9000 });
-    await link("service_agendas", { clinic_id: clinicA, service_id: examJoao, agenda_id: a.agendaJoao });
+    await link("service_agendas", { clinic_id: clinicA, service_id: examJoao, agenda_id: team!.id });
     const at = MONDAY("18:00");
 
     const exam = await receptionA.client
       .from("appointments")
-      .insert(appointment({ service_id: examJoao, scheduled_at: at, duration_minutes: 20 }))
+      .insert(appointment({ service_id: examJoao, agenda_id: team!.id, scheduled_at: at, duration_minutes: 20 }))
       .select("is_exam")
       .single();
     expect(exam.error).toBeNull();
@@ -157,7 +158,7 @@ describe("exame em paralelo (cliente, 28/out/2026)", () => {
 
     const secondExam = await receptionA.client
       .from("appointments")
-      .insert(appointment({ patient_id: a.patient3, service_id: examJoao, scheduled_at: at, duration_minutes: 20 }));
+      .insert(appointment({ patient_id: a.patient3, service_id: examJoao, agenda_id: team!.id, scheduled_at: at, duration_minutes: 20 }));
     expect(secondExam.error).toBeNull();
 
     // Duas consultas continuam travadas.

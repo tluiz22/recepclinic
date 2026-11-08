@@ -58,7 +58,7 @@ const CHOOSE_PROFESSIONAL: FlowItem[] = [
   ),
   bot(
     "Daqui em diante, tudo no contexto dele",
-    "Serviços, valores, formas de pagamento, convênios e observações do profissional escolhido. O menu ganha \"Outro profissional\" (volta à especialidade). Remarcar e cancelar mostram todos os atendimentos do paciente. A escolha vale até a conversa recomeçar.",
+    "Serviços, valores, formas de pagamento, convênios e observações do profissional escolhido, sem exames: exame fica sempre na agenda de Exames, na opção \"Exames\" da pergunta da especialidade (cliente, 08/nov/2026; o \"quero marcar exame\" leva para lá). O menu ganha \"Outro profissional\" (volta à especialidade). Remarcar e cancelar mostram todos os atendimentos do paciente. A escolha vale até a conversa recomeçar.",
   ),
 ];
 

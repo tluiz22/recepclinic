@@ -61,15 +61,11 @@ describe("escopo do profissional (MB)", () => {
     expect(professionalsOf(scope, NO_SPECIALTY).map((p) => p.id)).toEqual(["novo"]);
   });
 
-  it("escolha guardada: o catálogo só com os serviços dele e os exames da equipe; Exames: só exames", () => {
+  it("escolha guardada: o catálogo só com os serviços dele, sem exames (cliente, 08/nov/2026); Exames: só exames", () => {
     const scope = buildScope(catalog, { [PROFESSIONAL_KEY]: "joao" });
     expect(scope.current?.id).toBe("joao");
     const scoped = scopeCatalog(catalog, scope);
-    expect(scoped.services.map((s) => [s.id, s.agendas.map((a) => a.id)])).toEqual([
-      ["consulta", ["a-joao"]],
-      ["eco", ["a-joao"]],
-      ["raio", ["a-exames"]],
-    ]);
+    expect(scoped.services.map((s) => [s.id, s.agendas.map((a) => a.id)])).toEqual([["consulta", ["a-joao"]]]);
     const exams = scopeCatalog(catalog, buildScope(catalog, { [PROFESSIONAL_KEY]: EXAMS_CHOICE }));
     // Serviços da equipe (MS, S3): em "Exames", só os da agenda sem profissional (o eco é do Dr. João).
     expect(exams.services.map((s) => s.id)).toEqual(["raio"]);

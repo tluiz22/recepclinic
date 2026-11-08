@@ -51,7 +51,7 @@ export function buildScope(catalog: BotCatalog, context: unknown): ProfessionalS
   return { professionals, multi, choice: multi ? choice : null, current, examsOption };
 }
 
-/** O catálogo no contexto da escolha: os serviços do profissional (e os de agenda sem profissional); em "Exames", só os exames. */
+/** O catálogo no contexto da escolha: os serviços do profissional, sem exames; em "Exames", só os exames. */
 export function scopeCatalog(catalog: BotCatalog, scope: ProfessionalScope): BotCatalog {
   if (!scope.multi || !scope.choice) return catalog;
   if (scope.choice === EXAMS_CHOICE) {
@@ -68,10 +68,13 @@ export function scopeCatalog(catalog: BotCatalog, scope: ProfessionalScope): Bot
     return { ...catalog, services, copies: team(catalog.copies) };
   }
   const id = scope.choice;
+  // Exame só na agenda de Exames (cliente, 08/nov/2026): o menu e as Informações gerais do profissional ficam sem
+  // exames; eles estão em "Exames", na pergunta da especialidade.
   const mine = (list: BotCatalog["services"]) =>
     list
-      .map((s) => ({ ...s, agendas: s.agendas.filter((a) => a.professionalId === id || !a.professionalId) }))
-      .filter((s) => s.agendas.some((a) => a.professionalId === id) || (s.category === "exam" && s.agendas.length > 0));
+      .filter((s) => s.category !== "exam")
+      .map((s) => ({ ...s, agendas: s.agendas.filter((a) => a.professionalId === id) }))
+      .filter((s) => s.agendas.length > 0);
   // Serviços por profissional (MS): a opção do menu usa os dados da cópia dele (valor, preparo).
   const services = mine(catalog.services).map((s) => {
     const own = s.agendas.find((a) => a.professionalId === id);

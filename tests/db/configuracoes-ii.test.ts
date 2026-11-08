@@ -198,7 +198,9 @@ describe("item desligado depois de criado (ajuste da validação, 05/out)", () =
   it("domiciliar e exame já gravados não entram em serviço nem em horário novo; o já ligado fica guardado", async () => {
     const home = await createLocation(db(admin), clinicId, { name: "Domiciliar", type: "home_visit", address: null });
     const service = await createService(db(admin), clinicId, { name: "Consulta", category: "consultation", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" }, { professionalId: doctorB.id });
-    const exam = await createService(db(admin), clinicId, { name: "Exame", category: "exam", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" }, { professionalId: doctorB.id });
+    // Exame só na agenda de Exames (cliente, 08/nov/2026): da Equipe.
+    const exam = await createService(db(admin), clinicId, { name: "Exame", category: "exam", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" }, { team: true });
+    const { data: team } = await adminClient().from("agendas").select("id").eq("clinic_id", clinicId).eq("kind", "resource").single();
     await setServiceLocations(db(admin), clinicId, service.id, [{ locationId: home.id, priceCents: null }]);
 
     const { data: all } = await adminClient().from("features").select("key");
@@ -213,7 +215,7 @@ describe("item desligado depois de criado (ajuste da validação, 05/out)", () =
 
       const window = { agendaId: agendaB.id, serviceId: null, startTime: "18:00", endTime: "19:00", capacity: null };
       expect(await codeOf(() => addAvailabilityWindows(db(admin), clinicId, { ...window, locationId: home.id }, [6]))).toBe("not_enabled");
-      expect(await codeOf(() => addAvailabilityWindows(db(admin), clinicId, { ...window, locationId: office.id, serviceId: exam.id }, [6]))).toBe("not_enabled");
+      expect(await codeOf(() => addAvailabilityWindows(db(admin), clinicId, { ...window, agendaId: team!.id, locationId: office.id, serviceId: exam.id }, [6]))).toBe("not_enabled");
     } finally {
       await adminClient().rpc("set_clinic_features", { p_clinic_id: clinicId, p_features: all!.map((row) => row.key as string) });
     }

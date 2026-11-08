@@ -303,3 +303,35 @@ passam a ser de cada profissional.
 7. WhatsApp: com o prazo de 30 dias, o bot só oferece horários até 30 dias; com perfil Pediátrica, a consulta não
    pergunta "para quem é".
 
+## 13. Exame só na agenda de Exames (cliente, 08/nov/2026; item 3 da validação)
+
+**Pedido:** com mais de um profissional, o menu do profissional não oferece exames (estão em "Exames", na pergunta da
+especialidade) e as Informações gerais dele não trazem valores nem informações de exame.
+
+**Decisões do cliente (08/nov):**
+1. "Exames será sempre na agenda de exames. O profissional faz parte da equipe e a equipe se organiza junto com os
+   profissionais para tratar os exames." O profissional que tenta cadastrar exame recebe o aviso.
+2. Vale para **todas** as clínicas, também as de um profissional só.
+3. Os exames que já estavam na agenda de um profissional **passam para a agenda de Exames**, com os horários e os
+   atendimentos futuros.
+
+**Como ficou:**
+- Migração `20270101150000_exame_so_na_agenda_de_exames.sql`: move cada exame de profissional para a agenda de Exames
+  (criada ou reativada onde faltar): horários só dele, cópia dos horários "todos os serviços" da agenda do profissional
+  (só para o exame), atendimentos futuros, séries em andamento e links. O histórico fica. Daqui em diante, o banco
+  recusa exame de profissional (`services_exam_team_only`).
+- Serviço novo: tipo Exame põe "Equipe (exames)" e desabilita os profissionais, com o aviso; o servidor recusa e mostra
+  a mensagem no campo Tipo.
+- Bot: o catálogo do profissional escolhido fica sem exames (menu e Informações gerais); "quero marcar exame" com um
+  profissional escolhido passa para "Exames".
+- Staging, antes da migração: Odonto Sorriso Leve, Clareamento, Limpeza e Restauração (19 atendimentos futuros); Clínica
+  Exemplo Saúde, Espirometria e Exame com Arquivo (desativados). **Produção:** listar antes de aplicar (o Claude mostra
+  a lista ao cliente).
+
+**Roteiro no staging:**
+1. Odonto Sorriso Leve › Configurações › Serviços: Clareamento, Limpeza e Restauração em "Equipe (exames)"; Horários da
+   agenda Exames com os horários copiados; Agenda: os atendimentos futuros desses exames na agenda Exames.
+2. Novo serviço, tipo Exame: o profissional vira "Equipe (exames)" e aparece o aviso.
+3. WhatsApp (clínica com mais de um profissional): escolhido o profissional, o menu fica sem "Exames"; Informações
+   gerais › Valores sem exames; "quero marcar exame" leva aos exames.
+

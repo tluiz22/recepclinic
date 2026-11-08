@@ -122,7 +122,8 @@ describe("bot com mais de um profissional (MB)", () => {
     expect(titles(reply)).toEqual(["1. Cardiologia", "2. Pediatria", "3. Exames"]);
     reply = await say(phone, "1");
     expect(bodies(reply)[0]).toBe("Atendimento com *Dr. Segundo* (Cardiologia).");
-    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais", "4. Outro profissional"]);
+    // Exame só na agenda de Exames (cliente, 08/nov/2026): o menu do profissional fica sem "Exames".
+    expect(titles(reply)).toEqual(["1. Consultas", "2. Informações gerais", "3. Outro profissional"]);
     // Consultas › Marcar consulta: só a agenda dele, sem "Com qual profissional?".
     await say(phone, "1");
     reply = await say(phone, "1");
@@ -155,10 +156,12 @@ describe("bot com mais de um profissional (MB)", () => {
     await say(phone, "Oi");
     await say(phone, "2");
     let reply = await say(phone, "Dra. Agenda");
-    reply = await say(phone, "3");
+    reply = await say(phone, "2");
     expect(titles(reply)).toEqual(["1. Valores", "2. Convênios", "3. Endereço", "4. Outras informações", "5. Voltar ao menu"]);
     reply = await say(phone, "1");
     expect(reply[0].body).toContain("*Formas de pagamento*\nCartão em até 3x.");
+    // Sem valores de exame (cliente, 08/nov/2026): ficam em "Exames".
+    expect(reply[0].body).not.toMatch(/Exame/);
     reply = await say(phone, "2");
     expect(reply[0].body).toBe("Convênios atendidos por *Dra. Agenda*: Unimed.");
     reply = await say(phone, "4");
@@ -169,7 +172,7 @@ describe("bot com mais de um profissional (MB)", () => {
     reply = await say(phone, { id: optionId(reply, "Outro profissional") });
     expect(reply.at(-1)!.body).toBe("Para qual especialidade é o atendimento?");
     await say(phone, "1");
-    reply = await say(phone, "3");
+    reply = await say(phone, "2");
     expect(titles(reply)).toEqual(["1. Valores", "2. Convênios", "3. Endereço", "4. Voltar ao menu"]);
     reply = await say(phone, "1");
     expect(reply[0].body).toContain("*Formas de pagamento*\nSó Pix.");

@@ -228,6 +228,15 @@ for (const w of serviceWindows) {
           }
         </Field>
         {chooseOwner && ownerGroups.length === 0 && <p class="mt-2 text-sm text-ink-soft">Nenhum profissional cadastrado ainda.</p>}
+        {/* Exame só na agenda de Exames (cliente, 08/nov/2026). */}
+        {
+          isNew && (
+            <p class="mt-2 rounded-lg border border-pend-200 bg-pend-50 px-3 py-2 text-sm text-pend-800" data-only="exam" data-exam-note role="note">
+              Serviços do tipo exame ficam na agenda de Exames (Equipe): a equipe e os profissionais se organizam juntos nos exames.
+              {ownOnly ? " Peça ao Administrador para cadastrar o exame." : teamAgenda ? "" : " Crie a agenda de Exames em Agendas."}
+            </p>
+          )
+        }
       </div>
 
       <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">
@@ -322,12 +331,16 @@ for (const w of serviceWindows) {
       form?.querySelectorAll<HTMLElement>("[data-only]").forEach((el) => {
         el.hidden = el.dataset.only !== category;
       });
-      // A equipe só atende exames (cliente, 21/out/2026).
+      // A equipe só atende exames (cliente, 21/out/2026), e exame só na agenda de Exames (08/nov/2026).
       const team = owner?.querySelector<HTMLOptionElement>("option[data-team]");
       if (team) {
         team.disabled = category !== "exam";
         if (team.disabled && team.selected) owner!.value = "";
       }
+      owner?.querySelectorAll<HTMLOptionElement>("option[value]:not([data-team])").forEach((option) => {
+        if (option.value) option.disabled = category === "exam";
+      });
+      if (owner && category === "exam" && team) owner.value = team.value;
     };
     select?.addEventListener("change", sync);
     sync();

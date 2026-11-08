@@ -8,7 +8,7 @@ export const configuracoes = {
     servicoTipo: [
       { termo: "Consulta", texto: "atendimento comum." },
       { termo: "Retorno", texto: "volta ligada a uma consulta anterior, com prazo e valor próprios." },
-      { termo: "Exame", texto: "pode ter preparo e ser em turma, com vagas por horário." },
+      { termo: "Exame", texto: "fica sempre na agenda de Exames (Equipe); pode ter preparo e ser em turma, com vagas por horário." },
     ],
     // Só exames têm o modo (data-only="exam"); as vagas ficam no horário (capacity, configuracoes/horarios.astro).
     servicoModo: [
