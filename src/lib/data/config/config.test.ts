@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DataError, fromDbError } from "../errors";
-import { validateAgenda } from "./agendas";
+import { validateAgenda, validateAgendaAttendance } from "./agendas";
 import { findWindowConflict, type AvailabilityWindow } from "./availability";
 import { validateClinicSettingsPatch } from "./clinic";
 import { professionalAcceptsPlan, validateInsurancePlan } from "./insurance";
@@ -169,36 +169,40 @@ describe("configuração da clínica", () => {
     expect(validateClinicSettingsPatch({})).toEqual({});
   });
 
-  it("como a clínica é chamada e prazo para oferecer horários (cliente, 11/out/2026)", () => {
-    expect(validateClinicSettingsPatch({ messageNoun: "  espaço   de  saúde ", messageNounArticle: "o", bookingHorizonDays: 90 })).toEqual({
+  it("como a clínica é chamada (cliente, 11/out/2026)", () => {
+    expect(validateClinicSettingsPatch({ messageNoun: "  espaço   de  saúde ", messageNounArticle: "o" })).toEqual({
       messageNoun: "espaço de saúde",
       messageNounArticle: "o",
-      bookingHorizonDays: 90,
     });
-    expect(Object.keys(fieldsOf(() => validateClinicSettingsPatch({ messageNoun: " ", messageNounArticle: "os" as never, bookingHorizonDays: 6 }))).sort()).toEqual([
-      "bookingHorizonDays",
+    expect(Object.keys(fieldsOf(() => validateClinicSettingsPatch({ messageNoun: " ", messageNounArticle: "os" as never }))).sort()).toEqual([
       "messageNoun",
       "messageNounArticle",
     ]);
-    expect(Object.keys(fieldsOf(() => validateClinicSettingsPatch({ messageNoun: "x".repeat(41), bookingHorizonDays: 366 }))).sort()).toEqual(["bookingHorizonDays", "messageNoun"]);
+    expect(Object.keys(fieldsOf(() => validateClinicSettingsPatch({ messageNoun: "x".repeat(41) })))).toEqual(["messageNoun"]);
   });
 
-  it("recusa fuso, hora, idade e cor inválidos", () => {
-    expect(
-      fieldsOf(() =>
-        validateClinicSettingsPatch({ timezone: "Fortaleza", reminderHour: 24, consultationAgeLimitYears: 0, brandColor: "verde", name: "" }),
-      ),
-    ).toEqual({
+  it("recusa fuso, hora e cor inválidos", () => {
+    expect(fieldsOf(() => validateClinicSettingsPatch({ timezone: "Fortaleza", reminderHour: 24, brandColor: "verde", name: "" }))).toEqual({
       name: "Informe o nome da clínica",
       timezone: "Fuso horário inválido",
-      consultationAgeLimitYears: "Idade limite em anos inteiros, maior que 0",
       reminderHour: "Horário do lembrete das 6h às 20h",
       brandColor: "Cor no formato #RRGGBB",
     });
   });
 
-  it("idade limite pode ser desligada (null)", () => {
-    expect(validateClinicSettingsPatch({ consultationAgeLimitYears: null })).toEqual({ consultationAgeLimitYears: null });
+  it("atendimento do profissional: perfil, prazo de 7 a 365 dias e idade limite (ou sem limite; cliente, 08/nov/2026)", () => {
+    const ok = { profile: "pediatric" as const, bookingHorizonDays: 90, consultationAgeLimitYears: 14 };
+    expect(validateAgendaAttendance(ok)).toEqual(ok);
+    expect(validateAgendaAttendance({ ...ok, consultationAgeLimitYears: null })).toEqual({ ...ok, consultationAgeLimitYears: null });
+    expect(Object.keys(fieldsOf(() => validateAgendaAttendance({ profile: "x" as never, bookingHorizonDays: 6, consultationAgeLimitYears: 0 }))).sort()).toEqual([
+      "bookingHorizonDays",
+      "consultationAgeLimitYears",
+      "profile",
+    ]);
+    expect(Object.keys(fieldsOf(() => validateAgendaAttendance({ ...ok, bookingHorizonDays: 366, consultationAgeLimitYears: Number.NaN }))).sort()).toEqual([
+      "bookingHorizonDays",
+      "consultationAgeLimitYears",
+    ]);
   });
 
   it("nas mensagens, só \"da\" ou \"do\" antes do nome (F6.2)", () => {

@@ -162,6 +162,8 @@
 > `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
 >
 > **Pendências**
+> - **Limpeza (item 4, 08/nov):** `clinic_settings.booking_horizon_days` e `consultation_age_limit_years` sem uso; migração
+>   para tirar depois da produção.
 > - **Fotos (cliente, 08/nov):** cadastradas no profissional e na pessoa da Equipe; onde mostrar fora do cadastro fica
 >   para uma etapa posterior, a planejar ([`frente-validacao.md`](frente-validacao.md), registro).
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.

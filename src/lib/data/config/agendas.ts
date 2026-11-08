@@ -1,6 +1,7 @@
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors";
+import { BOOKING_HORIZON_MAX, BOOKING_HORIZON_MIN, CLINIC_PROFILES, type ClinicProfile } from "./clinic";
 
 // Agendas (D2): de um profissional ou da equipe (ex.: "Exames"), e o
 // acesso de cada membro a elas (D6 revista). A listagem já vem filtrada pelo
@@ -17,13 +18,26 @@ export type Agenda = {
   /** Intervalo entre atendimentos desta agenda, em minutos. */
   bufferMinutes: number;
   isActive: boolean;
+} & AgendaAttendance;
+
+/**
+ * Atendimento do profissional ou da Equipe (cliente, 08/nov/2026; antes, da clínica): perfil (palavras do bot e do
+ * link de agendar), prazo para oferecer horários e idade limite da Consulta. Ficam na agenda (uma por profissional,
+ * no máximo uma da Equipe); o perfil da clínica sai dos perfis das agendas ativas (o banco calcula).
+ */
+export type AgendaAttendance = {
+  profile: ClinicProfile;
+  /** Prazo para oferecer horários, em dias (bot e link de agendar; 7 a 365). */
+  bookingHorizonDays: number;
+  /** Idade a partir da qual não marca Consulta (só Retorno/Exame); null = sem limite. */
+  consultationAgeLimitYears: number | null;
 };
 
 // Sem nome (cliente, 06/nov/2026): a de um profissional tem sempre o nome dele e a da equipe, "Exames"; quem grava o
 // nome é o banco (app.check_team_agenda), também quando o profissional é renomeado.
-export type AgendaInput = Omit<Agenda, "id" | "isActive" | "name">;
+export type AgendaInput = Omit<Agenda, "id" | "isActive" | "name" | keyof AgendaAttendance>;
 
-const COLUMNS = "id, name, kind, professional_id, buffer_minutes, is_active";
+const COLUMNS = "id, name, kind, professional_id, buffer_minutes, is_active, profile, booking_horizon_days, consultation_age_limit_years";
 
 type Row = {
   id: string;
@@ -32,6 +46,9 @@ type Row = {
   professional_id: string | null;
   buffer_minutes: number;
   is_active: boolean;
+  profile: ClinicProfile;
+  booking_horizon_days: number;
+  consultation_age_limit_years: number | null;
 };
 
 const toAgenda = (row: Row): Agenda => ({
@@ -41,6 +58,9 @@ const toAgenda = (row: Row): Agenda => ({
   professionalId: row.professional_id,
   bufferMinutes: row.buffer_minutes,
   isActive: row.is_active,
+  profile: row.profile,
+  bookingHorizonDays: row.booking_horizon_days,
+  consultationAgeLimitYears: row.consultation_age_limit_years,
 });
 
 export function validateAgenda(input: AgendaInput) {
@@ -127,6 +147,7 @@ export async function createAgenda(db: DbClient, clinicId: string, input: Agenda
   // app.can_access_agenda, que consulta a própria tabela e ainda não enxerga a
   // linha nova no mesmo comando. Por isso o id sai daqui e a leitura vem depois.
   const id = crypto.randomUUID();
+  // Agenda nova começa com o perfil da clínica (o banco põe; app.agenda_starts_with_clinic_profile); prazo e idade, o padrão.
   unwrap(await db.from("agendas").insert({ id, clinic_id: clinicId, ...row }), "Agenda");
   return toAgenda(unwrapOne(await db.from("agendas").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Agenda"));
 }
@@ -152,6 +173,43 @@ export async function updateAgenda(db: DbClient, clinicId: string, id: string, i
       "Agenda",
     ),
   );
+}
+
+export function validateAgendaAttendance(input: AgendaAttendance): AgendaAttendance {
+  const v = new Validation();
+  v.check(CLINIC_PROFILES.includes(input.profile), "profile", "Escolha o perfil");
+  v.check(
+    Number.isInteger(input.bookingHorizonDays) && input.bookingHorizonDays >= BOOKING_HORIZON_MIN && input.bookingHorizonDays <= BOOKING_HORIZON_MAX,
+    "bookingHorizonDays",
+    `Prazo para oferecer horários: de ${BOOKING_HORIZON_MIN} a ${BOOKING_HORIZON_MAX} dias`,
+  );
+  const age = input.consultationAgeLimitYears;
+  v.check(age === null || (Number.isInteger(age) && age > 0 && age <= 130), "consultationAgeLimitYears", "Idade limite em anos inteiros, de 1 a 130");
+  v.throwIfInvalid("Atendimento");
+  return input;
+}
+
+/** Perfil, prazo e idade limite do profissional ou da Equipe (Administrador; o profissional com login, os dele). */
+export async function updateAgendaAttendance(db: DbClient, clinicId: string, id: string, input: AgendaAttendance): Promise<Agenda> {
+  const clean = validateAgendaAttendance(input);
+  return toAgenda(
+    unwrapOne(
+      await db
+        .from("agendas")
+        .update({ profile: clean.profile, booking_horizon_days: clean.bookingHorizonDays, consultation_age_limit_years: clean.consultationAgeLimitYears })
+        .eq("clinic_id", clinicId)
+        .eq("id", id)
+        .select(COLUMNS)
+        .maybeSingle(),
+      "Agenda",
+    ),
+  );
+}
+
+/** A agenda do profissional (uma só, ativa ou não); null sem agenda. */
+export async function agendaOfProfessional(db: DbClient, clinicId: string, professionalId: string): Promise<Agenda | null> {
+  const row = unwrap(await db.from("agendas").select(COLUMNS).eq("clinic_id", clinicId).eq("professional_id", professionalId).eq("kind", "professional").limit(1), "Agenda")[0];
+  return row ? toAgenda(row) : null;
 }
 
 export async function setAgendaActive(db: DbClient, clinicId: string, id: string, isActive: boolean): Promise<void> {

@@ -19,12 +19,12 @@ export type ClinicSettings = {
   /** Como a clínica é chamada nos textos genéricos ("a clínica", "o consultório"; cliente, 11/out/2026). */
   messageNoun: string;
   messageNounArticle: NounArticle;
-  /** Prazo para oferecer horários, em dias (bot e página de marcar; 7 a 365, padrão 60). */
-  bookingHorizonDays: number;
+  /**
+   * Perfil calculado (cliente, 08/nov/2026): sai dos perfis das agendas ativas (todas iguais: aquele; diferentes:
+   * "Mista"). Só leitura: perfil, prazo e idade limite são de cada profissional (agendas.ts, AgendaAttendance).
+   */
   profile: ClinicProfile;
   timezone: string;
-  /** Idade a partir da qual não marca Consulta (só Retorno/Exame); null = desligada. */
-  consultationAgeLimitYears: number | null;
   /**
    * Lembretes (cliente, 09/out/2026): um envio só por público, na véspera
    * ("eve") ou no dia ("same_day"), em hora cheia das 6h às 20h, no fuso da
@@ -58,7 +58,7 @@ export type ClinicSettings = {
 export type ReminderTiming = "eve" | "same_day";
 export const REMINDER_TIMINGS: ReminderTiming[] = ["eve", "same_day"];
 
-export type ClinicSettingsPatch = Partial<Omit<ClinicSettings, "clinicId">>;
+export type ClinicSettingsPatch = Partial<Omit<ClinicSettings, "clinicId" | "profile">>;
 
 export const CLINIC_PROFILES: ClinicProfile[] = ["pediatric", "adult", "mixed"];
 
@@ -81,7 +81,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows, message_noun, message_noun_article, booking_horizon_days";
+  "clinic_id, profile, timezone, reminder_hour, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows, message_noun, message_noun_article";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -99,10 +99,8 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     messageArticle: settings.message_article as MessageArticle,
     messageNoun: settings.message_noun,
     messageNounArticle: settings.message_noun_article as NounArticle,
-    bookingHorizonDays: settings.booking_horizon_days,
     profile: settings.profile,
     timezone: settings.timezone,
-    consultationAgeLimitYears: settings.consultation_age_limit_years,
     reminderEnabled: settings.reminder_enabled,
     reminderTiming: settings.reminder_timing as ReminderTiming,
     reminderHour: settings.reminder_hour,
@@ -138,16 +136,7 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
     v.check(out.messageNoun.length > 0 && out.messageNoun.length <= DESIGNATION_NOUN_MAX, "messageNoun", `Informe como a clínica é chamada (até ${DESIGNATION_NOUN_MAX} letras)`);
   }
   if ("messageNounArticle" in patch) v.check(NOUN_ARTICLES.includes(patch.messageNounArticle!), "messageNounArticle", "Escolha \"a\" ou \"o\"");
-  if ("bookingHorizonDays" in patch) {
-    const days = patch.bookingHorizonDays!;
-    v.check(Number.isInteger(days) && days >= BOOKING_HORIZON_MIN && days <= BOOKING_HORIZON_MAX, "bookingHorizonDays", `Prazo para oferecer horários: de ${BOOKING_HORIZON_MIN} a ${BOOKING_HORIZON_MAX} dias`);
-  }
-  if ("profile" in patch) v.check(CLINIC_PROFILES.includes(patch.profile!), "profile", "Perfil inválido");
   if ("timezone" in patch) v.check(isValidTimeZone(patch.timezone ?? ""), "timezone", "Fuso horário inválido");
-  if ("consultationAgeLimitYears" in patch && patch.consultationAgeLimitYears !== null) {
-    const age = patch.consultationAgeLimitYears!;
-    v.check(Number.isInteger(age) && age > 0, "consultationAgeLimitYears", "Idade limite em anos inteiros, maior que 0");
-  }
   for (const field of ["reminderHour", "professionalSummaryHour", "teamSummaryHour"] as const) {
     if (!(field in patch)) continue;
     const hour = patch[field]!;
@@ -208,10 +197,7 @@ export async function updateClinicSettings(
     ["messageArticle", "message_article"],
     ["messageNoun", "message_noun"],
     ["messageNounArticle", "message_noun_article"],
-    ["bookingHorizonDays", "booking_horizon_days"],
-    ["profile", "profile"],
     ["timezone", "timezone"],
-    ["consultationAgeLimitYears", "consultation_age_limit_years"],
     ["reminderHour", "reminder_hour"],
     ["reminderEnabled", "reminder_enabled"],
     ["reminderTiming", "reminder_timing"],

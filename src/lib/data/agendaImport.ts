@@ -253,7 +253,7 @@ export async function getAgendaImport(db: DbClient, clinicId: string, requestId:
 /** A conferência do pedido com o cadastro de agora (Suporte). */
 export async function loadImportReview(db: DbClient, clinicId: string, patients: ImportPatient[], now: Date = new Date()): Promise<{ review: ImportReview; catalog: ImportCatalog; timeZone: string; context: ReviewContext }> {
   const settings = unwrapOne(
-    await db.from("clinic_settings").select("timezone, consultation_age_limit_years").eq("clinic_id", clinicId).maybeSingle(),
+    await db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle(),
     "Configuração da clínica",
   );
   const timeZone = settings.timezone;
@@ -338,7 +338,9 @@ export async function loadImportReview(db: DbClient, clinicId: string, patients:
         cardNumber: p.insurance_card_number,
       })),
     })),
-    consultationAgeLimit: settings.consultation_age_limit_years,
+    consultationAgeLimits: Object.fromEntries(
+      unwrap(await db.from("agendas").select("id, consultation_age_limit_years").eq("clinic_id", clinicId), "Agendas").map((a) => [a.id, a.consultation_age_limit_years]),
+    ),
   };
   return { review: reviewImport(patients, catalog, context), catalog, timeZone, context };
 }

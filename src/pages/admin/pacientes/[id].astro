@@ -49,7 +49,7 @@ import StatusPill from "../../../components/admin/ui/StatusPill.astro";
 import Tabs from "../../../components/admin/ui/Tabs.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
 import { buttonClass, CONTROL, menuItemClass } from "../../../components/admin/ui/styles";
-import { formatAge, isOverConsultationAgeLimit } from "../../../lib/age";
+import { formatAge } from "../../../lib/age";
 import { canAccessArea, isUuid } from "../../../lib/clinicAccess";
 import { formatCpf } from "../../../lib/cpf";
 import { getContactCpf, getPatientFinance, resolvePayer } from "../../../lib/data/finance";
@@ -62,7 +62,6 @@ import { currentPath, receivedReturn, withReturn } from "../../../lib/returnPath
 import { addDays, formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
-import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
 import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
@@ -79,12 +78,11 @@ const id = Astro.params.id!;
 const patient = isUuid(id) ? await getPatient(db, clinic.clinicId, id).catch(() => null) : null;
 if (!patient) return Astro.redirect("/admin/pacientes");
 const insuranceOn = clinic.features.includes("insurance");
-const [contact, history, noShows, plans, settings] = await Promise.all([
+const [contact, history, noShows, plans] = await Promise.all([
   getContact(db, clinic.clinicId, patient.contactId),
   listPatientAppointments(db, clinic.clinicId, patient.id),
   listNoShowStats(db, clinic.clinicId, [patient.id]),
   insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
-  getClinicSettings(db, clinic.clinicId),
 ]);
 const now = new Date();
 const today = todayIn(clinic.timezone);
@@ -139,10 +137,7 @@ const [paymentStates, invoices] = paymentsOn
 const savedDelivery = financeOn ? await getSavedDestinations(db, clinic.clinicId, patient.id) : null;
 const financeAction = withReturn(`/api/admin/financeiro/paciente/${patient.id}`, volta);
 const cpfValue = (cpf: string | null) => (cpf ? formatCpf(cpf) : "");
-const ageWarning =
-  !anonymized && settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
-    ? `Passou da idade limite da Consulta (${settings.consultationAgeLimitYears} anos): só Retorno e Exame.`
-    : null;
+// Idade limite (cliente, 08/nov/2026): é do profissional; o aviso saiu da ficha (fica no Marcar e no bot).
 // Documentos (CRM P1).
 const documents = anonymized ? [] : await listPatientDocuments(db, clinic.clinicId, patient.id);
 const canAttach = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception"));
@@ -324,14 +319,6 @@ const canBook = patient.isActive && !anonymized;
         )
       }
     </div>
-    {
-      ageWarning && (
-        <p class={`${notice} border-pend-200 bg-pend-50 text-pend-800`}>
-          <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          {ageWarning}
-        </p>
-      )
-    }
     {
       anonymized && (
         <p class={`${notice} border-line bg-canvas text-ink`}>

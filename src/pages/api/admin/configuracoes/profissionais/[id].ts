@@ -12,6 +12,8 @@ import { listInsurancePlans, listProfessionalPlans, setProfessionalPlans } from 
 import { removeProfilePhoto, uploadProfilePhoto } from "../../../../../lib/data/config/profilePhotos";
 import { setProfessionalBotInfo } from "../../../../../lib/data/config/professionalBotInfo";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { agendaOfProfessional, updateAgendaAttendance } from "../../../../../lib/data/config/agendas";
+import { attendanceFromForm } from "../../../../../lib/attendanceForm";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
 
@@ -45,6 +47,13 @@ export const POST: APIRoute = async (context) => {
         if (!(file instanceof File) || file.size === 0) throw new DataError("invalid", "Foto: escolha o arquivo", { photo: "Escolha o arquivo da foto." });
         await uploadProfilePhoto(db, clinic.clinicId, owner, file);
         return { redirectTo: page(id), message: "Foto salva." };
+      }
+      if (acao === "atendimento") {
+        // Perfil, prazo e idade limite do profissional (cliente, 08/nov/2026): na agenda dele.
+        const agenda = await agendaOfProfessional(db, clinic.clinicId, id);
+        if (!agenda) throw new DataError("invalid", "Atendimento: profissional sem agenda", { profile: "Crie a agenda do profissional antes." });
+        await updateAgendaAttendance(db, clinic.clinicId, agenda.id, attendanceFromForm(form));
+        return { redirectTo: page(id), message: "Atendimento salvo." };
       }
       if (acao === "bot_info") {
         await setProfessionalBotInfo(db, clinic.clinicId, id, {

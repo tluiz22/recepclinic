@@ -55,7 +55,6 @@ beforeAll(async () => {
   users.push(admin, reception);
   await addMember(clinicId, admin.id, ["admin"]);
   await addMember(clinicId, reception.id, ["reception"]);
-  await adminClient().from("clinic_settings").update({ consultation_age_limit_years: 14 }).eq("clinic_id", clinicId);
 });
 
 afterAll(async () => {
@@ -75,7 +74,6 @@ describe("cadastro com responsável (outra pessoa)", () => {
     );
     expect(result.contact).toMatchObject({ fullName: "Maria Souza", phone: "+5585999990001" });
     expect(result.patient).toMatchObject({ fullName: "Ana Souza", isContactSelf: false, insurance: null });
-    expect(result.overConsultationAgeLimit).toBe(false);
   });
 
   it("telefone já cadastrado reaproveita o contato; mesmo nascimento avisa duplicado", async () => {
@@ -216,7 +214,6 @@ describe("paciente que é o próprio contato", () => {
     );
     expect(adult.patient.isContactSelf).toBe(true);
     expect(adult.contact.fullName).toBe("Pedro Alves");
-    expect(adult.overConsultationAgeLimit).toBe(true);
   });
 
   it("telefone de contato existente pede confirmação; confirmado, liga ao mesmo contato", async () => {

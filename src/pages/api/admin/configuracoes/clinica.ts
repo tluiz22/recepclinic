@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../lib/data/clients";
 import { removeClinicLogo, uploadClinicLogo, validateLogoFile } from "../../../../lib/data/config/brand";
-import { updateClinicSettings, type ClinicProfile, type ClinicSettingsPatch } from "../../../../lib/data/config/clinic";
+import { updateClinicSettings, type ClinicSettingsPatch } from "../../../../lib/data/config/clinic";
 import { saveReceptionHours } from "../../../../lib/data/config/receptionHours";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formOptionalInt, formOptionalText, formText } from "../../../../lib/forms";
@@ -49,12 +49,8 @@ export const POST: APIRoute = async (context) => {
         patch.messageNounArticle = preset ? preset.article : (formText(form, "designation_article") as NounArticle);
       }
       if (has("atendimento")) {
-        patch.profile = formText(form, "profile") as ClinicProfile;
+        // Perfil, prazo e idade limite saíram daqui: são de cada profissional (cliente, 08/nov/2026).
         patch.timezone = formText(form, "timezone");
-        patch.consultationAgeLimitYears = formChecked(form, "age_limit_on") ? formOptionalInt(form, "age_limit") : null;
-        if (patch.consultationAgeLimitYears === null && formChecked(form, "age_limit_on")) patch.consultationAgeLimitYears = Number.NaN;
-        // Campo vazio vira NaN e cai na validação.
-        patch.bookingHorizonDays = formOptionalInt(form, "booking_horizon_days") ?? Number.NaN;
       }
       if (has("paginas")) {
         patch.brandColor = formOptionalText(form, "brand_color");

@@ -67,7 +67,7 @@ export const primeirosPassos = [
     intro:
       "A clínica só atende de verdade quando uma cadeia está completa: Profissional → Agenda → Serviço → Horário, num Local. O guia de configuração, no topo de Configurações › Clínica, mostra o que falta em cada passo e leva direto ao ajuste.",
     steps: [
-      "Clínica: nome, perfil, fuso horário, prazo para oferecer horários e as informações que o paciente vê. É a base de tudo.",
+      "Clínica: nome, fuso horário e as informações que o paciente vê. É a base de tudo. Perfil, prazo e idade limite ficam em cada profissional.",
       "Profissionais: cadastre quem atende. Sem profissional não existe agenda.",
       "Locais: cadastre o consultório (com endereço) e, se a clínica tiver, o atendimento domiciliar.",
       "Agendas: crie a agenda de cada profissional (e a da equipe, para exames, se precisar).",

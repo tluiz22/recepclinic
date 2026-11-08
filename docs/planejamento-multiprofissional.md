@@ -266,3 +266,40 @@ da Marcar.
 mesmo profissional); sair e entrar pelo menu (pede de novo); Agenda › "Cadastrar os horários" abre Horários já
 escolhido; grupos da busca em negrito; em clínica com 6+ profissionais, o filtro de Agendas e Profissionais.
 
+## 12. Perfil, prazo e idade limite por profissional (cliente, 08/nov/2026; item 4 da validação)
+
+**Pedido:** "Perfil", "Prazo para oferecer horários" e "Idade limite para consulta" saem de Configurações › Clínica e
+passam a ser de cada profissional.
+
+**Decisões do cliente (08/nov):**
+1. Palavras das telas da clínica inteira: **calculadas** pelos perfis (todos Pediátrica: criança/responsável; todos
+   Adultos: paciente/contato; diferentes: paciente/responsável). Bot e link de agendar usam o perfil do profissional.
+2. Equipe (agenda "Exames"): **valores próprios** (perfil e prazo; sem idade limite, pois só faz exame), no cartão
+   Atendimento da agenda da Equipe.
+3. Ficha do paciente: **sai** o aviso de idade limite. Cadastro de paciente novo: **sai** também. Fica no Marcar e no bot.
+4. Onde editar: cartão **Atendimento no cadastro do profissional** (sem agenda: o cartão pede para criar).
+5. O profissional com login **muda os dele** (como o resto do cadastro, S1).
+
+**Como ficou:**
+- Migração `20270101140000_atendimento_por_profissional.sql`: `agendas.profile`, `booking_horizon_days` e
+  `consultation_age_limit_years` (cópia dos valores da clínica; a da Equipe sem idade limite); gatilho que recalcula
+  `clinic_settings.profile` a cada mudança de perfil ou ativação de agenda; agenda nova nasce com o perfil da clínica,
+  60 dias e sem idade limite.
+- Bot: perfil, palavras e Informações gerais pelo profissional em uso (`scopeAttendance`); cada marcação usa o prazo e
+  a idade limite da agenda (no "Primeiro horário", os comuns às agendas). Link de agendar: prazo e perfil da agenda (com
+  mais de uma, o maior prazo e o perfil comum). Marcar: aviso com a idade limite de cada agenda do serviço. Importação
+  de agenda: idade limite da agenda de cada atendimento.
+- **Pendente (limpeza):** `clinic_settings.booking_horizon_days` e `consultation_age_limit_years` ficam sem uso; saem
+  numa migração depois da produção.
+
+**Roteiro no staging:**
+1. Configurações › Clínica: o cartão Atendimento mostra só o fuso e as palavras das telas.
+2. Configurações › Profissionais › um profissional: cartão Atendimento com os valores de antes da clínica. Mude o
+   perfil para Adultos, o prazo para 30 e desligue a idade limite; salve.
+3. Volte à Clínica: com perfis diferentes, as palavras viram "paciente" e "responsável".
+4. Configurações › Agendas › Exames: cartão Atendimento sem idade limite; mude o prazo e salve.
+5. Agenda › Marcar: paciente adulto + consulta de um profissional com idade limite: o aviso cita o profissional.
+6. Ficha do paciente acima da idade: sem o aviso.
+7. WhatsApp: com o prazo de 30 dias, o bot só oferece horários até 30 dias; com perfil Pediátrica, a consulta não
+   pergunta "para quem é".
+

@@ -17,7 +17,8 @@ import { preparationFileCaption } from "../../../preparationMessage";
 import { logError } from "../../../log";
 import { firstName } from "../templates";
 import { loadCatalog, type BotCatalog } from "./catalog";
-import { buildScope, EXAMS_CHOICE, PROFESSIONAL_KEY, scopeCatalog, type ProfessionalScope } from "./professionalScope";
+import { buildScope, EXAMS_CHOICE, PROFESSIONAL_KEY, scopeAttendance, scopeCatalog, type ProfessionalScope } from "./professionalScope";
+import { BOOKING_HORIZON_DEFAULT } from "../../config/clinic";
 import {
   ASK_BIRTHDATE_AGAIN,
   HANDOFF_SUBJECT_QUESTION,
@@ -84,6 +85,8 @@ export type Bot = BotEnv & {
   scope: ProfessionalScope;
   /** Catálogo da clínica inteira (a escolha da especialidade e do profissional). */
   fullCatalog: BotCatalog;
+  /** Perfil calculado da clínica (antes da escolha do profissional; cliente, 08/nov/2026). */
+  clinicProfile: ClinicProfile;
   /** Lista ou botões enviados nesta mensagem (id da Meta; null = foram em texto). */
   promptId?: string | null;
   /** Tipo da mensagem do paciente ("text", "audio", "image"…; F8.5d). */
@@ -213,7 +216,7 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     env.db.from("clinics").select("name").eq("id", env.clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
     env.db
       .from("clinic_settings")
-      .select("profile, timezone, consultation_age_limit_years, message_noun, message_noun_article, booking_horizon_days")
+      .select("profile, timezone, message_noun, message_noun_article")
       .eq("clinic_id", env.clinicId)
       .maybeSingle()
       .then((r) => unwrapOne(r, "Configuração da clínica")),
@@ -224,7 +227,8 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     profile: settings.profile,
     timeZone: settings.timezone,
     today: todayIn(settings.timezone, env.now),
-    ageLimitYears: settings.consultation_age_limit_years,
+    // Perfil, prazo e idade limite são do profissional (cliente, 08/nov/2026): createBot troca pelos da conversa.
+    ageLimitYears: null,
     // MI (07/nov/2026): as informações são do profissional (createBot); aqui, nenhuma.
     paymentInfo: null,
     insuranceInfo: null,
@@ -232,7 +236,7 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     insurancePlans: null,
     professionalName: null,
     designation: { noun: settings.message_noun, article: settings.message_noun_article as NounArticle },
-    horizonDays: settings.booking_horizon_days,
+    horizonDays: BOOKING_HORIZON_DEFAULT,
   };
 }
 
@@ -259,6 +263,7 @@ export async function createBot(env: BotEnv, convo: Conversation, incomingId: st
     custom,
     scope,
     fullCatalog,
+    clinicProfile: clinic.profile,
     catalog: async () => scopeCatalog(fullCatalog, scope),
   };
   await loadProfessionalInfo(b);
@@ -313,7 +318,12 @@ export async function professionalInfoFor(
 }
 
 async function loadProfessionalInfo(b: Bot): Promise<void> {
-  b.clinic = { ...b.clinic, ...(await professionalInfoFor(b.db, b.clinicId, b.features, b.scope.current)) };
+  b.clinic = {
+    ...b.clinic,
+    ...(await professionalInfoFor(b.db, b.clinicId, b.features, b.scope.current)),
+    ...scopeAttendance(b.fullCatalog, b.scope, b.clinicProfile),
+  };
+  b.words = wordsFor(b.clinic.profile);
 }
 
 /** Guarda a escolha da especialidade ou do profissional (MB) e passa a conversa para o contexto dele. */

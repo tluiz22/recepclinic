@@ -27,14 +27,14 @@ isOneToOne: false
                   ]
                 },"agendas": {
                   Row: {
-                    "buffer_minutes": number,"clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id": string | null,"updated_at": string
+                    "booking_horizon_days": number,"buffer_minutes": number,"clinic_id": string,"consultation_age_limit_years": number | null,"created_at": string,"id": string,"is_active": boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id": string | null,"profile": Database["public"]['Enums']["clinic_profile"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "buffer_minutes"?: number,"clinic_id": string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id"?: string | null,"updated_at"?: string
+                    "booking_horizon_days"?: number,"buffer_minutes"?: number,"clinic_id": string,"consultation_age_limit_years"?: number | null,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id"?: string | null,"profile"?: Database["public"]['Enums']["clinic_profile"],"updated_at"?: string
                   }
                   Update: {
-                    "buffer_minutes"?: number,"clinic_id"?: string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind"?: Database["public"]['Enums']["agenda_kind"],"name"?: string,"professional_id"?: string | null,"updated_at"?: string
+                    "booking_horizon_days"?: number,"buffer_minutes"?: number,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind"?: Database["public"]['Enums']["agenda_kind"],"name"?: string,"professional_id"?: string | null,"profile"?: Database["public"]['Enums']["clinic_profile"],"updated_at"?: string
                   }
                   Relationships: [
                     {

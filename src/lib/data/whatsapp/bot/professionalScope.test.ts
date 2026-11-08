@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BotAgenda, BotCatalog, BotService } from "./catalog";
-import { buildScope, EXAMS_CHOICE, NO_SPECIALTY, professionalsOf, PROFESSIONAL_KEY, scopeCatalog, specialtyOptions } from "./professionalScope";
+import { buildScope, EXAMS_CHOICE, NO_SPECIALTY, professionalsOf, PROFESSIONAL_KEY, scopeAttendance, scopeCatalog, specialtyOptions } from "./professionalScope";
 
 // MB (cliente, 07/nov/2026): quem atende pelo bot, a escolha da conversa e o catálogo no contexto dela.
 
@@ -13,6 +13,7 @@ const agenda = (id: string, professional: { id: string; name: string; specialtie
   specialty: null,
   specialties: professional?.specialties ?? [],
   locationTypes: ["clinic"],
+  attendance: { profile: "mixed", bookingHorizonDays: 60, consultationAgeLimitYears: null },
 });
 
 const service = (id: string, category: BotService["category"], agendas: BotAgenda[]): BotService => ({
@@ -86,3 +87,23 @@ describe("escopo do profissional (MB)", () => {
     expect(scopeCatalog(single, scope)).toBe(single);
   });
 });
+
+describe("perfil, prazo e idade limite da conversa (cliente, 08/nov/2026)", () => {
+  const withAttendance = (agendaId: string, attendance: BotAgenda["attendance"]): BotCatalog => ({
+    ...catalog,
+    services: catalog.services.map((sv) => ({ ...sv, agendas: sv.agendas.map((a) => (a.id === agendaId ? { ...a, attendance } : a)) })),
+  });
+  const ped = { profile: "pediatric" as const, bookingHorizonDays: 30, consultationAgeLimitYears: 14 };
+
+  it("o do profissional escolhido", () => {
+    const c = withAttendance("a-ana", ped);
+    expect(scopeAttendance(c, buildScope(c, { [PROFESSIONAL_KEY]: "ana" }), "mixed")).toEqual({ profile: "pediatric", horizonDays: 30, ageLimitYears: 14 });
+  });
+
+  it("em Exames, o da Equipe; sem escolha, o perfil da clínica, 60 dias e sem idade limite", () => {
+    const c = withAttendance("a-exames", { profile: "adult", bookingHorizonDays: 45, consultationAgeLimitYears: null });
+    expect(scopeAttendance(c, buildScope(c, { [PROFESSIONAL_KEY]: EXAMS_CHOICE }), "mixed")).toEqual({ profile: "adult", horizonDays: 45, ageLimitYears: null });
+    expect(scopeAttendance(c, buildScope(c, {}), "pediatric")).toEqual({ profile: "pediatric", horizonDays: 60, ageLimitYears: null });
+  });
+});
+

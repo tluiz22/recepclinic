@@ -107,7 +107,7 @@ export const JOURNEY: JourneySection[] = [
     intro: "Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário são escolhidos numa página, com a agenda real.",
     flow: [
       bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sem preço. Com um serviço só, o bot escolhe sozinho e avisa: \"Vamos marcar *Consulta*\"."),
-      check("O serviço tem horário livre no prazo da agenda?"),
+      check("O serviço tem horário livre no prazo da agenda?", "Prazo para oferecer horários do profissional da agenda (ou da Equipe), no cadastro dele (cliente, 08/nov/2026; antes, da clínica)."),
       branch(
         ["Não", [bot("\"No momento não há horários livres\" e pergunta se quer falar com a recepção", "Sim: a recepção assume (item 8). Não: o menu.")]],
         [
@@ -140,7 +140,7 @@ export const JOURNEY: JourneySection[] = [
               ],
             ),
             bot("É para você ou para outra pessoa?", "Clínica pediátrica: só no exame."),
-            bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite na clínica. No \"Primeiro horário\": \"A clínica atende…\"."),
+            bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite no cadastro do profissional da agenda (cliente, 08/nov/2026; antes, da clínica). No \"Primeiro horário\": \"A clínica atende…\"."),
             bot(
               "Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento",
               "Número novo: o paciente primeiro, depois o nome de quem escreve (paciente menor: \"do responsável\"), que recebe os lembretes. Menor de 18 anos marcando para si: só pelo responsável. Acima da idade limite: \"Dr(a). X atende pacientes até N anos. Deseja agendar para outra criança?\"",

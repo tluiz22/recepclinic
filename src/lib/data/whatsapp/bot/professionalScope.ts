@@ -1,3 +1,5 @@
+import type { AgendaAttendance } from "../../config/agendas";
+import { BOOKING_HORIZON_DEFAULT } from "../../config/clinic";
 import type { BotCatalog } from "./catalog";
 
 // Clínica com mais de um profissional (MB, cliente, 07/nov/2026; plano
@@ -92,4 +94,24 @@ export function specialtyOptions(scope: ProfessionalScope, othersLabel: string):
 
 export function professionalsOf(scope: ProfessionalScope, specialtyId: string): ScopeProfessional[] {
   return scope.professionals.filter((p) => (specialtyId === NO_SPECIALTY ? !p.specialties.length : p.specialties.some((s) => s.id === specialtyId)));
+}
+
+/**
+ * Perfil, prazo e idade limite da conversa (cliente, 08/nov/2026; antes, da clínica): os do profissional em uso; na
+ * escolha "Exames", os da Equipe; sem escolha ainda, o perfil calculado da clínica, sem idade limite. Cada marcação usa
+ * os da agenda escolhida (booking.ts); estes valem para as palavras do bot e as Informações gerais.
+ */
+export function scopeAttendance(
+  catalog: Pick<BotCatalog, "services">,
+  scope: Pick<ProfessionalScope, "current" | "choice">,
+  clinicProfile: AgendaAttendance["profile"],
+): { profile: AgendaAttendance["profile"]; ageLimitYears: number | null; horizonDays: number } {
+  const agendas = catalog.services.flatMap((s) => s.agendas);
+  const agenda = scope.current
+    ? agendas.find((a) => a.professionalId === scope.current!.id)
+    : scope.choice === EXAMS_CHOICE
+      ? agendas.find((a) => !a.professionalId)
+      : undefined;
+  if (!agenda) return { profile: clinicProfile, ageLimitYears: null, horizonDays: BOOKING_HORIZON_DEFAULT };
+  return { profile: agenda.attendance.profile, ageLimitYears: agenda.attendance.consultationAgeLimitYears, horizonDays: agenda.attendance.bookingHorizonDays };
 }

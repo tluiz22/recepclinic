@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../../lib/data/clients";
-import { createAgenda, setAgendaActive, updateAgenda, type AgendaKind } from "../../../../../lib/data/config/agendas";
+import { createAgenda, setAgendaActive, updateAgenda, updateAgendaAttendance, type AgendaKind } from "../../../../../lib/data/config/agendas";
+import { attendanceFromForm } from "../../../../../lib/attendanceForm";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formInt, formOptionalText, formText } from "../../../../../lib/forms";
@@ -31,6 +32,11 @@ export const POST: APIRoute = async (context) => {
       if (acao === "desativar" || acao === "reativar") {
         await setAgendaActive(db, clinicId, id, acao === "reativar");
         return { redirectTo: page(id), message: acao === "reativar" ? "Agenda reativada." : "Agenda desativada." };
+      }
+      if (acao === "atendimento") {
+        // Perfil e prazo da Equipe (cliente, 08/nov/2026); a do profissional, pelo cadastro dele.
+        await updateAgendaAttendance(db, clinicId, id, attendanceFromForm(form));
+        return { redirectTo: page(id), message: "Atendimento salvo." };
       }
       const bufferMinutes = formInt(form, "buffer_minutes");
       if (id === "novo") {

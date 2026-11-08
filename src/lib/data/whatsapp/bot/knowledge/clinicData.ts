@@ -11,7 +11,7 @@ import type { ClinicSender } from "../../send";
 import { clinicLabel, type MessageArticle } from "../../templates";
 import { loadCatalog } from "../catalog";
 import { loadBotClinic, professionalInfoFor, type Bot } from "../engine";
-import { buildScope, scopeCatalog } from "../professionalScope";
+import { buildScope, scopeAttendance, scopeCatalog } from "../professionalScope";
 import type { KbClinicData } from "./answers";
 
 // Dados da clínica para as respostas da base (BC 3.2). Lidos com a credencial
@@ -39,7 +39,7 @@ export async function kbSourceEnv(db: DbClient, clinicId: string, now: Date): Pr
   return {
     db,
     clinicId,
-    clinic: { ...botClinic, ...(await professionalInfoFor(db, clinicId, features, scope.current)) },
+    clinic: { ...botClinic, ...(await professionalInfoFor(db, clinicId, features, scope.current)), ...scopeAttendance(fullCatalog, scope, botClinic.profile) },
     features,
     receptionAvailable: connection?.coexistence ?? false,
     catalog: async () => scopeCatalog(fullCatalog, scope),

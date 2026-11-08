@@ -538,6 +538,8 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
       })
     ).id;
   }
+  // Perfil, prazo e idade limite são de cada profissional (cliente, 08/nov/2026): o perfil a agenda já recebe da clínica.
+  await db.query("update public.agendas set consultation_age_limit_years = $2 where clinic_id = $1 and kind = 'professional'", [clinic.id, clinic.settings.consultation_age_limit_years ?? null]);
   // Serviço por profissional (MS, 07/nov/2026): uma cópia do serviço por agenda (o banco liga à agenda do dono).
   const serviceId = (key, agendaKey) => ids.service[key][agendaKey] ?? Object.values(ids.service[key])[0];
   for (const s of clinic.services) {

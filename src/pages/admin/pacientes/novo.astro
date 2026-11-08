@@ -151,8 +151,8 @@ if (Astro.request.method === "POST") {
       today,
     );
     if (result.status === "created") {
-      const age = result.overConsultationAgeLimit ? " Passou da idade limite da Consulta (só aviso)." : "";
-      setFlash(Astro.cookies, { tone: "success", text: `${capitalize(vocabulary.patient)} cadastrado.${age}` });
+      // Idade limite (cliente, 08/nov/2026): é do profissional; o aviso fica no Marcar e no bot.
+      setFlash(Astro.cookies, { tone: "success", text: `${capitalize(vocabulary.patient)} cadastrado.` });
       const to = backToBooking ? `${backToBooking}${backToBooking.includes("?") ? "&" : "?"}patient_id=${result.patient.id}` : withReturn(`/admin/pacientes/${result.patient.id}`, origin);
       return Astro.redirect(to, 303);
     }

@@ -95,7 +95,7 @@ begin
   -- Matriz de acesso (D11): a clínica de exemplo tem tudo liberado.
   insert into public.clinic_features (clinic_id, feature_key) select c_a, key from public.features;
   update public.clinic_settings
-    set profile = 'mixed', consultation_age_limit_years = 14, reminder_hour = 14,
+    set profile = 'mixed', reminder_hour = 14,
         brand_color = '#0F766E', require_insurance_details = true
     where clinic_id = c_a;
 
@@ -130,6 +130,8 @@ begin
     values (c_a, 'Rafael Lima', 'professional', p_fis) returning id into ag_fis;
   -- A agenda da equipe ("Exames") nasce com o item "Exames e procedimentos" (cliente, 06/nov/2026).
   select id into ag_exams from public.agendas where clinic_id = c_a and kind = 'resource';
+  -- Idade limite da Consulta é de cada profissional (cliente, 08/nov/2026).
+  update public.agendas set consultation_age_limit_years = 14 where clinic_id = c_a and kind = 'professional';
 
   insert into public.member_agenda_grants (clinic_id, user_id, agenda_id) values
     (c_a, u_a_rec2, ag_psi),

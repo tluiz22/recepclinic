@@ -310,7 +310,7 @@ describe("bot: retorno e idade limite", () => {
   });
 
   it("consulta acima da idade limite: avisa e pergunta se é para outra pessoa", async () => {
-    await adminClient().from("clinic_settings").update({ consultation_age_limit_years: 5 }).eq("clinic_id", f.clinicId);
+    await adminClient().from("agendas").update({ consultation_age_limit_years: 5 }).eq("clinic_id", f.clinicId);
     const phone = "+5584991226303"; // contato do Paciente Três (2020)
     await say(phone, "oi");
     await say(phone, "1");
@@ -322,7 +322,7 @@ describe("bot: retorno e idade limite", () => {
     expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Dra. Agenda atende pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
     reply = await say(phone, { id: "no" });
     expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais"]);
-    await adminClient().from("clinic_settings").update({ consultation_age_limit_years: null }).eq("clinic_id", f.clinicId);
+    await adminClient().from("agendas").update({ consultation_age_limit_years: null }).eq("clinic_id", f.clinicId);
   });
 });
 
