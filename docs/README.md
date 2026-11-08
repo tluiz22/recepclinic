@@ -2,7 +2,7 @@
 
 > **Nova frente (08/nov): recepção digital integrada** (portal do paciente, vários números de WhatsApp, caixa unificada,
 > clínica de 18 profissionais). **Etapa 1 aprovada, RD1 a RD14 decididas; Etapa 2 (design) em andamento**: **portal aprovado**
-> (celular e computador, P1 a P13); próximo: rodada 3, painel da recepção (R1 a R7); retomar pelo bloco do
+> (celular e computador, P1 a P13) e link do profissional decidido; próximo: rodada 3, painel da recepção (R1 a R7); retomar pelo bloco do
 > [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md). Frente da nota fiscal encerrada em 08/nov com a validação pendente.
 >
 > **Duas frentes (cliente, 07/nov):**

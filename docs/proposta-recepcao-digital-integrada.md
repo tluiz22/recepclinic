@@ -1,9 +1,10 @@
 # Proposta: recepção digital integrada (WhatsApp, Portal e Painel)
 
-> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 revista).
-> **Etapa 2 (design): portal aprovado** (celular e computador, P1 a P13) no canvas
-> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Próximo: rodada 3, painel da recepção (R1 a R7), com o
-> OK do cliente. Nenhum código mudou.
+> **Estado atual (retomar daqui), 08/nov/2026 (sessão encerrada).** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17;
+> RD12 revista). **Etapa 2 (design): portal aprovado** (celular e computador, P1 a P13) e **link do profissional
+> decidido** (seção 18), no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (para editar, ler os arquivos
+> `project/*` do canvas pela ferramenta de Artifact). **Próximo: rodada 3, painel da recepção (R1 a R7)**, incluindo
+> onde copiar o link e o QR do profissional; começar só com o OK do cliente. Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
