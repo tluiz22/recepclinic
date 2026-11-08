@@ -1,24 +1,17 @@
 # RecepClinic
 
-> **MS, serviços por profissional (07/nov):** S2, S3, S1 e S4 feitas e **no staging** (`02d17e3`; migrações
-> `20261230120000` e `20261230130000` aplicadas lá). O cliente valida pelo roteiro no fim da seção 10 do
-> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md). Produção só com autorização. Capturas na fila:
-> nenhuma (as 5 da ME, MC, MI e MS refeitas).
+> **Duas frentes (cliente, 07/nov):**
+> - **Validação do que está pendente:** [`frente-validacao.md`](frente-validacao.md) (multiprofissional ME, MC, MI, MB
+>   e MS no staging; o ajuste `9b22e00` da Central; depois, produção com autorização).
+> - **Nota fiscal:** bloco "Frente da nota fiscal" do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)
+>   (revisar o plano e decidir N-P1 a N-P7; depois N1 em diante, código só com o OK do cliente).
 >
-> **Multiprofissional (07/nov):** ME, MC e MI + MB no staging (migrações `20261229120000`, `20261229130000` e
-> `20261229140000`); o cliente valida pelo roteiro da seção 8. Produção só com autorização. 3 capturas na fila. Depois:
-> NFS-e por profissional (N-P1 a N-P7).
->
-> **Próxima sessão (cliente, 07/nov):** **revisar o planejamento da NFS-e pelo Asaas** com o cliente
-> ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), bloco de retomada e seções 11 a 13). Sem código antes da revisão.
+> Staging = `main` em `c60ae26` (com o bloco multiprofissional e a MS); produção sem o bloco multiprofissional (última
+> publicação no [`producao.md`](producao.md)). Capturas da ajuda: fila vazia.
 >
 > **BaaS do Asaas (07/nov):** ajustes pedidos pelo Asaas (cláusula nos termos e selo sem registro) no ar: site `beb9e1c`
 > e app `305efd7` (staging e produção; migração `20261228140000` nos dois). **E-mail de reanálise enviado pelo cliente
 > (07/nov)**, com o print da habilitação fiscal; aguardando o Asaas. Cliente valida o `9b22e00` da Central (foi junto).
->
-> **Próxima sessão (cliente, 07/nov):** **Central de Atendimento finalizada** (etapa 1 na produção, ligada na piloto,
-> funcionando). Retomar o planejamento e a implementação da **NFS-e pelo Asaas**: ler o bloco de retomada do
-> [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md); código só com o OK do cliente, direto na `main`.
 >
 > **Sessão anterior (07/nov):** **validados no staging (07/nov):** troca cartão ↔ Pix (com o Suporte, o
 > celular do pagador antes do Checkout e a troca de cartão aberta descartada ao mudar para Pix), EC (mensagens que a

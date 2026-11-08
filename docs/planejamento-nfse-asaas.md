@@ -1,5 +1,12 @@
 # Emissão de NFS-e pelo Asaas (substitui o emissor direto da F11)
 
+> **Frente da nota fiscal (retomar daqui), 07/nov/2026.** Separada da frente de validação a pedido do cliente (07/nov;
+> validação em [`frente-validacao.md`](frente-validacao.md)). Base pronta para a emissão por profissional: serviços,
+> especialidades e convênios por profissional (MS e M1 a M8, no staging). **Próximo passo:** revisar o plano com o
+> cliente (seções 11 a 14) e decidir **N-P1 a N-P7** (14.6), uma por vez, com a opção recomendada; depois, a N0 que
+> falta (Asaas, contador, advogado) e a implementação a partir da **N1** (14.5), uma fase por vez, código direto na `main`
+> só com o OK do cliente. Bloqueios externos: reanálise do BaaS pelo Asaas (aguardando).
+>
 > **Estado atual (retomar daqui), 07/nov/2026.** **Asaas pediu ajustes na análise BaaS (13.10):** cláusula do Asaas nos
 > termos e no contrato e selo sem registro de carregamento. Ajustes no ar (07/nov): site `beb9e1c` e app `305efd7` no staging e
 > na produção. **Reanálise pedida pelo cliente (07/nov)**, com o print da habilitação fiscal; aguardando o Asaas.
