@@ -698,3 +698,66 @@ export function platformBillingNoticeStore(env: ServiceEnv = platformEnv()): Bil
     finishNotice: (id, status, sentTo, error) => call<null>("billing_finish_notice", { p_id: id, p_status: status, p_sent_to: sentTo ?? "", p_error: error ?? "" }).then(() => undefined),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Emissores fiscais (N2): o servidor lê o emissor, a chave da subconta e grava
+// o que o Asaas respondeu. Quem chama já conferiu a permissão com o login.
+// ---------------------------------------------------------------------------
+export type PlatformIssuerStore = ReturnType<typeof platformIssuerStore>;
+
+export function platformIssuerStore(env: ServiceEnv = platformEnv()) {
+  const db = platformClient(env);
+  const check = (error: unknown, what: string) => {
+    if (error) throw new Error(`Emissor fiscal: ${what}`, { cause: error });
+  };
+  return {
+    async read(issuerId: string) {
+      const { data, error } = await db.from("fiscal_issuers").select("*").eq("id", issuerId).maybeSingle();
+      check(error, "leitura");
+      return data;
+    },
+    async apiKey(issuerId: string): Promise<string | null> {
+      const { data, error } = await db.rpc("get_fiscal_issuer_api_key", { p_issuer_id: issuerId });
+      check(error, "chave");
+      return (data as string | null) ?? null;
+    },
+    async linkAccount(issuerId: string, a: { accountId: string; walletId: string; apiKey: string; webhookToken: string; environment: string; actorId: string | null }) {
+      const { error } = await db.rpc("platform_link_fiscal_issuer_account", {
+        p_issuer_id: issuerId,
+        p_account_id: a.accountId,
+        p_wallet_id: a.walletId,
+        p_api_key: a.apiKey,
+        p_webhook_token: a.webhookToken,
+        p_environment: a.environment,
+        p_actor: a.actorId as string,
+      });
+      check(error, "subconta");
+    },
+    async setAccountStatus(issuerId: string, status: string) {
+      const { error } = await db.rpc("platform_set_fiscal_issuer_account_status", { p_issuer_id: issuerId, p_status: status });
+      check(error, "situação");
+    },
+    async setFiscalInfo(issuerId: string, r: { ok: boolean; message: string | null; municipalOptions: unknown; certificateSent: boolean; certificateValidUntil: Date | null; actorId: string | null }) {
+      const { error } = await db.rpc("platform_set_fiscal_issuer_fiscal_info", {
+        p_issuer_id: issuerId,
+        p_ok: r.ok,
+        p_message: r.message as string,
+        p_municipal_options: r.municipalOptions as never,
+        p_certificate_sent: r.certificateSent,
+        p_certificate_valid_until: (r.certificateValidUntil ? r.certificateValidUntil.toISOString() : null) as string,
+        p_actor: r.actorId as string,
+      });
+      check(error, "configuração fiscal");
+    },
+    async setMunicipalOptions(issuerId: string, options: unknown) {
+      const { error } = await db.rpc("platform_set_fiscal_issuer_municipal_options", { p_issuer_id: issuerId, p_options: options as never });
+      check(error, "regras do município");
+    },
+    async findByAccount(accountId: string): Promise<{ issuerId: string; clinicId: string; webhookToken: string } | null> {
+      const { data, error } = await db.rpc("find_fiscal_issuer_by_account", { p_account_id: accountId });
+      check(error, "webhook");
+      const row = (data as { issuer_id: string; clinic_id: string; webhook_token: string }[] | null)?.[0];
+      return row ? { issuerId: row.issuer_id, clinicId: row.clinic_id, webhookToken: row.webhook_token } : null;
+    },
+  };
+}

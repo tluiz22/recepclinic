@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `config-nota-fiscal` — Nota fiscal virou a lista de emissores (clínica e profissionais) e a página do emissor; destacar "Emissor da clínica" em vez de "Dados fiscais" no roteiro e rever o artigo (N2b, branch `nota-fiscal`) (07/11/2026)

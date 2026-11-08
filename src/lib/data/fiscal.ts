@@ -341,7 +341,18 @@ export type FiscalAuditEvent =
   | "nfse_rejected"
   | "nfse_cancel_requested"
   | "nfse_canceled"
-  | "nfse_cancel_rejected";
+  | "nfse_cancel_rejected"
+  | "issuer_saved"
+  | "issuer_route_changed"
+  | "issuer_payer_changed"
+  | "asaas_account_created"
+  | "account_status_changed"
+  | "fiscal_info_saved"
+  | "fiscal_info_failed"
+  | "issuing_enabled"
+  | "issuing_disabled"
+  | "issuer_suspended"
+  | "issuer_released";
 
 export const FISCAL_AUDIT_LABEL: Record<FiscalAuditEvent, string> = {
   terms_accepted: "Termo de autorização aceito",
@@ -356,6 +367,17 @@ export const FISCAL_AUDIT_LABEL: Record<FiscalAuditEvent, string> = {
   nfse_cancel_requested: "Cancelamento de nota pedido",
   nfse_canceled: "Nota cancelada",
   nfse_cancel_rejected: "Cancelamento recusado pela Receita",
+  issuer_saved: "Dados fiscais do emissor salvos",
+  issuer_route_changed: "Forma de emitir do profissional trocada",
+  issuer_payer_changed: "Quem paga as notas trocado",
+  asaas_account_created: "Subconta criada no Asaas",
+  account_status_changed: "Situação do cadastro no Asaas mudou",
+  fiscal_info_saved: "Configuração fiscal aceita pelo Asaas",
+  fiscal_info_failed: "Configuração fiscal recusada pelo Asaas",
+  issuing_enabled: "Emissão ligada",
+  issuing_disabled: "Emissão desligada",
+  issuer_suspended: "Emissão suspensa por falta de pagamento",
+  issuer_released: "Emissão liberada depois do pagamento",
 };
 
 export type FiscalAuditEntry = { event: FiscalAuditEvent; actorId: string | null; createdAt: Date; details: Record<string, unknown> };

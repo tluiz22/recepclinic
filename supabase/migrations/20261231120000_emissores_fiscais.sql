@@ -193,6 +193,15 @@ create policy fiscal_issuer_service_codes_select on public.fiscal_issuer_service
     exists (select 1 from public.fiscal_issuers i where i.id = issuer_id and app.can_manage_fiscal_issuer(i.clinic_id, i.professional_id))
   );
 
+-- O profissional lê a trilha do próprio emissor (o Administrador já lê toda a da clínica).
+create policy fiscal_audit_log_select_own_issuer on public.fiscal_audit_log
+  for select to authenticated using (
+    issuer_id is not null and exists (
+      select 1 from public.fiscal_issuers i
+       where i.id = issuer_id and i.professional_id is not null and i.professional_id = app.own_professional_id(i.clinic_id)
+    )
+  );
+
 -- Só as funções gravam.
 revoke insert, update, delete on public.fiscal_issuers, public.professional_fiscal_routes, public.fiscal_issuer_service_codes from authenticated;
 revoke all on public.fiscal_issuers, public.professional_fiscal_routes, public.fiscal_issuer_service_codes from anon, clinic_service;

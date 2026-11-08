@@ -1,384 +1,239 @@
 ---
-// Configurações › Nota fiscal (F11.3, Módulo financeiro; cliente, 12/out/2026):
-// dados fiscais da clínica (CNPJ, razão social, inscrição municipal,
-// município liberado, Simples Nacional, regime especial, código do serviço e
-// ISS), código próprio por serviço e o certificado A1. Dados e códigos: o
-// Administrador e o Suporte. Certificado: só o Administrador da clínica
-// (enviar ou trocar com o termo, e revogar); a tela mostra só titular, CNPJ e
-// validade, com aviso a partir de 30 dias do vencimento.
+// Configurações › Nota fiscal (N2b; planejamento-nfse-asaas.md, seção 14.7):
+// os emissores da clínica. O da clínica (CNPJ da clínica) e, por profissional,
+// como ele emite: pelo próprio CNPJ (emissor dele, com subconta no Asaas),
+// pelo emissor da clínica ou não emite pelo sistema (N-P1, o Administrador
+// escolhe). Lista pensada para clínica grande: busca, especialidade e forma
+// de emitir. O profissional com login vai direto para o emissor dele.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
-import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
-import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
-import { HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
-import { certificateStatus } from "../../../lib/certificate";
-import { formatInstant } from "../../../lib/clinicTime";
+import Icon from "../../../components/admin/Icon.astro";
+import { HEAD_ROW, INPUT, INPUT_INLINE, LABEL, LIST, PRIMARY_BUTTON, ROW_NAME, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
+import { ownSettingsOnly } from "../../../lib/clinicAccess";
 import { formatCnpj } from "../../../lib/cnpj";
-import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import { createUserClient } from "../../../lib/data/clients";
-import { listServices } from "../../../lib/data/config/services";
-import {
-  FISCAL_AUDIT_LABEL,
-  FISCAL_MUNICIPALITIES,
-  getFiscalCertificate,
-  getFiscalSettings,
-  listFiscalAudit,
-  listServiceFiscalCodes,
-  ENVIRONMENT_LABEL,
-  SIMPLES_NACIONAL_OPTIONS,
-  SIMPLES_REGIME_OPTIONS,
-  SPECIAL_REGIME_OPTIONS,
-} from "../../../lib/data/fiscal";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { getFiscalIssuerOverview, issuerMissing, issuerState, MISSING_LABEL, type FiscalIssuer } from "../../../lib/data/fiscalIssuers";
 import { ASAAS_PROVIDER_NOTICE, ASAAS_SEAL, ASAAS_SITE, ASAAS_SUPPORT } from "../../../lib/asaas/brand";
-import { FISCAL_TERMS, FISCAL_TERMS_VERSION } from "../../../lib/fiscalTerms";
-import { platformEnv } from "../../../lib/env";
 import { receivedReturn, returnLabel, withReturn } from "../../../lib/returnPath";
 
 const clinic = Astro.locals.clinic!;
+if (ownSettingsOnly(clinic)) return Astro.redirect(`/admin/configuracoes/nota-fiscal/emissor?profissional=${clinic.ownProfessionalId}`);
 const db = createUserClient(Astro.request, Astro.cookies);
-const [settings, services, codes, certificate, audit] = await Promise.all([
-  getFiscalSettings(db, clinic.clinicId),
-  listServices(db, clinic.clinicId),
-  listServiceFiscalCodes(db, clinic.clinicId),
-  getFiscalCertificate(db, clinic.clinicId),
-  listFiscalAudit(db, clinic.clinicId),
-]);
-const actors = await loadActorLabels(db, clinic.clinicId, audit.map((a) => a.actorId));
-// O certificado é só do Administrador da clínica (o Suporte nunca mexe).
-const isClinicAdmin = clinic.roles.includes("admin");
-const status = certificate ? certificateStatus(certificate.validUntil) : null;
-// Aberta de outra tela (pagamento, aviso do Início): "Voltar" para lá, também depois
-// de salvar (R9; S-01 do relatório da R8). Aberta pelo menu, sem "Voltar".
+const [overview, professionalList] = await Promise.all([getFiscalIssuerOverview(db, clinic.clinicId), listProfessionals(db, clinic.clinicId)]);
+// Especialidades da frente multiprofissional (um profissional pode ter várias).
+const specialtiesOf = new Map(professionalList.map((p) => [p.id, p.specialties.map((s) => s.name)]));
 const volta = receivedReturn(Astro.url);
 const action = withReturn("/api/admin/configuracoes/nota-fiscal", volta);
-const date = (d: Date) => formatInstant(d, clinic.timezone, "dd/MM/yyyy");
-const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
-
-// Ambientes para onde o Suporte pode trocar (F11.4b: a Simulação só no staging).
-const ENVIRONMENT_SHORT = { production: "Produção", restricted: "Produção Restrita", simulation: "Simulação" } as const;
-const ENVIRONMENT_BADGE = { production: "Produção", restricted: "testes", simulation: "simulação" } as const;
-const SWITCHES = {
-  production: {
-    title: "Passar para Produção?",
-    message: "As próximas notas saem de verdade, com valor fiscal. Confirme que a clínica testou e que o contador conferiu uma nota de teste.",
-    label: "Passar para Produção",
-  },
-  restricted: { title: "Voltar para Produção Restrita?", message: "As próximas notas saem no ambiente de testes da Receita, sem valor fiscal.", label: "Voltar para Produção Restrita" },
-  simulation: {
-    title: "Passar para Simulação?",
-    message: "As próximas notas saem do próprio RecepClinic, sem falar com a Receita, só para testar PDF, envio e cancelamento. Não valem nada e não existem no portal nacional.",
-    label: "Passar para Simulação",
-  },
-} as const;
-const switchTargets = !settings
-  ? []
-  : settings.environment === "restricted"
-    ? (["production", ...(platformEnv().nfseSimulation ? ["simulation" as const] : [])] as const)
-    : (["restricted"] as const);
+const issuerHref = (professionalId: string | null) => withReturn(`/admin/configuracoes/nota-fiscal/emissor${professionalId ? `?profissional=${professionalId}` : ""}`, volta);
+const TONE = { ok: "success", wait: "info", todo: "warning", stop: "danger" } as const;
+const badge = (i: FiscalIssuer) => {
+  const s = issuerState(i);
+  return { variant: TONE[s.tone], label: s.label };
+};
+const clinicIssuer = overview.clinicIssuer;
+const pros = overview.professionals.filter((p) => p.isActive);
+const specsOf = (id: string, profession: string) => (specialtiesOf.get(id)?.length ? specialtiesOf.get(id)! : [profession]);
+const specialties = [...new Set(pros.flatMap((p) => specsOf(p.professionalId, p.profession)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+const counts = { own: pros.filter((p) => p.route === "own").length, clinic: pros.filter((p) => p.route === "clinic").length, none: pros.filter((p) => p.route === "none").length };
+const ROUTE_LABEL = { own: "CNPJ próprio", clinic: "Pelo emissor da clínica", none: "Não emite pelo sistema" } as const;
+const missing = clinicIssuer ? issuerMissing(clinicIssuer) : [];
+const cols = "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)]";
 ---
 
-<ConfigShell current="nota_fiscal" title="Nota fiscal" subtitle="Dados fiscais, certificado A1 e o código de cada serviço para emitir a NFS-e." back={volta ? { href: volta, label: returnLabel(volta) } : undefined}>
-
+<ConfigShell current="nota_fiscal" title="Nota fiscal" subtitle="Quem emite a nota de cada atendimento: a clínica ou o próprio profissional." back={volta ? { href: volta, label: returnLabel(volta) } : undefined}>
   <HowItWorks id="nota-fiscal" topic={configuracoes.comoFunciona.notaFiscal} class="mb-4">
     <p class="text-[15px] text-ink-soft">O que a clínica precisa para emitir a nota.</p>
   </HowItWorks>
-  <div class="grid gap-4 lg:grid-cols-2">
-    <div class="flex flex-col gap-4">
-      <Card>
-        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Dados fiscais da clínica</h2>
-        <p class="mt-1 text-sm text-ink-soft">Vão em todas as notas. Confira com o contador da clínica, principalmente o regime e o código do serviço.</p>
-        <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
-          <input type="hidden" name="acao" value="dados" />
-          <div class="grid gap-3 sm:grid-cols-2">
+
+  <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <Card>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+            Emissor da clínica
+            {clinicIssuer ? <Badge variant={badge(clinicIssuer).variant}>{badge(clinicIssuer).label}</Badge> : <Badge>não cadastrado</Badge>}
+          </h2>
+          {
+            clinicIssuer ? (
+              <p class="mt-1 text-[15px] text-ink">
+                {clinicIssuer.legalName} <span class="whitespace-nowrap text-ink-soft">CNPJ {formatCnpj(clinicIssuer.cnpj)}</span>
+              </p>
+            ) : (
+              <p class="mt-1 text-[15px] text-ink-soft">O CNPJ da clínica. Emite as notas dos atendimentos sem profissional (exames) e dos profissionais que emitem pela clínica.</p>
+            )
+          }
+        </div>
+        <a href={issuerHref(null)} class={PRIMARY_BUTTON}>{clinicIssuer ? "Abrir emissor" : "Cadastrar emissor"}</a>
+      </div>
+      {
+        clinicIssuer && missing.length > 0 && !clinicIssuer.issuingEnabled && (
+          <div class="mt-3 rounded-lg bg-canvas px-3 py-2.5">
+            <p class="text-sm font-semibold text-ink">Falta para emitir</p>
+            <ul class="mt-1 flex flex-col gap-0.5 text-sm text-ink-mid">
+              {missing.map((m) => (
+                <li class="flex items-center gap-1.5">
+                  <Icon name="clock" class="h-3.5 w-3.5 text-ink-soft" />
+                  {MISSING_LABEL[m]}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </Card>
+
+    {/* Selo do Asaas (BaaS, playbook): em toda tela de habilitação fiscal, com link e sem no-referrer (13.8 e 13.10). */}
+    <Card class="flex flex-col">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink">Emissão pelo Asaas</h2>
+      <p class="mt-1 text-sm text-ink-mid">{ASAAS_PROVIDER_NOTICE}</p>
+      <a href={ASAAS_SITE} target="_blank" rel="noopener noreferrer" class="mt-3 inline-block self-start">
+        <img src={ASAAS_SEAL.positive} alt="Selo Serviços financeiros Asaas" width="160" height="48" style="display: inline-block;" />
+      </a>
+      <p class="mt-2 text-sm text-ink-soft">Suporte do Asaas: {ASAAS_SUPPORT.phone}, {ASAAS_SUPPORT.email}</p>
+    </Card>
+  </div>
+
+  <section aria-labelledby="pros-titulo" class="mt-6">
+    <div class="flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <h2 id="pros-titulo" class="font-display text-[19px] font-bold text-ink">Profissionais</h2>
+        <p class="text-[15px] text-ink-soft">Quem tem CNPJ próprio emite pelo próprio emissor. Sem CNPJ: pela clínica ou não emite pelo sistema.</p>
+      </div>
+    </div>
+
+    {
+      pros.length === 0 ? (
+        <p class="mt-3 rounded-xl border border-line bg-white px-4 py-5 text-[15px] text-ink-soft">Nenhum profissional ativo.</p>
+      ) : (
+        <>
+          <div class="mt-3 grid gap-3 rounded-xl border border-line bg-white p-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)] sm:p-4" data-filtros>
             <div>
-              <label for="cnpj" class={LABEL}>CNPJ</label>
-              <input id="cnpj" name="cnpj" required placeholder="00.000.000/0000-00" value={settings ? formatCnpj(settings.cnpj) : ""} class={INPUT} />
+              <label for="busca" class={LABEL}>Buscar</label>
+              <input id="busca" type="search" placeholder="Nome do profissional" autocomplete="off" class={INPUT} data-busca />
             </div>
             <div>
-              <HelpTip subject="Inscrição municipal" text={configuracoes.dicas.nfInscricao} id="municipal_registration">
-                <label for="municipal_registration" class={LABEL}>Inscrição municipal</label>
-              </HelpTip>
-              <input id="municipal_registration" name="municipal_registration" value={settings?.municipalRegistration ?? ""} class={INPUT} />
-            </div>
-          </div>
-          <div>
-            <label for="legal_name" class={LABEL}>Razão social</label>
-            <input id="legal_name" name="legal_name" required value={settings?.legalName ?? ""} class={INPUT} />
-          </div>
-          <div>
-            <label for="municipality_ibge" class={LABEL}>Município</label>
-            <select id="municipality_ibge" name="municipality_ibge" required class={INPUT}>
-              {FISCAL_MUNICIPALITIES.map((m) => (
-                <option value={m.ibge} selected={settings?.municipalityIbge === m.ibge}>
-                  {m.name}/{m.state}
-                </option>
-              ))}
-            </select>
-            <p class={HINT}>Só os municípios que emitem pelo padrão nacional e já foram conferidos. Outra cidade: fale com o suporte.</p>
-          </div>
-          <div>
-            <label for="simples_nacional" class={LABEL}>Simples Nacional</label>
-            <select id="simples_nacional" name="simples_nacional" required class={INPUT}>
-              {SIMPLES_NACIONAL_OPTIONS.map((o) => (
-                <option value={o.value} selected={settings?.simplesNacional === o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div data-me-epp class="grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
-            <p class="text-sm text-ink-soft sm:col-span-2">ME/EPP do Simples: a nota nacional pede mais estes dois dados.</p>
-            <div class="sm:col-span-2">
-              <label for="simples_regime" class={LABEL}>Regime de apuração do Simples</label>
-              <select id="simples_regime" name="simples_regime" class={INPUT}>
-                {SIMPLES_REGIME_OPTIONS.map((o) => (
-                  <option value={o.value} selected={(settings?.simplesRegime ?? "1") === o.value}>
-                    {o.label}
-                  </option>
-                ))}
+              <label for="especialidade" class={LABEL}>Especialidade</label>
+              <select id="especialidade" class={INPUT} data-especialidade>
+                <option value="">Todas</option>
+                {specialties.map((s) => <option value={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label for="simples_total_rate" class={LABEL}>Tributos aproximados do Simples (%)</label>
-              <input
-                id="simples_total_rate"
-                name="simples_total_rate"
-                inputmode="decimal"
-                placeholder="6"
-                value={settings?.simplesTotalRate !== null && settings?.simplesTotalRate !== undefined ? String(settings.simplesTotalRate).replace(".", ",") : ""}
-                class={INPUT}
-              />
-              <p class={HINT}>A alíquota efetiva da faixa do Simples da clínica: o contador informa.</p>
+              <label for="forma" class={LABEL}>Como emite</label>
+              <select id="forma" class={INPUT} data-forma>
+                <option value="">Todas ({pros.length})</option>
+                <option value="own">CNPJ próprio ({counts.own})</option>
+                <option value="clinic">Pela clínica ({counts.clinic})</option>
+                <option value="none">Não emite ({counts.none})</option>
+              </select>
             </div>
           </div>
-          <div>
-            <HelpTip subject="Regime especial de tributação" text={configuracoes.dicas.nfRegime} id="special_regime">
-              <label for="special_regime" class={LABEL}>Regime especial de tributação</label>
-            </HelpTip>
-            <select id="special_regime" name="special_regime" required class={INPUT}>
-              {SPECIAL_REGIME_OPTIONS.map((o) => (
-                <option value={o.value} selected={(settings?.specialRegime ?? "none") === o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <p class={HINT}>Clínicas médicas costumam usar "Sociedade de profissionais" ou "Nenhum": confirme com o contador.</p>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label for="service_code" class={LABEL}>Código do serviço (padrão)</label>
-              <input id="service_code" name="service_code" required placeholder="04.01.01" value={settings?.serviceCode ?? ""} class={INPUT} />
-              <p class={HINT}>Lista nacional: ex.: 04.01.01 Medicina.</p>
+          <p class="mt-3 text-sm text-ink-soft" role="status" data-contagem>
+            {pros.length} {pros.length === 1 ? "profissional" : "profissionais"}
+          </p>
+          <section aria-label="Profissionais e como emitem" class={`mt-2 ${LIST}`}>
+            <div aria-hidden="true" class={`${HEAD_ROW} ${cols}`}>
+              <span>Profissional</span>
+              <span>Situação</span>
+              <span>Como emite</span>
             </div>
-            <div>
-              <HelpTip subject="Alíquota do ISS" text={configuracoes.dicas.nfIss} id="iss_rate">
-                <label for="iss_rate" class={LABEL}>Alíquota do ISS (%)</label>
-              </HelpTip>
-              <input id="iss_rate" name="iss_rate" required inputmode="decimal" placeholder="2" value={issValue} class={INPUT} />
-            </div>
-          </div>
-          <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar dados fiscais</button>
-        </form>
-      </Card>
-
-      <Card>
-        <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
-          Ambiente da Receita
-          {settings && <Badge variant={settings.environment === "production" ? "success" : "warning"}>{ENVIRONMENT_BADGE[settings.environment]}</Badge>}
-        </h2>
-        <p class="mt-1 text-sm text-ink-soft">
-          {settings ? ENVIRONMENT_LABEL[settings.environment] : ENVIRONMENT_LABEL.restricted}. Toda clínica começa em testes; o suporte passa para Produção depois que
-          a clínica testou e o contador conferiu uma nota de teste.
-        </p>
-        {
-          clinic.isPlatformStaff && switchTargets.length > 0 && (
-            <div class="mt-3 flex flex-wrap items-end gap-2">
-              {switchTargets.map((target) => (
-                <form method="POST" action={action}>
-                  <input type="hidden" name="acao" value="ambiente" />
-                  <input type="hidden" name="environment" value={target} />
-                  <button
-                    type="submit"
-                    class={`${SECONDARY_BUTTON} js-confirm-delete`}
-                    data-confirm-title={SWITCHES[target].title}
-                    data-confirm-message={SWITCHES[target].message}
-                    data-confirm-label={SWITCHES[target].label}
+            <ul>
+              {pros.map((p) => {
+                const specs = specsOf(p.professionalId, p.profession);
+                const label = specs.join(", ");
+                return (
+                  <li
+                    class={`grid grid-cols-1 items-center gap-x-4 gap-y-2 border-t border-line px-4 py-3 first:border-t-0 ${cols}`}
+                    data-pro
+                    data-nome={p.name.toLocaleLowerCase("pt-BR")}
+                    data-esp={specs.join("|")}
+                    data-rota={p.route}
                   >
-                    {SWITCHES[target].label}
-                  </button>
-                </form>
-              ))}
-            </div>
-          )
-        }
-      </Card>
-
-      <Card>
-        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Código por serviço</h2>
-        <p class="mt-1 text-sm text-ink-soft">Só quando o serviço tem código diferente do padrão (ex.: 04.16.01 Psicologia). Vazio: vale o padrão.</p>
-        <form method="POST" action={action} class="mt-3 flex flex-col gap-2">
-          <input type="hidden" name="acao" value="codigos" />
-          {services.map((s) => (
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <input type="hidden" name="service_id" value={s.id} />
-              <label for={`code_${s.id}`} class="text-sm text-ink-mid">
-                {s.name}
-              </label>
-              <input id={`code_${s.id}`} name={`code_${s.id}`} placeholder={settings?.serviceCode ?? "04.01.01"} value={codes.get(s.id) ?? ""} class={`${INPUT_INLINE} w-32`} />
-            </div>
-          ))}
-          {services.length === 0 && <p class="text-sm text-ink-soft">Nenhum serviço ativo.</p>}
-          {services.length > 0 && <button type="submit" class={`${SECONDARY_BUTTON} mt-2 self-start`}>Salvar códigos</button>}
-        </form>
-      </Card>
-    </div>
-
-    <div class="flex flex-col gap-4">
-      {/* Selo do Asaas (BaaS, playbook): visível em todo ambiente; o Asaas confere o carregamento pelo Referer (cliente, 07/nov/2026). */}
-      <Card class="flex flex-col">
-        <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
-          Emissão pelo Asaas
-          <Badge variant="warning">aguardando liberação</Badge>
-        </h2>
-        <p class="mt-1 text-sm text-ink-soft">
-          A nota fiscal da clínica vai passar a ser emitida pelo Asaas. Ao habilitar, o RecepClinic cria a conta da clínica no Asaas e os documentos são
-          enviados por um link do próprio Asaas.
-        </p>
-        <p class="mt-2 text-sm text-ink-mid">{ASAAS_PROVIDER_NOTICE}</p>
-        <a href={ASAAS_SITE} target="_blank" rel="noopener noreferrer" class="mt-3 inline-block self-start">
-          <img src={ASAAS_SEAL.positive} alt="Selo Serviços financeiros Asaas" width="160" height="48" style="display: inline-block;" />
-        </a>
-        <p class={HINT}>
-          Suporte do Asaas para a conta e as tarifas: {ASAAS_SUPPORT.phone} · {ASAAS_SUPPORT.email}
-        </p>
-        <button type="button" class={`${PRIMARY_BUTTON} mt-3 self-start`} disabled>Habilitar emissão pelo Asaas</button>
-        <p class={HINT}>Aguardando a liberação do Asaas. Até lá, a emissão segue como está nesta tela.</p>
-      </Card>
-
-      <Card>
-        <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
-          Certificado digital A1
-          {status?.state === "ok" && <Badge variant="success">em dia</Badge>}
-          {status?.state === "expiring" && <Badge variant="warning">{`vence em ${status.daysLeft} ${status.daysLeft === 1 ? "dia" : "dias"}`}</Badge>}
-          {status?.state === "expired" && <Badge variant="danger">vencido</Badge>}
-          {!certificate && <Badge>não enviado</Badge>}
-        </h2>
-        {
-          certificate ? (
-            <dl class="mt-2 grid gap-1 text-sm text-ink-mid">
-              <div>
-                <dt class="inline text-ink-soft">Titular:</dt> <dd class="inline">{certificate.subjectName}</dd>
-              </div>
-              <div>
-                <dt class="inline text-ink-soft">CNPJ:</dt> <dd class="inline">{formatCnpj(certificate.subjectCnpj)}</dd>
-              </div>
-              <div>
-                <dt class="inline text-ink-soft">Validade:</dt>{" "}
-                <dd class="inline">
-                  {date(certificate.validFrom)} a {date(certificate.validUntil)}
-                </dd>
-              </div>
-            </dl>
-          ) : (
-            <p class="mt-1 text-sm text-ink-soft">Sem o certificado, a clínica não emite nota fiscal.</p>
-          )
-        }
-        {status?.state === "expired" && <p class="mt-2 text-sm text-danger">Vencido: a emissão está desligada até enviar o certificado novo.</p>}
-        {status?.state === "expiring" && <p class="mt-2 text-sm text-pend-800">Renove o certificado com a certificadora e envie o novo aqui antes de vencer.</p>}
-        <p class={HINT}>O arquivo e a senha ficam criptografados no cofre do sistema e nunca aparecem na tela, nem para o suporte.</p>
-
-        {
-          isClinicAdmin ? (
-            <>
-              <form method="POST" action={action} enctype="multipart/form-data" class="mt-4 flex flex-col gap-3 border-t border-[#e6ecea] pt-4">
-                <input type="hidden" name="acao" value="certificado" />
-                <p class="text-sm font-medium text-ink">{certificate ? "Trocar o certificado" : "Enviar o certificado"}</p>
-                {!settings && <p class="text-sm text-pend-800">Salve primeiro os dados fiscais: o certificado precisa ser do mesmo CNPJ.</p>}
-                <div>
-                  <label for="pfx" class={LABEL}>Arquivo (.pfx ou .p12)</label>
-                  <input id="pfx" name="pfx" type="file" required accept=".pfx,.p12,application/x-pkcs12" class="mt-1 block text-sm" />
-                </div>
-                <div>
-                  <label for="password" class={LABEL}>Senha do certificado</label>
-                  <input id="password" name="password" type="password" required autocomplete="off" class={`${INPUT_INLINE} mt-1.5 w-full sm:w-64`} />
-                </div>
-                <details class="rounded-lg border border-line p-3 text-sm text-ink-mid" open={!certificate}>
-                  <summary class="cursor-pointer font-medium">Termo de autorização</summary>
-                  {FISCAL_TERMS.map((paragraph) => (
-                    <p class="mt-2">{paragraph}</p>
-                  ))}
-                  <p class="mt-2 text-xs text-ink-soft">Versão {FISCAL_TERMS_VERSION}.</p>
-                </details>
-                <label class="flex items-start gap-2 text-sm text-ink-mid">
-                  <input type="checkbox" name="terms" value="1" required class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
-                  <span>Li e aceito o termo de autorização, em nome da clínica.</span>
-                </label>
-                <button type="submit" class={`${PRIMARY_BUTTON} self-start`} disabled={!settings}>
-                  {certificate ? "Trocar certificado" : "Enviar certificado"}
-                </button>
-              </form>
-              {certificate && (
-                <form method="POST" action={action} class="mt-4 border-t border-[#e6ecea] pt-4">
-                  <input type="hidden" name="acao" value="revogar" />
-                  <button
-                    type="submit"
-                    class={`${SECONDARY_BUTTON} js-confirm-delete text-danger`}
-                    data-confirm-title="Revogar o certificado?"
-                    data-confirm-message="O certificado e a senha são apagados do cofre na hora e a clínica deixa de emitir notas até enviar um certificado de novo. As notas já emitidas não mudam."
-                    data-confirm-label="Revogar"
-                  >
-                    Revogar certificado
-                  </button>
-                </form>
-              )}
-            </>
-          ) : (
-            <p class="mt-4 border-t border-[#e6ecea] pt-4 text-sm text-ink-soft">Só o Administrador da clínica envia, troca ou revoga o certificado.</p>
-          )
-        }
-      </Card>
-
-      <Card>
-        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Histórico fiscal</h2>
-        <ul class="mt-2 divide-y divide-[#e6ecea]">
-          {audit.map((entry) => (
-            <li class="py-2 text-sm">
-              <span class="font-medium text-ink">{FISCAL_AUDIT_LABEL[entry.event]}</span>
-              <span class="block text-ink-soft">
-                {formatInstant(entry.createdAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
-                {entry.actorId ? ` · ${actors.get(entry.actorId)?.name ?? "alguém da equipe"}` : ""}
-                {typeof entry.details.terms_version === "string" ? ` · versão ${entry.details.terms_version}` : ""}
-                {entry.details.nfse_number ? ` · nº ${entry.details.nfse_number}` : ""}
-                {typeof entry.details.error_code === "string" ? ` · ${entry.details.error_code}` : ""}
-                {entry.event === "environment_changed" ? ` · para ${ENVIRONMENT_SHORT[entry.details.to as keyof typeof ENVIRONMENT_SHORT] ?? "Produção Restrita"}` : ""}
-              </span>
-            </li>
-          ))}
-          {audit.length === 0 && <li class="py-2 text-sm text-ink-soft">Nada ainda.</li>}
-        </ul>
-      </Card>
-    </div>
-  </div>
-  <ConfirmDeleteDialog />
+                    <div class="min-w-0">
+                      <a href={issuerHref(p.professionalId)} class={ROW_NAME}>
+                        {p.name}
+                      </a>
+                      <p class="text-sm text-ink-soft">{label}</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5 text-sm">
+                      {p.issuer ? (
+                        <>
+                          <Badge variant={badge(p.issuer).variant}>{badge(p.issuer).label}</Badge>
+                          <span class="text-ink-soft">{p.issuer.payer === "professional" ? "paga as próprias notas" : "notas pagas pela clínica"}</span>
+                        </>
+                      ) : p.route === "clinic" ? (
+                        <span class="text-ink-mid">Sai com o CNPJ da clínica</span>
+                      ) : (
+                        <span class="text-ink-soft">Emite por fora do sistema</span>
+                      )}
+                    </div>
+                    <div>
+                      {p.route === "own" ? (
+                        <a href={issuerHref(p.professionalId)} class={SECONDARY_BUTTON}>
+                          Abrir emissor
+                        </a>
+                      ) : (
+                        <form method="POST" action={action} class="flex flex-wrap items-center gap-2">
+                          <input type="hidden" name="acao" value="rota" />
+                          <input type="hidden" name="profissional" value={p.professionalId} />
+                          <label for={`modo_${p.professionalId}`} class="sr-only">
+                            Como {p.name} emite
+                          </label>
+                          <select id={`modo_${p.professionalId}`} name="modo" class={`${INPUT_INLINE} min-w-0 flex-1`}>
+                            <option value="clinic" selected={p.route === "clinic"}>
+                              {ROUTE_LABEL.clinic}
+                            </option>
+                            <option value="none" selected={p.route === "none"}>
+                              {ROUTE_LABEL.none}
+                            </option>
+                            <option value="own">Cadastrar CNPJ próprio</option>
+                          </select>
+                          <button type="submit" class={SECONDARY_BUTTON}>
+                            Salvar
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <p class="hidden border-t border-line px-4 py-5 text-[15px] text-ink-soft" data-vazio>
+              Nenhum profissional com esse filtro.
+            </p>
+          </section>
+        </>
+      )
+    }
+  </section>
 </ConfigShell>
 
 <script>
-  // Os campos do Simples só aparecem (e só vão) para ME/EPP.
-  const select = document.getElementById("simples_nacional") as HTMLSelectElement | null;
-  const box = document.querySelector<HTMLElement>("[data-me-epp]");
-  if (select && box) {
-    const sync = () => {
-      const on = select.value === "me_epp";
-      box.hidden = !on;
-      box.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select").forEach((field) => {
-        field.disabled = !on;
-        field.required = on;
-      });
-    };
-    select.addEventListener("change", sync);
-    sync();
-  }
+  // Filtro na própria página (a lista vem inteira: clínicas com dezenas de profissionais).
+  const busca = document.querySelector<HTMLInputElement>("[data-busca]");
+  const esp = document.querySelector<HTMLSelectElement>("[data-especialidade]");
+  const forma = document.querySelector<HTMLSelectElement>("[data-forma]");
+  const rows = [...document.querySelectorAll<HTMLElement>("[data-pro]")];
+  const contagem = document.querySelector<HTMLElement>("[data-contagem]");
+  const vazio = document.querySelector<HTMLElement>("[data-vazio]");
+  const normalize = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const apply = () => {
+    const q = normalize(busca?.value.trim() ?? "");
+    let shown = 0;
+    for (const row of rows) {
+      const ok =
+        (!q || normalize(row.dataset.nome ?? "").includes(q)) && (!esp?.value || (row.dataset.esp ?? "").split("|").includes(esp.value)) && (!forma?.value || row.dataset.rota === forma.value);
+      row.hidden = !ok;
+      if (ok) shown++;
+    }
+    if (contagem) contagem.textContent = `${shown} ${shown === 1 ? "profissional" : "profissionais"}${shown === rows.length ? "" : ` de ${rows.length}`}`;
+    if (vazio) vazio.classList.toggle("hidden", shown > 0);
+  };
+  busca?.addEventListener("input", apply);
+  esp?.addEventListener("change", apply);
+  forma?.addEventListener("change", apply);
 </script>

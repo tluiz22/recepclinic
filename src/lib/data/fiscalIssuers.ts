@@ -482,3 +482,14 @@ export async function listIssuerServiceCodes(db: DbClient, issuerId: string): Pr
   const rows = unwrap(await db.from("fiscal_issuer_service_codes").select("service_id, service_code").eq("issuer_id", issuerId), "Códigos dos serviços");
   return new Map((rows as { service_id: string; service_code: string }[]).map((r) => [r.service_id, r.service_code]));
 }
+
+export type IssuerAuditEntry = { event: string; actorId: string | null; createdAt: Date; details: Record<string, unknown> };
+
+/** Trilha de um emissor (o Administrador vê; o profissional, a do próprio emissor). */
+export async function listIssuerAudit(db: DbClient, issuerId: string, limit = 20): Promise<IssuerAuditEntry[]> {
+  const rows = unwrap(
+    await db.from("fiscal_audit_log").select("event, actor_id, details, created_at").eq("issuer_id", issuerId).order("created_at", { ascending: false }).limit(limit),
+    "Trilha do emissor",
+  ) as { event: string; actor_id: string | null; details: Record<string, unknown>; created_at: string }[];
+  return rows.map((r) => ({ event: r.event, actorId: r.actor_id, createdAt: new Date(r.created_at), details: r.details }));
+}

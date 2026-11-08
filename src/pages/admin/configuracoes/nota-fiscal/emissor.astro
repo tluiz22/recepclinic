@@ -1,0 +1,575 @@
+---
+// Configurações › Nota fiscal › Emissor (N2b; planejamento-nfse-asaas.md,
+// seções 14.4 e 14.7). Um CNPJ que emite: o da clínica (sem ?profissional)
+// ou o de um profissional. O caminho até emitir é uma sequência: dados
+// fiscais → subconta no Asaas (o Suporte cria) → cadastro aprovado pelo Asaas
+// → configuração e certificado aceitos → emissão ligada. N-P2: o
+// Administrador e o próprio profissional mexem no emissor dele; quem paga as
+// notas, só o Administrador (N-P6: pagador profissional precisa de login).
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import Badge from "../../../../components/admin/config/Badge.astro";
+import Card from "../../../../components/admin/config/Panel.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
+import { configuracoes } from "../../../../lib/ajuda/configuracoes";
+import { CHECK, CHOICE, HINT, INPUT, INPUT_INLINE, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import { ASAAS_PROVIDER_NOTICE, ASAAS_SEAL, ASAAS_SITE, ASAAS_SUPPORT } from "../../../../lib/asaas/brand";
+import { certificateStatus } from "../../../../lib/certificate";
+import { isUuid, ownSettingsOnly } from "../../../../lib/clinicAccess";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { formatCnpj } from "../../../../lib/cnpj";
+import { loadActorLabels } from "../../../../lib/data/agenda/trail";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listProfessionals } from "../../../../lib/data/config/professionals";
+import { listServices } from "../../../../lib/data/config/services";
+import { FISCAL_AUDIT_LABEL, FISCAL_MUNICIPALITIES, type FiscalAuditEvent } from "../../../../lib/data/fiscal";
+import {
+  COMPANY_TYPES,
+  getFiscalIssuerOverview,
+  issuerMissing,
+  issuerState,
+  issuerToInput,
+  listIssuerAudit,
+  listIssuerServiceCodes,
+  MISSING_LABEL,
+} from "../../../../lib/data/fiscalIssuers";
+import { receivedReturn, withReturn } from "../../../../lib/returnPath";
+
+const clinic = Astro.locals.clinic!;
+const ownOnly = ownSettingsOnly(clinic);
+const asked = Astro.url.searchParams.get("profissional");
+const professionalId = ownOnly ? clinic.ownProfessionalId! : isUuid(asked) ? asked : null;
+if (ownOnly && asked !== clinic.ownProfessionalId) return Astro.redirect(`/admin/configuracoes/nota-fiscal/emissor?profissional=${clinic.ownProfessionalId}`);
+const db = createUserClient(Astro.request, Astro.cookies);
+const [overview, professionals] = await Promise.all([getFiscalIssuerOverview(db, clinic.clinicId), listProfessionals(db, clinic.clinicId, { includeInactive: true })]);
+const professional = professionalId ? professionals.find((p) => p.id === professionalId) : null;
+if (professionalId && !professional) return Astro.redirect("/admin/configuracoes/nota-fiscal");
+const row = professionalId ? overview.professionals.find((p) => p.professionalId === professionalId) : null;
+const issuer = professionalId ? (row?.issuer ?? null) : overview.clinicIssuer;
+const [services, codes, audit] = await Promise.all([
+  listServices(db, clinic.clinicId, professionalId ? { professionalId } : {}),
+  issuer ? listIssuerServiceCodes(db, issuer.id) : Promise.resolve(new Map<string, string>()),
+  issuer ? listIssuerAudit(db, issuer.id) : Promise.resolve([]),
+]);
+const actors = await loadActorLabels(db, clinic.clinicId, audit.map((a) => a.actorId));
+const values = issuerToInput(issuer);
+const isAdmin = clinic.roles.includes("admin") || clinic.isPlatformStaff;
+const volta = receivedReturn(Astro.url);
+const action = withReturn("/api/admin/configuracoes/nota-fiscal", volta);
+const listHref = withReturn("/admin/configuracoes/nota-fiscal", volta);
+const title = professional ? (ownOnly ? "Minha nota fiscal" : `Nota fiscal de ${professional.displayName}`) : "Emissor da clínica";
+const subtitle = professional ? "O CNPJ do profissional, com a conta dele no Asaas para emitir as notas dos atendimentos dele." : "O CNPJ da clínica: emite as notas de quem não tem CNPJ próprio e dos exames.";
+const state = issuer ? issuerState(issuer) : null;
+const TONE = { ok: "success", wait: "info", todo: "warning", stop: "danger" } as const;
+const missing = issuer ? issuerMissing(issuer) : [];
+const auth = issuer?.municipalOptions?.authenticationType ?? "CERTIFICATE";
+const regimes = issuer?.municipalOptions?.specialTaxRegimesList ?? [];
+const cert = issuer?.certificateValidUntil ? certificateStatus(issuer.certificateValidUntil) : null;
+const date = (d: Date) => formatInstant(d, clinic.timezone, "dd/MM/yyyy");
+const hidden = { profissional: professionalId ?? "", emissor: issuer?.id ?? "" };
+// O caminho até emitir (sequência de verdade, por isso numerada).
+const steps = [
+  { label: "Dados fiscais salvos", done: !!issuer, who: professional ? "Administrador ou o profissional" : "Administrador" },
+  { label: "Subconta criada no Asaas", done: !!issuer?.hasAccount, who: "Suporte do RecepClinic" },
+  { label: "Cadastro aprovado pelo Asaas", done: issuer?.accountStatus === "approved", who: "Asaas, depois dos documentos" },
+  { label: "Configuração fiscal e certificado aceitos", done: issuer?.fiscalInfoStatus === "configured" && !missing.includes("certificado"), who: "Envio nesta tela" },
+  { label: "Emissão ligada", done: !!issuer?.issuingEnabled, who: "Nesta tela" },
+];
+const nextStep = steps.findIndex((s) => !s.done);
+const ACCOUNT_LABEL = { none: "sem subconta", pending: "documentos pendentes", awaiting_approval: "em análise", approved: "aprovado", rejected: "recusado" } as const;
+const fieldset = "flex flex-col gap-3 border-t border-line pt-4 first-of-type:border-t-0 first-of-type:pt-0";
+---
+
+<ConfigShell current="nota_fiscal" title={title} subtitle={subtitle} back={ownOnly ? undefined : { href: volta ?? listHref, label: volta ? "Voltar" : "Nota fiscal" }}>
+  {
+    professional && !issuer && row?.route !== "own" && !ownOnly && (
+      <p class="mb-4 rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink-mid">
+        Hoje, {row?.route === "none" ? "este profissional não emite nota pelo sistema" : "as notas deste profissional saem pelo emissor da clínica"}. Preencha abaixo só se ele tem
+        CNPJ próprio: ao salvar, as notas dele passam a sair pelo CNPJ dele.
+      </p>
+    )
+  }
+  {
+    ownOnly && !issuer && (
+      <p class="mb-4 rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink-mid">
+        {row?.route === "none"
+          ? "Hoje, as suas notas não saem pelo sistema."
+          : "Hoje, as notas dos seus atendimentos saem pelo CNPJ da clínica."}{" "}
+        Se você tem CNPJ próprio, preencha os dados abaixo para emitir pelo seu CNPJ.
+      </p>
+    )
+  }
+
+  <ol class="mb-4 grid gap-2 rounded-xl border border-line bg-white p-4 sm:grid-cols-5 sm:gap-3" aria-label="Para emitir">
+    {
+      steps.map((s, i) => (
+        <li class={`flex gap-2.5 sm:flex-col sm:gap-1.5 ${i === nextStep ? "" : s.done ? "" : "opacity-70"}`} aria-current={i === nextStep ? "step" : undefined}>
+          <span
+            class={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold ${s.done ? "bg-conf-100 text-conf-800" : i === nextStep ? "bg-brand text-white" : "bg-blk-100 text-blk-800"}`}
+          >
+            {s.done ? <Icon name="check" class="h-4 w-4" strokeWidth={2.6} /> : i + 1}
+          </span>
+          <span class="min-w-0">
+            <span class="block text-[14.5px] leading-snug font-semibold text-ink">{s.label}</span>
+            <span class="block text-[13px] text-ink-soft">{s.who}</span>
+          </span>
+        </li>
+      ))
+    }
+  </ol>
+
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    <div class="flex flex-col gap-4">
+      <Card>
+        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Dados fiscais</h2>
+        <p class="mt-1 text-sm text-ink-soft">Vão para o Asaas e em todas as notas deste CNPJ. Confira com o contador, principalmente o regime e o código do serviço.</p>
+        <form method="POST" action={action} class="mt-4 flex flex-col gap-4" novalidate>
+          <input type="hidden" name="acao" value="dados" />
+          <input type="hidden" name="profissional" value={hidden.profissional} />
+          <fieldset class={fieldset}>
+            <legend class={`${LEGEND} mb-1`}>Empresa</legend>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label for="cnpj" class={LABEL}>CNPJ</label>
+                <input id="cnpj" name="cnpj" required inputmode="numeric" placeholder="00.000.000/0000-00" value={values.cnpj} readonly={issuer?.hasAccount} class={INPUT} />
+                {issuer?.hasAccount && <p class={HINT}>Não muda depois da subconta criada.</p>}
+              </div>
+              <div>
+                <label for="company_type" class={LABEL}>Tipo de empresa</label>
+                <select id="company_type" name="company_type" class={INPUT}>
+                  {COMPANY_TYPES.map((c) => (
+                    <option value={c.value} selected={values.companyType === c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label for="legal_name" class={LABEL}>Razão social</label>
+              <input id="legal_name" name="legal_name" required value={values.legalName} class={INPUT} />
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label for="fiscal_email" class={LABEL}>E-mail do responsável</label>
+                <input id="fiscal_email" name="fiscal_email" type="email" required value={values.fiscalEmail} class={INPUT} />
+                <p class={HINT}>O Asaas manda para cá os avisos da conta.</p>
+              </div>
+              <div>
+                <label for="mobile_phone" class={LABEL}>Celular do responsável</label>
+                <input id="mobile_phone" name="mobile_phone" type="tel" inputmode="tel" required placeholder="(84) 98888-0000" value={values.mobilePhone} class={INPUT} />
+              </div>
+            </div>
+            <div>
+              <label for="monthly_income" class={LABEL}>Faturamento mensal aproximado (R$)</label>
+              <input id="monthly_income" name="monthly_income" inputmode="decimal" placeholder="30000" value={values.monthlyIncome} class={`${INPUT} sm:max-w-[220px]`} />
+              <p class={HINT}>O Asaas pede para abrir a conta.</p>
+            </div>
+          </fieldset>
+
+          <fieldset class={fieldset}>
+            <legend class={`${LEGEND} mb-1`}>Endereço da empresa</legend>
+            <div class="grid gap-3 sm:grid-cols-[160px_minmax(0,1fr)]">
+              <div>
+                <label for="postal_code" class={LABEL}>CEP</label>
+                <input id="postal_code" name="postal_code" inputmode="numeric" required placeholder="59600-000" value={values.postalCode} class={INPUT} />
+              </div>
+              <div>
+                <label for="street" class={LABEL}>Rua</label>
+                <input id="street" name="street" required value={values.street} class={INPUT} />
+              </div>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-[120px_minmax(0,1fr)_minmax(0,1fr)]">
+              <div>
+                <label for="street_number" class={LABEL}>Número</label>
+                <input id="street_number" name="street_number" required value={values.streetNumber} class={INPUT} />
+              </div>
+              <div>
+                <label for="complement" class={LABEL}>Complemento</label>
+                <input id="complement" name="complement" value={values.complement} class={INPUT} />
+              </div>
+              <div>
+                <label for="district" class={LABEL}>Bairro</label>
+                <input id="district" name="district" required value={values.district} class={INPUT} />
+              </div>
+            </div>
+            <div>
+              <label for="municipality_ibge" class={LABEL}>Município onde emite</label>
+              <select id="municipality_ibge" name="municipality_ibge" class={`${INPUT} sm:max-w-xs`}>
+                {FISCAL_MUNICIPALITIES.map((m) => (
+                  <option value={m.ibge} selected={values.municipalityIbge === m.ibge}>
+                    {m.name}/{m.state}
+                  </option>
+                ))}
+              </select>
+              <p class={HINT}>Só os municípios já conferidos com o Asaas. Outra cidade: fale com o suporte.</p>
+            </div>
+          </fieldset>
+
+          <fieldset class={fieldset}>
+            <legend class={`${LEGEND} mb-1`}>Tributação</legend>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <HelpTip subject="Inscrição municipal" text={configuracoes.dicas.nfInscricao} id="municipal_registration">
+                  <label for="municipal_registration" class={LABEL}>Inscrição municipal</label>
+                </HelpTip>
+                <input id="municipal_registration" name="municipal_registration" value={values.municipalRegistration} class={INPUT} />
+              </div>
+              <div>
+                <label for="cnae" class={LABEL}>CNAE</label>
+                <input id="cnae" name="cnae" inputmode="numeric" placeholder="8630-5/03" value={values.cnae} class={INPUT} />
+              </div>
+            </div>
+            <fieldset>
+              <legend class={LABEL}>Simples Nacional</legend>
+              <div class="mt-1.5 flex flex-wrap gap-x-5">
+                <label class={CHOICE}><input type="radio" name="simples_nacional" value="true" checked={values.simplesNacional === "true"} class={CHECK} /> Optante</label>
+                <label class={CHOICE}><input type="radio" name="simples_nacional" value="false" checked={values.simplesNacional !== "true"} class={CHECK} /> Não optante</label>
+              </div>
+            </fieldset>
+            <div>
+              <HelpTip subject="Regime especial de tributação" text={configuracoes.dicas.nfRegime} id="special_tax_regime">
+                <label for="special_tax_regime" class={LABEL}>Regime especial de tributação</label>
+              </HelpTip>
+              {
+                regimes.length > 0 ? (
+                  <select id="special_tax_regime" name="special_tax_regime" class={INPUT}>
+                    <option value="">Nenhum</option>
+                    {regimes.map((r) => (
+                      <option value={r.value} selected={values.specialTaxRegime === r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input id="special_tax_regime" name="special_tax_regime" value={values.specialTaxRegime} class={INPUT} />
+                )
+              }
+              <p class={HINT}>{regimes.length ? "Lista do município, lida do Asaas." : "A lista do município aparece depois da subconta criada."}</p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+              <div>
+                <label for="service_code" class={LABEL}>Código do serviço</label>
+                <input id="service_code" name="service_code" placeholder="04.01.01" value={values.serviceCode} class={INPUT} />
+              </div>
+              <div>
+                <label for="service_name" class={LABEL}>Descrição do serviço</label>
+                <input id="service_name" name="service_name" placeholder="Medicina" value={values.serviceName} class={INPUT} />
+              </div>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label for="nbs_code" class={LABEL}>NBS</label>
+                <input id="nbs_code" name="nbs_code" placeholder="1.2301.22.00" value={values.nbsCode} class={INPUT} />
+              </div>
+              <div>
+                <HelpTip subject="Alíquota do ISS" text={configuracoes.dicas.nfIss} id="iss_rate">
+                  <label for="iss_rate" class={LABEL}>Alíquota do ISS (%)</label>
+                </HelpTip>
+                <input id="iss_rate" name="iss_rate" inputmode="decimal" placeholder="5" value={values.issRate} class={INPUT} />
+              </div>
+            </div>
+            <details class="rounded-lg border border-line px-3 py-2.5" open={!!(values.pisCofinsTaxStatus || values.taxSituationCode)}>
+              <summary class="cursor-pointer text-[14.5px] font-semibold text-ink">PIS/COFINS e IBS/CBS (o contador informa)</summary>
+              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label for="pis_cofins_tax_status" class={LABEL}>Situação do PIS/COFINS</label>
+                  <input id="pis_cofins_tax_status" name="pis_cofins_tax_status" placeholder="NONE" value={values.pisCofinsTaxStatus} class={INPUT} />
+                  <p class={HINT}>Obrigatório para quem não é do Simples.</p>
+                </div>
+                <div>
+                  <label for="tax_situation_code" class={LABEL}>CST do IBS/CBS</label>
+                  <input id="tax_situation_code" name="tax_situation_code" inputmode="numeric" placeholder="200" value={values.taxSituationCode} class={INPUT} />
+                </div>
+                <div>
+                  <label for="tax_classification_code" class={LABEL}>Classificação tributária</label>
+                  <input id="tax_classification_code" name="tax_classification_code" inputmode="numeric" placeholder="200029" value={values.taxClassificationCode} class={INPUT} />
+                </div>
+                <div>
+                  <label for="operation_indicator_code" class={LABEL}>Indicador de operação</label>
+                  <input id="operation_indicator_code" name="operation_indicator_code" inputmode="numeric" placeholder="030101" value={values.operationIndicatorCode} class={INPUT} />
+                </div>
+              </div>
+            </details>
+          </fieldset>
+
+          <fieldset class={fieldset}>
+            <legend class={`${LEGEND} mb-1`}>Numeração das notas</legend>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label for="rps_series" class={LABEL}>Série</label>
+                <input id="rps_series" name="rps_series" placeholder="2026" value={values.rpsSeries} class={INPUT} />
+              </div>
+              <div>
+                <label for="rps_next_number" class={LABEL}>Próximo número</label>
+                <input id="rps_next_number" name="rps_next_number" inputmode="numeric" placeholder="1" value={values.rpsNextNumber} class={INPUT} />
+              </div>
+            </div>
+            <p class={HINT}>Para continuar a numeração de quem já emitia: a série e o número da próxima nota.</p>
+          </fieldset>
+          <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar dados fiscais</button>
+        </form>
+      </Card>
+
+      {
+        issuer && (
+          <Card>
+            <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Código por serviço</h2>
+            <p class="mt-1 text-sm text-ink-soft">Só quando o serviço tem código diferente do padrão deste CNPJ. Vazio: vale o padrão ({issuer.serviceCode ?? "não preenchido"}).</p>
+            {services.length === 0 ? (
+              <p class="mt-3 text-sm text-ink-soft">Nenhum serviço ativo.</p>
+            ) : (
+              <form method="POST" action={action} class="mt-3 flex flex-col">
+                <input type="hidden" name="acao" value="codigos" />
+                <input type="hidden" name="profissional" value={hidden.profissional} />
+                <input type="hidden" name="emissor" value={hidden.emissor} />
+                <ul class="divide-y divide-line">
+                  {services.map((s) => (
+                    <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                      <input type="hidden" name="service_id" value={s.id} />
+                      <label for={`code_${s.id}`} class="min-w-0 text-[15px] text-ink">
+                        {s.name}
+                      </label>
+                      <input id={`code_${s.id}`} name={`code_${s.id}`} placeholder={issuer.serviceCode ?? "04.01.01"} value={codes.get(s.id) ?? ""} class={`${INPUT_INLINE} w-32`} />
+                    </li>
+                  ))}
+                </ul>
+                <button type="submit" class={`${SECONDARY_BUTTON} mt-3 self-start`}>Salvar códigos</button>
+              </form>
+            )}
+          </Card>
+        )
+      }
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <Card>
+        <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+          Conta no Asaas
+          {issuer && <Badge variant={issuer.accountStatus === "approved" ? "success" : issuer.accountStatus === "rejected" ? "danger" : issuer.hasAccount ? "info" : "neutral"}>{ACCOUNT_LABEL[issuer.accountStatus]}</Badge>}
+        </h2>
+        <p class="mt-1 text-sm text-ink-mid">{ASAAS_PROVIDER_NOTICE}</p>
+        <a href={ASAAS_SITE} target="_blank" rel="noopener noreferrer" class="mt-3 inline-block self-start">
+          <img src={ASAAS_SEAL.positive} alt="Selo Serviços financeiros Asaas" width="160" height="48" style="display: inline-block;" />
+        </a>
+        {
+          !issuer ? (
+            <p class="mt-3 text-sm text-ink-soft">Salve os dados fiscais primeiro: o Suporte cria a conta no Asaas com eles.</p>
+          ) : !issuer.hasAccount ? (
+            clinic.isPlatformStaff ? (
+              <form method="POST" action={action} class="mt-3">
+                <input type="hidden" name="acao" value="subconta" />
+                <input type="hidden" name="profissional" value={hidden.profissional} />
+                <input type="hidden" name="emissor" value={hidden.emissor} />
+                <button
+                  type="submit"
+                  class={`${PRIMARY_BUTTON} js-confirm-delete`}
+                  data-confirm-title="Criar a subconta no Asaas?"
+                  data-confirm-message={`Abre a conta de ${issuer.legalName} (CNPJ ${formatCnpj(issuer.cnpj)}) no Asaas ${issuer.environment === "production" ? "de produção" : "de testes (Sandbox)"}. O CNPJ não muda depois.`}
+                  data-confirm-label="Criar subconta"
+                >
+                  Criar subconta no Asaas
+                </button>
+              </form>
+            ) : (
+              <p class="mt-3 text-sm text-ink-soft">O Suporte do RecepClinic cria a conta no Asaas com estes dados. Avise o suporte quando estiverem conferidos.</p>
+            )
+          ) : (
+            <>
+              <dl class="mt-3 grid gap-1 text-sm text-ink-mid">
+                <div>
+                  <dt class="inline text-ink-soft">Ambiente:</dt> <dd class="inline">{issuer.environment === "production" ? "Produção" : "Testes (Sandbox)"}</dd>
+                </div>
+                {issuer.municipalOptions && (
+                  <div>
+                    <dt class="inline text-ink-soft">Cancelamento pelo sistema:</dt> <dd class="inline">{issuer.municipalOptions.supportsCancellation ? "o município permite" : "só no portal da prefeitura"}</dd>
+                  </div>
+                )}
+              </dl>
+              {issuer.accountStatus !== "approved" && (
+                <p class="mt-2 text-sm text-ink-mid">O Asaas manda ao e-mail do responsável o pedido dos documentos. A aprovação costuma levar alguns dias úteis.</p>
+              )}
+              <form method="POST" action={action} class="mt-3">
+                <input type="hidden" name="acao" value="atualizar" />
+                <input type="hidden" name="profissional" value={hidden.profissional} />
+                <input type="hidden" name="emissor" value={hidden.emissor} />
+                <button type="submit" class={SECONDARY_BUTTON}>Atualizar situação</button>
+              </form>
+            </>
+          )
+        }
+        <p class={HINT}>Suporte do Asaas: {ASAAS_SUPPORT.phone}, {ASAAS_SUPPORT.email}</p>
+      </Card>
+
+      {
+        issuer?.hasAccount && (
+          <Card>
+            <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+              Envio ao Asaas
+              {issuer.fiscalInfoStatus === "configured" && <Badge variant="success">aceito</Badge>}
+              {issuer.fiscalInfoStatus === "error" && <Badge variant="danger">recusado</Badge>}
+              {issuer.fiscalInfoStatus === "pending" && <Badge variant="warning">a enviar</Badge>}
+            </h2>
+            <p class="mt-1 text-sm text-ink-soft">Os dados fiscais acima e {auth === "CERTIFICATE" ? "o certificado digital A1 (e-CNPJ)" : auth === "TOKEN" ? "o token da prefeitura" : "o usuário e a senha da prefeitura"}, que o município exige.</p>
+            {issuer.fiscalInfoStatus === "error" && issuer.fiscalInfoMessage && <p class="mt-2 text-sm text-danger">{issuer.fiscalInfoMessage}</p>}
+            {cert && (
+              <p class={`mt-2 text-sm ${cert.state === "ok" ? "text-ink-mid" : cert.state === "expiring" ? "text-pend-800" : "text-danger"}`}>
+                Certificado enviado, válido até {date(issuer.certificateValidUntil!)}
+                {cert.state === "expiring" ? `: vence em ${cert.daysLeft} ${cert.daysLeft === 1 ? "dia" : "dias"}, envie o novo` : cert.state === "expired" ? ": vencido, envie o novo" : ""}.
+              </p>
+            )}
+            <form method="POST" action={action} enctype="multipart/form-data" class="mt-3 flex flex-col gap-3">
+              <input type="hidden" name="acao" value="enviar" />
+              <input type="hidden" name="profissional" value={hidden.profissional} />
+              <input type="hidden" name="emissor" value={hidden.emissor} />
+              <input type="hidden" name="credencial" value={auth} />
+              {auth === "CERTIFICATE" && (
+                <>
+                  <div>
+                    <label for="pfx" class={LABEL}>
+                      Certificado A1 (.pfx ou .p12){issuer.certificateSentAt ? ", só para trocar" : ""}
+                    </label>
+                    <input id="pfx" name="pfx" type="file" accept=".pfx,.p12,application/x-pkcs12" required={!issuer.certificateSentAt} class="mt-1.5 block text-sm" />
+                  </div>
+                  <div>
+                    <label for="password" class={LABEL}>Senha do certificado</label>
+                    <input id="password" name="password" type="password" autocomplete="off" required={!issuer.certificateSentAt} class={`${INPUT_INLINE} mt-1.5 w-full sm:w-64`} />
+                  </div>
+                </>
+              )}
+              {auth === "USER_AND_PASSWORD" && (
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label for="username" class={LABEL}>Usuário da prefeitura</label>
+                    <input id="username" name="username" autocomplete="off" class={INPUT} />
+                  </div>
+                  <div>
+                    <label for="password" class={LABEL}>Senha da prefeitura</label>
+                    <input id="password" name="password" type="password" autocomplete="off" class={INPUT} />
+                  </div>
+                </div>
+              )}
+              {auth === "TOKEN" && (
+                <div>
+                  <label for="access_token" class={LABEL}>Token da prefeitura</label>
+                  <input id="access_token" name="access_token" autocomplete="off" class={INPUT} />
+                </div>
+              )}
+              <label class="flex items-start gap-2 text-sm text-ink-mid">
+                <input type="checkbox" name="autorizo" value="1" required class={`${CHECK} mt-0.5`} />
+                <span>Autorizo o envio destes dados{auth === "CERTIFICATE" ? " e do certificado" : ""} ao Asaas para emitir as notas deste CNPJ. O RecepClinic não guarda a senha nem o arquivo.</span>
+              </label>
+              <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Enviar ao Asaas</button>
+            </form>
+          </Card>
+        )
+      }
+
+      {
+        issuer && (
+          <Card>
+            <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+              Emissão
+              {state && <Badge variant={TONE[state.tone]}>{state.label}</Badge>}
+            </h2>
+            {issuer.suspendedAt && <p class="mt-1 text-sm text-danger">{issuer.suspendedReason ?? "Suspensa por falta de pagamento das notas."}</p>}
+            {issuer.issuingEnabled ? (
+              <>
+                <p class="mt-1 text-sm text-ink-mid">As notas dos atendimentos {professional ? "deste profissional" : "da clínica"} saem por este CNPJ.</p>
+                <form method="POST" action={action} class="mt-3">
+                  <input type="hidden" name="acao" value="desligar" />
+                  <input type="hidden" name="profissional" value={hidden.profissional} />
+                  <input type="hidden" name="emissor" value={hidden.emissor} />
+                  <button
+                    type="submit"
+                    class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                    data-confirm-title="Desligar a emissão?"
+                    data-confirm-message="Os pagamentos continuam sendo registrados, mas nenhuma nota sai por este CNPJ até ligar de novo. As notas já emitidas não mudam."
+                    data-confirm-label="Desligar"
+                  >
+                    Desligar emissão
+                  </button>
+                </form>
+              </>
+            ) : missing.length > 0 ? (
+              <>
+                <p class="mt-1 text-sm text-ink-mid">Falta para ligar:</p>
+                <ul class="mt-1 flex flex-col gap-0.5 text-sm text-ink-mid">
+                  {missing.map((m) => (
+                    <li class="flex items-center gap-1.5">
+                      <Icon name="clock" class="h-3.5 w-3.5 text-ink-soft" />
+                      {MISSING_LABEL[m]}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <form method="POST" action={action} class="mt-3">
+                <input type="hidden" name="acao" value="ligar" />
+                <input type="hidden" name="profissional" value={hidden.profissional} />
+                <input type="hidden" name="emissor" value={hidden.emissor} />
+                <button
+                  type="submit"
+                  class={`${PRIMARY_BUTTON} js-confirm-delete`}
+                  data-confirm-title="Ligar a emissão?"
+                  data-confirm-message={issuer.environment === "production" ? "As próximas notas saem de verdade, com valor fiscal, por este CNPJ." : "As próximas notas saem no ambiente de testes do Asaas, sem valor fiscal."}
+                  data-confirm-label="Ligar emissão"
+                >
+                  Ligar emissão
+                </button>
+              </form>
+            )}
+          </Card>
+        )
+      }
+
+      {
+        issuer && professional && (
+          <Card>
+            <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Quem paga as notas</h2>
+            <p class="mt-1 text-sm text-ink-soft">Cada nota emitida tem um preço. O profissional que paga as próprias notas recebe a cobrança dele e precisa de login no RecepClinic.</p>
+            {isAdmin ? (
+              <form method="POST" action={action} class="mt-3 flex flex-col gap-2">
+                <input type="hidden" name="acao" value="pagador" />
+                <input type="hidden" name="profissional" value={hidden.profissional} />
+                <input type="hidden" name="emissor" value={hidden.emissor} />
+                <label class={CHOICE}>
+                  <input type="radio" name="pagador" value="clinic" checked={issuer.payer === "clinic"} class={CHECK} /> A clínica, junto da assinatura
+                </label>
+                <label class={CHOICE}>
+                  <input type="radio" name="pagador" value="professional" checked={issuer.payer === "professional"} disabled={!professional.userId} class={CHECK} /> O próprio profissional
+                </label>
+                {!professional.userId && <p class={HINT}>Para pagar as próprias notas, o profissional precisa de login (Configurações › Equipe).</p>}
+                <button type="submit" class={`${SECONDARY_BUTTON} mt-1 self-start`}>Salvar</button>
+              </form>
+            ) : (
+              <p class="mt-2 text-[15px] text-ink">{issuer.payer === "professional" ? "Você paga as suas notas." : "A clínica paga as suas notas."} <span class="text-ink-soft">O Administrador escolhe.</span></p>
+            )}
+          </Card>
+        )
+      }
+
+      {
+        issuer && (
+          <Card>
+            <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Histórico</h2>
+            <ul class="mt-2 divide-y divide-line">
+              {audit.map((entry) => (
+                <li class="py-2 text-sm">
+                  <span class="font-medium text-ink">{FISCAL_AUDIT_LABEL[entry.event as FiscalAuditEvent] ?? entry.event}</span>
+                  <span class="block text-ink-soft">
+                    {formatInstant(entry.createdAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
+                    {entry.actorId ? `, ${actors.get(entry.actorId)?.name ?? "alguém da equipe"}` : ""}
+                  </span>
+                </li>
+              ))}
+              {audit.length === 0 && <li class="py-2 text-sm text-ink-soft">Nada ainda.</li>}
+            </ul>
+          </Card>
+        )
+      }
+    </div>
+  </div>
+  <ConfirmDeleteDialog />
+</ConfigShell>
