@@ -1,9 +1,9 @@
 # Proposta: recepção digital integrada (WhatsApp, Portal e Painel)
 
-> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 (planejamento) **aprovada pelo cliente** e RD1 a RD14
-> **decididas** (seção 17). Nenhum código, migração, RLS, integração ou configuração mudou; nada foi enviado nem
-> publicado. Próximo: Etapa 2 (design, skill `frontend-design`), **só com autorização específica**; Etapa 3
-> (implementação) idem.
+> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17). **Etapa 2 (design)
+> autorizada em 08/nov**: 1ª rodada, portal no celular (P1 a P10, 13 telas) no canvas
+> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Aguardando as escolhas do cliente. Depois: portal em
+> 1280 px, P11 a P13 e o painel da recepção (R1 a R7). Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
@@ -541,3 +541,15 @@ A decidir na F3: se o prazo da RD10 vale também para cancelar pelo WhatsApp.
 
 Fora do código: advogado (termo, política, menores), template de autenticação na Meta, conferência dos limites da Meta
 para vários números, preço do item "Portal" e "Vários números" no contrato.
+
+## 18. Etapa 2: design (rodadas)
+
+**Rodada 1 (08/nov/2026), portal no celular, P1 a P10.** Canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb
+(skill `frontend-design`). Base: cores e fontes do link de hoje (verde `#0B7A62`, Bricolage Grotesque nos títulos,
+Source Sans 3 a 18 px). Desenho: uma pergunta grande por tela; cabeçalho com Voltar, "Recepção" (WhatsApp) e "Passo n
+de 6" com barra; **ficha** verde-clara no topo com as escolhas e "Trocar" (resume em uma linha a partir da P7); barra
+fixa embaixo com a escolha e o botão; faixa amarela do horário guardado a partir da P8; na P9 e P10 o cartão com data
+e hora em destaque. P3 em duas opções: A (cartão completo, com selos e próximo horário) e B (lista compacta, para
+especialidades com muitos médicos). Telas: P1, P2, P3 A/B, P4, P5, P6, P7 (veio do WhatsApp), P7 (celular + código,
+com erro), P8 (com carteirinha), P8b (com "Você quis dizer"), P9, P10. Clínica e médicos fictícios.
+Escolhas do cliente: pendentes.
