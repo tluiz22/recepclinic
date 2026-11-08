@@ -3,7 +3,7 @@
 > **Estado atual (retomar daqui), 08/nov/2026.** Plano aprovado (decisões I1 a I11, seção 6; regra da Matriz, bot e
 > portal, seção 1.1). **F1 feita, no staging e validada pelo cliente (08/nov)** (`aba61a8`, migração `20270102120000`;
 > roteiro 7.1 sem ajustes). Produção: não. **D4 feita e aprovada tela por tela (08/nov, seção 8)**, rodada 4 no canvas.
-> Próximo: F2a. Pedir ao cliente: CNAME de `agendar-teste` e `agendar`, chaves do Turnstile (seção 4).
+> Próximo: F2a. Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
@@ -63,12 +63,28 @@ Em cada etapa: unidade e banco; Playwright em 390 e 1280 px; `security-review` n
 
 | O quê | Quem | Quando precisa |
 |---|---|---|
-| Endereços `agendar.recepclinic.com.br` (produção) e `agendar-teste.recepclinic.com.br` (staging, I2): CNAME no DNS + domínio na Vercel | Cliente (DNS) e Claude (configuração) | Início da F2a |
+| Endereços `agendar.recepclinic.com.br` (produção) e `agendar-teste.recepclinic.com.br` (staging, I2): CNAME no DNS + domínio na Vercel | Cliente (DNS) e Claude (configuração) | Início da F2a: **feito (08/nov, 4.1)** |
 | Template de autenticação na Meta (código com "Copiar código"), por conta | Claude envia; Meta aprova | Antes da F2b |
-| Conta e chaves do Cloudflare Turnstile (staging e produção) | Cliente | Antes da F2b |
+| Conta e chaves do Cloudflare Turnstile (staging e produção) | Cliente | Antes da F2b: **feito (08/nov, 4.1)** |
 | Termo, política e menores (LGPD) revisados | Advogado | Antes da produção |
 | Preço do item "Portal" no contrato | Cliente | Antes de vender |
 | RD6 (horário por convênio) e perguntas do roteiro | Reunião com a clínica | Antes da F6 |
+
+### 4.1 Endereços e Turnstile (cliente, 08/nov/2026)
+
+- **`agendar-teste.recepclinic.com.br`**: projeto **recepclinic** (staging) na Vercel, ambiente Production; CNAME na
+  Cloudflare → `ed13a388a0d7bbde.vercel-dns-017.com`, nuvem cinza. Conferido: `HTTP/2 200`, a mesma página do `teste.`.
+- **`agendar.recepclinic.com.br`**: projeto **recepclinic-producao**; CNAME → `99094fc0daefbca7.vercel-dns-016.com`,
+  nuvem cinza. Conferido: `HTTP/2 200`, a mesma página do `app.`.
+- Até a F2a, os dois endereços abrem o sistema inteiro (login); a F2a faz o host `agendar…` servir só o portal.
+- **Turnstile:** dois widgets na conta da Cloudflare, modo **Managed**, sem pre-clearance: "RecepClinic portal
+  (staging)" (hostname `agendar-teste.`) e "RecepClinic portal (produção)" (hostname `agendar.`).
+- **Variáveis** (Vercel, ambiente Production de cada projeto, e nos arquivos `.env.staging` e `.env.production`):
+  `PUBLIC_TURNSTILE_SITE_KEY` (tipo Config: a Vercel avisa do prefixo público, e está certo, porque a Site Key vai na
+  página) e `TURNSTILE_SECRET_KEY` (Sensitive). As duas Secret Keys foram testadas no `siteverify` com um token falso
+  (`invalid-input-response`, ou seja, chave válida); as do staging e da produção são diferentes.
+- Desenvolvimento local: as chaves de teste públicas da Cloudflare (sempre passam), postas no `.env` na F2b. Nenhum
+  redeploy feito: as variáveis entram no ar com o deploy da F2b.
 
 ## 5. Riscos e cuidados
 
