@@ -20,8 +20,15 @@ export type InvoiceStatus = "issuing" | "issued" | "rejected" | "canceling" | "c
 export type Invoice = {
   id: string;
   paymentId: string;
-  environment: NfseEnvironment;
-  dpsNumber: number;
+  /** "sandbox": testes do Asaas (N3b). */
+  environment: NfseEnvironment | "sandbox";
+  /** Só do emissor antigo (DPS na Sefin). */
+  dpsNumber: number | null;
+  /** sefin: emissor antigo (até a N5); asaas: pelo emissor do atendimento (N3b). */
+  provider: "sefin" | "asaas";
+  issuerId: string | null;
+  /** PDF guardado no bucket (notas do Asaas, N4). */
+  hasPdf: boolean;
   status: InvoiceStatus;
   accessKey: string | null;
   nfseNumber: string | null;
@@ -113,7 +120,10 @@ type InvoiceRow = {
   id: string;
   payment_id: string;
   environment: string;
-  dps_number: number;
+  dps_number: number | null;
+  provider: string;
+  issuer_id: string | null;
+  pdf_path: string | null;
   status: string;
   access_key: string | null;
   nfse_number: string | null;
@@ -127,13 +137,16 @@ type InvoiceRow = {
 };
 
 const INVOICE_COLUMNS =
-  "id, payment_id, environment, dps_number, status, access_key, nfse_number, xml_path, error_code, error_message, requested_at, issued_at, canceled_at, cancel_reason_code";
+  "id, payment_id, environment, dps_number, provider, issuer_id, pdf_path, status, access_key, nfse_number, xml_path, error_code, error_message, requested_at, issued_at, canceled_at, cancel_reason_code";
 
 const toInvoice = (row: InvoiceRow): Invoice => ({
   id: row.id,
   paymentId: row.payment_id,
-  environment: row.environment as NfseEnvironment,
+  environment: row.environment as Invoice["environment"],
   dpsNumber: row.dps_number,
+  provider: row.provider as Invoice["provider"],
+  issuerId: row.issuer_id,
+  hasPdf: row.pdf_path !== null,
   status: row.status as InvoiceStatus,
   accessKey: row.access_key,
   nfseNumber: row.nfse_number,
@@ -307,7 +320,7 @@ async function recordIssueOutcome(recorder: Recorder, clinicId: string, invoiceI
 /** Confere na Receita uma nota "emitindo" ou "cancelando" (resposta perdida). */
 export async function checkNfse(db: DbClient, clinicId: string, invoiceId: string, deps: NfseDeps = defaultNfseDeps): Promise<NfseResult> {
   const invoice = await getInvoice(db, clinicId, invoiceId);
-  if (!invoice) throw new DataError("not_found", "Nota fiscal: não encontrada");
+  if (!invoice || invoice.provider !== "sefin" || invoice.environment === "sandbox") throw new DataError("not_found", "Nota fiscal: não encontrada");
   return checkPending(userRecorder(db), deps, { clinicId, invoiceId, status: invoice.status, environment: invoice.environment, dpsId: invoice.dpsId, accessKey: invoice.accessKey });
 }
 

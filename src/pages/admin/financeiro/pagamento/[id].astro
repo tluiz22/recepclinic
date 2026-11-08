@@ -27,7 +27,9 @@ import { formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../.
 import { formatCpf, maskCpf } from "../../../../lib/cpf";
 import { getAgendaAppointment } from "../../../../lib/data/agenda/view";
 import { createUserClient } from "../../../../lib/data/clients";
-import { effectivePayer, getContactCpf, getPatientFinance } from "../../../../lib/data/finance";
+import { effectivePayer, getContactCpf, getPatientFinance, getPayerContact, type PayerContact } from "../../../../lib/data/finance";
+import { asaasReadiness } from "../../../../lib/data/nfseAsaas";
+import PayerContactFields from "../../../../components/admin/finance/PayerContactFields.astro";
 import { getContact, getPatient } from "../../../../lib/data/patients";
 import {
   canReceivePayment,
@@ -40,7 +42,7 @@ import {
   type PaymentMethod,
 } from "../../../../lib/data/payments";
 import { centsToInput } from "../../../../lib/forms";
-import { ACTIVE_INVOICE, CANCEL_REASONS, listPaymentInvoices, nfseReadiness, type Invoice, type InvoiceStatus } from "../../../../lib/data/nfse";
+import { ACTIVE_INVOICE, CANCEL_REASONS, listPaymentInvoices, type Invoice, type InvoiceStatus } from "../../../../lib/data/nfse";
 import { getSavedDestinations, listInvoiceDeliveries } from "../../../../lib/data/nfseDelivery";
 import { formatPhoneBR } from "../../../../lib/phone";
 import { formatCentsBRL } from "../../../../lib/money";
@@ -68,11 +70,21 @@ const [contact, finance, contactCpf] = await Promise.all([
 ]);
 const summary = summarizePayments(price, payments);
 const state = paymentState(summary.priceCents, summary.paidCents);
-// Nota fiscal (F11.4): a situação de cada pagamento e se a clínica já emite.
-const [invoices, financeReady] = await Promise.all([
+// Nota fiscal (F11.4; pelo Asaas desde a N3b): a situação de cada pagamento e se o emissor do atendimento já emite.
+const [invoices, financeReady, contactOnRecord, patientOnRecord] = await Promise.all([
   listPaymentInvoices(db, clinic.clinicId, payments.map((p) => p.id)),
-  nfseReadiness(db, clinic.clinicId),
+  asaasReadiness(db, appointment.id),
+  getPayerContact(db, clinic.clinicId, patient, "contact"),
+  getPayerContact(db, clinic.clinicId, patient, "patient"),
 ]);
+// Tomador que falta no pagamento: sugerido o do Financeiro de quem pagou (N3a).
+const suggestedContact = (p: { payer: string; payerCpf: string | null }): PayerContact | null =>
+  p.payer === "contact" || (p.payer === "patient" && patient.isContactSelf)
+    ? contactOnRecord
+    : p.payer === "patient" || (finance.payer === "other" && finance.payerCpf === p.payerCpf)
+      ? patientOnRecord
+      : null;
+const ENV_NOTE = { sandbox: "ambiente de testes do Asaas, sem valor fiscal", production: "" } as const;
 // Envio da nota (F11.5): os envios de cada nota e os destinos guardados no Financeiro.
 const allInvoiceIds = [...invoices.values()].flat().map((n) => n.id);
 const [deliveries, saved] = await Promise.all([
@@ -83,13 +95,14 @@ const DELIVERY_STATUS = { sent: "enviado", delivered: "entregue", read: "lido", 
 const activeInvoice = (paymentId: string) => (invoices.get(paymentId) ?? []).find((n) => ACTIVE_INVOICE.includes(n.status));
 const isClinicAdmin = clinic.roles.includes("admin");
 const INVOICE_PILL: Record<InvoiceStatus, { tone: PillTone; icon: IconName; label: (n: Invoice) => string }> = {
-  issuing: { tone: "warning", icon: "clock", label: () => "Emitindo…" },
+  issuing: { tone: "warning", icon: "clock", label: (n) => (n.provider === "asaas" ? "Aguardando a prefeitura…" : "Emitindo…") },
   issued: { tone: "success", icon: "document-check", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber}` : "Nota emitida") },
   // Certificado que não abre ou DPS que a Receita não recebeu: não chegou a ser recusada.
   rejected: {
     tone: "danger",
     icon: "x-mark",
-    label: (n) => (n.errorCode === "CERTIFICADO" || n.errorCode === "SEM-NOTA" ? "Não emitida" : "Recusada pela Receita"),
+    label: (n) =>
+      n.errorCode === "CERTIFICADO" || n.errorCode === "SEM-NOTA" || n.errorCode?.startsWith("HTTP-") ? "Não emitida" : n.provider === "asaas" ? "Recusada" : "Recusada pela Receita",
   },
   canceling: { tone: "warning", icon: "clock", label: () => "Cancelando…" },
   canceled: { tone: "neutral", icon: "x-mark", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber} cancelada` : "Nota cancelada") },
@@ -321,8 +334,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                     <input type="checkbox" name="emitir_nota" value="1" data-emit class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                     <span>
                       Emitir a nota fiscal agora, no CPF de quem pagou
-                      {financeReady.environment === "restricted" && <span class="text-sm text-ink-soft"> (ambiente de testes, sem valor fiscal)</span>}
-                      {financeReady.environment === "simulation" && <span class="text-sm text-ink-soft"> (simulação, sem a Receita e sem valor fiscal)</span>}
+                      {financeReady.environment === "sandbox" && <span class="text-sm text-ink-soft"> ({ENV_NOTE.sandbox})</span>}
                     </span>
                   </label>
                 )
@@ -363,7 +375,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
           const active = activeInvoice(p.id);
           const issued = list.find((n) => n.status === "issued");
           const canDelete = canEdit && !active;
-          const canCancel = isClinicAdmin && !!issued;
+          const canCancel = isClinicAdmin && !!issued && (issued.provider !== "asaas" || financeReady.supportsCancellation);
           return (
             <article class="flex flex-col gap-2.5 rounded-[10px] border border-line p-3.5" aria-label={`Pagamento de ${amount}`}>
               <div class="flex items-start justify-between gap-2">
@@ -415,7 +427,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                       <Pill tone={INVOICE_PILL[n.status].tone} icon={INVOICE_PILL[n.status].icon}>
                         {INVOICE_PILL[n.status].label(n)}
                       </Pill>
-                      {n.environment === "restricted" && <Pill>teste</Pill>}
+                      {(n.environment === "restricted" || n.environment === "sandbox") && <Pill>teste</Pill>}
                       {n.environment === "simulation" && <Pill>simulada</Pill>}
                       <span class="text-[13px] text-ink-soft">pedida em {formatInstant(n.requestedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</span>
                     </div>
@@ -437,7 +449,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                             <input type="hidden" name="payment_id" value={p.id} />
                             <Button type="submit" size="sm" data-sending-label="Conferindo…">
                               <Icon name="arrow-path" class="h-4 w-4" strokeWidth={2} />
-                              Conferir na Receita
+                              {n.provider === "asaas" ? "Conferir no Asaas" : "Conferir na Receita"}
                             </Button>
                           </form>
                         )}
@@ -515,14 +527,16 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                         <input type="hidden" name="acao" value="cancelar_nota" />
                         <input type="hidden" name="invoice_id" value={n.id} />
                         <p class="text-[14.5px] font-semibold text-ink">Cancelar a {INVOICE_PILL[n.status].label(n)}</p>
-                        <div class={field}>
-                          <label for={`motivo-${n.id}`} class={fieldLabel}>Motivo</label>
-                          <select id={`motivo-${n.id}`} name="motivo" required class={CONTROL}>
-                            {CANCEL_REASONS.map((r) => (
-                              <option value={r.code}>{r.label}</option>
-                            ))}
-                          </select>
-                        </div>
+                        {n.provider !== "asaas" && (
+                          <div class={field}>
+                            <label for={`motivo-${n.id}`} class={fieldLabel}>Motivo</label>
+                            <select id={`motivo-${n.id}`} name="motivo" required class={CONTROL}>
+                              {CANCEL_REASONS.map((r) => (
+                                <option value={r.code}>{r.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                         <div class={field}>
                           <label for={`motivo-texto-${n.id}`} class={fieldLabel}>Explique (15 a 255 caracteres)</label>
                           <input id={`motivo-texto-${n.id}`} name="motivo_texto" required minlength="15" maxlength="255" class={CONTROL} />
@@ -535,7 +549,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                             class="js-confirm-delete"
                             data-sending-label="Cancelando…"
                             data-confirm-title="Cancelar a nota fiscal?"
-                            data-confirm-message={`Nota ${n.nfseNumber ? `nº ${n.nfseNumber}` : ""} de ${amount}, de ${p.payerName}. O cancelamento vai para a Receita e não dá para desfazer; depois, dá para emitir de novo.`}
+                            data-confirm-message={`Nota ${n.nfseNumber ? `nº ${n.nfseNumber}` : ""} de ${amount}, de ${p.payerName}. O cancelamento vai para a ${n.provider === "asaas" ? "prefeitura" : "Receita"} e não dá para desfazer; depois, dá para emitir de novo.`}
                             data-confirm-label="Cancelar nota"
                           >
                             Cancelar nota
@@ -549,7 +563,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                 {!active && (
                   <div class="flex flex-wrap items-center gap-2">
                     {list.length === 0 && <span class={hint}>Sem nota fiscal.</span>}
-                    {canEdit && p.payerCpf && financeReady.ready && (
+                    {canEdit && p.payerCpf && financeReady.ready && p.payerContact && (
                       <form method="POST" action={action}>
                         <input type="hidden" name="acao" value="emitir_nota" />
                         <input type="hidden" name="payment_id" value={p.id} />
@@ -559,7 +573,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                           class="js-confirm-delete"
                           data-sending-label="Emitindo…"
                           data-confirm-title="Emitir a nota fiscal?"
-                          data-confirm-message={`${amount}, no CPF de ${p.payerName}. ${financeReady.environment === "restricted" ? "Ambiente de testes (sem valor fiscal)." : financeReady.environment === "simulation" ? "Simulação: a nota não vai para a Receita." : "A nota vai para a Receita."}`}
+                          data-confirm-message={`${amount}, no CPF de ${p.payerName}, pelo CNPJ de ${financeReady.issuerName}. ${financeReady.environment === "sandbox" ? "Ambiente de testes do Asaas (sem valor fiscal)." : "A nota vai para a prefeitura pelo Asaas."}`}
                           data-confirm-label="Emitir nota"
                           data-confirm-tone="primary"
                         >
@@ -567,6 +581,37 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                           Emitir nota
                         </Button>
                       </form>
+                    )}
+                    {canEdit && p.payerCpf && financeReady.ready && !p.payerContact && (
+                      <>
+                        <Button size="sm" aria-expanded="false" aria-controls={`tomador-${p.id}`} data-open-panel={`tomador-${p.id}`}>
+                          <Icon name="document-check" class="h-4 w-4" strokeWidth={2} />
+                          Emitir nota
+                        </Button>
+                        <form id={`tomador-${p.id}`} hidden method="POST" action={action} class="flex w-full flex-col gap-3 rounded-lg border border-line bg-white p-3" data-panel>
+                          <input type="hidden" name="acao" value="emitir_nota" />
+                          <input type="hidden" name="payment_id" value={p.id} />
+                          <p class="text-[14.5px] font-semibold text-ink">Para emitir: e-mail e endereço de {p.payerName}</p>
+                          <p class={hint}>O Asaas exige. Ficam no pagamento e no Financeiro, para a próxima vez.</p>
+                          <PayerContactFields idPrefix={`tom_${p.id.slice(0, 8)}`} value={suggestedContact(p)} required inputClass={CONTROL} labelClass={fieldLabel} hintClass={hint} />
+                          <div class="flex flex-wrap gap-2">
+                            <Button
+                              type="submit"
+                              variant="primary"
+                              size="sm"
+                              class="js-confirm-delete"
+                              data-sending-label="Emitindo…"
+                              data-confirm-title="Emitir a nota fiscal?"
+                              data-confirm-message={`${amount}, no CPF de ${p.payerName}, pelo CNPJ de ${financeReady.issuerName}. ${financeReady.environment === "sandbox" ? "Ambiente de testes do Asaas (sem valor fiscal)." : "A nota vai para a prefeitura pelo Asaas."}`}
+                              data-confirm-label="Emitir nota"
+                              data-confirm-tone="primary"
+                            >
+                              Emitir nota
+                            </Button>
+                            <Button size="sm" data-close-panel>Fechar</Button>
+                          </div>
+                        </form>
+                      </>
                     )}
                     {canEdit && !p.payerCpf && <span class={hint}>Sem o CPF de quem pagou, a nota não sai.</span>}
                     {canEdit && p.payerCpf && !financeReady.ready && <span class={hint}>{financeReady.reason}</span>}

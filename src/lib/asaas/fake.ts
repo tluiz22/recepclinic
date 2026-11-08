@@ -244,7 +244,7 @@ export function createFakeAsaas(options: FakeAsaasOptions = {}) {
       }
       if (action === "cancel" && method === "POST") {
         if (!(options.municipal?.supportsCancellation ?? true)) return error(400, "O município não permite cancelamento.");
-        if (invoice.status !== "AUTHORIZED") return error(400, "Só nota autorizada pode ser cancelada.");
+        if (invoice.status !== "AUTHORIZED" && invoice.status !== "CANCELLATION_DENIED") return error(400, "Só nota autorizada pode ser cancelada.");
         invoice.status = "PROCESSING_CANCELLATION";
         return json(rawInvoice(invoice));
       }

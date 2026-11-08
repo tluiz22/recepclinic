@@ -1397,14 +1397,14 @@ isOneToOne: false
                   ]
                 },"nfse_invoices": {
                   Row: {
-                    "access_key": string | null,"cancel_reason_code": number | null,"cancel_reason_text": string | null,"cancel_requested_by": string | null,"canceled_at": string | null,"checked_at": string | null,"clinic_id": string,"dps_id": string,"dps_number": number,"environment": string,"error_code": string | null,"error_message": string | null,"id": string,"issued_at": string | null,"nfse_number": string | null,"payment_id": string,"requested_at": string,"requested_by": string | null,"series": string,"status": string,"xml_path": string | null
+                    "access_key": string | null,"asaas_invoice_id": string | null,"asaas_status": string | null,"cancel_reason": string | null,"cancel_reason_code": number | null,"cancel_reason_text": string | null,"cancel_requested_by": string | null,"canceled_at": string | null,"checked_at": string | null,"clinic_id": string,"dps_id": string | null,"dps_number": number | null,"environment": string,"error_code": string | null,"error_message": string | null,"id": string,"issued_at": string | null,"issuer_id": string | null,"nfse_number": string | null,"payment_id": string,"pdf_path": string | null,"provider": string,"requested_at": string,"requested_by": string | null,"series": string | null,"status": string,"validation_code": string | null,"xml_path": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "access_key"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id": string,"dps_id": string,"dps_number": number,"environment": string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"nfse_number"?: string | null,"payment_id": string,"requested_at"?: string,"requested_by"?: string | null,"series": string,"status"?: string,"xml_path"?: string | null
+                    "access_key"?: string | null,"asaas_invoice_id"?: string | null,"asaas_status"?: string | null,"cancel_reason"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id": string,"dps_id"?: string | null,"dps_number"?: number | null,"environment": string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"issuer_id"?: string | null,"nfse_number"?: string | null,"payment_id": string,"pdf_path"?: string | null,"provider"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string | null,"status"?: string,"validation_code"?: string | null,"xml_path"?: string | null
                   }
                   Update: {
-                    "access_key"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id"?: string,"dps_id"?: string,"dps_number"?: number,"environment"?: string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"nfse_number"?: string | null,"payment_id"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string,"status"?: string,"xml_path"?: string | null
+                    "access_key"?: string | null,"asaas_invoice_id"?: string | null,"asaas_status"?: string | null,"cancel_reason"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id"?: string,"dps_id"?: string | null,"dps_number"?: number | null,"environment"?: string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"issuer_id"?: string | null,"nfse_number"?: string | null,"payment_id"?: string,"pdf_path"?: string | null,"provider"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string | null,"status"?: string,"validation_code"?: string | null,"xml_path"?: string | null
                   }
                   Relationships: [
                     {
@@ -1419,6 +1419,38 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "payments"
       referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "nfse_invoices_issuer_id_fkey"
+      columns: ["issuer_id"]
+isOneToOne: false
+      referencedRelation: "fiscal_issuers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"nfse_provider_events": {
+                  Row: {
+                    "asaas_invoice_id": string | null,"clinic_id": string,"error": string | null,"event": string,"id": string,"issuer_id": string | null,"processed_at": string | null,"received_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asaas_invoice_id"?: string | null,"clinic_id": string,"error"?: string | null,"event": string,"id": string,"issuer_id"?: string | null,"processed_at"?: string | null,"received_at"?: string
+                  }
+                  Update: {
+                    "asaas_invoice_id"?: string | null,"clinic_id"?: string,"error"?: string | null,"event"?: string,"id"?: string,"issuer_id"?: string | null,"processed_at"?: string | null,"received_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "nfse_provider_events_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nfse_provider_events_issuer_id_fkey"
+      columns: ["issuer_id"]
+isOneToOne: false
+      referencedRelation: "fiscal_issuers"
+      referencedColumns: ["id"]
     }
                   ]
                 },"notification_recipients": {
@@ -2326,6 +2358,12 @@ isOneToOne: false
 "anonymize_patient":
 { Args: { "p_clinic_id": string,"p_patient_id": string }; Returns: Json
                            },
+"begin_asaas_cancel":
+{ Args: { "p_invoice_id": string,"p_reason": string }; Returns: Json
+                           },
+"begin_asaas_invoice":
+{ Args: { "p_payment_id": string }; Returns: Json
+                           },
 "begin_nfse_cancel":
 { Args: { "p_invoice_id": string,"p_reason_code": number,"p_reason_text": string }; Returns: Json
                            },
@@ -2552,6 +2590,11 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"find_asaas_invoice":
+{ Args: { "p_asaas_invoice_id": string,"p_issuer_id": string }; Returns: {
+              "clinic_id": string,"invoice_id": string,"status": string
+            }[]
+                           },
 "find_fiscal_issuer_by_account":
 { Args: { "p_account_id": string }; Returns: {
               "clinic_id": string,"issuer_id": string,"webhook_token": string
@@ -2560,11 +2603,23 @@ isOneToOne: false
 "find_user_id_by_email":
 { Args: { "p_email": string }; Returns: string
                            },
+"finish_asaas_cancel":
+{ Args: { "p_asaas_status": string,"p_invoice_id": string,"p_message"?: string,"p_outcome": string }; Returns: string
+                           },
+"finish_asaas_invoice":
+{ Args: { "p_asaas_invoice_id": string,"p_asaas_status": string,"p_invoice_id": string,"p_message"?: string,"p_number"?: string,"p_outcome": string,"p_validation_code"?: string }; Returns: string
+                           },
 "finish_nfse_cancel":
 { Args: { "p_error_code"?: string,"p_error_message"?: string,"p_invoice_id": string,"p_outcome": string }; Returns: undefined
                            },
 "finish_nfse_issue":
 { Args: { "p_access_key"?: string,"p_error_code"?: string,"p_error_message"?: string,"p_invoice_id": string,"p_nfse_number"?: string,"p_outcome": string,"p_xml_path"?: string }; Returns: undefined
+                           },
+"finish_nfse_provider_event":
+{ Args: { "p_error": string,"p_id": string }; Returns: undefined
+                           },
+"fiscal_issuer_for_appointment":
+{ Args: { "p_appointment_id": string }; Returns: Json
                            },
 "get_fiscal_certificate_secret":
 { Args: { "p_clinic_id": string }; Returns: {
@@ -2590,6 +2645,11 @@ isOneToOne: false
                            },
 "list_clinics_with_idle_conversations":
 { Args: { "p_before": string }; Returns: string[]
+                           },
+"list_pending_asaas_invoices":
+{ Args: { "p_before": string }; Returns: {
+              "asaas_invoice_id": string,"clinic_id": string,"invoice_id": string,"issuer_id": string,"status": string
+            }[]
                            },
 "list_pending_nfse_invoices":
 { Args: { "p_before": string }; Returns: {
@@ -2686,6 +2746,12 @@ isOneToOne: false
                            },
 "record_billing_contract_notice":
 { Args: { "p_clinic_id": string,"p_contract_id": string,"p_error": string,"p_sent_to": string }; Returns: undefined
+                           },
+"record_issuer_top_up":
+{ Args: { "p_issuer_id": string,"p_transfer_id": string,"p_value_cents": number }; Returns: undefined
+                           },
+"record_nfse_provider_event":
+{ Args: { "p_asaas_invoice_id": string,"p_clinic_id": string,"p_event": string,"p_id": string,"p_issuer_id": string }; Returns: boolean
                            },
 "release_clinic_suspension":
 { Args: { "p_note": string,"p_suspension_id": string }; Returns: undefined

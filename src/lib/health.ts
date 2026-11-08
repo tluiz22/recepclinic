@@ -18,7 +18,8 @@ export const CRON_JOBS: Readonly<Record<string, { every: string; maxDelayMinutes
   "atendimento-humano": { every: "a cada 5 minutos", maxDelayMinutes: 20 },
   lembretes: { every: "a cada hora", maxDelayMinutes: 90 },
   series: { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
-  "notas-fiscais": { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
+  // N3b: conciliação das notas do Asaas a cada 10 minutos.
+  "notas-fiscais": { every: "a cada 10 minutos", maxDelayMinutes: 40 },
   // Faturamento do SaaS (F12.5, 20261121120000_webhook_asaas.sql).
   "faturamento-eventos": { every: "a cada 10 minutos", maxDelayMinutes: 40 },
   "conciliacao-asaas": { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },

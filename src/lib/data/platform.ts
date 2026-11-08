@@ -761,3 +761,98 @@ export function platformIssuerStore(env: ServiceEnv = platformEnv()) {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Notas pelo Asaas (N3b): resultado gravado pelo webhook e pela conciliação,
+// eventos do webhook (uma vez cada) e a trilha da reposição de saldo.
+// ---------------------------------------------------------------------------
+export type AsaasInvoiceRecorder = {
+  finishIssue(a: { invoiceId: string; outcome: "issued" | "rejected" | "pending"; asaasInvoiceId: string | null; asaasStatus: string | null; number?: string | null; validationCode?: string | null; message?: string | null }): Promise<string>;
+  finishCancel(a: { invoiceId: string; outcome: "canceled" | "denied" | "pending"; asaasStatus: string | null; message?: string | null }): Promise<string>;
+};
+
+/** Grava pelo cliente dado (o login de quem usa o painel, ou a plataforma). */
+export function asaasInvoiceRecorder(db: DbClient): AsaasInvoiceRecorder {
+  return {
+    async finishIssue(a) {
+      const { data, error } = await db.rpc("finish_asaas_invoice", {
+        p_invoice_id: a.invoiceId,
+        p_outcome: a.outcome,
+        p_asaas_invoice_id: a.asaasInvoiceId as string,
+        p_asaas_status: a.asaasStatus as string,
+        p_number: (a.number ?? null) as string,
+        p_validation_code: (a.validationCode ?? null) as string,
+        p_message: (a.message ?? null) as string,
+      });
+      if (error) throw new Error("Nota fiscal: resultado não gravado", { cause: error });
+      return data as string;
+    },
+    async finishCancel(a) {
+      const { data, error } = await db.rpc("finish_asaas_cancel", {
+        p_invoice_id: a.invoiceId,
+        p_outcome: a.outcome,
+        p_asaas_status: a.asaasStatus as string,
+        p_message: (a.message ?? null) as string,
+      });
+      if (error) throw new Error("Nota fiscal: cancelamento não gravado", { cause: error });
+      return data as string;
+    },
+  };
+}
+
+export type PendingAsaasInvoice = { invoiceId: string; clinicId: string; issuerId: string; status: string; asaasInvoiceId: string | null };
+
+export function platformAsaasNfse(env: ServiceEnv = platformEnv()) {
+  const db = platformClient(env);
+  const fail = (error: unknown, what: string) => {
+    if (error) throw new Error(`Notas pelo Asaas: ${what}`, { cause: error });
+  };
+  return {
+    recorder: asaasInvoiceRecorder(db),
+    async listPending(before: Date): Promise<PendingAsaasInvoice[]> {
+      const { data, error } = await db.rpc("list_pending_asaas_invoices", { p_before: before.toISOString() });
+      fail(error, "pendentes");
+      return ((data ?? []) as { invoice_id: string; clinic_id: string; issuer_id: string; status: string; asaas_invoice_id: string | null }[]).map((r) => ({
+        invoiceId: r.invoice_id,
+        clinicId: r.clinic_id,
+        issuerId: r.issuer_id,
+        status: r.status,
+        asaasInvoiceId: r.asaas_invoice_id,
+      }));
+    },
+    async invoice(invoiceId: string): Promise<PendingAsaasInvoice | null> {
+      const { data, error } = await db.from("nfse_invoices").select("id, clinic_id, issuer_id, status, asaas_invoice_id, provider").eq("id", invoiceId).maybeSingle();
+      fail(error, "nota");
+      return data && data.provider === "asaas" && data.issuer_id
+        ? { invoiceId: data.id, clinicId: data.clinic_id, issuerId: data.issuer_id, status: data.status, asaasInvoiceId: data.asaas_invoice_id }
+        : null;
+    },
+    async findByAsaasId(issuerId: string, asaasInvoiceId: string): Promise<{ invoiceId: string; clinicId: string; status: string } | null> {
+      const { data, error } = await db.rpc("find_asaas_invoice", { p_issuer_id: issuerId, p_asaas_invoice_id: asaasInvoiceId });
+      fail(error, "nota pelo id do Asaas");
+      const row = (data as { invoice_id: string; clinic_id: string; status: string }[] | null)?.[0];
+      return row ? { invoiceId: row.invoice_id, clinicId: row.clinic_id, status: row.status } : null;
+    },
+    async recordEvent(e: { id: string; clinicId: string; issuerId: string; event: string; asaasInvoiceId: string | null }): Promise<boolean> {
+      const { data, error } = await db.rpc("record_nfse_provider_event", {
+        p_id: e.id,
+        p_clinic_id: e.clinicId,
+        p_issuer_id: e.issuerId,
+        p_event: e.event,
+        p_asaas_invoice_id: e.asaasInvoiceId as string,
+      });
+      fail(error, "evento");
+      return data === true;
+    },
+    async finishEvent(id: string, problem: string | null): Promise<void> {
+      const { error } = await db.rpc("finish_nfse_provider_event", { p_id: id, p_error: problem as string });
+      fail(error, "evento processado");
+    },
+    async recordTopUp(issuerId: string, valueCents: number, transferId: string): Promise<void> {
+      const { error } = await db.rpc("record_issuer_top_up", { p_issuer_id: issuerId, p_value_cents: valueCents, p_transfer_id: transferId });
+      fail(error, "reposição de saldo");
+    },
+  };
+}
+
+export type PlatformAsaasNfse = ReturnType<typeof platformAsaasNfse>;

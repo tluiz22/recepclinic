@@ -257,6 +257,8 @@ begin
     values (c_a, 'professional', p_psi, '45723174000110', 'Marina Alves Psicologia Ltda', 'marina@exemplo-saude.local', '84988881111', '59600000', 'Rua Coronel Gurgel', '100', 'Centro',
       '2408003', true, '04.16', '04.16.01', 'Psicologia', 2.00, 'LIMITED');
   insert into public.professional_fiscal_routes (clinic_id, professional_id, mode) values (c_a, p_fis, 'none');
+  -- Evento de webhook das notas já processado (N3b), para a varredura de isolamento.
+  insert into public.nfse_provider_events (id, clinic_id, event, processed_at) values ('evt_seed_1', c_a, 'INVOICE_CREATED', now());
   insert into public.fiscal_issuer_service_codes (clinic_id, issuer_id, service_id, service_code)
     select c_a, id, s_psi, '04.16.01' from public.fiscal_issuers where clinic_id = c_a and kind = 'clinic';
 
