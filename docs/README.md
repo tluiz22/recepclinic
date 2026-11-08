@@ -1,7 +1,9 @@
 # RecepClinic
 
-> **Próxima sessão (cliente, 07/nov):** implementar a **MS, serviços por profissional** (S1 a S4 decididas; seção 9
-> do [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md)), no mesmo padrão das etapas anteriores.
+> **MS, serviços por profissional (07/nov):** S2, S3, S1 e S4 feitas e **no staging** (`02d17e3`; migrações
+> `20261230120000` e `20261230130000` aplicadas lá). O cliente valida pelo roteiro no fim da seção 10 do
+> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md). Produção só com autorização. Capturas na fila:
+> `config-servicos` e `marcar` (autorizar a recaptura).
 >
 > **Multiprofissional (07/nov):** ME, MC e MI + MB no staging (migrações `20261229120000`, `20261229130000` e
 > `20261229140000`); o cliente valida pelo roteiro da seção 8. Produção só com autorização. 3 capturas na fila. Depois:
