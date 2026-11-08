@@ -2,10 +2,9 @@
 
 > **Frente da nota fiscal (retomar daqui), 07/nov/2026.** Separada da frente de validação a pedido do cliente (07/nov;
 > validação em [`frente-validacao.md`](frente-validacao.md)). Base pronta para a emissão por profissional: serviços,
-> especialidades e convênios por profissional (MS e M1 a M8, no staging). **Próximo passo:** revisar o plano com o
-> cliente (seções 11 a 14) e decidir **N-P1 a N-P7** (14.6), uma por vez, com a opção recomendada; depois, a N0 que
-> falta (Asaas, contador, advogado) e a implementação a partir da **N1** (14.5), uma fase por vez, código direto na `main`
-> só com o OK do cliente. Bloqueios externos: reanálise do BaaS pelo Asaas (aguardando).
+> especialidades e convênios por profissional (MS e M1 a M8, no staging). **N-P1 a N-P7 decididas (14.7).**
+> **Em andamento:** N1 a N5 na branch `nota-fiscal`, sem parar, testes por etapa, só local (sem staging); o cliente
+> valida no fim. Bloqueios externos (para a N6): reanálise do BaaS pelo Asaas, contador, advogado.
 >
 > **Estado atual (retomar daqui), 07/nov/2026.** **Asaas pediu ajustes na análise BaaS (13.10):** cláusula do Asaas nos
 > termos e no contrato e selo sem registro de carregamento. Ajustes no ar (07/nov): site `beb9e1c` e app `305efd7` no staging e
@@ -656,6 +655,23 @@ avulsa; o que é novo é o **pagador profissional**.
 | N-P5 | Profissional inadimplente: suspende só a emissão dele? | Sim, só a emissão daquele emissor |
 | N-P6 | Profissional sem login: como vê o uso e as cobranças? | E-mail do Asaas com o detalhamento; login opcional com a tela "Minhas notas" |
 | N-P7 | A clínica piloto (um médico, CNPJ da clínica) continua com o emissor da clínica? | Sim; o modelo por profissional vale quando houver médicos com CNPJ próprio |
+
+### 14.7 Decisões do cliente (07/nov/2026)
+
+| # | Decisão |
+|---|---|
+| N-P1 | **O Administrador escolhe, por profissional sem CNPJ próprio:** emite pelo emissor da clínica ou não emite pelo sistema. |
+| N-P2 | Administrador **e** o próprio profissional (com login) configuram o emissor dele e cancelam as notas dele. Recepção só emite. |
+| N-P3 | Dono com "cobrar junto da clínica": usa a **franquia da clínica** (uma conta só). |
+| N-P4 | Profissional pagador paga **as notas + uma taxa mensal** fixa pelo emissor próprio (mesmo sem emitir); valores no contrato dele, definidos pelo Suporte. |
+| N-P5 | Inadimplente: suspende **só a emissão daquele emissor**. |
+| N-P6 | **Login obrigatório** para o profissional pagador: vê uso e cobranças na tela "Minhas notas e cobranças". |
+| N-P7 | Clínica piloto segue com o **emissor da clínica**. |
+
+**Escopo e forma (cliente, 07/nov):** N1 a N5 numa **branch própria `nota-fiscal`** (pedido explícito do cliente,
+exceção à regra de 07/nov do financeiro direto na `main`), uma etapa por vez, sem parar, com testes de unidade, banco
+e Playwright ao fim de cada etapa; tudo contra o Sandbox do Asaas; **nada no staging** (validação local pelo cliente
+no fim). N6 depois da N0.
 
 ## Fontes (consultadas em 29/out/2026)
 
