@@ -133,7 +133,7 @@ describe("bot com mais de um profissional (MB)", () => {
     for (const input of ["10/03/2010", "Ana Multi"]) reply = await say(phone, input);
     reply = await say(phone, "sim");
     expect(reply[0].body).toContain("/agendar/");
-    expect(await lastLink(phone)).toMatchObject({ service_id: f.ids.consulta, agenda_id: f.ids.agendaDra2 });
+    expect(await lastLink(phone)).toMatchObject({ service_id: f.ids.consulta2, agenda_id: f.ids.agendaDra2 });
   });
 
   it("especialidade com dois: a lista dos profissionais (com as outras especialidades) e \"Outra especialidade\"", async () => {

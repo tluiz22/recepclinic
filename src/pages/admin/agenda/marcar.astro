@@ -1,7 +1,9 @@
 ---
-// Agenda › Marcar (F4.5): paciente, serviço do catálogo (D4c), com quem (a
-// agenda ou "Primeiro horário disponível", D2 revista; cliente, 05/out/2026),
-// data e horário. Turma: escolhe a sessão com vaga. Cada escolha recarrega a
+// Agenda › Marcar (F4.5): paciente, com quem (o profissional ou a equipe),
+// serviço dele, data e horário. Serviços por profissional (MS, opção A;
+// cliente, 07/nov/2026): o "Com quem" vem antes do serviço, com busca por
+// nome ou especialidade, e o "Primeiro horário disponível" entre profissionais
+// deixa de existir (como no bot); com um só, ele já vem escolhido. Turma: escolhe a sessão com vaga. Cada escolha recarrega a
 // tela (sem estado escondido no navegador); a marcação confere tudo de novo.
 //
 // Redesign R4 (cliente, 15/out/2026): passos numerados à esquerda e um resumo
@@ -66,7 +68,8 @@ import { listProfessionals } from "../../../lib/data/config/professionals";
 import { agendasAcceptingPlan } from "../../../lib/data/agenda/publicBooking";
 import Notice from "../../../components/admin/ui/Notice.astro";
 import { listAppointmentPayments } from "../../../lib/data/payments";
-import { listServices, servicePriceAt } from "../../../lib/data/config/services";
+import { listServices, servicePriceAt, TEAM_OWNER } from "../../../lib/data/config/services";
+import { ownerOptionGroups, TEAM_OWNER_LABEL } from "../../../lib/serviceOwner";
 import { getWhatsappConnection } from "../../../lib/data/whatsapp/connection";
 import { formatCentsBRL } from "../../../lib/money";
 import { getContact, getPatient, searchPatients } from "../../../lib/data/patients";
@@ -109,6 +112,8 @@ const state = {
   hora: isClockTime(params.get("hora") ?? "") ? params.get("hora")! : "",
   // Tipo aberto na escolha do serviço (C6): o do endereço; sem ele, o do serviço escolhido.
   tipo: params.get("tipo") ?? "",
+  // Com quem (MS): o id do profissional ou "equipe".
+  prof: params.get("prof") ?? "",
   volta: volta ?? "",
 };
 const link = (changes: Partial<typeof state> & { busca?: string }) => {
@@ -132,7 +137,33 @@ const [services, agendas, locations, settings, connection, plans, professionals]
 ]);
 const examsOn = clinic.features.includes("exams");
 // Alterar: o serviço atual aparece mesmo desativado.
-const serviceOptions = services.filter((s) => (s.isActive || s.id === editing?.serviceId) && (examsOn || s.category !== "exam" || s.id === editing?.serviceId));
+const visibleAgendas = new Set(agendas.map((a) => a.id));
+const bookable = services.filter(
+  (s) =>
+    (s.isActive || s.id === editing?.serviceId) &&
+    (examsOn || s.category !== "exam" || s.id === editing?.serviceId) &&
+    s.agendaIds.some((id) => visibleAgendas.has(id)),
+);
+// Com quem (MS): os donos com serviço numa agenda que a pessoa vê, por especialidade.
+const ownerOf = (s: { professionalId: string | null; isTeam: boolean }) => (s.isTeam ? TEAM_OWNER : (s.professionalId ?? ""));
+const servicesByOwner = new Map<string, number>();
+for (const s of bookable) servicesByOwner.set(ownerOf(s), (servicesByOwner.get(ownerOf(s)) ?? 0) + 1);
+const ownerGroups = ownerOptionGroups(
+  professionals.filter((p) => servicesByOwner.has(p.id)),
+  { team: servicesByOwner.has(TEAM_OWNER) },
+);
+const ownerKeys = ownerGroups.flatMap((g) => g.options.map((o) => o.value));
+const agendaOwner = agendas.find((a) => a.id === state.agenda_id);
+const fromService = bookable.find((s) => s.id === state.service_id);
+const chosenOwner =
+  [state.prof, fromService ? ownerOf(fromService) : "", agendaOwner ? (agendaOwner.kind === "resource" ? TEAM_OWNER : (agendaOwner.professionalId ?? "")) : ""].find(
+    (key) => key && ownerKeys.includes(key),
+  ) ?? (ownerKeys.length === 1 ? ownerKeys[0] : "");
+state.prof = chosenOwner;
+const showOwnerStep = ownerKeys.length > 1;
+const ownerName = chosenOwner === TEAM_OWNER ? TEAM_OWNER_LABEL : (professionals.find((p) => p.id === chosenOwner)?.displayName ?? "");
+const ownerSpecialty = professionals.find((p) => p.id === chosenOwner)?.specialties[0]?.name ?? null;
+const serviceOptions = chosenOwner ? bookable.filter((s) => ownerOf(s) === chosenOwner) : [];
 let service = serviceOptions.find((s) => s.id === state.service_id) ?? null;
 const openTipo = openType(state.tipo || null, serviceOptions, service);
 // Tipo com um só serviço (cliente, 03/nov/2026): o tipo aberto já escolhe o serviço.
@@ -416,7 +447,8 @@ const canBook = !locked && !!service && searchAgendas.length > 0;
 // Pode enviar: com horários, ou só pelo Outro horário (no passado, com atendimento futuro na agenda).
 const canSubmit = canBook || !!otherOption;
 const stepOf = (done: boolean, isCurrent: boolean) => (done ? "done" : isCurrent ? "current" : "todo") as "done" | "current" | "todo";
-const timeStep = showAgendaStep ? 4 : 3;
+const serviceStep = showOwnerStep ? 3 : 2;
+const timeStep = serviceStep + (showAgendaStep ? 2 : 1);
 const chip = (active: boolean) =>
   `inline-flex min-h-11 items-center rounded-lg border px-3.5 text-[15px] font-semibold no-underline sm:min-h-10 ${
     active ? "border-brand bg-brand text-white" : "border-line-strong bg-white text-ink hover:border-brand"
@@ -573,9 +605,62 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
         }
       </StepCard>
 
-      <StepCard number={2} title="Serviço" state={stepOf(!locked && !!service, !locked && !service)} id="passo-servico">
+      {
+        showOwnerStep && (
+          <StepCard number={2} title="Com quem" state={stepOf(!locked && !!chosenOwner, !locked && !chosenOwner)} id="passo-com-quem">
+            {!locked && chosenOwner && (
+              <a slot="action" href={link({ prof: "", service_id: "", agenda_id: "", tipo: "", de: "" })} class={buttonClass("quiet", "sm")}>
+                Trocar
+              </a>
+            )}
+            {locked ? (
+              <p class="text-[15px] text-ink-soft">Escolha o {vocabulary.patient} primeiro.</p>
+            ) : chosenOwner ? (
+              <p class="text-[15px] text-ink">
+                <strong class="font-semibold">{ownerName}</strong>
+                {ownerSpecialty && <span class="text-ink-soft">{` (${ownerSpecialty})`}</span>}
+              </p>
+            ) : (
+              <div class="flex flex-col gap-2.5" data-owner-picker>
+                <label for="busca-profissional" class="text-[15px] font-semibold text-ink-mid">
+                  Profissional ou especialidade
+                </label>
+                <input id="busca-profissional" type="search" autocomplete="off" placeholder="Digite o nome ou a especialidade" class={CONTROL} data-owner-filter />
+                <div class="overflow-hidden rounded-[10px] border border-line">
+                  {ownerGroups.map((group) => (
+                    <section data-owner-group aria-label={group.label}>
+                      <p class="bg-canvas-deep px-3 py-1.5 text-[13px] font-semibold text-ink-mid">{group.label}</p>
+                      <ul>
+                        {group.options.map((o) => {
+                          const count = servicesByOwner.get(o.value) ?? 0;
+                          return (
+                            <li data-owner-option data-search={`${o.label} ${group.label}`}>
+                              <a
+                                href={link({ prof: o.value, service_id: "", agenda_id: "", tipo: "", de: "" })}
+                                class="flex min-h-12 items-center justify-between gap-3 border-t border-line px-3 py-2 text-[15px] font-semibold text-ink no-underline hover:bg-[#e7f4ef] focus-visible:bg-[#e7f4ef]"
+                              >
+                                {o.label}
+                                <span class="shrink-0 text-sm font-normal text-ink-soft">{count === 1 ? "1 serviço" : `${count} serviços`}</span>
+                              </a>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  ))}
+                  <p hidden class="px-3 py-2.5 text-sm text-ink-soft" data-owner-empty>Ninguém encontrado com esse nome ou especialidade.</p>
+                </div>
+              </div>
+            )}
+          </StepCard>
+        )
+      }
+
+      <StepCard number={serviceStep} title="Serviço" state={stepOf(!locked && !!service, !locked && !!chosenOwner && !service)} id="passo-servico">
         {locked ? (
           <p class="text-[15px] text-ink-soft">Escolha o {vocabulary.patient} primeiro.</p>
+        ) : !chosenOwner ? (
+          <p class="text-[15px] text-ink-soft">{ownerKeys.length ? "Escolha com quem primeiro." : "Nenhum serviço para marcar nas agendas que você vê."}</p>
         ) : (
         <div class="flex flex-col gap-2.5">
           {/* C6: tipo primeiro, depois o serviço. U-09: o dia pedido continua valendo depois do serviço; só a faixa recomeça. */}
@@ -615,7 +700,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
 
       {
         showAgendaStep && (
-          <StepCard number={3} title="Com quem" state="done" id="passo-com-quem">
+          <StepCard number={serviceStep + 1} title="Agenda" state="done" id="passo-agenda">
             <div class="flex flex-wrap gap-2">
               <a href={link({ agenda_id: ANY, de: "" })} class={chip(agendaChoice === ANY)} aria-current={agendaChoice === ANY ? "true" : undefined}>
                 Primeiro horário disponível
@@ -919,6 +1004,25 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
     import { SERIES_SKIP_NOTE, seriesEndText, seriesWhenText, type SeriesEnd } from "../../../lib/confirmText";
     import { changesSchedule, compareSnapshots, type AppointmentSnapshot } from "../../../lib/appointmentChanges";
     import { paymentChangeNote } from "../../../lib/confirmText";
+    // Com quem (MS): a busca filtra os profissionais pelo nome ou pela especialidade, sem acento.
+    const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const ownerFilter = document.querySelector<HTMLInputElement>("[data-owner-filter]");
+    ownerFilter?.addEventListener("input", () => {
+      const terms = fold(ownerFilter.value).split(/\s+/).filter(Boolean);
+      let shown = 0;
+      document.querySelectorAll<HTMLElement>("[data-owner-group]").forEach((group) => {
+        let inGroup = 0;
+        group.querySelectorAll<HTMLElement>("[data-owner-option]").forEach((option) => {
+          const text = fold(option.dataset.search ?? "");
+          option.hidden = !terms.every((t) => text.includes(t));
+          if (!option.hidden) inGroup++;
+        });
+        group.hidden = inGroup === 0;
+        shown += inGroup;
+      });
+      const empty = document.querySelector<HTMLElement>("[data-owner-empty]");
+      if (empty) empty.hidden = shown > 0;
+    });
     // Resumo: o horário escolhido (quando e onde) e o endereço, só para local domiciliar.
     const box = document.querySelector<HTMLElement>("[data-home-address]");
     // O botão só se habilita com o horário escolhido (proposta aprovada da R4;

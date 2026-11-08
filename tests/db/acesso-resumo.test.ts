@@ -63,7 +63,7 @@ beforeAll(async () => {
   clinicNoSummary = await createClinic("Clínica sem resumo", ["reminders"]);
 
   appt.c1 = await book(ids.p1, ids.consulta, ids.agendaDra, at(MON1, "09:00"));
-  appt.c2 = await book(ids.p2, ids.consulta, ids.agendaDra2, at(MON1, "08:00"));
+  appt.c2 = await book(ids.p2, ids.consulta2, ids.agendaDra2, at(MON1, "08:00"));
   appt.e1 = await book(ids.p3, ids.exame, ids.agendaExams, at(MON1, "08:00"));
   await setPresenceConfirmed(db(reception), clinicId, appt.c1, true, reception.id, NOW);
 });

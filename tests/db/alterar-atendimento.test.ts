@@ -83,7 +83,7 @@ describe("alterar atendimento", () => {
   it("troca agenda e horário: presença zerada, um evento só ('changed', não 'rescheduled')", async () => {
     const a = await book(ids.p2, ids.consulta, ids.agendaDra, at(MON3, "10:00"), { locationId: ids.office });
     await setPresenceConfirmed(db(reception), clinicId, a.id, true, reception.id, NOW);
-    const result = await change(a, { agendaId: ids.agendaDra2, start: at(MON3, "08:00") });
+    const result = await change(a, { serviceId: ids.consulta2, agendaId: ids.agendaDra2, start: at(MON3, "08:00") });
     expect(result.scheduleChanged).toBe(true);
     expect(result.appointment).toMatchObject({ agendaId: ids.agendaDra2, patientConfirmedAt: null });
     expect(result.appointment.scheduledAt.toISOString()).toBe(at(MON3, "08:00").toISOString());
@@ -92,16 +92,16 @@ describe("alterar atendimento", () => {
 
   it("horário ocupado na agenda nova é recusado; o próprio horário não conta", async () => {
     third = await book(ids.p3, ids.consulta, ids.agendaDra, at(MON3, "11:00"), { locationId: ids.office });
-    expect(await codeOf(() => change(third, { agendaId: ids.agendaDra2, start: at(MON3, "08:00") }))).toBe("conflict");
+    expect(await codeOf(() => change(third, { serviceId: ids.consulta2, agendaId: ids.agendaDra2, start: at(MON3, "08:00") }))).toBe("conflict");
     // Mesmo horário, só o convênio/endereço: passa (não se choca com ele mesmo).
     const same = await change(third, { start: at(MON3, "11:00") });
     expect(same.scheduleChanged).toBe(false);
     // Duplicidade: o Paciente Um já tem Retorno na Dra. Agenda.
-    const other = await book(ids.p1, ids.consulta, ids.agendaDra2, at(MON3, "08:30"), { locationId: ids.office });
-    expect(await codeOf(() => change(other, { agendaId: ids.agendaDra, start: at(MON3, "11:30") }))).toBe("duplicate");
+    const other = await book(ids.p1, ids.consulta2, ids.agendaDra2, at(MON3, "08:30"), { locationId: ids.office });
+    expect(await codeOf(() => change(other, { serviceId: ids.consulta, agendaId: ids.agendaDra, start: at(MON3, "11:30") }))).toBe("duplicate");
     // Já em duplicidade (consulta e retorno na mesma agenda): corrigir sem trocar serviço nem agenda passa.
     const twin = await getAppointment(db(reception), clinicId, other.id);
-    await adminClient().from("appointments").update({ agenda_id: ids.agendaDra, scheduled_at: at(MON3, "11:30").toISOString() }).eq("id", twin.id);
+    await adminClient().from("appointments").update({ service_id: ids.consulta, agenda_id: ids.agendaDra, scheduled_at: at(MON3, "11:30").toISOString() }).eq("id", twin.id);
     const fixed = await change(await getAppointment(db(reception), clinicId, twin.id), { homeVisitAddress: null });
     expect(fixed.scheduleChanged).toBe(false);
     await cancelAppointment(db(reception), clinicId, twin.id, { channel: "admin", actorId: reception.id }, NOW);
@@ -117,7 +117,7 @@ describe("alterar atendimento", () => {
   it("turma: confere a vaga sem contar o próprio atendimento", async () => {
     await book(ids.p1, ids.turma, ids.agendaExams, at(MON3, "10:00"));
     const other = await book(ids.p2, ids.turma, ids.agendaExams, at(MON3, "10:00"));
-    const a = await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON1, "08:00"), { locationId: ids.office });
+    const a = await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON1, "08:00"), { locationId: ids.office });
     const toGroup = { serviceId: ids.turma, agendaId: ids.agendaExams, locationId: ids.office, start: at(MON3, "10:00") };
     expect(await codeOf(() => change(a, toGroup))).toBe("conflict");
     await cancelAppointment(db(reception), clinicId, other.id, { channel: "admin", actorId: reception.id }, NOW);
@@ -141,25 +141,25 @@ describe("data passada", () => {
 
   it("marcar no passado só com pastFrom, com o aviso aceito, até 90 dias", async () => {
     const office = { locationId: ids.office };
-    expect(await codeOf(() => book(ids.p1, ids.consulta, ids.agendaDra2, at(PAST, "08:00"), office))).toBe("conflict");
-    expect(await codeOf(() => book(ids.p1, ids.consulta, ids.agendaDra2, at(PAST, "08:00"), { ...office, pastFrom: pastFrom(), acceptedWarnings: false }))).toBe("invalid");
-    expect(await codeOf(() => book(ids.p1, ids.consulta, ids.agendaDra2, at("2030-11-25", "08:00"), { ...office, pastFrom: pastFrom() }))).toBe("conflict");
-    const a = await book(ids.p1, ids.consulta, ids.agendaDra2, at(PAST, "08:00"), { ...office, pastFrom: pastFrom() });
+    expect(await codeOf(() => book(ids.p1, ids.consulta2, ids.agendaDra2, at(PAST, "08:00"), office))).toBe("conflict");
+    expect(await codeOf(() => book(ids.p1, ids.consulta2, ids.agendaDra2, at(PAST, "08:00"), { ...office, pastFrom: pastFrom(), acceptedWarnings: false }))).toBe("invalid");
+    expect(await codeOf(() => book(ids.p1, ids.consulta2, ids.agendaDra2, at("2030-11-25", "08:00"), { ...office, pastFrom: pastFrom() }))).toBe("conflict");
+    const a = await book(ids.p1, ids.consulta2, ids.agendaDra2, at(PAST, "08:00"), { ...office, pastFrom: pastFrom() });
     expect(a.status).toBe("scheduled");
     const check = await checkFreeTime(
       db(reception),
       clinicId,
-      { serviceId: ids.consulta, agendaId: ids.agendaDra2, locationId: ids.office, start: at(PAST, "08:30"), pastFrom: pastFrom() },
+      { serviceId: ids.consulta2, agendaId: ids.agendaDra2, locationId: ids.office, start: at(PAST, "08:30"), pastFrom: pastFrom() },
       NOW,
     );
     expect(check).toEqual({ ok: true, warnings: [PAST_WARNING] });
   });
 
   it("altera o que já passou (até com comparecimento), sem ir para o futuro", async () => {
-    const a = await book(ids.p2, ids.consulta, ids.agendaDra2, at(PAST, "08:30"), { locationId: ids.office, pastFrom: pastFrom() });
+    const a = await book(ids.p2, ids.consulta2, ids.agendaDra2, at(PAST, "08:30"), { locationId: ids.office, pastFrom: pastFrom() });
     await recordAttendance(db(reception), clinicId, a.id, "completed", reception.id);
     const done = await getAppointment(db(reception), clinicId, a.id);
-    const result = await change(done, { agendaId: ids.agendaDra, start: at(PAST, "09:00"), acceptedWarnings: true });
+    const result = await change(done, { serviceId: ids.consulta, agendaId: ids.agendaDra, start: at(PAST, "09:00"), acceptedWarnings: true });
     expect(result.appointment).toMatchObject({ status: "completed", agendaId: ids.agendaDra });
     expect(await codeOf(() => change(result.appointment, { start: at(MON3, "08:00") }))).toBe("invalid");
   });
@@ -171,7 +171,7 @@ describe("série: esta e as próximas", () => {
     const { created } = await createSeries(
       db(reception),
       clinicId,
-      { patientId: ids.p3, serviceId: ids.consulta, agendaId: ids.agendaDra2, locationId: ids.office, intervalWeeks: 1, startsOn: "2031-04-07", startTime: "08:00", maxSessions: 3, actorId: reception.id },
+      { patientId: ids.p3, serviceId: ids.consulta2, agendaId: ids.agendaDra2, locationId: ids.office, intervalWeeks: 1, startsOn: "2031-04-07", startTime: "08:00", maxSessions: 3, actorId: reception.id },
       NOW,
     );
     expect(created).toHaveLength(3);
@@ -179,7 +179,7 @@ describe("série: esta e as próximas", () => {
 
     const blocker = await book(ids.p2, ids.consulta, ids.agendaDra, at("2031-04-14", "08:00"), { locationId: ids.office });
     expect(await codeOf(() => changeSeriesDetailsFrom(db(reception), clinicId, created[0].id, input, NOW))).toBe("conflict");
-    expect((await getAppointment(db(reception), clinicId, created[0].id)).serviceId).toBe(ids.consulta);
+    expect((await getAppointment(db(reception), clinicId, created[0].id)).serviceId).toBe(ids.consulta2);
 
     await cancelAppointment(db(reception), clinicId, blocker.id, { channel: "admin", actorId: reception.id }, NOW);
     const result = await changeSeriesDetailsFrom(db(reception), clinicId, created[0].id, input, NOW);

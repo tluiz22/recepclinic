@@ -8,7 +8,7 @@ import { addClinicHoliday } from "../../src/lib/data/config/holidays";
 import { createInsurancePlan, listPlanProfessionals, listProfessionalPlans, setPlanProfessionals } from "../../src/lib/data/config/insurance";
 import { createLocation, type Location } from "../../src/lib/data/config/locations";
 import { createProfessional, listProfessionals, type Professional } from "../../src/lib/data/config/professionals";
-import { createService, setServiceAgendas, setServiceLocations } from "../../src/lib/data/config/services";
+import { createService, setServiceLocations } from "../../src/lib/data/config/services";
 import { inviteMember, listTeam, removeMember, updateMember } from "../../src/lib/data/config/team";
 import type { OnboardingDeps } from "../../src/lib/data/onboarding";
 import { createPasswordLink, findUserIdByEmail } from "../../src/lib/data/platform";
@@ -197,9 +197,8 @@ describe("equipe", () => {
 describe("item desligado depois de criado (ajuste da validação, 05/out)", () => {
   it("domiciliar e exame já gravados não entram em serviço nem em horário novo; o já ligado fica guardado", async () => {
     const home = await createLocation(db(admin), clinicId, { name: "Domiciliar", type: "home_visit", address: null });
-    const service = await createService(db(admin), clinicId, { name: "Consulta", category: "consultation", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" });
-    const exam = await createService(db(admin), clinicId, { name: "Exame", category: "exam", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" });
-    await setServiceAgendas(db(admin), clinicId, exam.id, [agendaB.id]);
+    const service = await createService(db(admin), clinicId, { name: "Consulta", category: "consultation", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" }, { professionalId: doctorB.id });
+    const exam = await createService(db(admin), clinicId, { name: "Exame", category: "exam", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" }, { professionalId: doctorB.id });
     await setServiceLocations(db(admin), clinicId, service.id, [{ locationId: home.id, priceCents: null }]);
 
     const { data: all } = await adminClient().from("features").select("key");
@@ -209,7 +208,7 @@ describe("item desligado depois de criado (ajuste da validação, 05/out)", () =
       // Sem o item: a ligação antiga fica guardada com `keep`; uma nova é recusada.
       const kept = await setServiceLocations(db(admin), clinicId, service.id, [{ locationId: office.id, priceCents: null }], { keep: [home.id] });
       expect(kept.locations.map((l) => l.locationId).sort()).toEqual([home.id, office.id].sort());
-      const other = await createService(db(admin), clinicId, { name: "Retorno", category: "return_visit", durationMinutes: 30, priceCents: 0, returnDeadlineDays: 30, preparationInstructions: null, schedulingMode: "individual" });
+      const other = await createService(db(admin), clinicId, { name: "Retorno", category: "return_visit", durationMinutes: 30, priceCents: 0, returnDeadlineDays: 30, preparationInstructions: null, schedulingMode: "individual" }, { professionalId: doctorB.id });
       expect(await codeOf(() => setServiceLocations(db(admin), clinicId, other.id, [{ locationId: home.id, priceCents: null }]))).toBe("not_enabled");
 
       const window = { agendaId: agendaB.id, serviceId: null, startTime: "18:00", endTime: "19:00", capacity: null };

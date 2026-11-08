@@ -57,7 +57,8 @@ beforeAll(async () => {
   await setBotInfoForAll(a.clinicId, { payment_info: "Pix da clínica A" });
   await adminClient().from("clinic_settings").update({ website_url: null }).eq("clinic_id", b.clinicId);
   await setBotInfoForAll(b.clinicId, { payment_info: "Dinheiro da clínica B" });
-  await adminClient().from("services").update({ price_cents: 99900 }).eq("id", b.ids.consulta);
+  // Uma Consulta por profissional (MS): as duas com o preço da clínica B.
+  await adminClient().from("services").update({ price_cents: 99900 }).in("id", [b.ids.consulta, b.ids.consulta2]);
 });
 
 afterAll(async () => {

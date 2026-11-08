@@ -89,7 +89,7 @@ beforeAll(async () => {
   f = await setupAgendaClinic("Clínica Bot F96b", "+55849912297");
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "f96b-waba", status: "connected" });
   first = await book(at(MON1, "08:00"));
-  second = await book(at(MON2, "08:00"), f.ids.consulta, f.ids.agendaDra2);
+  second = await book(at(MON2, "08:00"), f.ids.consulta2, f.ids.agendaDra2);
   expect(await joinWaitlist(asDb(f.reception), f.clinicId, first, { via: "admin", actorId: f.reception.id }, new Date())).toBe("joined");
   const { data: series } = await adminClient()
     .from("appointment_series")

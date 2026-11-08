@@ -108,21 +108,22 @@ export const configuracoes = {
       ],
       depende: [{ texto: "Profissionais: toda agenda de profissional parte de um cadastro.", href: "/admin/configuracoes/profissionais" }],
       alimenta: [
-        { texto: "Serviços: o serviço só aparece para marcar nas agendas marcadas nele.", href: "/admin/configuracoes/servicos" },
+        { texto: "Serviços: cada serviço é de um profissional (ou da equipe) e aparece na agenda dele.", href: "/admin/configuracoes/servicos" },
         { texto: "Horários: cada horário de atendimento é de uma agenda.", href: "/admin/configuracoes/horarios" },
         { texto: "Equipe: o acesso restrito libera agendas escolhidas.", href: "/admin/configuracoes/equipe" },
       ],
     },
     servicos: {
-      serve: "Cadastrar o que o paciente pode marcar: consultas, retornos e exames, com duração, valor e as agendas que atendem.",
+      serve: "Cadastrar o que cada profissional oferece para marcar: consultas, retornos e exames, com duração e valor.",
       como: [
         "A duração define o tamanho de cada horário livre; o valor aparece no bot e na marcação, e pode ser diferente em cada local.",
-        "O serviço só aparece para marcar nas agendas e nos locais marcados nele.",
+        "Cada serviço é de um profissional (ou da equipe, nos exames): duração, valor e locais valem só para ele. O profissional não muda depois de criado; para outro, cadastre um serviço novo.",
+        "O serviço aparece para marcar na agenda do profissional dele, nos locais marcados nele.",
         "Sem horário de atendimento numa agenda e num local dele, o serviço não aparece no bot nem no link de agendar.",
         "Exame pode ter preparo e ser em turma, com as vagas definidas em Horários.",
       ],
       depende: [
-        { texto: "Agendas: pelo menos uma que o atenda.", href: "/admin/configuracoes/agendas" },
+        { texto: "Agendas: a do profissional do serviço.", href: "/admin/configuracoes/agendas" },
         { texto: "Locais: pelo menos um onde seja atendido.", href: "/admin/configuracoes/locais" },
       ],
       alimenta: [

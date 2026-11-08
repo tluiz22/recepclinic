@@ -14,7 +14,7 @@ import { getFreeSlots } from "../../src/lib/data/agenda/slots";
 import { setMemberAgendaAccess } from "../../src/lib/data/config/agendas";
 import { addClinicHoliday } from "../../src/lib/data/config/holidays";
 import { adminClient, type TestUser } from "./helpers";
-import { asDb, at, codeOf, MON1, MON2, MON3, MON4, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
+import { asDb, at, codeOf, consultaAt, MON1, MON2, MON3, MON4, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
 
 // F3.6b — bloqueios, links e séries recorrentes (D9), numa clínica criada
 // para o teste (tests/db/agendaFixture.ts).
@@ -159,7 +159,8 @@ describe("bloqueios", () => {
 describe("séries recorrentes (D9)", () => {
   const seriesInput = (patientId: string, extra: Record<string, unknown> = {}) => ({
     patientId,
-    serviceId: ids.consulta,
+    // A Consulta da agenda escolhida (MS: uma cópia por profissional).
+    serviceId: consultaAt(ids, (extra.agendaId as string | undefined) ?? ids.agendaDra2),
     agendaId: ids.agendaDra2,
     locationId: ids.office,
     intervalWeeks: 1,
@@ -172,12 +173,12 @@ describe("séries recorrentes (D9)", () => {
   it("por número de sessões: pula feriado, bloqueio e horário ocupado, e se estende até completar", async () => {
     await addClinicHoliday(db(admin), clinicId, { date: MON2, description: "Feriado municipal" });
     await createBlock(db(reception), clinicId, { agendaId: ids.agendaDra2, startsAt: at(MON3, "09:00"), endsAt: at(MON3, "12:00"), reason: "Curso", cancelAppointmentIds: [], actorId: null }, NOW);
-    await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON4, "08:00"));
+    await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON4, "08:00"));
     // Ocupa o horário da série em MON4 com um atendimento de outro paciente (fora das janelas: direto no banco).
     await adminClient().from("appointments").insert({
       clinic_id: clinicId,
       patient_id: ids.p2,
-      service_id: ids.consulta,
+      service_id: ids.consulta2,
       agenda_id: ids.agendaDra2,
       location_id: ids.office,
       scheduled_at: at(MON4, "10:00").toISOString(),

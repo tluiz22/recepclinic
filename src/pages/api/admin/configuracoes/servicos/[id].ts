@@ -3,8 +3,8 @@ import { createUserClient } from "../../../../../lib/data/clients";
 import {
   createService,
   getService,
+  parseOwner,
   setServiceActive,
-  setServiceAgendas,
   setServiceLocations,
   updateService,
   type SchedulingMode,
@@ -17,9 +17,9 @@ import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formChecked, formInt, formMoneyCents, formOptionalInt, formOptionalMoneyCents, formText } from "../../../../../lib/forms";
 
-// Serviço (F4.3, D4c): criar (`novo`), salvar (dados, agendas e locais com
-// preço próprio), desativar e reativar. A categoria não muda depois de criado;
-// os campos de outra categoria são ignorados.
+// Serviço (F4.3, D4c): criar (`novo`), salvar (dados e locais com preço
+// próprio), desativar e reativar. A categoria e o profissional (MS, 07/nov/2026)
+// não mudam depois de criado; os campos de outra categoria são ignorados.
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
   let id = params.id!;
@@ -54,12 +54,13 @@ export const POST: APIRoute = async (context) => {
       const newFile = formText(form, "preparation_file");
       if (category === "exam" && newFile) file = await receivedPreparationFile(db, clinicId, newFile);
       else if (category === "exam" && formChecked(form, "remover_arquivo")) file = null;
-      if (isNew) id = (await createService(db, clinicId, { ...input, category })).id;
-      else await updateService(db, clinicId, id, input);
+      // Dono (MS): o profissional ou a equipe; o banco liga à agenda dele.
+      const owner = parseOwner(formText(form, "owner"));
+      if (isNew) id = (await createService(db, clinicId, { ...input, category }, owner)).id;
+      else await updateService(db, clinicId, id, input, owner);
 
       // Depois de criado, um erro aqui volta para a tela do serviço (já existe).
       if (file?.path !== currentFile?.path) await setPreparationFile(db, clinicId, id, file);
-      await setServiceAgendas(db, clinicId, id, formAll(form, "agenda_id"));
       const locations = formAll(form, "location_id").map((locationId) => ({
         locationId,
         priceCents: formChecked(form, `own_price_${locationId}`) ? formOptionalMoneyCents(form, `price_${locationId}`) : null,

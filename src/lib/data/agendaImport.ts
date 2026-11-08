@@ -137,10 +137,22 @@ export async function loadImportCatalog(db: DbClient, clinicId: string): Promise
     db.from("locations").select("id, name, type").eq("clinic_id", clinicId).eq("is_active", true).order("name"),
     db.from("insurance_plans").select("id, name").eq("clinic_id", clinicId).eq("is_active", true).order("name"),
   ]);
+  // Serviço por profissional (MS, 07/nov/2026): nomes repetidos (uma cópia por profissional) levam o nome da agenda.
+  const serviceRows = unwrap(services, "Serviços");
+  const agendaRows = unwrap(agendas, "Agendas");
+  const pairRows = unwrap(pairs, "Serviços das agendas");
+  const repeated = new Set(serviceRows.map((s) => s.name).filter((name, i, all) => all.indexOf(name) !== i));
+  const agendaOf = (serviceId: string) => agendaRows.find((a) => pairRows.some((p) => p.service_id === serviceId && p.agenda_id === a.id))?.name;
   return {
-    services: unwrap(services, "Serviços").map((s) => ({ id: s.id, name: s.name, durationMinutes: s.duration_minutes, group: s.scheduling_mode === "group", category: s.category })),
-    agendas: unwrap(agendas, "Agendas").map((a) => ({ id: a.id, name: a.name })),
-    serviceAgendas: unwrap(pairs, "Serviços das agendas").map((p) => ({ serviceId: p.service_id, agendaId: p.agenda_id })),
+    services: serviceRows.map((s) => ({
+      id: s.id,
+      name: repeated.has(s.name) && agendaOf(s.id) ? `${s.name} (${agendaOf(s.id)})` : s.name,
+      durationMinutes: s.duration_minutes,
+      group: s.scheduling_mode === "group",
+      category: s.category,
+    })).sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+    agendas: agendaRows.map((a) => ({ id: a.id, name: a.name })),
+    serviceAgendas: pairRows.map((p) => ({ serviceId: p.service_id, agendaId: p.agenda_id })),
     locations: unwrap(locations, "Locais").map((l) => ({ id: l.id, name: l.name, homeVisit: l.type === "home_visit" })),
     insurancePlans: features.includes("insurance") ? unwrap(plans, "Convênios").map((p) => ({ id: p.id, name: p.name })) : [],
   };

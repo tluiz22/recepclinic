@@ -52,12 +52,22 @@ export function buildScope(catalog: BotCatalog, context: unknown): ProfessionalS
 /** O catálogo no contexto da escolha: os serviços do profissional (e os de agenda sem profissional); em "Exames", só os exames. */
 export function scopeCatalog(catalog: BotCatalog, scope: ProfessionalScope): BotCatalog {
   if (!scope.multi || !scope.choice) return catalog;
-  if (scope.choice === EXAMS_CHOICE) return { ...catalog, services: catalog.services.filter((s) => s.category === "exam") };
+  if (scope.choice === EXAMS_CHOICE) {
+    const exams = (list: BotCatalog["services"]) => list.filter((s) => s.category === "exam");
+    return { ...catalog, services: exams(catalog.services), copies: exams(catalog.copies) };
+  }
   const id = scope.choice;
-  const services = catalog.services
-    .map((s) => ({ ...s, agendas: s.agendas.filter((a) => a.professionalId === id || !a.professionalId) }))
-    .filter((s) => s.agendas.some((a) => a.professionalId === id) || (s.category === "exam" && s.agendas.length > 0));
-  return { ...catalog, services };
+  const mine = (list: BotCatalog["services"]) =>
+    list
+      .map((s) => ({ ...s, agendas: s.agendas.filter((a) => a.professionalId === id || !a.professionalId) }))
+      .filter((s) => s.agendas.some((a) => a.professionalId === id) || (s.category === "exam" && s.agendas.length > 0));
+  // Serviços por profissional (MS): a opção do menu usa os dados da cópia dele (valor, preparo).
+  const services = mine(catalog.services).map((s) => {
+    const own = s.agendas.find((a) => a.professionalId === id);
+    const copy = own && own.serviceId !== s.id ? catalog.copies.find((c) => c.id === own.serviceId) : undefined;
+    return copy ? { ...copy, agendas: s.agendas } : s;
+  });
+  return { ...catalog, services, copies: mine(catalog.copies) };
 }
 
 export type SpecialtyOption = { id: string; name: string };

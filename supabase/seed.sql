@@ -41,7 +41,7 @@ declare
   p_ped uuid; p_psi uuid; p_fis uuid;
   l_office uuid; l_home uuid;
   ag_ped uuid; ag_psi uuid; ag_fis uuid; ag_exams uuid;
-  s_consulta uuid; s_retorno uuid; s_avaliacao uuid; s_psi uuid; s_fis uuid; s_espiro uuid;
+  s_consulta uuid; s_retorno uuid; s_avaliacao uuid; s_avaliacao_fis uuid; s_psi uuid; s_fis uuid; s_espiro uuid;
   ip_unimed uuid; ip_bradesco uuid; ip_hapvida uuid;
   ct_maria uuid; ct_carlos uuid; ct_julia uuid;
   pt_joao uuid; pt_ana uuid; pt_carlos uuid; pt_julia uuid;
@@ -141,6 +141,9 @@ begin
     values (c_a, 'Retorno pediátrico', 'return_visit', 20, 0, 30) returning id into s_retorno;
   insert into public.services (clinic_id, name, category, duration_minutes, price_cents)
     values (c_a, 'Avaliação inicial', 'consultation', 50, 20000) returning id into s_avaliacao;
+  -- Serviço por profissional (MS, 07/nov/2026): a mesma avaliação, uma por profissional.
+  insert into public.services (clinic_id, name, category, duration_minutes, price_cents)
+    values (c_a, 'Avaliação inicial', 'consultation', 50, 20000) returning id into s_avaliacao_fis;
   insert into public.services (clinic_id, name, category, duration_minutes, price_cents)
     values (c_a, 'Sessão de psicoterapia', 'consultation', 50, 18000) returning id into s_psi;
   insert into public.services (clinic_id, name, category, duration_minutes, price_cents)
@@ -151,8 +154,8 @@ begin
   insert into public.service_agendas (clinic_id, service_id, agenda_id) values
     (c_a, s_consulta, ag_ped),
     (c_a, s_retorno, ag_ped),
-    (c_a, s_avaliacao, ag_psi),   -- mesmo serviço em duas agendas: o bot pergunta "com quem?"
-    (c_a, s_avaliacao, ag_fis),
+    (c_a, s_avaliacao, ag_psi),
+    (c_a, s_avaliacao_fis, ag_fis),
     (c_a, s_psi, ag_psi),
     (c_a, s_fis, ag_fis),
     (c_a, s_espiro, ag_exams);
@@ -162,6 +165,7 @@ begin
     (c_a, s_consulta, l_home, 45000),   -- consulta domiciliar com preço próprio
     (c_a, s_retorno, l_office, null),   -- retorno só no consultório
     (c_a, s_avaliacao, l_office, null),
+    (c_a, s_avaliacao_fis, l_office, null),
     (c_a, s_psi, l_office, null),
     (c_a, s_fis, l_office, null),
     (c_a, s_espiro, l_office, null);
@@ -289,7 +293,7 @@ begin
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, home_visit_address)
     values (c_a, pt_ana, s_consulta, ag_ped, l_home, (monday + 4 + time '14:00') at time zone tz, 30, 'whatsapp_bot', 'Rua A, 10 – Nova Betânia');
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel)
-    values (c_a, pt_carlos, s_avaliacao, ag_fis, l_office, (monday + 1 + time '09:00') at time zone tz, 50, 'whatsapp_bot');
+    values (c_a, pt_carlos, s_avaliacao_fis, ag_fis, l_office, (monday + 1 + time '09:00') at time zone tz, 50, 'whatsapp_bot');
   -- Turma de espirometria (quarta, 7h): dois pacientes no mesmo horário.
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel) values
     (c_a, pt_joao, s_espiro, ag_exams, l_office, (monday + 2 + time '07:00') at time zone tz, 40, 'admin'),

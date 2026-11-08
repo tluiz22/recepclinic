@@ -1933,14 +1933,14 @@ isOneToOne: false
                   ]
                 },"services": {
                   Row: {
-                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at": string,"duration_minutes": number,"id": string,"is_active": boolean,"name": string,"preparation_file_name": string | null,"preparation_file_path": string | null,"preparation_file_size": number | null,"preparation_file_type": string | null,"preparation_instructions": string | null,"price_cents": number,"return_deadline_days": number | null,"scheduling_mode": Database["public"]['Enums']["scheduling_mode"],"updated_at": string
+                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at": string,"duration_minutes": number,"id": string,"is_active": boolean,"is_team": boolean,"name": string,"preparation_file_name": string | null,"preparation_file_path": string | null,"preparation_file_size": number | null,"preparation_file_type": string | null,"preparation_instructions": string | null,"price_cents": number,"professional_id": string | null,"return_deadline_days": number | null,"scheduling_mode": Database["public"]['Enums']["scheduling_mode"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at"?: string,"duration_minutes": number,"id"?: string,"is_active"?: boolean,"name": string,"preparation_file_name"?: string | null,"preparation_file_path"?: string | null,"preparation_file_size"?: number | null,"preparation_file_type"?: string | null,"preparation_instructions"?: string | null,"price_cents": number,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
+                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at"?: string,"duration_minutes": number,"id"?: string,"is_active"?: boolean,"is_team"?: boolean,"name": string,"preparation_file_name"?: string | null,"preparation_file_path"?: string | null,"preparation_file_size"?: number | null,"preparation_file_type"?: string | null,"preparation_instructions"?: string | null,"price_cents": number,"professional_id"?: string | null,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
                   }
                   Update: {
-                    "category"?: Database["public"]['Enums']["service_category"],"clinic_id"?: string,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"is_active"?: boolean,"name"?: string,"preparation_file_name"?: string | null,"preparation_file_path"?: string | null,"preparation_file_size"?: number | null,"preparation_file_type"?: string | null,"preparation_instructions"?: string | null,"price_cents"?: number,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
+                    "category"?: Database["public"]['Enums']["service_category"],"clinic_id"?: string,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"is_active"?: boolean,"is_team"?: boolean,"name"?: string,"preparation_file_name"?: string | null,"preparation_file_path"?: string | null,"preparation_file_size"?: number | null,"preparation_file_type"?: string | null,"preparation_instructions"?: string | null,"price_cents"?: number,"professional_id"?: string | null,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1949,6 +1949,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "clinics"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "services_professional_fk"
+      columns: ["clinic_id","professional_id"]
+isOneToOne: false
+      referencedRelation: "professionals"
+      referencedColumns: ["clinic_id","id"]
     }
                   ]
                 },"system_errors": {

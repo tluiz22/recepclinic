@@ -207,3 +207,15 @@ por agenda: com um dono só, o "Com quem" do serviço deixa de existir (já é d
 - **Marcar (Recepção): opção A** do canvas "Marcar com serviços por profissional (MS)": passo "Com quem" antes do
   serviço, com busca por profissional ou especialidade (e "Equipe (exames)"); depois só os serviços do escolhido. Sai o
   "Primeiro horário disponível" entre profissionais (como no bot); com um profissional só, o passo já vem escolhido.
+
+## 10. Feito na MS (07/nov/2026)
+
+**S2, dono do serviço e cópias** (migração `20261230120000`): `services.professional_id` e `services.is_team` (dono
+fixo; o banco liga o serviço à agenda do dono e recusa outra agenda). Serviço que estava em várias agendas virou uma
+cópia por agenda (fica com a de mais atendimentos), com atendimentos, séries, horários próprios, links e vagas da lista
+de espera da agenda; sem agenda: o profissional único da clínica ou desativado sem dono. Cadastro do serviço com
+"Profissional" (por especialidade, "Equipe (exames)" só no exame; fixo depois); lista com a coluna Profissional; Marcar
+na opção A ("Com quem" com busca antes do serviço). Migrar agenda (cliente, 07/nov): vai para o serviço de mesmo nome e
+tipo do novo profissional ou cria a cópia. Bot: as cópias de mesmo nome viram uma opção, e a agenda escolhida segue com
+a cópia dela (sem "Primeiro horário" entre cópias). Marcar fecha os links pendentes das cópias do mesmo serviço.
+Importação da agenda: nome repetido leva a agenda. Arquivo do preparo compartilhado só sai sem uso.

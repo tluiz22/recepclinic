@@ -67,24 +67,22 @@ afterAll(async () => {
 });
 
 describe("link de agendamento na página pública", () => {
-  it("primeiro horário disponível: junta as agendas do serviço; mesmo horário aparece uma vez", async () => {
+  it("sem agenda escolhida, o link oferece a agenda do profissional do serviço (MS, 07/nov/2026)", async () => {
     const created = await link("p1", { serviceId: fixture.ids.consulta });
     const page = await loadBookingPage(bot, fixture.clinicId, created.id, NOW);
     expect(page.state).toBe("form");
     expect(page.service).toMatchObject({ name: "Consulta", category: "consultation", isGroup: false });
     expect(page.patient.fullName).toBe("Paciente Um");
     expect(page.contact).toEqual({ fullName: "Resp. Paciente Um", phone: contacts.p1.phone });
-    expect(page.candidates.agendas.map((a) => a.name)).toEqual(["Dr. Segundo", "Dra. Agenda"]);
+    expect(page.candidates.agendas.map((a) => a.name)).toEqual(["Dra. Agenda"]);
     expect(page.candidates.locations.map((l) => l.name)).toEqual(["Consultório"]);
 
     const dates = await listLinkDates(bot, fixture.clinicId, page, NOW);
     expect(dates.slice(0, 2).map((d) => d.date)).toEqual([MON1, MON2]);
     const slots = await listLinkSlots(bot, fixture.clinicId, page, MON1, NOW);
-    expect(slots[0]).toMatchObject({ agendaName: "Dr. Segundo", locationName: "Consultório", remaining: null });
+    expect(slots[0]).toMatchObject({ agendaName: "Dra. Agenda", locationName: "Consultório", remaining: null });
     expect(slots[0].start.toISOString()).toBe(at(MON1, "08:00").toISOString());
-    // 08:00 e 08:30 nas duas agendas: uma vez cada; depois só a Dra. Agenda.
-    expect(slots.filter((s) => s.start.getTime() === at(MON1, "08:00").getTime())).toHaveLength(1);
-    expect(slots.find((s) => s.start.getTime() === at(MON1, "09:00").getTime())?.agendaName).toBe("Dra. Agenda");
+    expect(slots.every((s) => s.agendaName === "Dra. Agenda")).toBe(true);
   });
 
   it("prazo da clínica para oferecer horários: só datas até o último dia do prazo (cliente, 11/out/2026)", async () => {
@@ -127,9 +125,9 @@ describe("link de agendamento na página pública", () => {
 
   it("horário ocupado entre a escolha e a confirmação: avisa e devolve o link", async () => {
     await bookAppointment(asDb(fixture.admin), fixture.clinicId, {
-      patientId: fixture.ids.p3, serviceId: fixture.ids.consulta, agendaId: fixture.ids.agendaDra2, start: at(MON2, "08:00"), channel: "admin", actorId: fixture.admin.id,
+      patientId: fixture.ids.p3, serviceId: fixture.ids.consulta2, agendaId: fixture.ids.agendaDra2, start: at(MON2, "08:00"), channel: "admin", actorId: fixture.admin.id,
     }, NOW);
-    const created = await link("p2", { serviceId: fixture.ids.consulta, agendaId: fixture.ids.agendaDra2 });
+    const created = await link("p2", { serviceId: fixture.ids.consulta2, agendaId: fixture.ids.agendaDra2 });
     expect(
       await confirmBookingLink(bot, fixture.clinicId, created.id, { start: at(MON2, "08:00"), agendaId: fixture.ids.agendaDra2, locationId: fixture.ids.office }, NOW),
     ).toEqual({ status: "slot_taken" });
@@ -236,7 +234,7 @@ describe("link de agendamento na página pública", () => {
   it("dia pedido sem horário: agenda aberta e cheia × sem agenda aberta (S-02 do teste da R11)", async () => {
     const full = "2031-04-07";
     const blocked = "2031-04-14";
-    const created = await link("p1", { serviceId: fixture.ids.consulta, agendaId: fixture.ids.agendaDra2 });
+    const created = await link("p1", { serviceId: fixture.ids.consulta2, agendaId: fixture.ids.agendaDra2 });
     const page = await loadBookingPage(bot, fixture.clinicId, created.id, NOW);
     // A agenda só atende às segundas.
     expect(await isLinkDayOpen(bot, fixture.clinicId, page, full, NOW)).toBe(true);
@@ -285,7 +283,7 @@ describe("página pública do preparo (F5.3)", () => {
 describe("link de remarcação na mensagem da tela Avisar (F5.4)", () => {
   it("o bloqueio que cancela liga o link ao atendimento; usado ou vencido, não aparece mais", async () => {
     const { appointment } = await bookAppointment(asDb(fixture.admin), fixture.clinicId, {
-      patientId: fixture.ids.p1, serviceId: fixture.ids.consulta, agendaId: fixture.ids.agendaDra2, start: at(MON4, "08:00"), channel: "admin", actorId: fixture.admin.id,
+      patientId: fixture.ids.p1, serviceId: fixture.ids.consulta2, agendaId: fixture.ids.agendaDra2, start: at(MON4, "08:00"), channel: "admin", actorId: fixture.admin.id,
     }, NOW);
     const { canceled } = await createBlock(asDb(fixture.admin), fixture.clinicId, {
       agendaId: fixture.ids.agendaDra2, startsAt: at(MON4, "08:00"), endsAt: at(MON4, "09:00"), reason: "Congresso",

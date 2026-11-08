@@ -186,7 +186,7 @@ describe("lembrete com falha técnica", () => {
 
 describe("oferta de vaga com falha técnica", () => {
   it("a vaga fica reservada para a pessoa; quando o reenvio sai, os 60 minutos contam dali", async () => {
-    const service = { serviceId: f.ids.consulta, agendaId: f.ids.agendaDra2 };
+    const service = { serviceId: f.ids.consulta2, agendaId: f.ids.agendaDra2 };
     const waiting = await book(f.ids.p3, service.serviceId, service.agendaId, at(MON2, "08:00"));
     await joinWaitlist(db, f.clinicId, waiting.id, { via: "whatsapp_bot", actorId: null }, NOW);
     await book(f.ids.p1, service.serviceId, service.agendaId, at(MON1, "08:00")); // ocupa o horário antes da vaga
@@ -223,7 +223,7 @@ describe("oferta de vaga com falha técnica", () => {
   });
 
   it("as três falharam: a pessoa é pulada e a vaga volta para a fila", async () => {
-    const service = { serviceId: f.ids.consulta, agendaId: f.ids.agendaDra2 };
+    const service = { serviceId: f.ids.consulta2, agendaId: f.ids.agendaDra2 };
     const { data: entry } = await adminClient().from("waitlist_entries").select("appointment_id").eq("clinic_id", f.clinicId).eq("status", "active").single();
     // Nova vaga: a oferta anterior foi recusada pela pessoa.
     await adminClient().from("waitlist_offers").update({ status: "declined" }).eq("clinic_id", f.clinicId).eq("status", "pending");

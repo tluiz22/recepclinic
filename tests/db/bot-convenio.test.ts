@@ -1,11 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClinicServiceClient } from "../../src/lib/data/clinicService";
-import { getBookingLink } from "../../src/lib/data/agenda/links";
-import { confirmBookingLink, linkCandidates, listLinkDates, listLinkSlots, loadBookingPage } from "../../src/lib/data/agenda/publicBooking";
+import { confirmBookingLink, listLinkDates, listLinkSlots, loadBookingPage } from "../../src/lib/data/agenda/publicBooking";
 import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { asDb, setupAgendaClinic, type AgendaFixture, setBotInfoForAll } from "./agendaFixture";
+import { setupAgendaClinic, type AgendaFixture, setBotInfoForAll } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
 // Jornada do bot, E2 (cliente, 31/out/2026): particular ou convênio depois de
@@ -83,7 +82,7 @@ async function reset(phone: string) {
 }
 
 /** Do "Oi" até depois do profissional (Dr. Segundo só tem consultório; a Dra. Agenda pergunta o local). */
-async function upToProfessional(phone: string, professional: "Dr. Segundo" | "Dra. Agenda" | "Primeiro horário"): Promise<Sent[]> {
+async function upToProfessional(phone: string, professional: "Dr. Segundo" | "Dra. Agenda"): Promise<Sent[]> {
   await reset(phone);
   await say(phone, "Oi");
   await say(phone, "1"); // Consultas
@@ -244,18 +243,12 @@ describe("clínica com convênios", () => {
     }
   });
 
-  it("\"Primeiro horário\" com plano que um dos profissionais não atende: aceito, e a página só oferece quem atende", async () => {
-    await upToProfessional(phone, "Primeiro horário");
-    let reply = await say(phone, { id: "coverage_insurance" });
-    reply = await say(phone, { id: optionId(reply, "Amil") });
-    expect(reply[0].body).toBe("Atendemos pelo convênio *Amil*.");
-    await say(phone, { id: "for_other" });
-    for (const input of ["Lia Amil", "05/05/2016", "Rita Amil", "sim", "Sim"]) reply = await say(phone, input);
-    expect(reply[0].body).toContain("/agendar/");
-    const link = await lastLink(phone);
-    expect(link).toMatchObject({ insurance_plan_id: plans.Amil, agenda_id: null });
-    const candidates = await linkCandidates(asDb(f.reception), f.clinicId, await getBookingLink(asDb(f.reception), f.clinicId, link.id));
-    expect(candidates.agendas.map((a) => a.id)).toEqual([f.ids.agendaDra]);
+  it("sem \"Primeiro horário\" entre profissionais (MS, 07/nov/2026): o paciente escolhe com quem", async () => {
+    await reset(phone);
+    await say(phone, "Oi");
+    await say(phone, "1");
+    const agendas = await say(phone, "1");
+    expect(titles(agendas)).toEqual(["1. Dr. Segundo", "2. Dra. Agenda", "3. Voltar ao menu"]);
   });
 
   it("\"Outro convênio\": não atende; sem particular, pergunta e, com o Sim, a conversa vai para a recepção", async () => {

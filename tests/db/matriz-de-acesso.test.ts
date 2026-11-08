@@ -123,7 +123,7 @@ describe("travas no banco com o item desligado", () => {
         createService(a, clinicId, {
           name: "Exame novo", category: "exam", durationMinutes: 20, priceCents: 0, returnDeadlineDays: null,
           preparationInstructions: null, schedulingMode: "individual",
-        }),
+        }, { team: true }),
       ),
     ).toBe("not_enabled");
     expect(await codeOf(() => createLocation(a, clinicId, { name: "Em casa", type: "home_visit", address: null }))).toBe("not_enabled");
@@ -157,7 +157,7 @@ describe("travas no banco com o item desligado", () => {
   it("lista de espera: não entra e o motor não roda; cancelamento pela clínica sem link do bot", async () => {
     const { appointment } = await bookAppointment(
       db(reception), clinicId,
-      { patientId: ids.p3, serviceId: ids.consulta, agendaId: ids.agendaDra2, start: at(MON1, "08:00"), channel: "admin", actorId: reception.id },
+      { patientId: ids.p3, serviceId: ids.consulta2, agendaId: ids.agendaDra2, start: at(MON1, "08:00"), channel: "admin", actorId: reception.id },
       NOW,
     );
     expect(await codeOf(() => joinWaitlist(db(reception), clinicId, appointment.id, { via: "admin", actorId: reception.id }, NOW))).toBe("not_enabled");

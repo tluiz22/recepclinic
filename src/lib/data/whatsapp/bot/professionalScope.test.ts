@@ -6,6 +6,7 @@ import { buildScope, EXAMS_CHOICE, NO_SPECIALTY, professionalsOf, PROFESSIONAL_K
 
 const agenda = (id: string, professional: { id: string; name: string; specialties?: { id: string; name: string }[] } | null): BotAgenda => ({
   id,
+  serviceId: "",
   name: professional?.name ?? "Exames",
   professionalName: professional?.name ?? null,
   professionalId: professional?.id ?? null,
@@ -19,7 +20,7 @@ const service = (id: string, category: BotService["category"], agendas: BotAgend
   name: id,
   category,
   isGroup: false,
-  agendas,
+  agendas: agendas.map((a) => ({ ...a, serviceId: id })),
   locationPrices: { clinic: 100 },
   priceCents: 100,
   returnDeadlineDays: null,
@@ -37,6 +38,7 @@ const catalog: BotCatalog = {
     service("eco", "exam", [agenda("a-joao", joao)]),
     service("raio", "exam", [agenda("a-exames", null)]),
   ],
+  copies: [],
   locations: [],
 };
 
@@ -76,7 +78,7 @@ describe("escopo do profissional (MB)", () => {
   });
 
   it("um profissional só: nada muda (ele é o profissional em uso, o catálogo inteiro)", () => {
-    const single: BotCatalog = { services: [service("consulta", "consultation", [agenda("a-ana", ana)]), service("raio", "exam", [agenda("a-exames", null)])], locations: [] };
+    const single: BotCatalog = { services: [service("consulta", "consultation", [agenda("a-ana", ana)]), service("raio", "exam", [agenda("a-exames", null)])], copies: [], locations: [] };
     const scope = buildScope(single, {});
     expect(scope).toMatchObject({ multi: false, choice: null });
     expect(scope.current?.id).toBe("ana");

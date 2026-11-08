@@ -100,7 +100,14 @@ export async function setPreparationFile(db: DbClient, clinicId: string, service
     throw new DataError("unexpected", `Arquivo do preparo: ${error.message}`, {}, { cause: error });
   }
   const old = current?.preparation_file_path;
-  if (old && old !== file?.path) await db.storage.from(SERVICE_FILES_BUCKET).remove([old]);
+  if (!old || old === file?.path) return;
+  // Cópias do serviço (MS, 07/nov/2026) usam o mesmo arquivo: só sai quando nenhum outro serviço o usa.
+  const { count } = await db
+    .from("services")
+    .select("id", { count: "exact", head: true })
+    .eq("clinic_id", clinicId)
+    .eq("preparation_file_path", old);
+  if (count === 0) await db.storage.from(SERVICE_FILES_BUCKET).remove([old]);
 }
 
 /** Link temporário para abrir o arquivo (prévia da imagem, "Abrir"). */

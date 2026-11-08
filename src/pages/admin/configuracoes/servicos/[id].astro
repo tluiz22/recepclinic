@@ -1,7 +1,8 @@
 ---
 // Configurações › Serviços › novo ou editar (F4.3, D4c): dados do serviço,
-// agendas que atendem (D2) e locais em que é oferecido, com preço próprio
-// opcional por local. Exame só com o item "Exames e procedimentos" (D11); a
+// o profissional dono (MS, 07/nov/2026: um profissional ou a equipe, fixo
+// depois de criado) e locais em que é oferecido, com preço próprio opcional
+// por local. Exame só com o item "Exames e procedimentos" (D11); a
 // categoria não muda depois de criado. Os dias e horários entram na F4.4.
 import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
 import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
@@ -16,7 +17,9 @@ import { CARD, CHECK, CHOICE, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, 
 import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas } from "../../../../lib/data/config/agendas";
 import { listLocations } from "../../../../lib/data/config/locations";
-import { listServices } from "../../../../lib/data/config/services";
+import { hasOwner, listServices, TEAM_OWNER } from "../../../../lib/data/config/services";
+import { listProfessionals } from "../../../../lib/data/config/professionals";
+import { ownerLabel, ownerOptionGroups } from "../../../../lib/serviceOwner";
 import { listServiceWindows, WEEKDAY_NAMES } from "../../../../lib/data/config/availability";
 import { preparationFileLink } from "../../../../lib/data/config/preparationFile";
 import { platformEnv } from "../../../../lib/env";
@@ -29,10 +32,11 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const { id } = Astro.params;
 const isNew = id === "novo";
-const [services, agendas, locations] = await Promise.all([
+const [services, agendas, locations, professionals] = await Promise.all([
   isNew ? Promise.resolve([]) : listServices(db, clinic.clinicId, { includeInactive: true }),
   listAgendas(db, clinic.clinicId, { includeInactive: true }),
   listLocations(db, clinic.clinicId, { includeInactive: true }),
+  listProfessionals(db, clinic.clinicId, { includeInactive: true }),
 ]);
 const service = isNew ? null : (services.find((s) => s.id === id) ?? null);
 if (!isNew && !service) return Astro.redirect("/admin/configuracoes/servicos");
@@ -43,8 +47,11 @@ const categories = (["consultation", "return_visit", "exam"] as const).filter((c
 // Aberto pela agenda da equipe, já como Exame (ela só atende exames, cliente 21/out/2026).
 const fromTeamAgenda = isNew && examsOn && agendas.some((a) => a.kind === "resource" && a.id === setupParam(Astro.url, "agenda"));
 const presetCategory = isNew && Astro.url.searchParams.get("tipo") === "retorno" ? "return_visit" : fromTeamAgenda ? "exam" : null;
-// Desativados só aparecem se já estão ligados ao serviço.
-const agendaOptions = agendas.filter((a) => a.isActive || service?.agendaIds.includes(a.id));
+// Profissional dono (MS): escolhido ao criar (ou no serviço sem dono) e fixo
+// depois. Agrupado pela especialidade principal (clínicas com 10+ profissionais).
+const chooseOwner = isNew || !hasOwner(service!);
+const teamAgenda = agendas.find((a) => a.kind === "resource" && a.isActive) ?? null;
+const ownerGroups = ownerOptionGroups(professionals, { team: examsOn && !!teamAgenda });
 const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.priceCents]));
 // Domiciliar só com o item liberado (D11); sem ele, as ligações já gravadas ficam guardadas.
 const homeVisitOn = clinic.features.includes("home_visit");
@@ -64,6 +71,10 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
 const origin = isNew ? setupOrigin(Astro.url, ["local", "agenda"]) : null;
 const back = origin ? { href: originPage(origin), label: "Voltar" } : { href: list, label: "Serviços" };
 const markAgendas = new Set([setupParam(Astro.url, "agenda"), setupParam(Astro.url, "marcar_agenda")].filter(Boolean));
+// Aberto por uma agenda (ou com ?profissional=), o dono já vem escolhido.
+const presetAgenda = agendas.find((a) => markAgendas.has(a.id));
+const presetOwner =
+  Astro.url.searchParams.get("profissional") ?? (presetAgenda ? (presetAgenda.kind === "resource" ? TEAM_OWNER : presetAgenda.professionalId) : null);
 const markLocations = new Set([setupParam(Astro.url, "local"), setupParam(Astro.url, "marcar_local")].filter(Boolean));
 const noLocation = !locations.some((l) => l.isActive && (homeVisitOn || l.type !== "home_visit"));
 const noAgenda = !agendas.some((a) => a.isActive);
@@ -90,8 +101,12 @@ for (const w of serviceWindows) {
       <NextStep text="Antes do serviço, cadastre onde a clínica atende." href={`/admin/configuracoes/locais/novo?servico=${id}`} label="Cadastrar o local" />
     ) : noAgenda ? (
       <NextStep text="Antes do serviço, crie a agenda que vai atendê-lo." href={`/admin/configuracoes/agendas/novo?servico=${id}`} label="Criar a agenda" />
-    ) : serviceIssues.includes("no_agenda") || serviceIssues.includes("no_location") ? (
-      <NextStep text="Marque abaixo a agenda e o local deste serviço e salve. Depois, cadastre os horários." />
+    ) : !isNew && !hasOwner(service!) ? (
+      <NextStep text="Este serviço ficou sem profissional (era de nenhuma agenda). Escolha abaixo o profissional e salve; depois, reative." />
+    ) : serviceIssues.includes("no_agenda") ? (
+      <NextStep text={`${ownerLabel(service!, professionals)} ainda não tem agenda: crie a agenda para o serviço aparecer para marcar.`} href={`/admin/configuracoes/agendas/novo?servico=${id}`} label="Criar a agenda" />
+    ) : serviceIssues.includes("no_location") ? (
+      <NextStep text="Marque abaixo o local deste serviço e salve. Depois, cadastre os horários." />
     ) : serviceIssues.includes("no_hours") && setup?.hoursReasons.has(id!) ? (
       <NextStep text={`${service!.name} não tem horário que valha: ${setup.hoursReasons.get(id!)} Depois, salve.`} />
     ) : (
@@ -173,24 +188,34 @@ for (const w of serviceWindows) {
         />
       </div>
 
-      <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">
-        <legend class={`${SECTION_TITLE} float-left w-full`}>Agendas que atendem</legend>
-        <p class={HINT}>O serviço só aparece para marcar nas agendas marcadas aqui.</p>
-        <div class="mt-2 flex flex-col gap-2">
+      <div class="border-t border-[#e6ecea] pt-5">
+        <Field
+          id="owner"
+          label="Profissional"
+          kind={chooseOwner ? "label" : "text"}
+          hint={chooseOwner ? "Duração, valor e locais valem só para este profissional. Não muda depois de criado." : "Não muda depois de criado. Para outro profissional, cadastre um serviço novo."}
+        >
           {
-            agendaOptions.map((agenda) => (
-              // A agenda da equipe só atende exames (cliente, 21/out/2026): some nos outros tipos.
-              <label class={CHOICE} data-only={agenda.kind === "resource" ? "exam" : undefined}>
-                <input type="checkbox" name="agenda_id" value={agenda.id} checked={service?.agendaIds.includes(agenda.id) || markAgendas.has(agenda.id)} class={CHECK} />
-                {agenda.name}
-                {agenda.kind === "resource" && " (equipe)"}
-                {!agenda.isActive && " (desativada)"}
-              </label>
-            ))
+            chooseOwner ? (
+              <select id="owner" name="owner" required class={INPUT} aria-describedby={describedBy("owner", { hint: true })} data-owner-select>
+                <option value="" selected={!presetOwner}>Escolha o profissional</option>
+                {ownerGroups.map((group) => (
+                  <optgroup label={group.label}>
+                    {group.options.map((o) => (
+                      <option value={o.value} selected={o.value === presetOwner} data-team={o.value === TEAM_OWNER ? "" : undefined}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            ) : (
+              <p class="mt-1 text-sm text-ink">{ownerLabel(service!, professionals)}</p>
+            )
           }
-          {agendaOptions.length === 0 && <p class="text-sm text-ink-soft">Nenhuma agenda cadastrada ainda.</p>}
-        </div>
-      </fieldset>
+        </Field>
+        {chooseOwner && ownerGroups.length === 0 && <p class="mt-2 text-sm text-ink-soft">Nenhum profissional cadastrado ainda.</p>}
+      </div>
 
       <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">
         <legend class={`${SECTION_TITLE} float-left w-full`}>Locais em que é oferecido</legend>
@@ -264,13 +289,18 @@ for (const w of serviceWindows) {
     // Mostra só os campos do tipo escolhido (prazo do retorno; turma e preparo do exame).
     const form = document.querySelector<HTMLFormElement>("[data-service-form]");
     const select = document.getElementById("category") as HTMLSelectElement | null;
+    const owner = form?.querySelector<HTMLSelectElement>("[data-owner-select]");
     const sync = () => {
       const category = select?.value ?? form?.dataset.category ?? "";
       form?.querySelectorAll<HTMLElement>("[data-only]").forEach((el) => {
         el.hidden = el.dataset.only !== category;
-        // Agenda da equipe escondida não vai junto (só atende exames).
-        if (el.hidden) el.querySelectorAll<HTMLInputElement>('input[name="agenda_id"]').forEach((box) => (box.checked = false));
       });
+      // A equipe só atende exames (cliente, 21/out/2026).
+      const team = owner?.querySelector<HTMLOptionElement>("option[data-team]");
+      if (team) {
+        team.disabled = category !== "exam";
+        if (team.disabled && team.selected) owner!.value = "";
+      }
     };
     select?.addEventListener("change", sync);
     sync();

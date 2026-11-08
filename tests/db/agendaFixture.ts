@@ -3,7 +3,7 @@ import { createAgenda } from "../../src/lib/data/config/agendas";
 import { addAvailabilityWindow } from "../../src/lib/data/config/availability";
 import { createLocation } from "../../src/lib/data/config/locations";
 import { createProfessional } from "../../src/lib/data/config/professionals";
-import { createService, setServiceAgendas, setServiceLocations, type ServiceInput } from "../../src/lib/data/config/services";
+import { createService, setServiceLocations, type ServiceInput, type ServiceOwner } from "../../src/lib/data/config/services";
 import { DataError } from "../../src/lib/data/errors";
 import { registerPatient } from "../../src/lib/data/patients";
 import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, teamAgendaId, type TestUser } from "./helpers";
@@ -21,7 +21,7 @@ export const MON4 = "2031-03-31";
 export const NOW = at("2031-03-09", "12:00");
 
 export type AgendaIds = Record<
-  "agendaDra" | "agendaDra2" | "agendaExams" | "office" | "home" | "consulta" | "retorno" | "exame" | "turma" | "p1" | "p2" | "p3",
+  "agendaDra" | "agendaDra2" | "agendaExams" | "office" | "home" | "consulta" | "consulta2" | "retorno" | "exame" | "turma" | "p1" | "p2" | "p3",
   string
 >;
 
@@ -34,6 +34,9 @@ export type AgendaFixture = {
 };
 
 export const asDb = (user: TestUser) => user.client as unknown as DbClient;
+
+/** A Consulta da agenda (MS: uma cópia por profissional). */
+export const consultaAt = (ids: AgendaIds, agendaId: string) => (agendaId === ids.agendaDra2 ? ids.consulta2 : ids.consulta);
 
 export async function codeOf(run: () => Promise<unknown>): Promise<string> {
   try {
@@ -68,23 +71,29 @@ export async function setupAgendaClinic(name: string, phonePrefix: string, { one
   ids.office = (await createLocation(a, clinicId, { name: "Consultório", type: "clinic", address: "Rua A, 1" })).id;
   ids.home = (await createLocation(a, clinicId, { name: "Domiciliar", type: "home_visit", address: null })).id;
 
-  const service = async (input: Partial<ServiceInput> & Pick<ServiceInput, "name" | "category">, agendas: string[], locations: string[]) => {
-    const created = await createService(a, clinicId, {
-      durationMinutes: 30,
-      priceCents: 30000,
-      returnDeadlineDays: null,
-      preparationInstructions: null,
-      schedulingMode: "individual",
-      ...input,
-    });
-    await setServiceAgendas(a, clinicId, created.id, agendas);
+  // Serviço por profissional (MS, 07/nov/2026): o dono decide a agenda.
+  const service = async (input: Partial<ServiceInput> & Pick<ServiceInput, "name" | "category">, owner: ServiceOwner, locations: string[]) => {
+    const created = await createService(
+      a,
+      clinicId,
+      {
+        durationMinutes: 30,
+        priceCents: 30000,
+        returnDeadlineDays: null,
+        preparationInstructions: null,
+        schedulingMode: "individual",
+        ...input,
+      },
+      owner,
+    );
     await setServiceLocations(a, clinicId, created.id, locations.map((locationId) => ({ locationId, priceCents: locationId === ids.home ? 45000 : null })));
     return created.id;
   };
-  ids.consulta = await service({ name: "Consulta", category: "consultation" }, [ids.agendaDra, ids.agendaDra2], [ids.office, ids.home]);
-  ids.retorno = await service({ name: "Retorno", category: "return_visit", durationMinutes: 20, priceCents: 0, returnDeadlineDays: 30 }, [ids.agendaDra], [ids.office, ids.home]);
-  ids.exame = await service({ name: "Exame", category: "exam", durationMinutes: 20, priceCents: 15000 }, [ids.agendaExams], [ids.office]);
-  ids.turma = await service({ name: "Turma", category: "exam", durationMinutes: 60, priceCents: 9000, schedulingMode: "group" }, [ids.agendaExams], [ids.office]);
+  ids.consulta = await service({ name: "Consulta", category: "consultation" }, { professionalId: dra.id }, [ids.office, ids.home]);
+  ids.consulta2 = await service({ name: "Consulta", category: "consultation" }, { professionalId: dra2.id }, [ids.office, ids.home]);
+  ids.retorno = await service({ name: "Retorno", category: "return_visit", durationMinutes: 20, priceCents: 0, returnDeadlineDays: 30 }, { professionalId: dra.id }, [ids.office, ids.home]);
+  ids.exame = await service({ name: "Exame", category: "exam", durationMinutes: 20, priceCents: 15000 }, { team: true }, [ids.office]);
+  ids.turma = await service({ name: "Turma", category: "exam", durationMinutes: 60, priceCents: 9000, schedulingMode: "group" }, { team: true }, [ids.office]);
 
   const window = (agendaId: string, locationId: string, startTime: string, endTime: string, extra = {}) =>
     addAvailabilityWindow(a, clinicId, { agendaId, locationId, serviceId: null, weekday: 1, startTime, endTime, capacity: null, ...extra });

@@ -12,7 +12,7 @@ import { listGuidanceResendable, resendGuidance } from "../../src/lib/data/whats
 import { createClinicSender, guidanceSender } from "../../src/lib/data/whatsapp/send";
 import { createDefaultTemplates, deleteUnusedTemplate, listUnusedTemplates, namesInWaba, refreshTemplateStatuses, resendRejectedTemplate } from "../../src/lib/data/whatsapp/templateSync";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, consultaAt, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 
 // F6.2 — Envio pela conexão da clínica: templates padrão criados na conta,
@@ -355,7 +355,7 @@ describe("avisos ao paciente", () => {
     const { appointment } = await bookAppointment(
       asDb(f.reception),
       f.clinicId,
-      { patientId: f.ids.p2, serviceId: f.ids.consulta, agendaId: f.ids.agendaDra2, start: at(MON1, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null },
+      { patientId: f.ids.p2, serviceId: f.ids.consulta2, agendaId: f.ids.agendaDra2, start: at(MON1, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null },
       NOW,
     );
     expect(await sendAppointmentNotice(asDb(f.reception), f.clinicId, appointment.id, "reschedule", s, NOW)).toBe("skipped_no_template");
@@ -485,7 +485,7 @@ describe("cancelamento pela clínica (F6.5)", () => {
         await bookAppointment(
           asDb(f.reception),
           f.clinicId,
-          { patientId, serviceId: f.ids.consulta, agendaId, start: at(MON2, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null },
+          { patientId, serviceId: consultaAt(f.ids, agendaId), agendaId, start: at(MON2, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null },
           NOW,
         )
       ).appointment.id;

@@ -25,7 +25,7 @@ beforeAll(async () => {
   const book = (patientId: string, serviceId: string, agendaId: string, date: string, time: string) =>
     bookAppointment(asDb(admin), clinicId, { patientId, serviceId, agendaId, start: at(date, time), locationId: ids.office, channel: "admin", actorId: admin.id }, NOW);
   await book(ids.p1, ids.consulta, ids.agendaDra, MON1, "08:00");
-  await book(ids.p2, ids.consulta, ids.agendaDra2, MON1, "08:00");
+  await book(ids.p2, ids.consulta2, ids.agendaDra2, MON1, "08:00");
   await book(ids.p1, ids.turma, ids.agendaExams, MON1, "10:00");
   await book(ids.p2, ids.turma, ids.agendaExams, MON1, "10:00");
 });
@@ -66,7 +66,7 @@ describe("agenda do dia", () => {
 it("selo de faltas: só com 2 ou mais faltas e em pelo menos metade dos registrados", async () => {
   const { clinicId, ids, admin } = fixture;
   const book = (date: string) =>
-    bookAppointment(asDb(admin), clinicId, { patientId: ids.p3, serviceId: ids.consulta, agendaId: ids.agendaDra2, start: at(date, "08:00"), locationId: ids.office, channel: "admin", actorId: admin.id }, NOW);
+    bookAppointment(asDb(admin), clinicId, { patientId: ids.p3, serviceId: ids.consulta2, agendaId: ids.agendaDra2, start: at(date, "08:00"), locationId: ids.office, channel: "admin", actorId: admin.id }, NOW);
   const first = await book(MON2);
   await recordAttendance(asDb(admin), clinicId, first.appointment.id, "no_show", admin.id);
   expect((await listNoShowStats(asDb(admin), clinicId, [ids.p3])).has(ids.p3)).toBe(false);

@@ -143,12 +143,12 @@ beforeAll(async () => {
   consultP1 = await book(f.ids.p1, f.ids.consulta, f.ids.agendaDra, MON1, "08:00");
   examP1 = await book(f.ids.p1, f.ids.exame, f.ids.agendaExams, MON2, "08:00");
   consultP4 = await book(sibling.patient.id, f.ids.consulta, f.ids.agendaDra, MON1, "09:00");
-  consultP2 = await book(f.ids.p2, f.ids.consulta, f.ids.agendaDra2, MON1, "08:00");
+  consultP2 = await book(f.ids.p2, f.ids.consulta2, f.ids.agendaDra2, MON1, "08:00");
   await book(p5.patient.id, f.ids.consulta, f.ids.agendaDra, MON1, "10:00");
   await adminClient().from("appointments").update({ reminder_sent_at: new Date().toISOString() }).in("id", [consultP2]);
 
   // Paciente Três: nada relevante (já passou, cancelado, realizado).
-  const base = { clinic_id: f.clinicId, patient_id: f.ids.p3, service_id: f.ids.consulta, agenda_id: f.ids.agendaDra2, location_id: f.ids.office, duration_minutes: 30, booking_channel: "admin" as const };
+  const base = { clinic_id: f.clinicId, patient_id: f.ids.p3, service_id: f.ids.consulta2, agenda_id: f.ids.agendaDra2, location_id: f.ids.office, duration_minutes: 30, booking_channel: "admin" as const };
   const { error } = await adminClient()
     .from("appointments")
     .insert([

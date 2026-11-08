@@ -60,15 +60,15 @@ describe("aguardando remarcação", () => {
     const createdAfterCancel = (id: string) =>
       adminClient().from("appointments").update({ created_at: new Date(NOW.getTime() + 60_000).toISOString() }).eq("id", id);
 
-    const first = await book(ids.p2, ids.consulta, ids.agendaDra2, MON1, "08:00");
+    const first = await book(ids.p2, ids.consulta2, ids.agendaDra2, MON1, "08:00");
     await cancelByClinic(asDb(admin), clinicId, [first.appointment.id], admin.id, NOW);
-    const again = await book(ids.p2, ids.consulta, ids.agendaDra2, MON1, "08:30");
+    const again = await book(ids.p2, ids.consulta2, ids.agendaDra2, MON1, "08:30");
     await createdAfterCancel(again.appointment.id);
     await cancelByClinic(asDb(admin), clinicId, [again.appointment.id], admin.id, NOW);
     expect((await listAwaitingRebooking(asDb(admin), clinicId, NOW)).map((a) => a.id)).toEqual([again.appointment.id]);
 
     // Marcado de novo e cancelado pelo paciente (não pela clínica): sai também.
-    const third = await book(ids.p2, ids.consulta, ids.agendaDra2, MON2, "08:00");
+    const third = await book(ids.p2, ids.consulta2, ids.agendaDra2, MON2, "08:00");
     await adminClient().from("appointments").update({ created_at: new Date(NOW.getTime() + 120_000).toISOString(), status: "canceled", canceled_at: NOW.toISOString() }).eq("id", third.appointment.id);
     expect(await listAwaitingRebooking(asDb(admin), clinicId, NOW)).toEqual([]);
   });

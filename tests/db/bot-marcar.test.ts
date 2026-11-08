@@ -110,7 +110,8 @@ describe("bot: marcar consulta (número novo)", () => {
   it("consulta única escolhida sozinha (cliente, 31/out/2026), com quem? (dois profissionais), local, para quem, cadastro, link", async () => {
     let reply = await say(phone, "1");
     expect(reply.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
-    expect(titles(reply)).toEqual(["1. Primeiro horário", "2. Dr. Segundo", "3. Dra. Agenda", "4. Voltar ao menu"]);
+    // Uma cópia da Consulta por profissional (MS): sem "Primeiro horário" entre elas.
+    expect(titles(reply)).toEqual(["1. Dr. Segundo", "2. Dra. Agenda", "3. Voltar ao menu"]);
 
     reply = await say(phone, { id: optionId(reply, "Dra. Agenda") });
     expect(reply.at(-1)!.body).toBe("Prefere consultório ou atendimento domiciliar?");

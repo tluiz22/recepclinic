@@ -48,7 +48,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 <ConfigShell current="agendas" title={`Migrar ${from.name}`} back={back}>
   <div class="flex max-w-3xl flex-col gap-4">
     <p class="text-[15px] text-ink">
-      Passa os <strong>horários de atendimento</strong> e os <strong>atendimentos de hoje em diante</strong> desta agenda para outra, dos serviços que você escolher (a nova agenda precisa atender o serviço). O histórico
+      Passa os <strong>horários de atendimento</strong> e os <strong>atendimentos de hoje em diante</strong> desta agenda para outra, dos serviços que você escolher. Cada serviço vai para o serviço de mesmo nome do novo profissional; se ele não tiver, a migração cria a cópia, com as mesmas características. O histórico
       (atendimentos que já passaram ou foram cancelados) fica nesta agenda. O paciente não recebe aviso: dia, hora e local não mudam.
     </p>
 
@@ -83,7 +83,13 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                   <strong>{x.name}</strong>
                   <span class="block text-sm text-ink-soft">
                     {plural(x.windows, "horário", "horários")}, {plural(x.appointments, "atendimento futuro", "atendimentos futuros")}
-                    {x.target_attends ? "" : ` · ${to.name} não atende este serviço; fica em ${from.name}`}
+                    {!x.target_attends
+                      ? ` · ${to.name} não atende este serviço; fica em ${from.name}`
+                      : x.creates_copy
+                        ? ` · ${to.name} ainda não tem este serviço: a migração cria a cópia, com as mesmas características`
+                        : x.target_service && x.target_service !== x.name
+                          ? ` · vai para "${x.target_service}" de ${to.name}`
+                          : ""}
                   </span>
                 </span>
               </label>

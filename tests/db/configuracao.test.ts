@@ -82,7 +82,9 @@ beforeAll(async () => {
     preparation_instructions: "*Jejum* de 2 horas", scheduling_mode: "group",
   });
   await link("service_agendas", { clinic_id: clinicA, service_id: a.consultation, agenda_id: a.agendaJoao });
-  await link("service_agendas", { clinic_id: clinicA, service_id: a.consultation, agenda_id: a.agendaAna });
+  // Serviço por profissional (MS, 07/nov/2026): a Consulta da Dra. Ana é uma cópia.
+  a.consultationAna = await insert("services", { clinic_id: clinicA, name: "Consulta", category: "consultation", duration_minutes: 30, price_cents: 25000 });
+  await link("service_agendas", { clinic_id: clinicA, service_id: a.consultationAna, agenda_id: a.agendaAna });
   await link("service_agendas", { clinic_id: clinicA, service_id: a.exam, agenda_id: a.agendaExams });
   await link("service_locations", { clinic_id: clinicA, service_id: a.consultation, location_id: a.office });
   await link("service_locations", { clinic_id: clinicA, service_id: a.consultation, location_id: a.home, price_cents: 40000 });

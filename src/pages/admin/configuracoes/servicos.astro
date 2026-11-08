@@ -1,6 +1,6 @@
 ---
-// Configurações › Serviços (F4.3, D4c): consulta, retorno e exame, com as
-// agendas que atendem e os locais em que são oferecidos.
+// Configurações › Serviços (F4.3, D4c): consulta, retorno e exame, com o
+// profissional dono (MS, 07/nov/2026) e os locais em que são oferecidos.
 // Redesign R9 (cliente, 17/out/2026): uma linha por serviço, "Ativos | Todos".
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import { withAllFilter } from "../../../lib/returnPath";
@@ -14,8 +14,9 @@ import Notice from "../../../components/admin/ui/Notice.astro";
 import Pill from "../../../components/admin/ui/Pill.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
 import { createUserClient } from "../../../lib/data/clients";
-import { listAgendas } from "../../../lib/data/config/agendas";
-import { listServices } from "../../../lib/data/config/services";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { hasOwner, listServices } from "../../../lib/data/config/services";
+import { ownerLabel } from "../../../lib/serviceOwner";
 import { loadSetupStatus } from "../../../lib/data/config/setup";
 import { formatCentsBRL } from "../../../lib/money";
 import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
@@ -23,16 +24,15 @@ import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
-const [all, agendas, setup] = await Promise.all([
+const [all, professionals, setup] = await Promise.all([
   listServices(db, clinic.clinicId, { includeInactive: true }),
-  listAgendas(db, clinic.clinicId, { includeInactive: true }),
+  listProfessionals(db, clinic.clinicId, { includeInactive: true }),
   // Pendências da jornada de configuração (F6.3b), nos selos.
   loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
 const active = all.filter((s) => s.isActive);
 // Aba "Desativados" (cliente, 21/out/2026): só os desativados.
 const services = showInactive ? all.filter((s) => !s.isActive) : active;
-const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 // Sem retorno com horário, o bot não mostra "Marcar retorno" (cliente, 18/out/2026).
 const returns = active.filter((s) => s.category === "return_visit");
 const returnReady = returns.some((s) => !setup.issues.services.get(s.id)?.length);
@@ -41,7 +41,7 @@ import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
-<ConfigShell current="servicos" title="Serviços" subtitle="O que a clínica oferece para marcar, com duração, preço e as agendas que atendem." setup={setup}>
+<ConfigShell current="servicos" title="Serviços" subtitle="O que cada profissional oferece para marcar, com duração e preço." setup={setup}>
   <Button slot="actions" href="/admin/configuracoes/servicos/novo" variant="primary">
     <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo serviço
   </Button>
@@ -77,7 +77,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
         <div aria-hidden="true" class={`${HEAD_ROW} ${cols}`}>
           <span>Serviço</span>
           <span>Duração e preço</span>
-          <span>Agendas que atendem</span>
+          <span>Profissional</span>
           <span />
         </div>
         <ul>
@@ -111,10 +111,10 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
                   </span>
                 </span>
                 <span class={ROW_CELL}>
-                  {service.agendaIds.length ? (
-                    service.agendaIds.map((id) => agendaName.get(id)).join(", ")
+                  {hasOwner(service) ? (
+                    ownerLabel(service, professionals)
                   ) : (
-                    <span class={SOFT}>Nenhuma agenda: não aparece para marcar</span>
+                    <span class={SOFT}>Sem profissional: escolha para reativar</span>
                   )}
                 </span>
               </li>

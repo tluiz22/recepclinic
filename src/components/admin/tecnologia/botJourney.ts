@@ -113,7 +113,7 @@ export const JOURNEY: JourneySection[] = [
         [
           "Sim",
           [
-            bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de uma agenda atende o serviço no contexto da conversa (com vários profissionais, o paciente já escolheu um no começo)."),
+            bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de uma agenda atende o serviço no contexto da conversa (com vários profissionais, o paciente já escolheu um no começo). Serviços por profissional (MS, 07/11): as cópias de mesmo nome viram uma opção; escolhida a agenda, valem o valor e o preparo da cópia dela; entre cópias diferentes não há \"Primeiro horário\"."),
             bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
             check("O caminho escolhido aceita convênios?", "Recurso Convênios ligado e algum plano ativo ligado ao profissional escolhido (agenda de exames: todos os planos). Profissional só particular: não pergunta (MC, 07/11/2026)."),
             branch(

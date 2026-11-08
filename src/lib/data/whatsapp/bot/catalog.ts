@@ -13,9 +13,17 @@ import type { PreparationFile } from "../../config/preparationFile";
 // horário cadastrados, o serviço nem aparece para escolher). Item desligado
 // na matriz some do bot (D11): exames sem "Exames e procedimentos",
 // domiciliar sem "Atendimento domiciliar".
+//
+// Serviços por profissional (MS, 07/nov/2026): cada serviço tem um dono, e o
+// mesmo serviço de vários profissionais são cópias. No menu, as cópias com o
+// mesmo nome e tipo viram uma opção só (como antes da MS), e cada agenda leva
+// o id da sua cópia (`serviceId`); escolhida a agenda, o bot segue com a cópia
+// dela (valor, duração, preparo). `copies` guarda todas, uma por serviço.
 
 export type BotAgenda = {
   id: string;
+  /** A cópia do serviço atendida nesta agenda (MS). */
+  serviceId: string;
   name: string;
   professionalName: string | null;
   professionalId: string | null;
@@ -44,7 +52,42 @@ export type BotService = {
 
 export type BotLocation = { id: string; name: string; type: LocationType; address: string | null };
 
-export type BotCatalog = { services: BotService[]; locations: BotLocation[] };
+export type BotCatalog = {
+  /** Para os menus: as cópias de mesmo nome e tipo juntas. */
+  services: BotService[];
+  /** Cada serviço com as agendas dele (MS). */
+  copies: BotService[];
+  locations: BotLocation[];
+};
+
+const mergeKey = (s: BotService) =>
+  `${s.category}|${s.isGroup}|${s.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()}`;
+
+/** Junta as cópias de mesmo nome e tipo numa opção só; a primeira dá os dados. */
+export function mergeCopies(copies: BotService[]): BotService[] {
+  const merged = new Map<string, BotService>();
+  for (const copy of copies) {
+    const key = mergeKey(copy);
+    const current = merged.get(key);
+    if (!current) merged.set(key, { ...copy, agendas: [...copy.agendas] });
+    else {
+      current.agendas = [...current.agendas, ...copy.agendas].sort((a, b) => (a.professionalName ?? a.name).localeCompare(b.professionalName ?? b.name, "pt-BR"));
+      for (const [type, price] of Object.entries(copy.locationPrices) as [LocationType, number][]) if (!(type in current.locationPrices)) current.locationPrices[type] = price;
+    }
+  }
+  return [...merged.values()];
+}
+
+/** A cópia do serviço atendida na agenda (sem ela, o próprio serviço). */
+export function copyAt(catalog: Pick<BotCatalog, "copies">, service: BotService, agendaId: string | null | undefined): BotService {
+  const serviceId = service.agendas.find((a) => a.id === agendaId)?.serviceId;
+  if (!serviceId) return service;
+  const copy = catalog.copies.find((c) => c.id === serviceId);
+  return copy ? { ...copy, agendas: service.agendas.filter((a) => a.serviceId === serviceId) } : service;
+}
+
+/** O serviço tem agendas de cópias diferentes (sem "Primeiro horário disponível" entre elas). */
+export const mixesCopies = (service: BotService) => new Set(service.agendas.map((a) => a.serviceId)).size > 1;
 
 export async function loadCatalog(db: DbClient, clinicId: string, features: readonly FeatureKey[]): Promise<BotCatalog> {
   const [services, agendas, professionals, locations, windows] = await Promise.all([
@@ -90,7 +133,7 @@ export async function loadCatalog(db: DbClient, clinicId: string, features: read
           const agenda = agendaById.get(id)!;
           const professional = agenda.professionalId ? professionalById.get(agenda.professionalId) : undefined;
           const locationTypes = [...new Set(fits.filter((w) => w.agenda_id === id).map((w) => locationById.get(w.location_id)!.type))];
-          return { id, name: agenda.name, professionalName: professional?.displayName ?? null, professionalId: agenda.professionalId ?? null, specialty: professional?.specialty ?? null, specialties: (professional?.specialties ?? []).map((sp) => ({ id: sp.id, name: sp.name })), locationTypes };
+          return { id, serviceId: service.id, name: agenda.name, professionalName: professional?.displayName ?? null, professionalId: agenda.professionalId ?? null, specialty: professional?.specialty ?? null, specialties: (professional?.specialties ?? []).map((sp) => ({ id: sp.id, name: sp.name })), locationTypes };
         })
         .sort((a, b) => (a.professionalName ?? a.name).localeCompare(b.professionalName ?? b.name, "pt-BR")),
       locationPrices,
@@ -101,7 +144,8 @@ export async function loadCatalog(db: DbClient, clinicId: string, features: read
     });
   }
   return {
-    services: bookable,
+    services: mergeCopies(bookable),
+    copies: bookable,
     locations: [...locationById.values()].map((l) => ({ id: l.id, name: l.name, type: l.type, address: l.address })),
   };
 }

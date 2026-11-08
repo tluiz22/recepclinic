@@ -114,7 +114,7 @@ describe("tela inicial", () => {
         .appointment.id;
     const c1 = await book(ids.p1, ids.consulta, ids.agendaDra, at(MON1, "08:00"));
     await book(ids.p2, ids.exame, ids.agendaExams, at(MON1, "08:00"));
-    const canceled = await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON1, "08:00"));
+    const canceled = await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON1, "08:00"));
     await cancelAppointment(asDb(reception), clinicId, canceled, { channel: "admin", actorId: reception.id }, NOW);
     await recordOutboundMessage(asDb(reception), clinicId, { phone: "+5584977760099", appointmentId: c1, messageType: "appointment_reminder", status: "sent" }, at(MON1, "07:00"));
 

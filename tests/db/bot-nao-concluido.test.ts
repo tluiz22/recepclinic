@@ -114,7 +114,7 @@ beforeAll(async () => {
       )
     ).appointment.id;
   consultP1 = await book(f.ids.p1, f.ids.consulta, f.ids.agendaDra, MON1, "08:00");
-  await book(f.ids.p2, f.ids.consulta, f.ids.agendaDra2, MON1, "08:00");
+  await book(f.ids.p2, f.ids.consulta2, f.ids.agendaDra2, MON1, "08:00");
   await book(f.ids.p3, f.ids.exame, f.ids.agendaExams, MON2, "08:00");
 });
 

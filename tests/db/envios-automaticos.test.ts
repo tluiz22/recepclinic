@@ -169,7 +169,7 @@ describe("séries sem fim (F7)", () => {
     const { series, created } = await createSeries(
       asDb(f.reception),
       f.clinicId,
-      { patientId: f.ids.p2, serviceId: f.ids.consulta, agendaId: f.ids.agendaDra2, locationId: f.ids.office, intervalWeeks: 1, startsOn: MON1, startTime: "08:30", actorId: null },
+      { patientId: f.ids.p2, serviceId: f.ids.consulta2, agendaId: f.ids.agendaDra2, locationId: f.ids.office, intervalWeeks: 1, startsOn: MON1, startTime: "08:30", actorId: null },
       NOW,
     );
     const before = created.length;

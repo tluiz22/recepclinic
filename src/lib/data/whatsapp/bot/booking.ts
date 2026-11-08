@@ -10,7 +10,7 @@ import { getContact, listContactPatients, registerPatient, type ContactChoice, t
 import { pauseForHuman, startFunnel } from "../conversations";
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent } from "../botLimits";
 import { formatAppointmentWhen } from "../templates";
-import { servicesOf, type BotService } from "./catalog";
+import { copyAt, mixesCopies, servicesOf, type BotService } from "./catalog";
 import { askHandoffSubject, attachContact, end, go, offerReception, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu, showSubmenu } from "./menus";
@@ -107,7 +107,13 @@ export const BOOKING_STATES = new Set([
 const ctxOf = (b: Bot) => b.convo.context as BookingContext;
 
 async function serviceOf(b: Bot, ctx: BookingContext): Promise<BotService | null> {
-  return (await b.catalog()).services.find((s) => s.id === ctx.serviceId) ?? null;
+  const catalog = await b.catalog();
+  // Escolhida a agenda, o contexto guarda a cópia dela (MS).
+  if (ctx.agendaId && ctx.serviceId) {
+    const copy = catalog.copies.find((s) => s.id === ctx.serviceId);
+    if (copy) return copy;
+  }
+  return catalog.services.find((s) => s.id === ctx.serviceId) ?? catalog.copies.find((s) => s.id === ctx.serviceId) ?? null;
 }
 
 async function open(b: Bot, flow: "booking" | "exam" | "return_booking", metadata: Record<string, unknown> = {}): Promise<void> {
@@ -185,7 +191,12 @@ async function handleService(b: Bot, selection: Selection): Promise<void> {
  */
 async function chooseService(b: Bot, ctx: BookingContext, service: BotService): Promise<void> {
   const lastDate = horizonLastDate(b.clinic.today, b.clinic.horizonDays);
-  const found = await bookableAgendaLocations(b.db, b.clinicId, { serviceId: service.id, agendaIds: service.agendas.map((a) => a.id), lastDate }, b.now);
+  // Cada agenda com a cópia dela (MS).
+  const found = new Map<string, Set<LocationType>>();
+  for (const serviceId of new Set(service.agendas.map((a) => a.serviceId))) {
+    const agendaIds = service.agendas.filter((a) => a.serviceId === serviceId).map((a) => a.id);
+    for (const [id, types] of await bookableAgendaLocations(b.db, b.clinicId, { serviceId, agendaIds, lastDate }, b.now)) found.set(id, types);
+  }
   const agendas = service.agendas.filter((a) => found.has(a.id));
   if (!agendas.length) return handOver(b, "bot_book_no_free_times", t.noFreeTimesOffer(service.name), "no_free_times");
   const bookable = Object.fromEntries([...found].map(([id, types]) => [id, [...types]]));
@@ -198,7 +209,8 @@ async function chooseService(b: Bot, ctx: BookingContext, service: BotService): 
 const bookableAgendas = (service: BotService, ctx: BookingContext) => (ctx.bookable ? service.agendas.filter((a) => ctx.bookable![a.id]) : service.agendas);
 
 const agendaItems = (service: BotService, ctx: BookingContext) => [
-  { id: "agenda_any", label: t.FIRST_AVAILABLE, description: t.FIRST_AVAILABLE_DESCRIPTION },
+  // Cópias diferentes (MS) não têm um "primeiro horário" comum: o paciente escolhe com quem.
+  ...(mixesCopies(service) ? [] : [{ id: "agenda_any", label: t.FIRST_AVAILABLE, description: t.FIRST_AVAILABLE_DESCRIPTION }]),
   ...bookableAgendas(service, ctx).map((a) => ({ id: `agenda_${a.id}`, label: a.professionalName ?? a.name, description: a.specialty })),
 ];
 
@@ -232,7 +244,10 @@ function locationTypes(service: BotService, agendaId: string | null | undefined,
   return (["clinic", "home_visit"] as const).filter((type) => types.includes(type));
 }
 
-async function afterAgenda(b: Bot, ctx: BookingContext, service: BotService): Promise<void> {
+async function afterAgenda(b: Bot, ctx: BookingContext, merged: BotService): Promise<void> {
+  // Com a agenda escolhida, segue com a cópia do serviço dela (MS).
+  const service = ctx.agendaId ? copyAt(await b.catalog(), merged, ctx.agendaId) : merged;
+  ctx = { ...ctx, serviceId: service.id, serviceName: service.name };
   const types = locationTypes(service, ctx.agendaId, ctx);
   if (types.length > 1) return askLocation(b, ctx, service, types);
   await afterLocation(b, { ...ctx, locationCategory: types[0] ?? null });
@@ -866,7 +881,8 @@ async function restart(b: Bot): Promise<void> {
 export async function startReturn(b: Bot, { joinWaitlist = false } = {}): Promise<void> {
   await open(b, "return_booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
-  const services = servicesOf(await b.catalog(), "return_visit");
+  // Cada cópia do retorno com a agenda dela (MS): a origem é a consulta naquela agenda.
+  const services = (await b.catalog()).copies.filter((s) => s.category === "return_visit");
   const deadline = services[0]?.returnDeadlineDays ?? null;
   const patients = await activePatients(b);
   const upcoming = await listUpcomingAppointments(
@@ -950,7 +966,7 @@ async function handleReturn(b: Bot, selection: Selection): Promise<void> {
     await sendList(b, "bot_book_return_patient_choice", t.patientChoice(b.words), t.numberedList(candidates.map((c) => ({ id: `return_${c.id}`, label: c.name }))));
     return;
   }
-  const service = (await b.catalog()).services.find((s) => s.id === chosen.serviceId);
+  const service = (await b.catalog()).copies.find((s) => s.id === chosen.serviceId);
   if (!service) return restart(b);
   const agenda = service.agendas.find((a) => a.id === chosen.agendaId);
   // Horário livre até o fim do prazo do retorno e do prazo da clínica (cliente, 11/out/2026).

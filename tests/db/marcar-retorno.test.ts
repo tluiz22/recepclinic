@@ -51,7 +51,7 @@ beforeAll(async () => {
   p5 = await patient("Paciente Cinco", `${PHONE}05`);
 
   c.p1 = await book(ids.p1, ids.consulta, ids.agendaDra, MON1, "08:00", NOW);
-  c.p2Dra2 = await book(ids.p2, ids.consulta, ids.agendaDra2, MON1, "08:00", NOW);
+  c.p2Dra2 = await book(ids.p2, ids.consulta2, ids.agendaDra2, MON1, "08:00", NOW);
   c.p3Home = await book(ids.p3, ids.consulta, ids.agendaDra, MON1, "14:00", NOW, true);
   c.p4NoShow = await book(p4, ids.consulta, ids.agendaDra, MON1, "08:30", NOW);
   c.p5Pending = await book(p5, ids.consulta, ids.agendaDra, MON1, "09:00", NOW);

@@ -244,7 +244,19 @@ export type AgendaMigration = {
   appointments: number;
   conflicts: { id: string; scheduled_at: string; patient: string }[];
   /** Serviços da agenda de origem com horário, atendimento futuro ou série, e se a de destino os atende. */
-  services: { id: string; name: string; windows: number; appointments: number; series: number; target_attends: boolean }[];
+  services: {
+    id: string;
+    name: string;
+    windows: number;
+    appointments: number;
+    series: number;
+    /** A nova agenda pode receber (a da equipe só recebe exames). */
+    target_attends: boolean;
+    /** Serviços por profissional (MS): o serviço do dono da nova agenda que recebe (mesmo nome e tipo). */
+    target_service: string | null;
+    /** Sem ele, a migração cria a cópia. */
+    creates_copy: boolean;
+  }[];
   applied: boolean;
 };
 
@@ -268,7 +280,7 @@ export async function migrateAgenda(
       throw new DataError(
         "invalid",
         "Agenda: serviço não atendido na nova agenda",
-        { to: `A nova agenda ainda não atende: ${message.slice("service_not_in_agenda:".length).trim()}. Marque a agenda em Serviços e tente de novo.` },
+        { to: `A nova agenda não atende: ${message.slice("service_not_in_agenda:".length).trim()}. A agenda da equipe só atende exames.` },
         { cause: error },
       );
     }

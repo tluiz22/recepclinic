@@ -4,9 +4,11 @@ import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 
-// Serviços (D4c): consulta, retorno e exame, cada um atendido em uma ou mais
-// agendas (D2 revista) e oferecido em um ou mais locais, com preço próprio
-// opcional por local. Saem por desativação (têm atendimentos ligados).
+// Serviços (D4c): consulta, retorno e exame, oferecidos em um ou mais locais,
+// com preço próprio opcional por local. Saem por desativação (têm atendimentos
+// ligados). Serviços por profissional (MS, 07/nov/2026): cada serviço tem um
+// dono, um profissional ou a equipe (exames), que não muda depois de escolhido;
+// o banco liga o serviço à agenda do dono (service_agendas).
 
 export type ServiceCategory = Enums<"service_category">;
 export type SchedulingMode = Enums<"scheduling_mode">;
@@ -28,14 +30,31 @@ export type Service = {
   /** Só Exame: arquivo com as orientações, enviado depois do preparo (C7). */
   preparationFile: PreparationFile | null;
   isActive: boolean;
+  /** Dono (MS): o profissional; null com isTeam = serviço da equipe; os dois vazios = sem dono (desativado). */
+  professionalId: string | null;
+  isTeam: boolean;
   agendaIds: string[];
   locations: ServiceLocationPrice[];
 };
 
-export type ServiceInput = Omit<Service, "id" | "isActive" | "agendaIds" | "locations" | "preparationFile">;
+/** Dono do serviço (MS): um profissional ou a equipe (só exame). */
+export type ServiceOwner = { professionalId: string } | { team: true };
+
+export type ServiceInput = Omit<Service, "id" | "isActive" | "agendaIds" | "locations" | "preparationFile" | "professionalId" | "isTeam">;
+
+export const hasOwner = (s: Pick<Service, "professionalId" | "isTeam">) => s.isTeam || s.professionalId !== null;
+
+/** Valor do campo "Profissional" do formulário: o id do profissional ou "equipe". */
+export const TEAM_OWNER = "equipe";
+export function parseOwner(value: string | null | undefined): ServiceOwner | null {
+  if (!value) return null;
+  return value === TEAM_OWNER ? { team: true } : { professionalId: value };
+}
+const ownerColumns = (owner: ServiceOwner) =>
+  "team" in owner ? { professional_id: null, is_team: true } : { professional_id: owner.professionalId, is_team: false };
 
 const COLUMNS =
-  "id, name, category, duration_minutes, price_cents, return_deadline_days, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type, preparation_file_size, scheduling_mode, is_active, service_agendas ( agenda_id ), service_locations ( location_id, price_cents )";
+  "id, name, category, duration_minutes, price_cents, return_deadline_days, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type, preparation_file_size, scheduling_mode, is_active, professional_id, is_team, service_agendas ( agenda_id ), service_locations ( location_id, price_cents )";
 const CATEGORIES: ServiceCategory[] = ["consultation", "return_visit", "exam"];
 
 type Row = {
@@ -52,6 +71,8 @@ type Row = {
   preparation_file_size: number | null;
   scheduling_mode: SchedulingMode;
   is_active: boolean;
+  professional_id: string | null;
+  is_team: boolean;
   service_agendas: { agenda_id: string }[];
   service_locations: { location_id: string; price_cents: number | null }[];
 };
@@ -70,6 +91,8 @@ const toService = (row: Row): Service => ({
       ? { path: row.preparation_file_path, name: row.preparation_file_name, type: row.preparation_file_type, size: row.preparation_file_size }
       : null,
   isActive: row.is_active,
+  professionalId: row.professional_id,
+  isTeam: row.is_team,
   agendaIds: row.service_agendas.map((link) => link.agenda_id).sort(),
   locations: row.service_locations
     .map((link) => ({ locationId: link.location_id, priceCents: link.price_cents }))
@@ -118,11 +141,16 @@ export function validateService(input: ServiceInput) {
 export async function listServices(
   db: DbClient,
   clinicId: string,
-  { includeInactive = false, category }: { includeInactive?: boolean; category?: ServiceCategory } = {},
+  {
+    includeInactive = false,
+    category,
+    professionalId,
+  }: { includeInactive?: boolean; category?: ServiceCategory; professionalId?: string } = {},
 ): Promise<Service[]> {
   let query = db.from("services").select(COLUMNS).eq("clinic_id", clinicId).order("name");
   if (!includeInactive) query = query.eq("is_active", true);
   if (category) query = query.eq("category", category);
+  if (professionalId) query = query.eq("professional_id", professionalId);
   return (unwrap(await query, "Serviços") as unknown as Row[]).map(toService);
 }
 
@@ -142,24 +170,41 @@ export async function getService(db: DbClient, clinicId: string, id: string): Pr
   );
 }
 
-export async function createService(db: DbClient, clinicId: string, input: ServiceInput): Promise<Service> {
+export function validateOwner(owner: ServiceOwner | null, category: ServiceCategory) {
+  const v = new Validation();
+  v.check(owner !== null, "owner", "Escolha o profissional do serviço");
+  v.check(!owner || !("team" in owner) || category === "exam", "owner", "A equipe só atende exames");
+  v.throwIfInvalid("Serviço");
+  return ownerColumns(owner!);
+}
+
+export async function createService(db: DbClient, clinicId: string, input: ServiceInput, owner: ServiceOwner | null): Promise<Service> {
   const row = validateService(input);
-  const created = await db.from("services").insert({ clinic_id: clinicId, ...row }).select("id").single();
+  const created = await db
+    .from("services")
+    .insert({ clinic_id: clinicId, ...row, ...validateOwner(owner, row.category) })
+    .select("id")
+    .single();
   const { id } = unwrap(created, "Serviço");
   return getService(db, clinicId, id);
 }
 
-/** A categoria não muda depois de criado (atendimentos e regras dependem dela). */
+/**
+ * A categoria e o dono não mudam depois de criado (atendimentos e regras
+ * dependem deles). Exceção: o serviço sem dono (desativado na MS) ganha um.
+ */
 export async function updateService(
   db: DbClient,
   clinicId: string,
   id: string,
   input: Omit<ServiceInput, "category">,
+  owner: ServiceOwner | null = null,
 ): Promise<Service> {
   const current = await getService(db, clinicId, id);
   const { category: _category, ...row } = validateService({ ...input, category: current.category });
+  const ownerRow = hasOwner(current) ? {} : validateOwner(owner, current.category);
   unwrapOne(
-    await db.from("services").update(row).eq("clinic_id", clinicId).eq("id", id).select("id").maybeSingle(),
+    await db.from("services").update({ ...row, ...ownerRow }).eq("clinic_id", clinicId).eq("id", id).select("id").maybeSingle(),
     "Serviço",
   );
   return getService(db, clinicId, id);
@@ -170,27 +215,6 @@ export async function setServiceActive(db: DbClient, clinicId: string, id: strin
     await db.from("services").update({ is_active: isActive }).eq("clinic_id", clinicId).eq("id", id).select("id").maybeSingle(),
     "Serviço",
   );
-}
-
-/** Agendas que atendem o serviço. Grava as novas antes de tirar as antigas. */
-export async function setServiceAgendas(db: DbClient, clinicId: string, serviceId: string, agendaIds: string[]): Promise<Service> {
-  const current = await getService(db, clinicId, serviceId);
-  const wanted = [...new Set(agendaIds)];
-  const toAdd = wanted.filter((id) => !current.agendaIds.includes(id));
-  const toRemove = current.agendaIds.filter((id) => !wanted.includes(id));
-  if (toAdd.length) {
-    unwrap(
-      await db.from("service_agendas").insert(toAdd.map((agenda_id) => ({ clinic_id: clinicId, service_id: serviceId, agenda_id }))),
-      "Agendas do serviço",
-    );
-  }
-  if (toRemove.length) {
-    unwrap(
-      await db.from("service_agendas").delete().eq("clinic_id", clinicId).eq("service_id", serviceId).in("agenda_id", toRemove),
-      "Agendas do serviço",
-    );
-  }
-  return getService(db, clinicId, serviceId);
 }
 
 /**

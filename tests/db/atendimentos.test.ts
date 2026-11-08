@@ -38,10 +38,12 @@ async function link(table: string, row: Record<string, unknown>): Promise<void> 
   if (error) throw error;
 }
 
+// Serviço por profissional (MS, 07/nov/2026): a Consulta da Dra. Ana é uma cópia.
+const consultationAt = (agendaId: unknown) => (agendaId === a.agendaAna ? a.consultationAna : a.consultation);
 const appointment = (overrides: Record<string, unknown> = {}) => ({
   clinic_id: clinicA,
   patient_id: a.patient,
-  service_id: a.consultation,
+  service_id: consultationAt(overrides.agenda_id ?? a.agendaJoao),
   agenda_id: a.agendaJoao,
   location_id: a.office,
   scheduled_at: MONDAY("10:00"),
@@ -76,9 +78,9 @@ beforeAll(async () => {
   a.exam = await insert("services", {
     clinic_id: clinicA, name: "Espirometria", category: "exam", duration_minutes: 40, price_cents: 18000, scheduling_mode: "group",
   });
-  for (const agenda of [a.agendaJoao, a.agendaAna]) {
-    await link("service_agendas", { clinic_id: clinicA, service_id: a.consultation, agenda_id: agenda });
-  }
+  a.consultationAna = await insert("services", { clinic_id: clinicA, name: "Consulta", category: "consultation", duration_minutes: 30, price_cents: 25000 });
+  await link("service_agendas", { clinic_id: clinicA, service_id: a.consultation, agenda_id: a.agendaJoao });
+  await link("service_agendas", { clinic_id: clinicA, service_id: a.consultationAna, agenda_id: a.agendaAna });
   await link("service_agendas", { clinic_id: clinicA, service_id: a.therapy, agenda_id: a.agendaAna });
   await link("service_agendas", { clinic_id: clinicA, service_id: a.exam, agenda_id: a.agendaExams });
   await link("service_locations", { clinic_id: clinicA, service_id: a.consultation, location_id: a.home, price_cents: 40000 });
@@ -316,7 +318,7 @@ describe("acesso pela agenda (D6 revista)", () => {
       .select("id")
       .eq("scheduled_at", MONDAY("08:00"))
       .single();
-    const { error } = await drJoao.client.from("appointments").update({ agenda_id: a.agendaAna }).eq("id", own!.id);
+    const { error } = await drJoao.client.from("appointments").update({ agenda_id: a.agendaAna, service_id: a.consultationAna }).eq("id", own!.id);
     expect(error?.code).toBe("42501");
   });
 

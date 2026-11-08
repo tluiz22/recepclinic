@@ -538,22 +538,28 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
       })
     ).id;
   }
+  // Serviço por profissional (MS, 07/nov/2026): uma cópia do serviço por agenda (o banco liga à agenda do dono).
+  const serviceId = (key, agendaKey) => ids.service[key][agendaKey] ?? Object.values(ids.service[key])[0];
   for (const s of clinic.services) {
-    ids.service[s.key] = (
-      await insert(db, "services", {
-        clinic_id: clinic.id,
-        name: s.name,
-        category: s.category,
-        duration_minutes: s.minutes,
-        price_cents: s.price,
-        return_deadline_days: s.returnDays ?? null,
-        preparation_instructions: s.preparation ?? null,
-      })
-    ).id;
-    for (const agenda of s.agendas) await insert(db, "service_agendas", { clinic_id: clinic.id, service_id: ids.service[s.key], agenda_id: ids.agenda[agenda] });
-    for (const location of s.locations) {
-      const home = clinic.locations.find((l) => l.key === location).type === "home_visit";
-      await insert(db, "service_locations", { clinic_id: clinic.id, service_id: ids.service[s.key], location_id: ids.location[location], price_cents: home ? (s.homePrice ?? null) : null });
+    ids.service[s.key] = {};
+    for (const agenda of s.agendas) {
+      const id = (
+        await insert(db, "services", {
+          clinic_id: clinic.id,
+          name: s.name,
+          category: s.category,
+          duration_minutes: s.minutes,
+          price_cents: s.price,
+          return_deadline_days: s.returnDays ?? null,
+          preparation_instructions: s.preparation ?? null,
+        })
+      ).id;
+      ids.service[s.key][agenda] = id;
+      await insert(db, "service_agendas", { clinic_id: clinic.id, service_id: id, agenda_id: ids.agenda[agenda] });
+      for (const location of s.locations) {
+        const home = clinic.locations.find((l) => l.key === location).type === "home_visit";
+        await insert(db, "service_locations", { clinic_id: clinic.id, service_id: id, location_id: ids.location[location], price_cents: home ? (s.homePrice ?? null) : null });
+      }
     }
   }
   for (const w of clinic.windows) {
@@ -561,7 +567,7 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
       clinic_id: clinic.id,
       agenda_id: ids.agenda[w.agenda],
       location_id: ids.location[w.location],
-      service_id: w.service ? ids.service[w.service] : null,
+      service_id: w.service ? serviceId(w.service, w.agenda) : null,
       weekday: w.weekday,
       start_time: w.start,
       end_time: w.end,
@@ -702,7 +708,7 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
         id: series.id,
         clinic_id: clinic.id,
         patient_id: person.id,
-        service_id: ids.service[s.service],
+        service_id: serviceId(s.service, s.agenda),
         agenda_id: ids.agenda[s.agenda],
         location_id: ids.location.office,
         interval_weeks: 1,
@@ -862,7 +868,7 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
       mover.rescheduledVia = "whatsapp_bot";
       mover.reminder = null;
       waitlist.entries.push({ id: entryId, clinic_id: clinic.id, appointment_id: mover.id, status: "advanced", created_via: "whatsapp_bot", created_at: entryAt, ended_at: respondedAt, ended_reason: "advanced" });
-      waitlist.openings.push({ id: openingId, clinic_id: clinic.id, opened_by_appointment_id: freed.id, reason: "canceled", service_id: ids.service[freed.service.key], agenda_id: ids.agenda[freed.agendaKey], slot_scheduled_at: freed.start, slot_location_id: ids.location[freed.locationKey], slot_duration_minutes: freed.service.minutes, status: "filled", created_at: freed.canceledAt });
+      waitlist.openings.push({ id: openingId, clinic_id: clinic.id, opened_by_appointment_id: freed.id, reason: "canceled", service_id: serviceId(freed.service.key, freed.agendaKey), agenda_id: ids.agenda[freed.agendaKey], slot_scheduled_at: freed.start, slot_location_id: ids.location[freed.locationKey], slot_duration_minutes: freed.service.minutes, status: "filled", created_at: freed.canceledAt });
       waitlist.offers.push({ clinic_id: clinic.id, entry_id: entryId, appointment_id: mover.id, opening_id: openingId, opened_by_appointment_id: freed.id, slot_scheduled_at: freed.start, slot_location_id: ids.location[freed.locationKey], slot_duration_minutes: freed.service.minutes, status: "accepted", offered_at: offeredAt, expires_at: plusMinutes(offeredAt, 60), responded_at: respondedAt, details: JSON.stringify({ previous_scheduled_at: oldStart.toISOString() }) });
       count("antecipados pela lista de espera");
     }
@@ -879,7 +885,7 @@ async function buildClinic(db, clinic, index, adminId, extraAdminIds) {
       id: a.id,
       clinic_id: clinic.id,
       patient_id: a.person.id,
-      service_id: ids.service[a.service.key],
+      service_id: serviceId(a.service.key, a.agendaKey),
       agenda_id: ids.agenda[a.agendaKey],
       location_id: ids.location[a.locationKey],
       series_id: a.seriesId,

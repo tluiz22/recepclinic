@@ -19,6 +19,8 @@ let receptionA: TestUser;
 let drJoao: TestUser;
 let adminB: TestUser;
 const a = {} as Record<string, string>;
+// Serviço por profissional (MS, 07/nov/2026): a Consulta de cada agenda.
+const consultationAt: Record<string, string> = {};
 
 async function insert(table: string, row: Record<string, unknown>): Promise<string> {
   const { data, error } = await adminClient().from(table).insert(row).select("id").single();
@@ -36,7 +38,7 @@ const nextSlot = () => {
 
 const book = (agendaId: string, overrides: Record<string, unknown> = {}) =>
   insert("appointments", {
-    clinic_id: clinicA, patient_id: a.patient, service_id: a.consultation, agenda_id: agendaId,
+    clinic_id: clinicA, patient_id: a.patient, service_id: consultationAt[agendaId], agenda_id: agendaId,
     location_id: a.office, scheduled_at: nextSlot(), duration_minutes: 30, booking_channel: "admin", ...overrides,
   });
 
@@ -69,7 +71,9 @@ beforeAll(async () => {
   a.consultation = await insert("services", { clinic_id: clinicA, name: "Consulta", category: "consultation", duration_minutes: 30, price_cents: 0 });
   a.therapy = await insert("services", { clinic_id: clinicA, name: "Terapia", category: "consultation", duration_minutes: 50, price_cents: 0 });
   for (const agenda of [a.agendaJoao, a.agendaAna, a.agendaPedro]) {
-    await adminClient().from("service_agendas").insert({ clinic_id: clinicA, service_id: a.consultation, agenda_id: agenda });
+    const id = agenda === a.agendaJoao ? a.consultation : await insert("services", { clinic_id: clinicA, name: "Consulta", category: "consultation", duration_minutes: 30, price_cents: 0 });
+    consultationAt[agenda] = id;
+    await adminClient().from("service_agendas").insert({ clinic_id: clinicA, service_id: id, agenda_id: agenda });
   }
   await adminClient().from("service_agendas").insert({ clinic_id: clinicA, service_id: a.therapy, agenda_id: a.agendaJoao });
   a.contact = await insert("contacts", { clinic_id: clinicA, full_name: "Maria", phone: "+5584977770001" });

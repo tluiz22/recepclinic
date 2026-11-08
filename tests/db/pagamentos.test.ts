@@ -5,7 +5,7 @@ import { getContactCpf } from "../../src/lib/data/finance";
 import { anonymizePatient, getContact, getPatient } from "../../src/lib/data/patients";
 import { deletePayment, listAppointmentPayments, listPatientPayments, listPaymentStates, registerPayment, summarizePayments, type PaymentInput } from "../../src/lib/data/payments";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
-import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture, consultaAt } from "./agendaFixture";
 
 // F11.2 — Pagamentos do atendimento. Vários por atendimento; cancelado não
 // recebe novo; nome e CPF de quem pagou ficam no pagamento; CPF opcional (o
@@ -41,7 +41,7 @@ beforeAll(async () => {
       await bookAppointment(
         asDb(fixture.reception),
         clinicId,
-        { patientId: fixture.ids.p1, serviceId: fixture.ids.consulta, agendaId, locationId: fixture.ids.office, start: at(MON1, "08:00"), channel: "admin", actorId: fixture.reception.id },
+        { patientId: fixture.ids.p1, serviceId: consultaAt(fixture.ids, agendaId), agendaId, locationId: fixture.ids.office, start: at(MON1, "08:00"), channel: "admin", actorId: fixture.reception.id },
         NOW,
       )
     ).appointment.id;

@@ -528,13 +528,18 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
     }
   }
 
-  // Links de agendamento pendentes do mesmo serviço perdem a validade (piloto, Fase 12).
+  // Links de agendamento pendentes do mesmo serviço perdem a validade (piloto, Fase 12). Serviços por profissional
+  // (MS, 07/nov/2026): "o mesmo serviço" inclui as cópias dos outros profissionais (mesmo nome e tipo).
+  const { data: catalog } = await db.from("services").select("id, name, category").eq("clinic_id", clinicId);
+  const fold = (name: string) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  const booked = catalog?.find((s) => s.id === input.serviceId);
+  const sameService = booked ? catalog!.filter((s) => s.category === booked.category && fold(s.name) === fold(booked.name)).map((s) => s.id) : [input.serviceId];
   const { error: linkError } = await db
     .from("booking_links")
     .update({ used_at: now.toISOString() })
     .eq("clinic_id", clinicId)
     .eq("patient_id", input.patientId)
-    .eq("service_id", input.serviceId)
+    .in("service_id", sameService.length ? sameService : [input.serviceId])
     .eq("mode", "create")
     .is("used_at", null);
   if (linkError) logError("agenda: não invalidou links pendentes", linkError, { clinica: clinicId });

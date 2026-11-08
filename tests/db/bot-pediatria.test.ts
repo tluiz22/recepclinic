@@ -179,7 +179,7 @@ describe("entrada com agendamento (cliente, 31/out/2026)", () => {
       .insert({
         clinic_id: f.clinicId,
         patient_id: f.ids.p2,
-        service_id: f.ids.consulta,
+        service_id: f.ids.consulta2,
         agenda_id: agenda!.id,
         location_id: f.ids.office,
         scheduled_at: new Date(Date.now() + 3 * 24 * 60 * 60_000).toISOString(),

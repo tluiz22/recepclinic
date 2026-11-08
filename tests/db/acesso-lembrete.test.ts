@@ -129,7 +129,7 @@ describe("lembrete da véspera (agendador)", () => {
     appt.canceled = await book(ids.p2, ids.consulta, ids.agendaDra, at(MON1, "09:00"));
     await cancelAppointment(db(reception), clinicId, appt.canceled, { channel: "admin", actorId: reception.id }, NOW);
     appt.nextWeek = await book(ids.p3, ids.consulta, ids.agendaDra, at(MON2, "08:00"));
-    appt.a4 = await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON1, "08:00"));
+    appt.a4 = await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON1, "08:00"));
     failFor.add(appt.a4);
 
     const result = await runAppointmentReminders(bot, clinicId, { trigger: "scheduled", sender }, at(SUN, "14:00"));
@@ -292,7 +292,7 @@ describe("preparo do exame", () => {
 describe("sem template, sem conexão e sem o item", () => {
   it("sem template aprovado: não envia, não conta como lembrado e registra 'não enviado' uma vez", async () => {
     await setTemplate("reminder", "pending");
-    appt.a6 = await book(ids.p1, ids.consulta, ids.agendaDra2, at(MON1, "08:30"), at(SUN, "15:30"));
+    appt.a6 = await book(ids.p1, ids.consulta2, ids.agendaDra2, at(MON1, "08:30"), at(SUN, "15:30"));
     const first = await runAppointmentReminders(bot, clinicId, { trigger: "manual", sender }, at(SUN, "16:00"));
     // Ainda sem lembrete: a5 (remarcado), a6 e os exames e1 e e2.
     expect(first).toMatchObject({ totals: { candidates: 4, sent: 0, not_sent_no_template: 4 } });

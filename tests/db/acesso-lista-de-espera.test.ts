@@ -109,10 +109,10 @@ describe("sair da lista", () => {
   });
 
   it("quem sai perde a oferta em aberto e a vaga volta para a fila (sem service role)", async () => {
-    const waiting = await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON1, "08:30"));
+    const waiting = await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON1, "08:30"));
     await joinWaitlist(bot, clinicId, waiting.id, { via: "whatsapp_bot", actorId: null }, NOW);
     // Vaga aberta na mesma agenda e serviço, oferecida a quem espera.
-    const source = await book(ids.p1, ids.consulta, ids.agendaDra2, at(MON1, "08:00"));
+    const source = await book(ids.p1, ids.consulta2, ids.agendaDra2, at(MON1, "08:00"));
     await cancelAppointment(db(reception), clinicId, source.id, { channel: "admin", actorId: reception.id }, NOW);
     const { data: opening } = await adminClient().from("waitlist_openings").select("id").eq("opened_by_appointment_id", source.id).single();
     await adminClient().from("waitlist_openings").update({ status: "offering" }).eq("id", opening!.id);
@@ -142,7 +142,7 @@ describe("sair da lista", () => {
 
 describe("consultar a fila", () => {
   it("lista na ordem de entrada, com atendimento, paciente, contato e oferta em aberto; filtra por agenda", async () => {
-    const first = await book(ids.p2, ids.consulta, ids.agendaDra2, at(MON1, "08:00"));
+    const first = await book(ids.p2, ids.consulta2, ids.agendaDra2, at(MON1, "08:00"));
     const second = await book(ids.p1, ids.exame, ids.agendaExams, at(MON1, "08:40"));
     await joinWaitlist(db(reception), clinicId, first.id, { via: "admin", actorId: reception.id }, new Date(NOW.getTime() + 1000));
     await joinWaitlist(db(reception), clinicId, second.id, { via: "booking_link", actorId: null }, new Date(NOW.getTime() + 2000));

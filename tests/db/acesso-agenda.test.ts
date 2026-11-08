@@ -86,11 +86,10 @@ describe("horários livres", () => {
     expect(dates.map((d) => d.date)).toEqual([MON1, MON2, MON3, "2031-04-07"]);
   });
 
-  it("primeiro horário disponível entre as agendas do serviço (D2)", async () => {
+  it("sem agenda escolhida, o serviço só tem a agenda do profissional dele (MS, 07/nov/2026)", async () => {
     const slots = await getFreeSlotsAnyAgenda(db(reception), clinicId, { serviceId: ids.consulta, date: MON1, locationId: ids.office }, NOW);
     expect(times(slots).slice(0, 3)).toEqual(["08:00", "08:30", "09:00"]);
-    // 08:00 existe nas duas agendas: aparece uma vez, na primeira em ordem de nome (Dr. Segundo).
-    expect(slots[0].agendaId).toBe(ids.agendaDra2);
+    expect(new Set(slots.map((s) => s.agendaId))).toEqual(new Set([ids.agendaDra]));
   });
 });
 
@@ -114,7 +113,7 @@ describe("marcar", () => {
   it("duplicidade por agenda: consulta futura na mesma agenda trava; em outra agenda e exame, não", async () => {
     expect(await codeOf(() => book(ids.p1, ids.consulta, ids.agendaDra, at(MON2, "08:00")))).toBe("duplicate");
     expect(await codeOf(() => book(ids.p1, ids.retorno, ids.agendaDra, at(MON2, "09:00")))).toBe("duplicate");
-    await book(ids.p1, ids.consulta, ids.agendaDra2, at(MON1, "08:00"));
+    await book(ids.p1, ids.consulta2, ids.agendaDra2, at(MON1, "08:00"));
     await book(ids.p1, ids.exame, ids.agendaExams, at(MON1, "08:00"));
     expect(await codeOf(() => book(ids.p1, ids.exame, ids.agendaExams, at(MON2, "08:00")))).toBe("duplicate");
   });
@@ -167,7 +166,7 @@ describe("remarcar e cancelar", () => {
   });
 
   it("cancelar vários (dia inteiro) marca como cancelamento da clínica", async () => {
-    const a1 = (await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON2, "08:00"))).appointment;
+    const a1 = (await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON2, "08:00"))).appointment;
     const result = await cancelAppointments(db(reception), clinicId, [a1.id, a1.id], { channel: "admin", trailChannel: "mass_cancel", actorId: reception.id }, NOW);
     expect(result.canceled.map((a) => a.id)).toEqual([a1.id]);
     expect(result.skipped).toBe(1);
@@ -236,19 +235,27 @@ describe("exame em paralelo (cliente, 28/out/2026)", () => {
   const MON5 = "2031-04-07";
 
   it("exame não ocupa o horário da consulta, nem consulta o do exame; dois exames no mesmo horário", async () => {
-    const { error } = await adminClient().from("service_agendas").insert({ clinic_id: clinicId, service_id: ids.exame, agenda_id: ids.agendaDra2 });
+    // Exame do próprio Dr. Segundo (MS: o exame da equipe não entra na agenda dele).
+    const { data: owner } = await adminClient().from("agendas").select("professional_id").eq("id", ids.agendaDra2).single();
+    const { data: own, error } = await adminClient()
+      .from("services")
+      .insert({ clinic_id: clinicId, name: "Exame do Dr. Segundo", category: "exam", duration_minutes: 20, price_cents: 0, professional_id: owner!.professional_id })
+      .select("id")
+      .single();
     expect(error).toBeNull();
+    await adminClient().from("service_locations").insert({ clinic_id: clinicId, service_id: own!.id, location_id: ids.office });
+    const exame = own!.id;
     const free = async (service: string) => times(await getFreeSlots(db(reception), clinicId, { serviceId: service, agendaId: ids.agendaDra2, date: MON5 }, NOW));
 
-    await book(ids.p3, ids.exame, ids.agendaDra2, at(MON5, "08:00"));
-    expect((await free(ids.consulta))[0]).toBe("08:00");
-    expect((await free(ids.exame))[0]).toBe("08:00");
+    await book(ids.p3, exame, ids.agendaDra2, at(MON5, "08:00"));
+    expect((await free(ids.consulta2))[0]).toBe("08:00");
+    expect((await free(exame))[0]).toBe("08:00");
 
-    await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON5, "08:00"));
-    expect((await free(ids.consulta))[0]).toBe("08:30");
-    expect((await free(ids.exame))[0]).toBe("08:00");
+    await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON5, "08:00"));
+    expect((await free(ids.consulta2))[0]).toBe("08:30");
+    expect((await free(exame))[0]).toBe("08:00");
 
-    await book(ids.p2, ids.exame, ids.agendaDra2, at(MON5, "08:00"));
+    await book(ids.p2, exame, ids.agendaDra2, at(MON5, "08:00"));
   });
 });
 

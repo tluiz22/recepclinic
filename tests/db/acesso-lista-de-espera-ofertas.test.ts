@@ -30,7 +30,7 @@ const more = {} as Record<"p4" | "p5" | "p6", string>;
 const db = asDb;
 
 const book = async (patient: string, start: Date) =>
-  (await bookAppointment(db(reception), clinicId, { patientId: patient, serviceId: ids.consulta, agendaId: ids.agendaDra2, start, channel: "admin", actorId: reception.id }, NOW))
+  (await bookAppointment(db(reception), clinicId, { patientId: patient, serviceId: ids.consulta2, agendaId: ids.agendaDra2, start, channel: "admin", actorId: reception.id }, NOW))
     .appointment;
 
 const join = (appointmentId: string, now: Date) => joinWaitlist(bot, clinicId, appointmentId, { via: "whatsapp_bot", actorId: null }, now);
@@ -64,7 +64,7 @@ const insertOpening = async (slot: Date) => {
   const { data, error } = await adminClient()
     .from("waitlist_openings")
     .insert({
-      clinic_id: clinicId, reason: "canceled", service_id: ids.consulta, agenda_id: ids.agendaDra2,
+      clinic_id: clinicId, reason: "canceled", service_id: ids.consulta2, agenda_id: ids.agendaDra2,
       slot_scheduled_at: slot.toISOString(), slot_location_id: ids.office, slot_duration_minutes: 30,
     })
     .select("id")

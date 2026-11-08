@@ -91,7 +91,8 @@ describe("agenda atual", () => {
 
   it("a página vê os serviços, agendas e locais ativos da clínica (sem convênio fora da matriz)", async () => {
     const catalog = await loadImportCatalog(asDb(clinicServiceClient(fx.clinicId)), fx.clinicId);
-    expect(catalog.services.map((s) => s.name)).toEqual(["Consulta", "Exame", "Retorno", "Turma"]);
+    // Uma cópia por profissional (MS): o nome repetido leva a agenda.
+    expect(catalog.services.map((s) => s.name)).toEqual(["Consulta (Dr. Segundo)", "Consulta (Dra. Agenda)", "Exame", "Retorno", "Turma"]);
     expect(catalog.services.find((s) => s.name === "Turma")!.group).toBe(true);
     expect(catalog.agendas.map((a) => a.name).sort()).toEqual(["Dr. Segundo", "Dra. Agenda", "Exames"]);
     expect(catalog.serviceAgendas).toContainEqual({ serviceId: fx.ids.exame, agendaId: fx.ids.agendaExams });

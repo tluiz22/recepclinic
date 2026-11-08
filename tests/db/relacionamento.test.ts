@@ -7,7 +7,7 @@ import { listFrequentNoShows } from "../../src/lib/data/metrics";
 import { registerPatient } from "../../src/lib/data/patients";
 import { listReturnOpportunities } from "../../src/lib/data/performance";
 import { listWaitlist } from "../../src/lib/data/waitlist/entries";
-import { asDb, at, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, consultaAt, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
 // CRM A1 — Central de Relacionamento: lembretes que pedem ação (Q4, Q11),
@@ -25,7 +25,7 @@ const book = (f: AgendaFixture, patientId: string, time: string, agendaId = f.id
   bookAppointment(
     asDb(f.reception),
     f.clinicId,
-    { patientId, serviceId: f.ids.consulta, agendaId, start: at(MON1, time), locationId: f.ids.office, channel: "admin", actorId: f.reception.id },
+    { patientId, serviceId: consultaAt(f.ids, agendaId), agendaId, start: at(MON1, time), locationId: f.ids.office, channel: "admin", actorId: f.reception.id },
     NOW,
   );
 
@@ -130,7 +130,7 @@ describe("listas das Métricas na central (A2)", () => {
       adminClient().from("appointments").insert({
         clinic_id: clinic.clinicId,
         patient_id: patientId,
-        service_id: clinic.ids.consulta,
+        service_id: consultaAt(clinic.ids, agendaId),
         agenda_id: agendaId,
         location_id: clinic.ids.office,
         scheduled_at: new Date(when).toISOString(),

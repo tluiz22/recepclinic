@@ -90,7 +90,7 @@ beforeAll(async () => {
   await book("A4", "09:30");
   await book("A5", "10:00", { channel: "whatsapp_bot", actorId: null });
   await book("A6", "10:30");
-  await book("A7", "08:00", { agendaId: f.agendaDra2 });
+  await book("A7", "08:00", { agendaId: f.agendaDra2, serviceId: f.consulta2 });
 
   await recordAttendance(db, clinicId, ids.A1, "completed", admin.id);
   await recordAttendance(db, clinicId, ids.A2, "no_show", admin.id);

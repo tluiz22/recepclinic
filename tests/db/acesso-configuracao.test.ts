@@ -37,7 +37,6 @@ import {
   listServices,
   servicePriceAt,
   setServiceActive,
-  setServiceAgendas,
   setServiceLocations,
   updateService,
   type Service,
@@ -342,15 +341,20 @@ describe("profissionais, locais e agendas", () => {
 
 describe("serviços", () => {
   beforeAll(async () => {
-    consultation = await createService(db(admin), clinicId, {
-      name: "Consulta",
-      category: "consultation",
-      durationMinutes: 30,
-      priceCents: 30000,
-      returnDeadlineDays: null,
-      preparationInstructions: null,
-      schedulingMode: "individual",
-    });
+    consultation = await createService(
+      db(admin),
+      clinicId,
+      {
+        name: "Consulta",
+        category: "consultation",
+        durationMinutes: 30,
+        priceCents: 30000,
+        returnDeadlineDays: null,
+        preparationInstructions: null,
+        schedulingMode: "individual",
+      },
+      { professionalId: professional.id },
+    );
     const exam = (name: string, schedulingMode: "individual" | "group") =>
       createService(db(admin), clinicId, {
         name,
@@ -360,14 +364,13 @@ describe("serviços", () => {
         returnDeadlineDays: null,
         preparationInstructions: "Jejum de 4h",
         schedulingMode,
-      });
+      }, { team: true });
     groupExam = await exam("Teste da orelhinha (turma)", "group");
     examA = await exam("Exame A", "individual");
     examB = await exam("Exame B", "individual");
   });
 
-  it("agendas e locais do serviço, com preço próprio por local", async () => {
-    await setServiceAgendas(db(admin), clinicId, consultation.id, [doctorAgenda.id]);
+  it("agenda do dono e locais do serviço, com preço próprio por local", async () => {
     const withLocations = await setServiceLocations(db(admin), clinicId, consultation.id, [
       { locationId: office.id, priceCents: null },
       { locationId: homeVisit.id, priceCents: 45000 },
@@ -393,39 +396,48 @@ describe("serviços", () => {
     });
     expect(updated).toMatchObject({ name: "Consulta pediátrica", category: "consultation", durationMinutes: 40 });
 
-    const old = await createService(db(admin), clinicId, {
-      name: "Antigo",
-      category: "consultation",
-      durationMinutes: 30,
-      priceCents: 0,
-      returnDeadlineDays: null,
-      preparationInstructions: null,
-      schedulingMode: "individual",
-    });
+    const old = await createService(
+      db(admin),
+      clinicId,
+      { name: "Antigo", category: "consultation", durationMinutes: 30, priceCents: 0, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" },
+      { professionalId: professional.id },
+    );
     await setServiceActive(db(admin), clinicId, old.id, false);
     expect((await listServices(db(reception), clinicId)).map((s) => s.name)).not.toContain("Antigo");
     expect((await listServices(db(reception), clinicId, { category: "exam" })).length).toBe(3);
   });
 
-  it("agenda da equipe só atende serviço do tipo exame (21/out)", async () => {
-    expect(await codeOf(() => setServiceAgendas(db(admin), clinicId, consultation.id, [doctorAgenda.id, examsAgenda.id]))).toBe("invalid");
-    expect((await setServiceAgendas(db(admin), clinicId, examA.id, [examsAgenda.id])).agendaIds).toEqual([examsAgenda.id]);
-    await setServiceAgendas(db(admin), clinicId, examA.id, []);
-  });
-
-  it("serviço não é ligado a agenda de outra clínica", async () => {
+  it("dono do serviço (MS): a equipe só atende exame; o dono não muda; sem dono, não ativa", async () => {
+    const base = { durationMinutes: 30, priceCents: 0, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" as const };
+    expect(await codeOf(() => createService(db(admin), clinicId, { ...base, name: "Consulta da equipe", category: "consultation" }, { team: true }))).toBe("invalid");
+    expect(await codeOf(() => createService(db(admin), clinicId, { ...base, name: "Sem dono", category: "consultation" }, null))).toBe("invalid");
+    expect(examA).toMatchObject({ isTeam: true, professionalId: null, agendaIds: [examsAgenda.id] });
+    expect(consultation).toMatchObject({ professionalId: professional.id, isTeam: false });
+    // Fixo: nem o banco aceita trocar.
+    const { error } = await adminClient().from("services").update({ professional_id: null, is_team: true }).eq("id", consultation.id);
+    expect(error?.message).toContain("não muda");
+    // Ligar a outra agenda (de outro profissional, da equipe ou de outra clínica) é recusado.
+    const { error: team } = await adminClient().from("service_agendas").insert({ clinic_id: clinicId, service_id: consultation.id, agenda_id: examsAgenda.id });
+    expect(team).toBeTruthy();
     const { data: agendaB } = await adminClient().from("agendas").select("id").eq("clinic_id", CLINIC_B).limit(1).single();
-    expect(await codeOf(() => setServiceAgendas(db(admin), clinicId, consultation.id, [doctorAgenda.id, agendaB!.id]))).toBe("invalid");
+    const { error: otherClinic } = await adminClient().from("service_agendas").insert({ clinic_id: clinicId, service_id: consultation.id, agenda_id: agendaB!.id });
+    expect(otherClinic).toBeTruthy();
     expect((await listServices(db(admin), clinicId)).find((s) => s.id === consultation.id)?.agendaIds).toEqual([doctorAgenda.id]);
+    // Sem dono (desativado na MS): não reativa antes de escolher o profissional; ao escolher, entra na agenda dele.
+    const { data: orphan } = await adminClient()
+      .from("services")
+      .insert({ clinic_id: clinicId, name: "Órfão", category: "consultation", duration_minutes: 30, price_cents: 0, is_active: false })
+      .select("id")
+      .single();
+    expect(await codeOf(() => setServiceActive(db(admin), clinicId, orphan!.id, true))).toBe("invalid");
+    const owned = await updateService(db(admin), clinicId, orphan!.id, { ...base, name: "Órfão" }, { professionalId: professional.id });
+    expect(owned.agendaIds).toEqual([doctorAgenda.id]);
+    await setServiceActive(db(admin), clinicId, orphan!.id, true);
   });
 });
 
 describe("dias e horários (sobreposição por agenda)", () => {
   const base = { capacity: null as number | null, serviceId: null as string | null, weekday: 1 };
-
-  beforeAll(async () => {
-    for (const exam of [groupExam, examA, examB]) await setServiceAgendas(db(admin), clinicId, exam.id, [examsAgenda.id]);
-  });
 
   it("geral cruzando outro geral da mesma agenda conflita, mesmo em outro local", async () => {
     await addAvailabilityWindow(db(admin), clinicId, { ...base, agendaId: doctorAgenda.id, locationId: office.id, startTime: "08:00", endTime: "12:00" });
@@ -502,10 +514,16 @@ describe("dias e horários (sobreposição por agenda)", () => {
   });
 
   it("exame cruza com o horário geral da agenda (cliente, 28/out/2026)", async () => {
-    await setServiceAgendas(db(admin), clinicId, examB.id, [examsAgenda.id, doctorAgenda.id]);
+    // Exame do próprio profissional (MS: cada serviço tem um dono).
+    const doctorExam = await createService(
+      db(admin),
+      clinicId,
+      { name: "Exame da Dra.", category: "exam", durationMinutes: 20, priceCents: 0, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" },
+      { professionalId: professional.id },
+    );
     const thursday = { ...base, weekday: 4, agendaId: doctorAgenda.id, locationId: office.id };
     await addAvailabilityWindow(db(admin), clinicId, { ...thursday, startTime: "08:00", endTime: "12:00" });
-    await addAvailabilityWindow(db(admin), clinicId, { ...thursday, serviceId: examB.id, startTime: "09:00", endTime: "10:00" });
+    await addAvailabilityWindow(db(admin), clinicId, { ...thursday, serviceId: doctorExam.id, startTime: "09:00", endTime: "10:00" });
   });
 
   it("Recepção não mexe nos horários", async () => {
