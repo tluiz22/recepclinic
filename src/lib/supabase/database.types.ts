@@ -799,14 +799,14 @@ isOneToOne: false
                   ]
                 },"contact_finance": {
                   Row: {
-                    "clinic_id": string,"contact_id": string,"cpf": string | null,"created_at": string,"updated_at": string,"updated_by": string | null
+                    "address_complement": string | null,"address_number": string | null,"clinic_id": string,"contact_id": string,"cpf": string | null,"created_at": string,"district": string | null,"email": string | null,"postal_code": string | null,"street": string | null,"updated_at": string,"updated_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"contact_id": string,"cpf"?: string | null,"created_at"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "address_complement"?: string | null,"address_number"?: string | null,"clinic_id": string,"contact_id": string,"cpf"?: string | null,"created_at"?: string,"district"?: string | null,"email"?: string | null,"postal_code"?: string | null,"street"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"contact_id"?: string,"cpf"?: string | null,"created_at"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "address_complement"?: string | null,"address_number"?: string | null,"clinic_id"?: string,"contact_id"?: string,"cpf"?: string | null,"created_at"?: string,"district"?: string | null,"email"?: string | null,"postal_code"?: string | null,"street"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -1489,14 +1489,14 @@ isOneToOne: false
                   ]
                 },"patient_finance": {
                   Row: {
-                    "clinic_id": string,"cpf": string | null,"created_at": string,"invoice_auto_send": boolean,"invoice_email": string | null,"invoice_phone": string | null,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string | null,"updated_at": string,"updated_by": string | null
+                    "clinic_id": string,"cpf": string | null,"created_at": string,"invoice_auto_send": boolean,"invoice_email": string | null,"invoice_phone": string | null,"patient_id": string,"payer": string,"payer_address_complement": string | null,"payer_address_number": string | null,"payer_cpf": string | null,"payer_district": string | null,"payer_email": string | null,"payer_name": string | null,"payer_postal_code": string | null,"payer_street": string | null,"updated_at": string,"updated_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"cpf"?: string | null,"created_at"?: string,"invoice_auto_send"?: boolean,"invoice_email"?: string | null,"invoice_phone"?: string | null,"patient_id": string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "clinic_id": string,"cpf"?: string | null,"created_at"?: string,"invoice_auto_send"?: boolean,"invoice_email"?: string | null,"invoice_phone"?: string | null,"patient_id": string,"payer"?: string,"payer_address_complement"?: string | null,"payer_address_number"?: string | null,"payer_cpf"?: string | null,"payer_district"?: string | null,"payer_email"?: string | null,"payer_name"?: string | null,"payer_postal_code"?: string | null,"payer_street"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"cpf"?: string | null,"created_at"?: string,"invoice_auto_send"?: boolean,"invoice_email"?: string | null,"invoice_phone"?: string | null,"patient_id"?: string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "clinic_id"?: string,"cpf"?: string | null,"created_at"?: string,"invoice_auto_send"?: boolean,"invoice_email"?: string | null,"invoice_phone"?: string | null,"patient_id"?: string,"payer"?: string,"payer_address_complement"?: string | null,"payer_address_number"?: string | null,"payer_cpf"?: string | null,"payer_district"?: string | null,"payer_email"?: string | null,"payer_name"?: string | null,"payer_postal_code"?: string | null,"payer_street"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -1605,14 +1605,14 @@ isOneToOne: false
                   ]
                 },"payments": {
                   Row: {
-                    "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"deleted_at": string | null,"deleted_by": string | null,"id": string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string
+                    "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"deleted_at": string | null,"deleted_by": string | null,"id": string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_address_complement": string | null,"payer_address_number": string | null,"payer_cpf": string | null,"payer_district": string | null,"payer_email": string | null,"payer_name": string,"payer_postal_code": string | null,"payer_street": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"deleted_by"?: string | null,"id"?: string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_cpf"?: string | null,"payer_name": string
+                    "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"deleted_by"?: string | null,"id"?: string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_address_complement"?: string | null,"payer_address_number"?: string | null,"payer_cpf"?: string | null,"payer_district"?: string | null,"payer_email"?: string | null,"payer_name": string,"payer_postal_code"?: string | null,"payer_street"?: string | null
                   }
                   Update: {
-                    "amount_cents"?: number,"appointment_id"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"deleted_by"?: string | null,"id"?: string,"method"?: string,"paid_on"?: string,"patient_id"?: string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string
+                    "amount_cents"?: number,"appointment_id"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"deleted_by"?: string | null,"id"?: string,"method"?: string,"paid_on"?: string,"patient_id"?: string,"payer"?: string,"payer_address_complement"?: string | null,"payer_address_number"?: string | null,"payer_cpf"?: string | null,"payer_district"?: string | null,"payer_email"?: string | null,"payer_name"?: string,"payer_postal_code"?: string | null,"payer_street"?: string | null
                   }
                   Relationships: [
                     {
@@ -2779,6 +2779,9 @@ isOneToOne: false
                            },
 "set_fiscal_issuing_enabled":
 { Args: { "p_enabled": boolean,"p_issuer_id": string }; Returns: undefined
+                           },
+"set_payment_payer_contact":
+{ Args: { "p_complement": string,"p_district": string,"p_email": string,"p_number": string,"p_payment_id": string,"p_postal_code": string,"p_street": string }; Returns: undefined
                            },
 "set_professional_fiscal_route":
 { Args: { "p_clinic_id": string,"p_mode": string,"p_professional_id": string }; Returns: undefined

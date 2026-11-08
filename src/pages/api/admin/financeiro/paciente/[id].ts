@@ -3,10 +3,10 @@ import { isUuid } from "../../../../../lib/clinicAccess";
 import { receivedReturn, withReturn } from "../../../../../lib/returnPath";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
-import { savePatientFinance } from "../../../../../lib/data/finance";
+import { parsePayerContact, savePatientFinance, savePayerContact, type Payer } from "../../../../../lib/data/finance";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { getPatient } from "../../../../../lib/data/patients";
-import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
+import { formChecked, formOptionalText, formText, payerContactFromForm } from "../../../../../lib/forms";
 
 // Módulo financeiro (F11.1): CPF e responsável financeiro do paciente, pelo
 // cartão "Financeiro" da tela do paciente. Só o Administrador e a Recepção,
@@ -25,6 +25,8 @@ export const POST: APIRoute = async (context) => {
       if (!isUuid(id)) throw new DataError("not_found", "Paciente: não encontrado");
       const patient = await getPatient(db, clinic.clinicId, id);
       if (patient.anonymizedAt) throw new DataError("invalid", "Paciente anonimizado: não recebe dados financeiros");
+      // N3a: e-mail e endereço de quem paga (opcionais aqui; validados se vierem).
+      const payerContact = parsePayerContact(payerContactFromForm(form));
       await savePatientFinance(db, clinic.clinicId, patient, {
         cpf: formOptionalText(form, "cpf"),
         payer: formText(form, "payer"),
@@ -35,6 +37,8 @@ export const POST: APIRoute = async (context) => {
         invoiceEmail: formOptionalText(form, "invoice_email"),
         invoiceAutoSend: formChecked(form, "invoice_auto_send"),
       });
+      const payer = (["contact", "patient", "other"] as const).find((p) => p === formText(form, "payer")) ?? ("contact" as Payer);
+      await savePayerContact(db, clinic.clinicId, patient, payer, payerContact);
       return { redirectTo: page, message: "Dados financeiros salvos." };
     },
     page,

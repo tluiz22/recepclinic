@@ -52,7 +52,8 @@ import { buttonClass, CONTROL, menuItemClass } from "../../../components/admin/u
 import { formatAge, isOverConsultationAgeLimit } from "../../../lib/age";
 import { canAccessArea, isUuid } from "../../../lib/clinicAccess";
 import { formatCpf } from "../../../lib/cpf";
-import { getContactCpf, getPatientFinance, resolvePayer } from "../../../lib/data/finance";
+import { getContactCpf, getPatientFinance, getPayerContact, resolvePayer } from "../../../lib/data/finance";
+import PayerContactFields from "../../../components/admin/finance/PayerContactFields.astro";
 import { listPatientPayments, listPaymentStates, PAYMENT_METHOD_LABEL } from "../../../lib/data/payments";
 import { ACTIVE_INVOICE, listPaymentInvoices, type InvoiceStatus } from "../../../lib/data/nfse";
 import { getSavedDestinations } from "../../../lib/data/nfseDelivery";
@@ -127,6 +128,8 @@ const [finance, contactCpf] = financeOn
   ? await Promise.all([getPatientFinance(db, clinic.clinicId, patient.id), getContactCpf(db, clinic.clinicId, contact.id)])
   : [null, null];
 const responsible = finance ? resolvePayer(patient, contact, finance, contactCpf) : null;
+// Tomador da nota pelo Asaas (N3a): e-mail e endereço de quem paga.
+const payerContact = finance ? await getPayerContact(db, clinic.clinicId, patient, finance.payer) : null;
 const payments = paymentsOn ? await listPatientPayments(db, clinic.clinicId, patient.id) : [];
 // Selos da R6 (cliente, 16/out/2026): pago em cada atendimento e a nota de cada pagamento.
 const [paymentStates, invoices] = paymentsOn
@@ -890,6 +893,7 @@ const canBook = patient.isActive && !anonymized;
               Responsável financeiro: {responsible.name || "não informado"} ({payerRole(responsible.payer)}) · CPF {responsible.cpf ? formatCpf(responsible.cpf) : "não informado"}
             </p>
             <p class={hint}>Envio das notas: {deliveryText()}</p>
+            <p class={hint}>Para a nota: {payerContact ? `${payerContact.email}, CEP ${payerContact.postalCode.slice(0, 5)}-${payerContact.postalCode.slice(5)}` : "falta o e-mail e o endereço de quem paga"}</p>
             {
               !responsible.cpf && (
                 <p class={`${notice} border-pend-200 bg-pend-50 text-pend-800`}>
@@ -958,6 +962,11 @@ const canBook = patient.isActive && !anonymized;
                   <input id="fin_payer_cpf" name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(finance.payerCpf)} class={CONTROL} />
                 </div>
               </div>
+              <fieldset class="flex flex-col gap-3 border-t border-line pt-4">
+                <legend class="sr-only">E-mail e endereço de quem paga</legend>
+                <p class={fieldLabel} aria-hidden="true">E-mail e endereço de quem paga <span class="font-normal text-ink-soft">(pedidos para emitir a nota)</span></p>
+                <PayerContactFields idPrefix="fin_pc" value={payerContact} inputClass={CONTROL} labelClass={fieldLabel} hintClass={hint} />
+              </fieldset>
               <fieldset class="flex flex-col gap-3 border-t border-line pt-4">
                 <legend class="sr-only">Envio das notas fiscais</legend>
                 <p class={fieldLabel} aria-hidden="true">Envio das notas fiscais</p>

@@ -2,7 +2,7 @@ import { isCalendarDate } from "../clinicTime";
 import type { DbClient } from "./clients";
 import type { AppointmentStatus } from "./agenda/appointments";
 import { cleanText, unwrap, unwrapAllIn, unwrapOne, Validation } from "./errors";
-import { effectivePayer, FINANCE_MESSAGES, getContactCpf, getPatientFinance, type Payer } from "./finance";
+import { effectivePayer, FINANCE_MESSAGES, getContactCpf, getPatientFinance, getPayerContact, type Payer, type PayerContact } from "./finance";
 import type { Contact, Patient } from "./patients";
 import { normalizeCpf } from "../cpf";
 
@@ -40,6 +40,8 @@ export type Payment = {
   payerName: string;
   /** 11 dígitos, ou null (falta para a nota). */
   payerCpf: string | null;
+  /** E-mail e endereço de quem pagou (N3a, exigidos pelo Asaas para a nota); null = falta. */
+  payerContact: PayerContact | null;
   createdAt: Date;
   /** Excluído (correção): fica guardado, fora das somas. */
   deletedAt: Date | null;
@@ -98,11 +100,18 @@ type PaymentRow = {
   payer: string;
   payer_name: string;
   payer_cpf: string | null;
+  payer_email: string | null;
+  payer_postal_code: string | null;
+  payer_street: string | null;
+  payer_address_number: string | null;
+  payer_address_complement: string | null;
+  payer_district: string | null;
   created_at: string;
   deleted_at: string | null;
 };
 
-const PAYMENT_COLUMNS = "id, appointment_id, patient_id, amount_cents, method, paid_on, payer, payer_name, payer_cpf, created_at, deleted_at";
+const PAYMENT_COLUMNS =
+  "id, appointment_id, patient_id, amount_cents, method, paid_on, payer, payer_name, payer_cpf, payer_email, payer_postal_code, payer_street, payer_address_number, payer_address_complement, payer_district, created_at, deleted_at";
 
 const toPayment = (row: PaymentRow): Payment => ({
   id: row.id,
@@ -114,6 +123,10 @@ const toPayment = (row: PaymentRow): Payment => ({
   payer: row.payer as Payer,
   payerName: row.payer_name,
   payerCpf: row.payer_cpf,
+  payerContact:
+    row.payer_email && row.payer_postal_code && row.payer_street && row.payer_address_number && row.payer_district
+      ? { email: row.payer_email, postalCode: row.payer_postal_code, street: row.payer_street, number: row.payer_address_number, complement: row.payer_address_complement, district: row.payer_district }
+      : null,
   createdAt: new Date(row.created_at),
   deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
 });
@@ -244,6 +257,15 @@ export async function registerPayment(
   }
   v.throwIfInvalid("Pagamento");
 
+  // N3a: e-mail e endereço de quem paga, do Financeiro (retrato no pagamento, para a nota).
+  let saved: PayerContact | null = null;
+  if (payer === "other") {
+    const finance = await getPatientFinance(db, clinicId, patient.id);
+    if (finance.payer === "other" && finance.payerCpf && finance.payerCpf === payerCpf) saved = await getPayerContact(db, clinicId, patient, "other");
+  } else {
+    saved = await getPayerContact(db, clinicId, patient, payer);
+  }
+
   const row = unwrap(
     await db
       .from("payments")
@@ -257,6 +279,12 @@ export async function registerPayment(
         payer,
         payer_name: payerName!,
         payer_cpf: payerCpf,
+        payer_email: saved?.email ?? null,
+        payer_postal_code: saved?.postalCode ?? null,
+        payer_street: saved?.street ?? null,
+        payer_address_number: saved?.number ?? null,
+        payer_address_complement: saved?.complement ?? null,
+        payer_district: saved?.district ?? null,
       })
       .select(PAYMENT_COLUMNS)
       .single(),
