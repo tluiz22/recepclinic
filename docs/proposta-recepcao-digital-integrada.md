@@ -5,8 +5,9 @@
 > recepção (rodada 3, revisada tela por tela e aprovada)**, no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb
 > (seção 18). Decisões da rodada 3 que mudam a proposta: conversa **sem profissional** (só com quem está); **vários
 > números de WhatsApp fora desta entrega** (seção 10, F4, RD11: pendentes); link no Meu dia e no perfil do profissional;
-> aba Métricas › Portal e origens em Desempenho; links marcados por lugar. **Próximo:** atualizar a especificação das
-> telas com essas decisões e planejar a implementação (fases sem a F4), com o OK do cliente. Nenhum código mudou.
+> aba Métricas › Portal e origens em Desempenho; links marcados por lugar. Especificação das telas
+> atualizada (08/nov). **Próxima sessão (cliente, 08/nov): planejar a implementação** (fases sem a F4). Nenhum código
+> mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
