@@ -257,6 +257,11 @@ begin
     values (c_a, 'professional', p_psi, '45723174000110', 'Marina Alves Psicologia Ltda', 'marina@exemplo-saude.local', '84988881111', '59600000', 'Rua Coronel Gurgel', '100', 'Centro',
       '2408003', true, '04.16', '04.16.01', 'Psicologia', 2.00, 'LIMITED');
   insert into public.professional_fiscal_routes (clinic_id, professional_id, mode) values (c_a, p_fis, 'none');
+  -- Contrato de notas da psicóloga (N4b, aguardando o aceite) e a cobrança das notas da clínica do mês passado (nada a cobrar).
+  insert into public.fiscal_issuer_contracts (issuer_id, clinic_id, monthly_fee_cents, unit_price_cents, monthly_allowance)
+    select id, c_a, 1500, 99, 20 from public.fiscal_issuers where clinic_id = c_a and professional_id = p_psi;
+  insert into public.fiscal_usage_charges (clinic_id, period, notes_count, allowance, unit_price_cents, amount_cents, due_date, status)
+    values (c_a, date_trunc('month', current_date - interval '1 month')::date, 0, 0, 0, 0, current_date, 'none');
   -- Evento de webhook das notas já processado (N3b), para a varredura de isolamento.
   insert into public.nfse_provider_events (id, clinic_id, event, processed_at) values ('evt_seed_1', c_a, 'INVOICE_CREATED', now());
   insert into public.fiscal_issuer_service_codes (clinic_id, issuer_id, service_id, service_code)

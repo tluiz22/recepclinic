@@ -355,6 +355,7 @@ export async function asaasReadiness(db: DbClient, appointmentId: string): Promi
     suspended?: boolean;
     supports_cancellation?: boolean;
     contract_ok?: boolean;
+    payer?: "clinic" | "professional";
     route_none?: boolean;
   } | null;
   const base = { issuerName: r?.legal_name ?? null, environment: r?.environment ?? null, supportsCancellation: r?.supports_cancellation ?? true };
@@ -362,7 +363,13 @@ export async function asaasReadiness(db: DbClient, appointmentId: string): Promi
     return { ...base, ready: false, reason: r?.route_none ? "Este profissional não emite nota pelo sistema." : "A clínica ainda não tem emissor de nota fiscal (Configurações › Nota fiscal)." };
   }
   if (r.suspended) return { ...base, ready: false, reason: `A emissão de ${r.legal_name} está suspensa por falta de pagamento.` };
-  if (!r.contract_ok) return { ...base, ready: false, reason: "Falta o Administrador assinar o contrato com nota fiscal (Configurações › Assinatura)." };
+  if (!r.contract_ok) {
+    return {
+      ...base,
+      ready: false,
+      reason: r.payer === "professional" ? `Falta ${r.legal_name} aceitar o contrato de notas (Minha nota fiscal).` : "Falta o Administrador assinar o contrato com nota fiscal (Configurações › Assinatura).",
+    };
+  }
   if (!r.issuing_enabled) return { ...base, ready: false, reason: `A emissão de ${r.legal_name} ainda não está ligada (Configurações › Nota fiscal).` };
   return { ...base, ready: true, reason: null };
 }

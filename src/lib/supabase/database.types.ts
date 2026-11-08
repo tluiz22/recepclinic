@@ -995,6 +995,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"fiscal_issuer_contracts": {
+                  Row: {
+                    "accepted_at": string | null,"accepted_by": string | null,"asaas_customer_id": string | null,"clinic_id": string,"issuer_id": string,"monthly_allowance": number,"monthly_fee_cents": number,"status": string,"terms_version": string | null,"unit_price_cents": number,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"asaas_customer_id"?: string | null,"clinic_id": string,"issuer_id": string,"monthly_allowance"?: number,"monthly_fee_cents": number,"status"?: string,"terms_version"?: string | null,"unit_price_cents": number,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"asaas_customer_id"?: string | null,"clinic_id"?: string,"issuer_id"?: string,"monthly_allowance"?: number,"monthly_fee_cents"?: number,"status"?: string,"terms_version"?: string | null,"unit_price_cents"?: number,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fiscal_issuer_contracts_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "fiscal_issuer_contracts_clinic_id_issuer_id_fkey"
+      columns: ["clinic_id","issuer_id"]
+isOneToOne: false
+      referencedRelation: "fiscal_issuers"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"fiscal_issuer_service_codes": {
                   Row: {
                     "clinic_id": string,"issuer_id": string,"service_code": string,"service_id": string,"updated_at": string,"updated_by": string | null
@@ -1051,6 +1077,32 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "professionals"
       referencedColumns: ["clinic_id","id"]
+    }
+                  ]
+                },"fiscal_usage_charges": {
+                  Row: {
+                    "allowance": number,"amount_cents": number,"asaas_payment_id": string | null,"clinic_id": string,"created_at": string,"due_date": string,"error": string | null,"fee_cents": number,"id": string,"invoice_url": string | null,"issuer_id": string | null,"last_synced_at": string | null,"notes_count": number,"paid_at": string | null,"period": string,"status": string,"unit_price_cents": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "allowance": number,"amount_cents": number,"asaas_payment_id"?: string | null,"clinic_id": string,"created_at"?: string,"due_date": string,"error"?: string | null,"fee_cents"?: number,"id"?: string,"invoice_url"?: string | null,"issuer_id"?: string | null,"last_synced_at"?: string | null,"notes_count": number,"paid_at"?: string | null,"period": string,"status"?: string,"unit_price_cents": number
+                  }
+                  Update: {
+                    "allowance"?: number,"amount_cents"?: number,"asaas_payment_id"?: string | null,"clinic_id"?: string,"created_at"?: string,"due_date"?: string,"error"?: string | null,"fee_cents"?: number,"id"?: string,"invoice_url"?: string | null,"issuer_id"?: string | null,"last_synced_at"?: string | null,"notes_count"?: number,"paid_at"?: string | null,"period"?: string,"status"?: string,"unit_price_cents"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fiscal_usage_charges_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "fiscal_usage_charges_issuer_id_fkey"
+      columns: ["issuer_id"]
+isOneToOne: false
+      referencedRelation: "fiscal_issuers"
+      referencedColumns: ["id"]
     }
                   ]
                 },"handoff_events": {
@@ -2352,6 +2404,9 @@ isOneToOne: false
             "accept_billing_contract":
 { Args: { "p_clinic_id": string,"p_contract_id": string,"p_ip": string,"p_recurring_consent": string,"p_terms_version": string }; Returns: undefined
                            },
+"accept_fiscal_issuer_contract":
+{ Args: { "p_issuer_id": string,"p_terms_version": string }; Returns: undefined
+                           },
 "activate_billing_contract":
 { Args: { "p_clinic_id": string,"p_terms_version": string }; Returns: undefined
                            },
@@ -2729,10 +2784,16 @@ isOneToOne: false
 "nfse_invoice_issued_for_retry":
 { Args: { "p_invoice_id": string }; Returns: boolean
                            },
+"platform_apply_issuer_suspensions":
+{ Args: { "p_today": string }; Returns: number
+                           },
 "platform_claim_auto_deliveries":
 { Args: { "p_limit": number }; Returns: {
               "clinic_id": string,"invoice_id": string
             }[]
+                           },
+"platform_compute_fiscal_usage":
+{ Args: { "p_period": string,"p_today": string }; Returns: number
                            },
 "platform_finish_auto_delivery":
 { Args: { "p_invoice_id": string,"p_ok": boolean }; Returns: undefined
@@ -2749,8 +2810,14 @@ isOneToOne: false
 "platform_set_fiscal_issuer_municipal_options":
 { Args: { "p_issuer_id": string,"p_options": Json }; Returns: undefined
                            },
+"platform_set_fiscal_usage_charge":
+{ Args: { "p_asaas_payment_id": string,"p_error": string,"p_id": string,"p_invoice_url": string,"p_paid_at": string,"p_raw_status": string }; Returns: undefined
+                           },
 "platform_set_invoice_files":
 { Args: { "p_invoice_id": string,"p_pdf_path": string,"p_xml_path": string }; Returns: undefined
+                           },
+"platform_set_issuer_contract_customer":
+{ Args: { "p_customer": string,"p_issuer_id": string }; Returns: undefined
                            },
 "publish_knowledge_base":
 { Args: Record<PropertyKey, never>; Returns: number
@@ -2805,6 +2872,9 @@ isOneToOne: false
                            },
 "save_fiscal_issuer":
 { Args: { "p_clinic_id": string,"p_data": Json,"p_professional_id": string }; Returns: string
+                           },
+"save_fiscal_issuer_contract":
+{ Args: { "p_allowance": number,"p_fee_cents": number,"p_issuer_id": string,"p_unit_price_cents": number }; Returns: undefined
                            },
 "search_contact_ids":
 { Args: { "p_clinic_id": string,"p_include_inactive"?: boolean,"p_limit"?: number,"p_query": string }; Returns: {

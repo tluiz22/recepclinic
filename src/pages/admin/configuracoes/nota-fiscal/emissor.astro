@@ -35,6 +35,11 @@ import {
   MISSING_LABEL,
 } from "../../../../lib/data/fiscalIssuers";
 import { receivedReturn, withReturn } from "../../../../lib/returnPath";
+import NotesUsageCard from "../../../../components/admin/finance/NotesUsageCard.astro";
+import { countNotesThisMonth, getIssuerContract, ISSUER_CONTRACT_TERMS, ISSUER_CONTRACT_TERMS_VERSION, listUsageCharges } from "../../../../lib/data/fiscalBilling";
+import { toInstant, todayIn } from "../../../../lib/clinicTime";
+import { centsToInput } from "../../../../lib/forms";
+import { formatCentsBRL } from "../../../../lib/money";
 
 const clinic = Astro.locals.clinic!;
 const ownOnly = ownSettingsOnly(clinic);
@@ -53,6 +58,16 @@ const [services, codes, audit] = await Promise.all([
   issuer ? listIssuerAudit(db, issuer.id) : Promise.resolve([]),
 ]);
 const actors = await loadActorLabels(db, clinic.clinicId, audit.map((a) => a.actorId));
+// Cobrança das notas do profissional pagador (N4b): contrato próprio, uso e cobranças.
+const proBilling = issuer?.kind === "professional";
+const [issuerContract, usageCharges, notesCount] = proBilling
+  ? await Promise.all([
+      getIssuerContract(db, issuer!.id),
+      listUsageCharges(db, clinic.clinicId, issuer!.id),
+      countNotesThisMonth(db, clinic.clinicId, toInstant(`${todayIn(clinic.timezone).slice(0, 8)}01`, "00:00", clinic.timezone)),
+    ])
+  : [null, [], new Map<string, number>()];
+const isOwner = ownOnly && !!issuer && issuer.professionalId === clinic.ownProfessionalId;
 const values = issuerToInput(issuer);
 const isAdmin = clinic.roles.includes("admin") || clinic.isPlatformStaff;
 const volta = receivedReturn(Astro.url);
@@ -547,6 +562,91 @@ const fieldset = "flex flex-col gap-3 border-t border-line pt-4 first-of-type:bo
               <p class="mt-2 text-[15px] text-ink">{issuer.payer === "professional" ? "Você paga as suas notas." : "A clínica paga as suas notas."} <span class="text-ink-soft">O Administrador escolhe.</span></p>
             )}
           </Card>
+        )
+      }
+
+      {
+        proBilling && issuer!.payer === "professional" && (
+          <Card>
+            <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+              {isOwner ? "Meu contrato de notas" : "Contrato de notas do profissional"}
+              {issuerContract?.status === "active" && <Badge variant="success">aceito</Badge>}
+              {issuerContract?.status === "draft" && <Badge variant="warning">aguardando o aceite</Badge>}
+              {!issuerContract && <Badge>sem valores</Badge>}
+            </h2>
+            {issuerContract ? (
+              <dl class="mt-2 grid gap-1 text-[15px] text-ink-mid">
+                <div>
+                  <dt class="inline text-ink-soft">Taxa mensal:</dt> <dd class="inline">{formatCentsBRL(issuerContract.monthlyFeeCents)}</dd>
+                </div>
+                <div>
+                  <dt class="inline text-ink-soft">Franquia:</dt> <dd class="inline">{issuerContract.monthlyAllowance} {issuerContract.monthlyAllowance === 1 ? "nota" : "notas"} por mês</dd>
+                </div>
+                <div>
+                  <dt class="inline text-ink-soft">Nota acima da franquia:</dt> <dd class="inline">{formatCentsBRL(issuerContract.unitPriceCents)}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p class="mt-1 text-sm text-ink-soft">O Suporte do RecepClinic define os valores; depois, o profissional aceita aqui. Sem o aceite, as notas deste CNPJ não saem.</p>
+            )}
+            {isOwner && issuerContract?.status === "draft" && (
+              <form method="POST" action={action} class="mt-3 flex flex-col gap-3 border-t border-line pt-3">
+                <input type="hidden" name="acao" value="contrato_aceite" />
+                <input type="hidden" name="profissional" value={hidden.profissional} />
+                <input type="hidden" name="emissor" value={hidden.emissor} />
+                <details class="rounded-lg border border-line p-3 text-sm text-ink-mid" open>
+                  <summary class="cursor-pointer font-medium">Termos do contrato de notas</summary>
+                  {ISSUER_CONTRACT_TERMS.map((t) => (
+                    <p class="mt-2">{t}</p>
+                  ))}
+                  <p class="mt-2 text-xs text-ink-soft">Versão {ISSUER_CONTRACT_TERMS_VERSION}.</p>
+                </details>
+                <label class="flex items-start gap-2 text-sm text-ink-mid">
+                  <input type="checkbox" name="aceite" value="1" required class={`${CHECK} mt-0.5`} />
+                  <span>Li e aceito o contrato de notas, em nome do meu CNPJ.</span>
+                </label>
+                <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Aceitar contrato</button>
+              </form>
+            )}
+            {!isOwner && issuerContract?.status === "draft" && <p class="mt-2 text-sm text-ink-soft">O profissional aceita em Configurações › Minha nota fiscal.</p>}
+            {clinic.isPlatformStaff && (
+              <form method="POST" action={action} class="mt-3 flex flex-col gap-3 border-t border-line pt-3">
+                <input type="hidden" name="acao" value="contrato_valores" />
+                <input type="hidden" name="profissional" value={hidden.profissional} />
+                <input type="hidden" name="emissor" value={hidden.emissor} />
+                <p class="text-sm font-semibold text-ink">Valores (Suporte)</p>
+                <div class="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <label for="fee" class={LABEL}>Taxa mensal (R$)</label>
+                    <input id="fee" name="fee" inputmode="decimal" placeholder="15,00" value={centsToInput(issuerContract?.monthlyFeeCents ?? null)} class={INPUT} />
+                  </div>
+                  <div>
+                    <label for="unit_price" class={LABEL}>Preço por nota (R$)</label>
+                    <input id="unit_price" name="unit_price" inputmode="decimal" placeholder="0,99" value={centsToInput(issuerContract?.unitPriceCents ?? null)} class={INPUT} />
+                  </div>
+                  <div>
+                    <label for="allowance" class={LABEL}>Franquia (notas/mês)</label>
+                    <input id="allowance" name="allowance" inputmode="numeric" placeholder="0" value={issuerContract ? String(issuerContract.monthlyAllowance) : ""} class={INPUT} />
+                  </div>
+                </div>
+                <p class={HINT}>Mudou um valor, o contrato volta para o aceite do profissional.</p>
+                <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar valores</button>
+              </form>
+            )}
+          </Card>
+        )
+      }
+
+      {
+        proBilling && issuer!.payer === "professional" && (
+          <NotesUsageCard
+            title={isOwner ? "Minhas notas e cobranças" : "Notas e cobranças"}
+            rows={[{ name: issuer!.legalName, count: notesCount.get(issuer!.id) ?? 0 }]}
+            allowance={issuerContract?.monthlyAllowance ?? null}
+            unitPriceCents={issuerContract?.unitPriceCents ?? null}
+            feeCents={issuerContract?.monthlyFeeCents ?? null}
+            charges={usageCharges}
+          />
         )
       }
 

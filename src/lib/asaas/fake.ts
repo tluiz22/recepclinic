@@ -53,6 +53,8 @@ export function createFakeAsaas(options: FakeAsaasOptions = {}) {
   let timeoutNext: RegExp | null = null;
   const main = { balanceCents: 100_000 };
   const files = new Map<string, Uint8Array>();
+  const mainCustomers = new Map<string, { id: string; cpfCnpj: string; body: Record<string, unknown> }>();
+  const payments = new Map<string, { id: string; customer: string; value: number; dueDate: string; billingType: string; status: string; externalReference: string | null; description: string; invoiceUrl: string; paymentDate?: string }>();
 
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   const error = (status: number, description: string, code = "invalid_action") => json({ errors: [{ code, description }] }, status);
@@ -147,6 +149,31 @@ export function createFakeAsaas(options: FakeAsaasOptions = {}) {
         const t = { id: next("tra"), walletId: account.walletId, valueCents, externalReference: (body.externalReference as string) ?? null };
         transfers.push(t);
         return json({ object: "transfer", id: t.id, status: "DONE", value: valueCents / 100, walletId: t.walletId });
+      }
+      // Cobrança das notas (N4b): clientes e cobranças avulsas na conta principal.
+      if (path === "/customers" && method === "GET") {
+        const cpfCnpj = parsed.searchParams.get("cpfCnpj");
+        return json({ data: [...mainCustomers.values()].filter((c) => c.cpfCnpj === cpfCnpj).map((c) => ({ id: c.id })) });
+      }
+      if (path === "/customers" && method === "POST") {
+        const id = next("cus");
+        mainCustomers.set(id, { id, cpfCnpj: String(body.cpfCnpj), body });
+        return json({ id });
+      }
+      if (path === "/payments" && method === "POST") {
+        const id = next("pay");
+        const p = { id, customer: String(body.customer), value: Number(body.value), dueDate: String(body.dueDate), billingType: String(body.billingType), status: "PENDING", externalReference: (body.externalReference as string) ?? null, description: String(body.description ?? ""), invoiceUrl: `https://fake.asaas.local/i/${id}` };
+        payments.set(id, p);
+        return json(p);
+      }
+      if (path === "/payments" && method === "GET") {
+        const ref = parsed.searchParams.get("externalReference");
+        return json({ data: [...payments.values()].filter((p) => p.externalReference === ref) });
+      }
+      const pay = path.match(/^\/payments\/([^/]+)$/);
+      if (pay && method === "GET") {
+        const p = payments.get(decodeURIComponent(pay[1]));
+        return p ? json(p) : error(404, "Cobrança não encontrada.");
       }
       return error(404, `rota falsa sem resposta: ${method} ${path}`);
     }
@@ -263,6 +290,16 @@ export function createFakeAsaas(options: FakeAsaasOptions = {}) {
     invoices,
     transfers,
     calls,
+    mainCustomers,
+    payments,
+    /** A cobrança foi paga (ou venceu). */
+    setPaymentStatus(id: string, status: string) {
+      const p = payments.get(id);
+      if (p) {
+        p.status = status;
+        if (status === "RECEIVED") p.paymentDate = new Date().toISOString().slice(0, 10);
+      }
+    },
     /** Aprova o cadastro da subconta (no Sandbox: POST /sandbox/myAccount/approve). */
     approve(accountId: string) {
       const a = accounts.get(accountId);

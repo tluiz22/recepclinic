@@ -7,6 +7,10 @@ import { logError } from "../../../lib/log";
 import { defaultAsaasNfseDeps, reconcileAsaasInvoices } from "../../../lib/data/nfseAsaas";
 import { defaultAutoDeliveryDeps, runInvoiceOutbox } from "../../../lib/data/nfseAutoDelivery";
 import { asaasFiscalApi } from "../../../lib/asaas/fiscalApi";
+import { asaasBillingApi } from "../../../lib/asaas/billingApi";
+import { runFiscalBilling } from "../../../lib/data/fiscalBilling";
+import { platformFiscalBilling } from "../../../lib/data/platform";
+import { todayIn } from "../../../lib/clinicTime";
 
 // Notas fiscais sem resposta (F11.4, segurança da F11, item 5): a cada 10
 // minutos (N3b; antes, uma vez por dia), confere na Receita as notas "emitindo" ou "cancelando" pedidas há mais
@@ -47,9 +51,17 @@ const route: APIRoute = async ({ request }) => {
       logError("notas-fiscais: Asaas", error);
     }
   }
-  errors += asaas.failed;
+  // N4b: cobrança das notas por pagador e suspensão do profissional inadimplente.
+  let billing = { created: 0, synced: 0, failed: 0, suspensions: 0 };
+  try {
+    billing = await runFiscalBilling(todayIn("America/Sao_Paulo"), { store: platformFiscalBilling(), api: env.asaas ? asaasBillingApi(env.asaas) : null });
+  } catch (error) {
+    errors++;
+    logError("notas-fiscais: cobrança das notas", error);
+  }
+  errors += asaas.failed + billing.failed;
   await heartbeat("notas-fiscais", new Set(pending.map((p) => p.clinicId)).size + asaas.checked, errors);
-  return new Response(JSON.stringify({ pending: pending.length, errors, results, asaas, outbox }), { headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ pending: pending.length, errors, results, asaas, outbox, billing }), { headers: { "Content-Type": "application/json" } });
 };
 
 export const POST = route;

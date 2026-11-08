@@ -12,7 +12,8 @@ import {
   type IssuerInput,
 } from "../../../../lib/data/fiscalIssuers";
 import { runFormAction } from "../../../../lib/data/formAction";
-import { formChecked, formText } from "../../../../lib/forms";
+import { acceptIssuerContract, saveIssuerContract } from "../../../../lib/data/fiscalBilling";
+import { formChecked, formMoneyCents, formText } from "../../../../lib/forms";
 import { isUuid } from "../../../../lib/clinicAccess";
 import { receivedReturn, withReturn } from "../../../../lib/returnPath";
 
@@ -136,6 +137,22 @@ export const POST: APIRoute = async (context) => {
           const ids = form?.getAll("service_id").map(String).filter(isUuid) ?? [];
           for (const serviceId of ids) await setIssuerServiceCode(db, issuer.id, serviceId, formText(form, `code_${serviceId}`));
           return { redirectTo: issuerPage, message: "Códigos dos serviços salvos." };
+        }
+        case "contrato_valores": {
+          if (!clinic.isPlatformStaff) throw new DataError("forbidden", "Só o Suporte define os valores do contrato de notas.");
+          const issuer = await issuerFromForm();
+          const allowanceText = formText(form, "allowance");
+          await saveIssuerContract(db, issuer.id, {
+            feeCents: formMoneyCents(form, "fee"),
+            unitPriceCents: formMoneyCents(form, "unit_price"),
+            allowance: /^\d+$/.test(allowanceText) ? Number(allowanceText) : allowanceText === "" ? 0 : Number.NaN,
+          });
+          return { redirectTo: issuerPage, message: "Valores do contrato de notas salvos. O profissional aceita em Minha nota fiscal." };
+        }
+        case "contrato_aceite": {
+          const issuer = await issuerFromForm();
+          await acceptIssuerContract(db, issuer.id, formChecked(form, "aceite"));
+          return { redirectTo: issuerPage, message: "Contrato de notas aceito: as notas do seu CNPJ já podem sair (com a emissão ligada)." };
         }
         default:
           throw new DataError("invalid", "Ação desconhecida", { acao: "Ação desconhecida." });

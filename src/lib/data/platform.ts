@@ -1004,3 +1004,114 @@ export function platformInvoiceFiles(env: ServiceEnv = platformEnv()) {
 }
 
 export type PlatformInvoiceFiles = ReturnType<typeof platformInvoiceFiles>;
+
+// ---------------------------------------------------------------------------
+// Cobrança das notas (N4b): apuração, cobranças no Asaas e suspensão.
+// ---------------------------------------------------------------------------
+export type FiscalChargeContext = {
+  id: string;
+  clinicId: string;
+  issuerId: string | null;
+  period: string;
+  notesCount: number;
+  amountCents: number;
+  feeCents: number;
+  dueDate: string;
+  status: string;
+  asaasPaymentId: string | null;
+  /** Clínica: cliente e forma do contrato; profissional: dados do emissor. */
+  clinic: { customerId: string | null; paymentMethod: string | null; billingMode: string | null } | null;
+  professional: { customerId: string | null; legalName: string; cnpj: string; email: string; mobilePhone: string; postalCode: string; street: string; number: string; complement: string | null; district: string } | null;
+};
+
+export function platformFiscalBilling(env: ServiceEnv = platformEnv()) {
+  const db = platformClient(env);
+  const fail = (error: unknown, what: string) => {
+    if (error) throw new Error(`Cobrança das notas: ${what}`, { cause: error });
+  };
+  return {
+    async computeUsage(period: string, today: string): Promise<number> {
+      const { data, error } = await db.rpc("platform_compute_fiscal_usage", { p_period: period, p_today: today });
+      fail(error, "apuração");
+      return Number(data ?? 0);
+    },
+    async openCharges(syncedBefore: Date, limit = 50): Promise<FiscalChargeContext[]> {
+      const { data, error } = await db
+        .from("fiscal_usage_charges")
+        .select("id, clinic_id, issuer_id, period, notes_count, amount_cents, fee_cents, due_date, status, asaas_payment_id, last_synced_at")
+        .in("status", ["creating", "pending", "overdue"])
+        .or(`status.eq.creating,last_synced_at.is.null,last_synced_at.lt.${syncedBefore.toISOString()}`)
+        .order("created_at")
+        .limit(limit);
+      fail(error, "abertas");
+      const out: FiscalChargeContext[] = [];
+      for (const r of data ?? []) {
+        let clinic: FiscalChargeContext["clinic"] = null;
+        let professional: FiscalChargeContext["professional"] = null;
+        if (!r.issuer_id) {
+          const [{ data: acc }, { data: contract }] = await Promise.all([
+            db.from("billing_accounts").select("asaas_customer_id").eq("clinic_id", r.clinic_id).maybeSingle(),
+            db.from("billing_contracts").select("payment_method, billing_mode").eq("clinic_id", r.clinic_id).in("status", ["active", "ended"]).order("version", { ascending: false }).limit(1).maybeSingle(),
+          ]);
+          clinic = { customerId: acc?.asaas_customer_id ?? null, paymentMethod: contract?.payment_method ?? null, billingMode: contract?.billing_mode ?? null };
+        } else {
+          const [{ data: i }, { data: k }] = await Promise.all([
+            db.from("fiscal_issuers").select("legal_name, cnpj, fiscal_email, mobile_phone, postal_code, street, street_number, complement, district").eq("id", r.issuer_id).maybeSingle(),
+            db.from("fiscal_issuer_contracts").select("asaas_customer_id").eq("issuer_id", r.issuer_id).maybeSingle(),
+          ]);
+          if (i) {
+            professional = {
+              customerId: k?.asaas_customer_id ?? null,
+              legalName: i.legal_name,
+              cnpj: i.cnpj,
+              email: i.fiscal_email,
+              mobilePhone: i.mobile_phone,
+              postalCode: i.postal_code,
+              street: i.street,
+              number: i.street_number,
+              complement: i.complement,
+              district: i.district,
+            };
+          }
+        }
+        out.push({
+          id: r.id,
+          clinicId: r.clinic_id,
+          issuerId: r.issuer_id,
+          period: r.period,
+          notesCount: r.notes_count,
+          amountCents: r.amount_cents,
+          feeCents: r.fee_cents,
+          dueDate: r.due_date,
+          status: r.status,
+          asaasPaymentId: r.asaas_payment_id,
+          clinic,
+          professional,
+        });
+      }
+      return out;
+    },
+    async setCharge(id: string, a: { asaasPaymentId?: string | null; rawStatus?: string | null; invoiceUrl?: string | null; paidAt?: string | null; error?: string | null }): Promise<void> {
+      const { error } = await db.rpc("platform_set_fiscal_usage_charge", {
+        p_id: id,
+        p_asaas_payment_id: (a.asaasPaymentId ?? null) as string,
+        p_raw_status: (a.rawStatus ?? null) as string,
+        p_invoice_url: (a.invoiceUrl ?? null) as string,
+        p_paid_at: (a.paidAt ?? null) as string,
+        p_error: (a.error ?? null) as string,
+      });
+      fail(error, "situação");
+    },
+    async setContractCustomer(issuerId: string, customerId: string): Promise<void> {
+      const { error } = await db.rpc("platform_set_issuer_contract_customer", { p_issuer_id: issuerId, p_customer: customerId });
+      fail(error, "cliente do profissional");
+    },
+    async applySuspensions(today: string): Promise<number> {
+      const { data, error } = await db.rpc("platform_apply_issuer_suspensions", { p_today: today });
+      fail(error, "suspensões");
+      return Number(data ?? 0);
+    },
+  };
+}
+
+export type PlatformFiscalBilling = ReturnType<typeof platformFiscalBilling>;

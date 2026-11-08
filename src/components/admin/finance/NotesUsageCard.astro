@@ -1,0 +1,85 @@
+---
+// Uso e cobranças das notas fiscais (N4b): notas emitidas no mês, a franquia e
+// as cobranças mensais (a da clínica, na Assinatura; a do profissional
+// pagador, em Minha nota fiscal). O link "Pagar" é a página do Asaas.
+import Badge from "../config/Badge.astro";
+import Card from "../config/Panel.astro";
+import { formatCalendarDate } from "../../../lib/clinicTime";
+import { CHARGE_STATUS_LABEL, type UsageCharge } from "../../../lib/data/fiscalBilling";
+import { formatCentsBRL } from "../../../lib/money";
+
+interface Props {
+  title: string;
+  /** Notas deste mês, por emissor (nome e quantidade). */
+  rows: { name: string; count: number }[];
+  allowance: number | null;
+  unitPriceCents: number | null;
+  feeCents?: number | null;
+  charges: UsageCharge[];
+  note?: string;
+}
+const { title, rows, allowance, unitPriceCents, feeCents = null, charges, note } = Astro.props;
+const total = rows.reduce((sum, r) => sum + r.count, 0);
+const over = allowance === null ? 0 : Math.max(total - allowance, 0);
+const TONE: Record<string, "success" | "warning" | "danger" | "neutral" | "info"> = { paid: "success", pending: "info", overdue: "danger", creating: "neutral", manual: "neutral", none: "neutral" };
+const month = (period: string) => formatCalendarDate(period, "MM/yyyy");
+---
+
+<Card>
+  <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">{title}</h2>
+  <div class="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+    <p class="font-display text-[28px] leading-none font-bold text-ink tabular-nums">{total}</p>
+    <p class="text-[15px] text-ink-soft">
+      {total === 1 ? "nota emitida neste mês" : "notas emitidas neste mês"}
+      {allowance !== null && <>, franquia de {allowance}{over > 0 ? `: ${over} acima` : ""}</>}
+    </p>
+  </div>
+  {
+    rows.length > 1 && (
+      <ul class="mt-3 divide-y divide-line text-[15px]">
+        {rows.map((r) => (
+          <li class="flex items-center justify-between gap-3 py-1.5">
+            <span class="min-w-0 text-ink">{r.name}</span>
+            <span class="text-ink-mid tabular-nums">{r.count}</span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  {
+    (unitPriceCents !== null || feeCents !== null) && (
+      <p class="mt-3 text-sm text-ink-soft">
+        {feeCents !== null ? `Taxa mensal ${formatCentsBRL(feeCents)}. ` : ""}
+        {unitPriceCents !== null ? `Cada nota acima da franquia: ${formatCentsBRL(unitPriceCents)}.` : ""} Cobrança no mês seguinte, com vencimento junto da mensalidade.
+      </p>
+    )
+  }
+  {note && <p class="mt-1 text-sm text-ink-soft">{note}</p>}
+  {
+    charges.length > 0 && (
+      <ul class="mt-4 flex flex-col gap-2 border-t border-line pt-3">
+        {charges.map((c) => (
+          <li class="flex flex-wrap items-center justify-between gap-2">
+            <span class="flex min-w-0 flex-col">
+              <span class="text-[15px] font-semibold text-ink">
+                Notas de {month(c.period)}: {formatCentsBRL(c.amountCents)}
+              </span>
+              <span class="text-sm text-ink-soft">
+                {c.notesCount} {c.notesCount === 1 ? "nota" : "notas"}
+                {c.feeCents > 0 ? `, taxa ${formatCentsBRL(c.feeCents)}` : ""}, vence {formatCalendarDate(c.dueDate, "dd/MM/yyyy")}
+              </span>
+            </span>
+            <span class="flex items-center gap-2">
+              <Badge variant={TONE[c.status] ?? "neutral"}>{CHARGE_STATUS_LABEL[c.status] ?? c.status}</Badge>
+              {c.invoiceUrl && (c.status === "pending" || c.status === "overdue") && (
+                <a href={c.invoiceUrl} target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-brand">
+                  Pagar
+                </a>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Card>
