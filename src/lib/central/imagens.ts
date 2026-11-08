@@ -24,7 +24,7 @@ export const IMAGENS: Record<string, ArticleImage[]> = {
   "config-profissionais": [shot("config-profissionais", "Configurações › Profissionais, com o botão Novo profissional destacado.", "Profissionais: a lista mostra o registro, o WhatsApp e o selo do que falta.")],
   "config-locais": [shot("config-locais", "Configurações › Locais, com o botão Novo local destacado.", "Locais: consultórios e atendimento domiciliar.")],
   "config-agendas": [shot("config-agendas", "Configurações › Agendas, com o botão Nova agenda destacado.", "Agendas: uma por profissional, mais a da equipe para exames.")],
-  "config-servicos": [shot("config-servicos", "Configurações › Serviços, com o botão Novo serviço destacado.", "Serviços: o selo diz o que falta para o serviço aparecer para marcar.")],
+  "config-servicos": [shot("config-servicos", "Configurações › Serviços, com a pergunta De qual profissional? e o botão Novo serviço destacado.", "Serviços: escolha o profissional para ver os serviços dele; o selo diz o que falta para o serviço aparecer para marcar.")],
   "config-horarios": [shot("config-horarios", "Configurações › Horários, com o seletor de agenda destacado e a semana da agenda.", "Horários: escolha a agenda e adicione os horários de cada dia.")],
   "config-feriados": [shot("config-feriados", "Configurações › Feriados, com o botão Adicionar destacado.", "Feriados: os nacionais já vêm cadastrados; adicione os da clínica.")],
   "config-convenios": [shot("config-convenios", "Configurações › Convênios, com o botão Novo plano destacado.", "Convênios: planos atendidos e a opção de pedir carteirinha.")],
