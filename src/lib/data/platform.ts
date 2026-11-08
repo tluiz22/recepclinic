@@ -856,3 +856,151 @@ export function platformAsaasNfse(env: ServiceEnv = platformEnv()) {
 }
 
 export type PlatformAsaasNfse = ReturnType<typeof platformAsaasNfse>;
+
+// ---------------------------------------------------------------------------
+// Arquivos e entrega automática das notas do Asaas (N4)
+// ---------------------------------------------------------------------------
+export type AutoDeliveryFacts = {
+  invoiceId: string;
+  clinicId: string;
+  status: string;
+  nfseNumber: string | null;
+  pdfPath: string | null;
+  amountCents: number;
+  payerName: string;
+  appointmentId: string;
+  scheduledAt: string;
+  patientName: string;
+  contactName: string;
+  contactPhone: string;
+  savedPhone: string | null;
+  autoSend: boolean;
+};
+
+export function platformInvoiceFiles(env: ServiceEnv = platformEnv()) {
+  const db = platformClient(env);
+  const fail = (error: unknown, what: string) => {
+    if (error) throw new Error(`Arquivos da nota: ${what}`, { cause: error });
+  };
+  return {
+    /** Guarda o PDF e o XML (bucket privado) e marca a entrega automática. */
+    async store(clinicId: string, invoiceId: string, files: { pdf: Uint8Array | null; xml: Uint8Array | null }): Promise<void> {
+      let pdfPath: string | null = null;
+      let xmlPath: string | null = null;
+      if (files.pdf) {
+        const path = `${clinicId}/${invoiceId}.pdf`;
+        const { error } = await db.storage.from("nfse-pdf").upload(path, new Blob([files.pdf as BlobPart], { type: "application/pdf" }), { contentType: "application/pdf", upsert: true });
+        fail(error, "PDF");
+        pdfPath = path;
+      }
+      if (files.xml) {
+        const path = `${clinicId}/${invoiceId}.xml`;
+        const { error } = await db.storage.from("nfse-xml").upload(path, new Blob([files.xml as BlobPart], { type: "application/xml" }), { contentType: "application/xml", upsert: true });
+        fail(error, "XML");
+        xmlPath = path;
+      }
+      const { error } = await db.rpc("platform_set_invoice_files", { p_invoice_id: invoiceId, p_pdf_path: pdfPath as string, p_xml_path: xmlPath as string });
+      fail(error, "caminhos");
+    },
+    /** Emitidas pelo Asaas sem o PDF guardado (o download falhou): a rotina tenta de novo. */
+    async missingFiles(limit = 50): Promise<{ invoiceId: string; clinicId: string; issuerId: string; asaasInvoiceId: string }[]> {
+      const { data, error } = await db
+        .from("nfse_invoices")
+        .select("id, clinic_id, issuer_id, asaas_invoice_id")
+        .eq("provider", "asaas")
+        .in("status", ["issued", "canceling", "canceled"])
+        .is("pdf_path", null)
+        .not("asaas_invoice_id", "is", null)
+        .limit(limit);
+      fail(error, "pendentes");
+      return (data ?? []).map((r) => ({ invoiceId: r.id, clinicId: r.clinic_id, issuerId: r.issuer_id!, asaasInvoiceId: r.asaas_invoice_id! }));
+    },
+    async claimDeliveries(limit = 20): Promise<{ invoiceId: string; clinicId: string }[]> {
+      const { data, error } = await db.rpc("platform_claim_auto_deliveries", { p_limit: limit });
+      fail(error, "entregas");
+      return ((data ?? []) as { invoice_id: string; clinic_id: string }[]).map((r) => ({ invoiceId: r.invoice_id, clinicId: r.clinic_id }));
+    },
+    async finishDelivery(invoiceId: string, ok: boolean): Promise<void> {
+      const { error } = await db.rpc("platform_finish_auto_delivery", { p_invoice_id: invoiceId, p_ok: ok });
+      fail(error, "entrega concluída");
+    },
+    async deliveryFacts(invoiceId: string): Promise<AutoDeliveryFacts | null> {
+      const { data, error } = await db
+        .from("nfse_invoices")
+        .select(
+          "id, clinic_id, status, nfse_number, pdf_path, payments ( amount_cents, payer_name, appointment_id, patient_id, appointments ( scheduled_at ), patients ( full_name, contacts ( full_name, phone ) ) )",
+        )
+        .eq("id", invoiceId)
+        .maybeSingle();
+      fail(error, "nota");
+      if (!data) return null;
+      const p = data.payments as unknown as {
+        amount_cents: number;
+        payer_name: string;
+        appointment_id: string;
+        patient_id: string;
+        appointments: { scheduled_at: string };
+        patients: { full_name: string; contacts: { full_name: string; phone: string } };
+      };
+      const { data: fin } = await db.from("patient_finance").select("invoice_phone, invoice_auto_send").eq("patient_id", p.patient_id).maybeSingle();
+      return {
+        invoiceId: data.id,
+        clinicId: data.clinic_id,
+        status: data.status,
+        nfseNumber: data.nfse_number,
+        pdfPath: data.pdf_path,
+        amountCents: p.amount_cents,
+        payerName: p.payer_name,
+        appointmentId: p.appointment_id,
+        scheduledAt: p.appointments.scheduled_at,
+        patientName: p.patients.full_name,
+        contactName: p.patients.contacts.full_name,
+        contactPhone: p.patients.contacts.phone,
+        savedPhone: fin?.invoice_phone ?? null,
+        autoSend: fin?.invoice_auto_send === true,
+      };
+    },
+    async pdf(path: string): Promise<Uint8Array> {
+      const { data, error } = await db.storage.from("nfse-pdf").download(path);
+      fail(error, "PDF guardado");
+      return new Uint8Array(await data!.arrayBuffer());
+    },
+    /** Envio registrado (uma vez por destino: o índice único barra o repetido). */
+    async recordDelivery(row: { clinicId: string; invoiceId: string; destination: string; target: "contact" | "other"; ok: boolean; error: string | null; whatsappMessageId: string | null }): Promise<boolean> {
+      const { error } = await db.from("nfse_deliveries").insert({
+        clinic_id: row.clinicId,
+        invoice_id: row.invoiceId,
+        channel: "whatsapp",
+        destination: row.destination,
+        target: row.target,
+        status: row.ok ? "sent" : "failed",
+        error: row.error,
+        whatsapp_message_id: row.whatsappMessageId,
+        automatic: true,
+      });
+      if (error && (error as { code?: string }).code === "23505") {
+        // Nova tentativa depois de uma falha: atualiza o mesmo envio.
+        const { error: again } = await db
+          .from("nfse_deliveries")
+          .update({ status: row.ok ? "sent" : "failed", error: row.error, whatsapp_message_id: row.whatsappMessageId })
+          .eq("invoice_id", row.invoiceId)
+          .eq("channel", "whatsapp")
+          .eq("destination", row.destination)
+          .eq("automatic", true)
+          .neq("status", "sent");
+        fail(again, "envio repetido");
+        return false;
+      }
+      fail(error, "envio");
+      return true;
+    },
+    /** Já houve envio automático com sucesso para este destino? */
+    async alreadySent(invoiceId: string, destination: string): Promise<boolean> {
+      const { data, error } = await db.from("nfse_deliveries").select("status").eq("invoice_id", invoiceId).eq("destination", destination).eq("automatic", true).maybeSingle();
+      fail(error, "envio anterior");
+      return data?.status === "sent";
+    },
+  };
+}
+
+export type PlatformInvoiceFiles = ReturnType<typeof platformInvoiceFiles>;

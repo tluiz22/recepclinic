@@ -49,6 +49,8 @@ type InvoiceForDelivery = {
   environment: string;
   nfse_number: string | null;
   xml_path: string | null;
+  provider: string;
+  pdf_path: string | null;
   payment_id: string;
   payments: {
     amount_cents: number;
@@ -65,7 +67,7 @@ async function loadInvoice(db: DbClient, clinicId: string, invoiceId: string): P
     await db
       .from("nfse_invoices")
       .select(
-        "id, status, environment, nfse_number, xml_path, payment_id, payments ( amount_cents, payer_name, appointment_id, patient_id, appointments ( scheduled_at ), patients ( full_name, contact_id, contacts ( full_name, phone ) ) )",
+        "id, status, environment, nfse_number, xml_path, provider, pdf_path, payment_id, payments ( amount_cents, payer_name, appointment_id, patient_id, appointments ( scheduled_at ), patients ( full_name, contact_id, contacts ( full_name, phone ) ) )",
       )
       .eq("clinic_id", clinicId)
       .eq("id", invoiceId)
@@ -86,12 +88,25 @@ export async function loadInvoiceXml(db: DbClient, path: string): Promise<string
 /** PDF (DANFSe) da nota: do XML guardado, com a marca "CANCELADA" se for o caso. */
 export async function invoicePdf(db: DbClient, clinicId: string, invoiceId: string): Promise<{ bytes: Uint8Array; filename: string }> {
   const invoice = unwrap(
-    await db.from("nfse_invoices").select("status, nfse_number, xml_path").eq("clinic_id", clinicId).eq("id", invoiceId).maybeSingle(),
+    await db.from("nfse_invoices").select("status, nfse_number, xml_path, pdf_path, provider").eq("clinic_id", clinicId).eq("id", invoiceId).maybeSingle(),
     "Nota fiscal",
-  ) as { status: string; nfse_number: string | null; xml_path: string | null } | null;
+  ) as { status: string; nfse_number: string | null; xml_path: string | null; pdf_path: string | null; provider: string } | null;
+  const filename = `NFSe_${invoice?.nfse_number ?? invoiceId}.pdf`;
+  // Nota do Asaas (N4): o PDF da prefeitura, guardado no bucket privado.
+  if (invoice?.provider === "asaas") {
+    if (!invoice.pdf_path) throw new DataError("not_found", "Nota fiscal: PDF ainda não guardado");
+    return { bytes: await loadStoredPdf(db, invoice.pdf_path), filename };
+  }
   if (!invoice?.xml_path) throw new DataError("not_found", "Nota fiscal: XML não guardado");
   const xml = await loadInvoiceXml(db, invoice.xml_path);
-  return { bytes: await buildDanfse(xml, { canceled: invoice.status === "canceled" }), filename: `NFSe_${invoice.nfse_number ?? invoiceId}.pdf` };
+  return { bytes: await buildDanfse(xml, { canceled: invoice.status === "canceled" }), filename };
+}
+
+/** PDF guardado da nota do Asaas (o RLS do Storage confere quem lê). */
+export async function loadStoredPdf(db: DbClient, path: string): Promise<Uint8Array> {
+  const { data, error } = await db.storage.from("nfse-pdf").download(path);
+  if (error || !data) throw new DataError("not_found", "PDF da nota: não encontrado");
+  return new Uint8Array(await data.arrayBuffer());
 }
 
 /** Guardados no Financeiro do paciente para as próximas notas. */
@@ -151,11 +166,19 @@ export async function deliverInvoice(
 ): Promise<DeliveryLine[]> {
   const targets = parseTargets(input);
   const invoice = await loadInvoice(db, clinicId, invoiceId);
-  if (invoice.status !== "issued" || !invoice.xml_path || !invoice.nfse_number) throw new DataError("invalid", `Envio da nota: ${DELIVERY_MESSAGES.notIssued}`);
-  if (input.save) await saveDestinations(db, clinicId, invoice.payments.patient_id, { phone: targets.phone, email: targets.email, autoSend: !!input.autoSend });
+  const asaas = invoice.provider === "asaas";
+  if (invoice.status !== "issued" || !invoice.nfse_number || (asaas ? !invoice.pdf_path : !invoice.xml_path)) throw new DataError("invalid", `Envio da nota: ${DELIVERY_MESSAGES.notIssued}`);
+  // Nota do Asaas (decisão de 30/out): o e-mail da nota é o do Asaas para quem pagou; aqui, só WhatsApp.
+  if (asaas) targets.email = null;
+  if (asaas && !targets.contact && !targets.phone) throw new DataError("invalid", `Envio da nota: ${DELIVERY_MESSAGES.nothing}`, { destinos: DELIVERY_MESSAGES.nothing });
+  if (input.save) {
+    // Nota do Asaas: o e-mail guardado no Financeiro não muda por aqui.
+    const email = asaas ? (await getSavedDestinations(db, clinicId, invoice.payments.patient_id)).email : targets.email;
+    await saveDestinations(db, clinicId, invoice.payments.patient_id, { phone: targets.phone, email, autoSend: !!input.autoSend });
+  }
 
-  const [settings, xml] = await Promise.all([getClinicSettings(db, clinicId), loadInvoiceXml(db, invoice.xml_path)]);
-  const pdf = await buildDanfse(xml);
+  const [settings, xml] = await Promise.all([getClinicSettings(db, clinicId), asaas ? Promise.resolve("") : loadInvoiceXml(db, invoice.xml_path!)]);
+  const pdf = asaas ? await loadStoredPdf(db, invoice.pdf_path!) : await buildDanfse(xml);
   const filename = `NFSe_${invoice.nfse_number}.pdf`;
   const label = clinicLabel(settings.name, settings.messageArticle);
   const payment = invoice.payments;

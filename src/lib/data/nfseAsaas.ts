@@ -6,7 +6,8 @@ import { platformEnv } from "../env";
 import { logError } from "../log";
 import type { DbClient } from "./clients";
 import { DataError, fromDbError } from "./errors";
-import { asaasInvoiceRecorder, platformAsaasNfse, platformIssuerStore, type AsaasInvoiceRecorder, type PlatformAsaasNfse, type PlatformIssuerStore } from "./platform";
+import { copyInvoiceFiles } from "./nfseAutoDelivery";
+import { asaasInvoiceRecorder, platformAsaasNfse, platformInvoiceFiles, platformIssuerStore, type AsaasInvoiceRecorder, type PlatformAsaasNfse, type PlatformIssuerStore } from "./platform";
 
 // Nota fiscal pelo Asaas (N3b; planejamento-nfse-asaas.md, seções 5 e 14).
 // O banco escolhe o emissor do atendimento e reserva a nota ("emitindo"); o
@@ -39,6 +40,8 @@ export function defaultAsaasNfseDeps(): AsaasNfseDeps {
     fiscalFor: (apiKey) => asaasFiscalApi({ baseUrl: asaas.baseUrl, apiKey }),
     topUp: TOP_UP,
     now: () => new Date(),
+    // N4: PDF e XML para o bucket privado; a entrega automática fica pendente.
+    afterIssued: (invoiceId, clinicId, remote, fiscal) => copyInvoiceFiles(platformInvoiceFiles(), clinicId, invoiceId, remote, fiscal),
   };
 }
 

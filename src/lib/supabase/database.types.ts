@@ -1397,14 +1397,14 @@ isOneToOne: false
                   ]
                 },"nfse_invoices": {
                   Row: {
-                    "access_key": string | null,"asaas_invoice_id": string | null,"asaas_status": string | null,"cancel_reason": string | null,"cancel_reason_code": number | null,"cancel_reason_text": string | null,"cancel_requested_by": string | null,"canceled_at": string | null,"checked_at": string | null,"clinic_id": string,"dps_id": string | null,"dps_number": number | null,"environment": string,"error_code": string | null,"error_message": string | null,"id": string,"issued_at": string | null,"issuer_id": string | null,"nfse_number": string | null,"payment_id": string,"pdf_path": string | null,"provider": string,"requested_at": string,"requested_by": string | null,"series": string | null,"status": string,"validation_code": string | null,"xml_path": string | null
+                    "access_key": string | null,"asaas_invoice_id": string | null,"asaas_status": string | null,"auto_delivery_at": string | null,"auto_delivery_attempts": number,"auto_delivery_status": string | null,"cancel_reason": string | null,"cancel_reason_code": number | null,"cancel_reason_text": string | null,"cancel_requested_by": string | null,"canceled_at": string | null,"checked_at": string | null,"clinic_id": string,"dps_id": string | null,"dps_number": number | null,"environment": string,"error_code": string | null,"error_message": string | null,"id": string,"issued_at": string | null,"issuer_id": string | null,"nfse_number": string | null,"payment_id": string,"pdf_path": string | null,"provider": string,"requested_at": string,"requested_by": string | null,"series": string | null,"status": string,"validation_code": string | null,"xml_path": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "access_key"?: string | null,"asaas_invoice_id"?: string | null,"asaas_status"?: string | null,"cancel_reason"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id": string,"dps_id"?: string | null,"dps_number"?: number | null,"environment": string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"issuer_id"?: string | null,"nfse_number"?: string | null,"payment_id": string,"pdf_path"?: string | null,"provider"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string | null,"status"?: string,"validation_code"?: string | null,"xml_path"?: string | null
+                    "access_key"?: string | null,"asaas_invoice_id"?: string | null,"asaas_status"?: string | null,"auto_delivery_at"?: string | null,"auto_delivery_attempts"?: number,"auto_delivery_status"?: string | null,"cancel_reason"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id": string,"dps_id"?: string | null,"dps_number"?: number | null,"environment": string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"issuer_id"?: string | null,"nfse_number"?: string | null,"payment_id": string,"pdf_path"?: string | null,"provider"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string | null,"status"?: string,"validation_code"?: string | null,"xml_path"?: string | null
                   }
                   Update: {
-                    "access_key"?: string | null,"asaas_invoice_id"?: string | null,"asaas_status"?: string | null,"cancel_reason"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id"?: string,"dps_id"?: string | null,"dps_number"?: number | null,"environment"?: string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"issuer_id"?: string | null,"nfse_number"?: string | null,"payment_id"?: string,"pdf_path"?: string | null,"provider"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string | null,"status"?: string,"validation_code"?: string | null,"xml_path"?: string | null
+                    "access_key"?: string | null,"asaas_invoice_id"?: string | null,"asaas_status"?: string | null,"auto_delivery_at"?: string | null,"auto_delivery_attempts"?: number,"auto_delivery_status"?: string | null,"cancel_reason"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id"?: string,"dps_id"?: string | null,"dps_number"?: number | null,"environment"?: string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"issuer_id"?: string | null,"nfse_number"?: string | null,"payment_id"?: string,"pdf_path"?: string | null,"provider"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string | null,"status"?: string,"validation_code"?: string | null,"xml_path"?: string | null
                   }
                   Relationships: [
                     {
@@ -2729,6 +2729,14 @@ isOneToOne: false
 "nfse_invoice_issued_for_retry":
 { Args: { "p_invoice_id": string }; Returns: boolean
                            },
+"platform_claim_auto_deliveries":
+{ Args: { "p_limit": number }; Returns: {
+              "clinic_id": string,"invoice_id": string
+            }[]
+                           },
+"platform_finish_auto_delivery":
+{ Args: { "p_invoice_id": string,"p_ok": boolean }; Returns: undefined
+                           },
 "platform_link_fiscal_issuer_account":
 { Args: { "p_account_id": string,"p_actor": string,"p_api_key": string,"p_environment": string,"p_issuer_id": string,"p_wallet_id": string,"p_webhook_token": string }; Returns: undefined
                            },
@@ -2740,6 +2748,9 @@ isOneToOne: false
                            },
 "platform_set_fiscal_issuer_municipal_options":
 { Args: { "p_issuer_id": string,"p_options": Json }; Returns: undefined
+                           },
+"platform_set_invoice_files":
+{ Args: { "p_invoice_id": string,"p_pdf_path": string,"p_xml_path": string }; Returns: undefined
                            },
 "publish_knowledge_base":
 { Args: Record<PropertyKey, never>; Returns: number
