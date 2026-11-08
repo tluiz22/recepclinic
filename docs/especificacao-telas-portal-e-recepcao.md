@@ -39,8 +39,8 @@ telefone; Campo de código (6 dígitos); Resumo do agendamento; Barra fixa infer
 Fluxo e navegação:
 
 ```
-P1 Início ─▶ P2 Especialidade ─▶ P3 Médicos ─▶ P4 Médico e modalidades ─▶ P5 Particular/convênio
-                 (pulada se 1)      (pulada se 1)                               (pulada se 1)
+P1 Início ─▶ P2 Especialidade ─▶ P3 Médicos ─▶ P5 Particular/convênio (com os dados do médico)
+                 (pulada se 1)      (pulada se 1)   (pulada se 1)
    ─▶ P6 Dias e horários ─▶ P7 Telefone (+ código) ─▶ P8 Quem será atendido ─▶ P9 Revisão ─▶ P10 Confirmado
                               (pulada com link do bot)        (+ P8b Cadastro novo)
 P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/cancelar).   P13 Link inválido.
@@ -77,12 +77,17 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
   12345/RN), especialidades (principal em destaque), selos de modalidade ("Particular R$ 350", "Unimed", "+2"),
   próximo horário livre ("Amanhã, 14:00" / "Sem horário nos próximos 60 dias").
 - **Filtros:** "Atende meu convênio" (lista dos convênios da clínica).
-- **Ações:** tocar no cartão → P4; profissional sem horário: cartão visível, botão "Avisar a recepção" → P11.
+- **Ações:** tocar no cartão → P5 (ou P6 se uma modalidade só); profissional sem horário: cartão visível com "Sem horário
+  nos próximos 60 dias", sem toque e sem botão (cliente, 08/nov). Até 5 médicos: cartão completo; 6 ou mais: lista
+  compacta (cliente, 08/nov).
 - **Vazio do filtro:** "Nenhum médico de {especialidade} atende {convênio}. [Ver todos] [Falar com a recepção]."
 - **Regras:** só ativos com serviço Consulta ativo; convênio do filtro usa a associação positiva (MC).
 - **Aceite:** 18 profissionais rolam bem no celular (cartões de altura fixa, imagens leves); filtro mantido ao voltar.
 
 ### P4. Médico e modalidades
+
+> **Retirada da jornada (cliente, 08/nov, Etapa 2):** P3 vai direto à P5; o conteúdo abaixo (foto, nome, registro,
+> especialidades, local, orientações; valores e convênios) aparece no topo da P5 e da P6. Mantido como referência.
 
 - **Objetivo:** mostrar como o médico atende antes de qualquer horário.
 - **Exibe:** foto, nome, registro, especialidades; **Particular: R$ X** (ou "Não atende particular"); **Convênios
