@@ -430,9 +430,10 @@ begin
   -- Clínica B: Odonto Exemplo (perfil Adultos)
   -- -------------------------------------------------------------------------
   insert into public.clinics (id, name, max_professionals) values (c_b, 'Odonto Exemplo', 2);
+  -- Perfil antes da Matriz: a agenda de Exames, criada com o item, nasce com o perfil da clínica.
+  update public.clinic_settings set profile = 'adult', reminder_hour = 10 where clinic_id = c_b;
   -- Matriz de acesso (D11): a clínica de exemplo tem tudo liberado.
   insert into public.clinic_features (clinic_id, feature_key) select c_b, key from public.features;
-  update public.clinic_settings set profile = 'adult', reminder_hour = 10 where clinic_id = c_b;
 
   insert into public.clinic_members (clinic_id, user_id, roles) values
     (c_b, u_b_admin, '{admin,professional}'),
