@@ -1,15 +1,19 @@
 # RecepClinic
 
-> **Próxima sessão (cliente, 07/nov): começar pela frente da nota fiscal.**
+> **Próxima sessão: planejar uma nova melhoria (o cliente traz o tema). Frente da nota fiscal encerrada em 08/nov com a
+> validação pendente.**
 >
 > **Duas frentes (cliente, 07/nov):**
 > - **Validação do que está pendente:** [`frente-validacao.md`](frente-validacao.md) (multiprofissional ME, MC, MI, MB
 >   e MS no staging; o ajuste `9b22e00` da Central; depois, produção com autorização).
-> - **Nota fiscal:** bloco "Frente da nota fiscal" do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)
->   (revisar o plano e decidir N-P1 a N-P7; depois N1 em diante, código só com o OK do cliente).
+> - **Nota fiscal:** bloco "Frente da nota fiscal" do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md).
+>   N-P1 a N-P7 decididas; **N1 a N5 feitas na branch `nota-fiscal`** (só local, 7 migrações); roteiro de validação
+>   na seção 15.2. **Pendente: validação do cliente** (tudo da N1 à N5) e a recaptura de `config-nota-fiscal` (fila da
+>   branch). Depois: trazer a `main` para a branch, juntar na `main` e decidir staging/produção (N6 depende do Asaas,
+>   contador e advogado).
 >
-> Staging = `main` em `c60ae26` (com o bloco multiprofissional e a MS); produção sem o bloco multiprofissional (última
-> publicação no [`producao.md`](producao.md)). Capturas da ajuda: fila vazia.
+> **Staging = produção = `main` (`64ec6b1`, 08/nov)**, com o bloco multiprofissional e a validação de 08/nov (itens 1 a 4,
+> fotos, filtros), validados pelo cliente; 9 migrações na produção (`producao.md`). Capturas da ajuda: fila vazia.
 >
 > **BaaS do Asaas (07/nov):** ajustes pedidos pelo Asaas (cláusula nos termos e selo sem registro) no ar: site `beb9e1c`
 > e app `305efd7` (staging e produção; migração `20261228140000` nos dois). **E-mail de reanálise enviado pelo cliente
@@ -161,6 +165,10 @@
 > `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
 >
 > **Pendências**
+> - **Limpeza (item 4, 08/nov):** `clinic_settings.booking_horizon_days` e `consultation_age_limit_years` sem uso; migração
+>   para tirar depois da produção.
+> - **Fotos (cliente, 08/nov):** cadastradas no profissional e na pessoa da Equipe; onde mostrar fora do cadastro fica
+>   para uma etapa posterior, a planejar ([`frente-validacao.md`](frente-validacao.md), registro).
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
 > - **Operação:** 1º backup diário da produção; sessão do painel que caiu (parte P do `staging.md`).
 > - **Clínica piloto (03/nov):** conferir os lembretes de hoje (1º lote depois do cartão na Meta); verificação da

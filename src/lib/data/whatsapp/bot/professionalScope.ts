@@ -1,3 +1,5 @@
+import type { AgendaAttendance } from "../../config/agendas";
+import { BOOKING_HORIZON_DEFAULT } from "../../config/clinic";
 import type { BotCatalog } from "./catalog";
 
 // Clínica com mais de um profissional (MB, cliente, 07/nov/2026; plano
@@ -49,7 +51,7 @@ export function buildScope(catalog: BotCatalog, context: unknown): ProfessionalS
   return { professionals, multi, choice: multi ? choice : null, current, examsOption };
 }
 
-/** O catálogo no contexto da escolha: os serviços do profissional (e os de agenda sem profissional); em "Exames", só os exames. */
+/** O catálogo no contexto da escolha: os serviços do profissional, sem exames; em "Exames", só os exames. */
 export function scopeCatalog(catalog: BotCatalog, scope: ProfessionalScope): BotCatalog {
   if (!scope.multi || !scope.choice) return catalog;
   if (scope.choice === EXAMS_CHOICE) {
@@ -66,10 +68,13 @@ export function scopeCatalog(catalog: BotCatalog, scope: ProfessionalScope): Bot
     return { ...catalog, services, copies: team(catalog.copies) };
   }
   const id = scope.choice;
+  // Exame só na agenda de Exames (cliente, 08/nov/2026): o menu e as Informações gerais do profissional ficam sem
+  // exames; eles estão em "Exames", na pergunta da especialidade.
   const mine = (list: BotCatalog["services"]) =>
     list
-      .map((s) => ({ ...s, agendas: s.agendas.filter((a) => a.professionalId === id || !a.professionalId) }))
-      .filter((s) => s.agendas.some((a) => a.professionalId === id) || (s.category === "exam" && s.agendas.length > 0));
+      .filter((s) => s.category !== "exam")
+      .map((s) => ({ ...s, agendas: s.agendas.filter((a) => a.professionalId === id) }))
+      .filter((s) => s.agendas.length > 0);
   // Serviços por profissional (MS): a opção do menu usa os dados da cópia dele (valor, preparo).
   const services = mine(catalog.services).map((s) => {
     const own = s.agendas.find((a) => a.professionalId === id);
@@ -92,4 +97,24 @@ export function specialtyOptions(scope: ProfessionalScope, othersLabel: string):
 
 export function professionalsOf(scope: ProfessionalScope, specialtyId: string): ScopeProfessional[] {
   return scope.professionals.filter((p) => (specialtyId === NO_SPECIALTY ? !p.specialties.length : p.specialties.some((s) => s.id === specialtyId)));
+}
+
+/**
+ * Perfil, prazo e idade limite da conversa (cliente, 08/nov/2026; antes, da clínica): os do profissional em uso; na
+ * escolha "Exames", os da Equipe; sem escolha ainda, o perfil calculado da clínica, sem idade limite. Cada marcação usa
+ * os da agenda escolhida (booking.ts); estes valem para as palavras do bot e as Informações gerais.
+ */
+export function scopeAttendance(
+  catalog: Pick<BotCatalog, "services">,
+  scope: Pick<ProfessionalScope, "current" | "choice">,
+  clinicProfile: AgendaAttendance["profile"],
+): { profile: AgendaAttendance["profile"]; ageLimitYears: number | null; horizonDays: number } {
+  const agendas = catalog.services.flatMap((s) => s.agendas);
+  const agenda = scope.current
+    ? agendas.find((a) => a.professionalId === scope.current!.id)
+    : scope.choice === EXAMS_CHOICE
+      ? agendas.find((a) => !a.professionalId)
+      : undefined;
+  if (!agenda) return { profile: clinicProfile, ageLimitYears: null, horizonDays: BOOKING_HORIZON_DEFAULT };
+  return { profile: agenda.attendance.profile, ageLimitYears: agenda.attendance.consultationAgeLimitYears, horizonDays: agenda.attendance.bookingHorizonDays };
 }

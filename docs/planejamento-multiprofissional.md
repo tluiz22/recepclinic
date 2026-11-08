@@ -249,3 +249,89 @@ da Marcar.
    Horários e Meus serviços; serviço novo já dele; sem Desativar nem Migrar.
 6. WhatsApp: clínica com vários profissionais — "Exames" só com os exames da equipe; clínica de um profissional — igual
    a antes.
+
+## 11. Ajuste da validação (cliente, 08/nov/2026): escolha do profissional em Configurações
+
+- **Serviços e Horários**, com mais de um profissional: a mesma busca de profissional (`OwnerPicker`), com a
+  especialidade (o grupo) em negrito. Pelo menu, nada vem escolhido: a escolha é obrigatória. Só vem escolhido quando
+  outra tela manda para um profissional (`?profissional=` em Serviços, `?agenda=` em Horários), como a volta de um
+  serviço, "Cadastrar os horários" da agenda ou do serviço. A escolha **não fica mais lembrada** (o cookie de 180 dias
+  da S4 saiu). Em Horários, a lista suspensa de agendas virou "De qual profissional?" e a barra "Profissional: … ·
+  Trocar de profissional"; agenda de profissional desativado fica em "Outras agendas".
+- **Agendas e Profissionais:** a lista fica como estava, com "Buscar agenda" / "Buscar profissional" acima dela a partir
+  de 6 cadastros (`LIST_FILTER_FROM`), filtrando sem acento pelo nome, profissional, especialidade ou registro.
+- As abas Ativos/Desativados de Serviços mantêm o profissional escolhido.
+
+**Roteiro (staging):** Serviços e Horários pelo menu pedem o profissional; escolher, abrir um serviço e voltar (volta no
+mesmo profissional); sair e entrar pelo menu (pede de novo); Agenda › "Cadastrar os horários" abre Horários já
+escolhido; grupos da busca em negrito; em clínica com 6+ profissionais, o filtro de Agendas e Profissionais.
+
+## 12. Perfil, prazo e idade limite por profissional (cliente, 08/nov/2026; item 4 da validação)
+
+**Pedido:** "Perfil", "Prazo para oferecer horários" e "Idade limite para consulta" saem de Configurações › Clínica e
+passam a ser de cada profissional.
+
+**Decisões do cliente (08/nov):**
+1. Palavras das telas da clínica inteira: **calculadas** pelos perfis (todos Pediátrica: criança/responsável; todos
+   Adultos: paciente/contato; diferentes: paciente/responsável). Bot e link de agendar usam o perfil do profissional.
+2. Equipe (agenda "Exames"): **valores próprios** (perfil e prazo; sem idade limite, pois só faz exame), no cartão
+   Atendimento da agenda da Equipe.
+3. Ficha do paciente: **sai** o aviso de idade limite. Cadastro de paciente novo: **sai** também. Fica no Marcar e no bot.
+4. Onde editar: cartão **Atendimento no cadastro do profissional** (sem agenda: o cartão pede para criar).
+5. O profissional com login **muda os dele** (como o resto do cadastro, S1).
+
+**Como ficou:**
+- Migração `20270101140000_atendimento_por_profissional.sql`: `agendas.profile`, `booking_horizon_days` e
+  `consultation_age_limit_years` (cópia dos valores da clínica; a da Equipe sem idade limite); gatilho que recalcula
+  `clinic_settings.profile` a cada mudança de perfil ou ativação de agenda; agenda nova nasce com o perfil da clínica,
+  60 dias e sem idade limite.
+- Bot: perfil, palavras e Informações gerais pelo profissional em uso (`scopeAttendance`); cada marcação usa o prazo e
+  a idade limite da agenda (no "Primeiro horário", os comuns às agendas). Link de agendar: prazo e perfil da agenda (com
+  mais de uma, o maior prazo e o perfil comum). Marcar: aviso com a idade limite de cada agenda do serviço. Importação
+  de agenda: idade limite da agenda de cada atendimento.
+- **Pendente (limpeza):** `clinic_settings.booking_horizon_days` e `consultation_age_limit_years` ficam sem uso; saem
+  numa migração depois da produção.
+
+**Roteiro no staging:**
+1. Configurações › Clínica: o cartão Atendimento mostra só o fuso e as palavras das telas.
+2. Configurações › Profissionais › um profissional: cartão Atendimento com os valores de antes da clínica. Mude o
+   perfil para Adultos, o prazo para 30 e desligue a idade limite; salve.
+3. Volte à Clínica: com perfis diferentes, as palavras viram "paciente" e "responsável".
+4. Configurações › Agendas › Exames: cartão Atendimento sem idade limite; mude o prazo e salve.
+5. Agenda › Marcar: paciente adulto + consulta de um profissional com idade limite: o aviso cita o profissional.
+6. Ficha do paciente acima da idade: sem o aviso.
+7. WhatsApp: com o prazo de 30 dias, o bot só oferece horários até 30 dias; com perfil Pediátrica, a consulta não
+   pergunta "para quem é".
+
+## 13. Exame só na agenda de Exames (cliente, 08/nov/2026; item 3 da validação)
+
+**Pedido:** com mais de um profissional, o menu do profissional não oferece exames (estão em "Exames", na pergunta da
+especialidade) e as Informações gerais dele não trazem valores nem informações de exame.
+
+**Decisões do cliente (08/nov):**
+1. "Exames será sempre na agenda de exames. O profissional faz parte da equipe e a equipe se organiza junto com os
+   profissionais para tratar os exames." O profissional que tenta cadastrar exame recebe o aviso.
+2. Vale para **todas** as clínicas, também as de um profissional só.
+3. Os exames que já estavam na agenda de um profissional **passam para a agenda de Exames**, com os horários e os
+   atendimentos futuros.
+
+**Como ficou:**
+- Migração `20270101150000_exame_so_na_agenda_de_exames.sql`: move cada exame de profissional para a agenda de Exames
+  (criada ou reativada onde faltar): horários só dele, cópia dos horários "todos os serviços" da agenda do profissional
+  (só para o exame), atendimentos futuros, séries em andamento e links. O histórico fica. Daqui em diante, o banco
+  recusa exame de profissional (`services_exam_team_only`).
+- Serviço novo: tipo Exame põe "Equipe (exames)" e desabilita os profissionais, com o aviso; o servidor recusa e mostra
+  a mensagem no campo Tipo.
+- Bot: o catálogo do profissional escolhido fica sem exames (menu e Informações gerais); "quero marcar exame" com um
+  profissional escolhido passa para "Exames".
+- Staging, antes da migração: Odonto Sorriso Leve, Clareamento, Limpeza e Restauração (19 atendimentos futuros); Clínica
+  Exemplo Saúde, Espirometria e Exame com Arquivo (desativados). **Produção:** listar antes de aplicar (o Claude mostra
+  a lista ao cliente).
+
+**Roteiro no staging:**
+1. Odonto Sorriso Leve › Configurações › Serviços: Clareamento, Limpeza e Restauração em "Equipe (exames)"; Horários da
+   agenda Exames com os horários copiados; Agenda: os atendimentos futuros desses exames na agenda Exames.
+2. Novo serviço, tipo Exame: o profissional vira "Equipe (exames)" e aparece o aviso.
+3. WhatsApp (clínica com mais de um profissional): escolhido o profissional, o menu fica sem "Exames"; Informações
+   gerais › Valores sem exames; "quero marcar exame" leva aos exames.
+

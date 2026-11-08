@@ -63,7 +63,9 @@ const locationOptions = locations.filter((l) => (l.isActive || offered.has(l.id)
 const hiddenHomeVisit = !homeVisitOn && locations.some((l) => l.type === "home_visit" && offered.has(l.id));
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
-const list = withAllFilter("/admin/configuracoes/servicos", all);
+// A lista volta no profissional do serviço (cliente, 08/nov/2026: a lista não lembra a escolha).
+const listOwner = ownOnly ? null : service ? (service.isTeam ? TEAM_OWNER : (service.professionalId ?? "sem")) : Astro.url.searchParams.get("profissional");
+const list = withAllFilter(listOwner ? `/admin/configuracoes/servicos?profissional=${encodeURIComponent(listOwner)}` : "/admin/configuracoes/servicos", all);
 const action = withAllFilter(`/api/admin/configuracoes/servicos/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
@@ -226,6 +228,15 @@ for (const w of serviceWindows) {
           }
         </Field>
         {chooseOwner && ownerGroups.length === 0 && <p class="mt-2 text-sm text-ink-soft">Nenhum profissional cadastrado ainda.</p>}
+        {/* Exame só na agenda de Exames (cliente, 08/nov/2026). */}
+        {
+          isNew && (
+            <p class="mt-2 rounded-lg border border-pend-200 bg-pend-50 px-3 py-2 text-sm text-pend-800" data-only="exam" data-exam-note role="note">
+              Serviços do tipo exame ficam na agenda de Exames (Equipe): a equipe e os profissionais se organizam juntos nos exames.
+              {ownOnly ? " Peça ao Administrador para cadastrar o exame." : teamAgenda ? "" : " Crie a agenda de Exames em Agendas."}
+            </p>
+          )
+        }
       </div>
 
       <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">
@@ -293,7 +304,21 @@ for (const w of serviceWindows) {
         <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
-    {!isNew && <ActiveToggle action={action} isActive={service!.isActive} what="o serviço" />}
+    {
+      !isNew && (
+        <ActiveToggle
+          action={action}
+          isActive={service!.isActive}
+          what="o serviço"
+          message={
+            serviceWindows.length
+              ? `Sai das telas de marcação e ${serviceWindows.length === 1 ? "o horário cadastrado só para ele também é desativado" : `os ${serviceWindows.length} horários cadastrados só para ele também são desativados`}; o histórico fica. Reativar o serviço traz os horários de volta.`
+              : undefined
+          }
+          inactiveMessage="Está desativado: não aparece nas telas de marcação. Reativar traz de volta, com os horários que foram desativados junto com ele."
+        />
+      )
+    }
   </div>
 
   <script>
@@ -306,12 +331,16 @@ for (const w of serviceWindows) {
       form?.querySelectorAll<HTMLElement>("[data-only]").forEach((el) => {
         el.hidden = el.dataset.only !== category;
       });
-      // A equipe só atende exames (cliente, 21/out/2026).
+      // A equipe só atende exames (cliente, 21/out/2026), e exame só na agenda de Exames (08/nov/2026).
       const team = owner?.querySelector<HTMLOptionElement>("option[data-team]");
       if (team) {
         team.disabled = category !== "exam";
         if (team.disabled && team.selected) owner!.value = "";
       }
+      owner?.querySelectorAll<HTMLOptionElement>("option[value]:not([data-team])").forEach((option) => {
+        if (option.value) option.disabled = category === "exam";
+      });
+      if (owner && category === "exam" && team) owner.value = team.value;
     };
     select?.addEventListener("change", sync);
     sync();

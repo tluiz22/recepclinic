@@ -117,7 +117,7 @@ export type BotMessageDef = {
 };
 
 export const BOT_MESSAGES: BotMessageDef[] = [
-  { key: "welcome", label: "Boas-vindas", markers: ["clinica"], required: [], defaultText: "Olá! 👋 Aqui é {clinica}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo." },
+  { key: "welcome", label: "Boas-vindas", markers: ["nome", "clinica"], required: [], defaultText: "Olá, {nome}! 👋 Aqui é {clinica}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo." },
   { key: "menu", label: "Menu", markers: [], required: [], defaultText: "Escolha uma opção abaixo ou faça uma pergunta." },
   {
     key: "not_understood",
@@ -184,6 +184,14 @@ export function validateBotMessage(key: BotMessageKey, text: string): string {
 /** Texto próprio com os valores no lugar dos marcadores. */
 export function renderMarkers(text: string, values: Record<string, string>): string {
   return text.replace(/\{([^{}]*)\}/g, (match, m: string) => values[m] ?? match);
+}
+
+/**
+ * Boas-vindas próprias da clínica (cliente, 08/nov/2026): {nome} = primeiro nome do contato cadastrado. Sem cadastro,
+ * o {nome} sai com a vírgula ou o espaço da frente ("Olá, {nome}!" vira "Olá!").
+ */
+export function renderWelcome(text: string, clinica: string, nome: string | null): string {
+  return renderMarkers(nome ? text : text.replace(/,?[ \t]*\{nome\}/g, ""), { clinica, nome: nome ?? "" });
 }
 
 export async function listBotMessages(db: DbClient, clinicId: string): Promise<Map<BotMessageKey, string>> {

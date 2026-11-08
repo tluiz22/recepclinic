@@ -47,8 +47,8 @@ export const CAPTURAS = [
   ["config-locais", "/admin/configuracoes/locais", ["Novo local"], []],
   ["config-agendas", "/admin/configuracoes/agendas", ["Nova agenda"], []],
   ["config-servicos", "/admin/configuracoes/servicos", ["Novo serviço"], []],
-  // O id da agenda muda a cada seed: "?agenda=@Nome" escolhe a opção pelo nome (ver abaixo).
-  ["config-horarios", "/admin/configuracoes/horarios?agenda=@Dra. Helena Costa", [], ["#agenda"]],
+  // O id da agenda muda a cada seed: "?agenda=@Nome" escolhe o profissional pelo nome (ver abaixo).
+  ["config-horarios", "/admin/configuracoes/horarios?agenda=@Dra. Helena Costa", [], ["[data-agenda-owner]"]],
   ["config-feriados", "/admin/configuracoes/feriados", ["Adicionar"], []],
   ["config-convenios", "/admin/configuracoes/convenios", ["Novo plano"], []],
   ["config-lembretes", "/admin/configuracoes/lembretes", [], []],
@@ -111,7 +111,10 @@ try {
     if (byName) {
       await page.goto(BASE + path.replace(/\?.*$/, ""), { waitUntil: "networkidle" });
       const id = await page.evaluate(
-        (label) => [...document.querySelectorAll("#agenda option")].find((o) => o.textContent.trim() === label)?.value,
+        // Horários escolhe pelo profissional (cliente, 08/nov/2026): o link dele leva o ?agenda=.
+        (label) =>
+          new URL([...document.querySelectorAll("[data-owner-option] a")].find((a) => a.firstChild?.textContent.trim() === label)?.href ?? "http://x/")
+            .searchParams.get("agenda"),
         byName[1],
       );
       if (!id) {

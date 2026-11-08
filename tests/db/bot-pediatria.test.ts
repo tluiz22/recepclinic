@@ -66,8 +66,9 @@ async function say(phone: string, input: string | { id: string }): Promise<Sent[
 const optionId = (reply: Sent[], titleStart: string) => reply.at(-1)!.options.find((o) => o.title.includes(titleStart))!.id;
 const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 
+// Perfil e idade limite são de cada profissional (cliente, 08/nov/2026): na agenda; o perfil da clínica, o banco calcula.
 async function settings(values: { profile?: "pediatric" | "mixed"; consultation_age_limit_years?: number | null }) {
-  await adminClient().from("clinic_settings").update(values).eq("clinic_id", f.clinicId);
+  await adminClient().from("agendas").update(values).eq("clinic_id", f.clinicId);
 }
 
 async function lastLinkPatient(phone: string) {

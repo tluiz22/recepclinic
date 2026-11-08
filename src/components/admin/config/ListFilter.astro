@@ -1,0 +1,45 @@
+---
+// Filtro das listas de Configurações (cliente, 08/nov/2026): em clínica com
+// muitos profissionais, um campo que filtra, sem acento, as linhas da lista
+// (`[data-filter-item]`, pelo `data-search`) que vem logo depois dele. Só
+// aparece a partir de LIST_FILTER_FROM cadastros (pensado para 10+ profissionais).
+import { CONTROL } from "../ui/styles";
+
+interface Props {
+  id: string;
+  label: string;
+  placeholder: string;
+  /** Texto quando nada combina com a busca. */
+  empty: string;
+}
+
+const { id, label, placeholder, empty } = Astro.props;
+---
+
+<div class="mt-3 flex max-w-md flex-col gap-1.5" data-list-filter>
+  <label for={id} class="text-[15px] font-semibold text-ink-mid">{label}</label>
+  <input id={id} type="search" autocomplete="off" placeholder={placeholder} class={CONTROL} data-list-filter-input />
+  <p hidden class="text-sm text-ink-soft" role="status" data-list-filter-empty>{empty}</p>
+</div>
+
+<script>
+  const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  document.querySelectorAll<HTMLElement>("[data-list-filter]").forEach((filter) => {
+    const input = filter.querySelector<HTMLInputElement>("[data-list-filter-input]");
+    const empty = filter.querySelector<HTMLElement>("[data-list-filter-empty]");
+    // A lista filtrada é a primeira com linhas depois do campo.
+    let list: Element | null = filter.nextElementSibling;
+    while (list && !list.querySelector("[data-filter-item]")) list = list.nextElementSibling;
+    if (!input || !list) return;
+    const items = [...list.querySelectorAll<HTMLElement>("[data-filter-item]")];
+    input.addEventListener("input", () => {
+      const terms = fold(input.value).split(/\s+/).filter(Boolean);
+      let shown = 0;
+      for (const item of items) {
+        item.hidden = !terms.every((t) => fold(item.dataset.search ?? "").includes(t));
+        if (!item.hidden) shown++;
+      }
+      if (empty) empty.hidden = shown > 0;
+    });
+  });
+</script>

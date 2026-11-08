@@ -105,6 +105,8 @@ const fresh = (phone: string) =>
   adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
 
 const WELCOME = "Olá! 👋 Aqui é da Clínica Bot Entrada.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
+/** Número cadastrado: com o primeiro nome do contato (cliente, 08/nov/2026). */
+const WELCOME_KNOWN = WELCOME.replace("Olá! 👋", "Olá, Resp.! 👋");
 const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
 // 1º menu da conversa: a apresentação do que dá para resolver (cliente, 04/nov/2026); sem coexistência, sem a recepção.
 const MENU_INTRO =
@@ -174,14 +176,14 @@ describe("sem atendimento relevante", () => {
 
   it("10. passado, cancelado e realizado não contam: o menu direto", async () => {
     const reply = await say(P3, "oi");
-    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU_INTRO]);
+    expect(reply.map((m) => m.body)).toEqual([WELCOME_KNOWN, MENU_INTRO]);
   });
 });
 
 describe("um atendimento", () => {
   it("2 e 3. pergunta sem detalhes; \"Não, outro assunto\" leva ao menu", async () => {
     let reply = await say(P2, "oi");
-    expect(reply.map((m) => m.body)).toEqual([WELCOME, ASK_ONE]);
+    expect(reply.map((m) => m.body)).toEqual([WELCOME_KNOWN, ASK_ONE]);
     expect(titles(reply)).toEqual(["Sim, quero", "Não, outro assunto"]);
     expect(bodies(reply)).not.toMatch(/Paciente|10\/03/);
     reply = await say(P2, { id: "entry_no" });
@@ -276,7 +278,7 @@ describe("um atendimento", () => {
 describe("vários atendimentos", () => {
   it("7 e 8. pergunta sem detalhes; \"Não, outro assunto\" leva ao menu", async () => {
     let reply = await say(P1, "oi");
-    expect(reply.map((m) => m.body)).toEqual([WELCOME, ASK_MANY]);
+    expect(reply.map((m) => m.body)).toEqual([WELCOME_KNOWN, ASK_MANY]);
     expect(titles(reply)).toEqual(["Sim, consultar", "Não, outro assunto"]);
     reply = await say(P1, "2");
     expect(reply.map((m) => m.body)).toEqual([MENU_INTRO]);
@@ -495,7 +497,7 @@ describe("robustez", () => {
     failAppointments = true;
     try {
       let reply = await say(P1, "oi");
-      expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU_INTRO]);
+      expect(reply.map((m) => m.body)).toEqual([WELCOME_KNOWN, MENU_INTRO]);
       failAppointments = false;
       await fresh(P1);
       await say(P1, "oi");
@@ -590,7 +592,7 @@ describe("robustez", () => {
 
   it("16. isolamento entre clínicas: o mesmo telefone na outra clínica não vê estes atendimentos", async () => {
     const reply = await say(P1, "oi", NUMBER_B);
-    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU_INTRO]);
+    expect(reply.map((m) => m.body)).toEqual([WELCOME_KNOWN, MENU_INTRO]);
     expect((await conversation(P1, g.clinicId)).state).toBe("MENU");
     // O cliente do bot da outra clínica não lê o atendimento daqui (RLS).
     const { data } = await createClinicServiceClient(g.clinicId, env()).from("appointments").select("id").eq("id", consultP1);

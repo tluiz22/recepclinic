@@ -18,6 +18,10 @@ import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
 import { ownSettingsOnly } from "../../../../lib/clinicAccess";
+import PhotoCard from "../../../../components/admin/config/PhotoCard.astro";
+import { profilePhotoLink } from "../../../../lib/data/config/profilePhotos";
+import AttendanceCard from "../../../../components/admin/config/AttendanceCard.astro";
+import { agendaOfProfessional } from "../../../../lib/data/config/agendas";
 
 const clinic = Astro.locals.clinic!;
 const { id } = Astro.params;
@@ -54,6 +58,10 @@ const [plans, acceptedPlans] = insuranceOn
 // Informações que o bot responde (MI, 07/nov/2026, M5): só por profissional, com o bot.
 const botOn = clinic.features.includes("whatsapp_bot") && !isNew;
 const botInfo = botOn ? await getProfessionalBotInfo(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!) : EMPTY_BOT_INFO;
+// Foto (cliente, 08/nov/2026): só no cadastro, por enquanto.
+const photoUrl = isNew ? null : await profilePhotoLink(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { kind: "professional", id: id! });
+// Perfil, prazo e idade limite (cliente, 08/nov/2026; antes, da clínica): na agenda do profissional.
+const agenda = isNew ? null : await agendaOfProfessional(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!);
 const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 ---
 
@@ -187,6 +195,22 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
         <a href={ownOnly ? `/admin/configuracoes/profissionais/${id}` : list} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
+    {isNew && <p class="text-sm text-ink-soft">Depois de cadastrar, você inclui aqui mesmo o atendimento (perfil, prazo e idade limite) e a foto.</p>}
+    {
+      !isNew && (
+        <AttendanceCard
+          action={action}
+          attendance={agenda}
+          who="do profissional"
+          createAgendaHref={ownOnly ? undefined : `/admin/configuracoes/agendas/novo?profissional=${encodeURIComponent(id!)}`}
+        />
+      )
+    }
+    {
+      !isNew && (
+        <PhotoCard action={action} photoUrl={photoUrl} name={professional!.displayName} withDialog={ownOnly || !professional!.isActive} />
+      )
+    }
     {
       insuranceOn && (
         <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 p-4 sm:p-5`} aria-labelledby="convenios-titulo">

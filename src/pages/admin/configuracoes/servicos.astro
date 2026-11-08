@@ -19,8 +19,6 @@ import { listProfessionals } from "../../../lib/data/config/professionals";
 import { hasOwner, listServices, TEAM_OWNER } from "../../../lib/data/config/services";
 import { ownerLabel, ownerOptionGroups } from "../../../lib/serviceOwner";
 import OwnerPicker from "../../../components/admin/OwnerPicker.astro";
-
-const OWNER_COOKIE = "rc_servicos_profissional";
 import { loadSetupStatus } from "../../../lib/data/config/setup";
 import { formatCentsBRL } from "../../../lib/money";
 import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
@@ -37,7 +35,8 @@ const [all, professionals, setup] = await Promise.all([
 // Profissional com login (MS, S1): só os serviços dele.
 const ownOnly = ownSettingsOnly(clinic);
 // Busca de profissional (MS, S4, opção D; cliente, 07/nov/2026): com mais de um dono, a lista mostra só os serviços
-// do escolhido; a última escolha fica lembrada neste navegador. Agrupada pela especialidade (10+ profissionais).
+// do escolhido. Agrupada pela especialidade (10+ profissionais). Sem lembrar a escolha (cliente, 08/nov/2026): pelo
+// menu, a pessoa escolhe sempre; só vem escolhido quando outra tela manda para um profissional (?profissional=).
 const NO_OWNER = "sem";
 const keyOf = (s: { professionalId: string | null; isTeam: boolean }) => (s.isTeam ? TEAM_OWNER : (s.professionalId ?? NO_OWNER));
 const counts = new Map<string, number>();
@@ -49,12 +48,7 @@ const ownerGroups = [
 const ownerKeys = ownerGroups.flatMap((g) => g.options.map((o) => o.value));
 const usePicker = !ownOnly && ownerKeys.length > 1;
 const asked = Astro.url.searchParams.get("profissional");
-const remembered = Astro.cookies.get(OWNER_COOKIE)?.value ?? null;
-const chosenKey = usePicker ? ([asked, asked === null ? remembered : null].find((k) => k && ownerKeys.includes(k)) ?? null) : null;
-if (usePicker) {
-  if (chosenKey) Astro.cookies.set(OWNER_COOKIE, chosenKey, { path: "/admin/configuracoes/servicos", maxAge: 180 * 24 * 60 * 60, sameSite: "lax", httpOnly: true });
-  else if (asked !== null) Astro.cookies.delete(OWNER_COOKIE, { path: "/admin/configuracoes/servicos" });
-}
+const chosenKey = usePicker && asked && ownerKeys.includes(asked) ? asked : null;
 const chosenLabel = chosenKey === NO_OWNER ? "Sem profissional" : chosenKey ? ownerLabel({ professionalId: chosenKey === TEAM_OWNER ? null : chosenKey, isTeam: chosenKey === TEAM_OWNER }, professionals) : "";
 const mine = ownOnly ? all.filter((s) => s.professionalId === clinic.ownProfessionalId) : usePicker ? all.filter((s) => keyOf(s) === chosenKey) : all;
 const clinicActive = (ownOnly ? mine : all).filter((s) => s.isActive);
@@ -100,7 +94,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
           <h2 id="busca-titulo" class="font-display text-[19px] font-bold text-ink">De qual profissional?</h2>
           <p class="text-[15px] text-ink-soft">Cada profissional tem os próprios serviços. Escolha para ver e editar os dele.</p>
         </div>
-        <OwnerPicker id="busca-profissional" groups={ownerGroups} counts={counts} href={(value) => `?profissional=${value}`} />
+        <OwnerPicker id="busca-profissional" groups={ownerGroups} counts={counts} href={(value) => `?profissional=${value}${showInactive ? "&todos=1" : ""}`} />
       </section>
     )
   }
@@ -111,7 +105,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
           <span class="text-ink-soft">Profissional: </span>
           <strong class="font-semibold">{chosenLabel}</strong>
         </p>
-        <a href="?profissional=" class="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand no-underline hover:underline">
+        <a href={showInactive ? "?todos=1" : "?"} class="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand no-underline hover:underline">
           Trocar de profissional
         </a>
       </div>
@@ -123,7 +117,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
     <p class="text-sm text-ink-soft" role="status">
       {services.length} {services.length === 1 ? "serviço" : "serviços"}{services.length === 1 ? (showInactive ? " desativado" : " ativo") : showInactive ? " desativados" : " ativos"}
     </p>
-    <ActiveFilter showInactive={showInactive} active={active.length} inactive={mine.length - active.length} />
+    <ActiveFilter showInactive={showInactive} active={active.length} inactive={mine.length - active.length} keep={chosenKey ? `profissional=${encodeURIComponent(chosenKey)}` : ""} />
   </div>
 
   {

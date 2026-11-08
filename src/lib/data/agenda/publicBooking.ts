@@ -1,3 +1,4 @@
+import { BOOKING_HORIZON_DEFAULT } from "../config/clinic";
 import { localDateOf, todayIn } from "../../clinicTime";
 import type { ClinicProfile } from "../../vocabulary";
 import type { DbClient } from "../clients";
@@ -39,7 +40,8 @@ type Option = { id: string; name: string };
 type LocationOption = Option & { type: string; address: string | null };
 
 /** Agendas e locais em que o link pode marcar. */
-export type LinkCandidates = { agendas: Option[]; locations: LocationOption[] };
+/** Agendas com o perfil e o prazo do profissional delas (cliente, 08/nov/2026). */
+export type LinkCandidates = { agendas: (Option & { profile: ClinicProfile; horizonDays: number })[]; locations: LocationOption[] };
 
 export type PublicSlot = {
   start: Date;
@@ -136,7 +138,12 @@ export async function linkCandidates(db: DbClient, clinicId: string, link: Booki
   }
   const [agendas, offered] = await Promise.all([
     agendaIds.length
-      ? db.from("agendas").select("id, name").eq("clinic_id", clinicId).in("id", agendaIds).then((r) => unwrap(r, "Agendas"))
+      ? db
+          .from("agendas")
+          .select("id, name, profile, booking_horizon_days")
+          .eq("clinic_id", clinicId)
+          .in("id", agendaIds)
+          .then((r) => unwrap(r, "Agendas"))
       : Promise.resolve([]),
     db
       .from("service_locations")
@@ -150,9 +157,11 @@ export async function linkCandidates(db: DbClient, clinicId: string, link: Booki
     .map((row) => ({ id: row.locations.id, name: row.locations.name, type: row.locations.type, address: row.locations.address }))
     .filter((location) => (link.locationId ? location.id === link.locationId : !link.locationCategory || location.type === link.locationCategory))
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  const byId = new Map(agendas.map((agenda) => [agenda.id, agenda.name]));
+  const byId = new Map(agendas.map((agenda) => [agenda.id, agenda]));
   return {
-    agendas: agendaIds.filter((id) => byId.has(id)).map((id) => ({ id, name: byId.get(id)! })),
+    agendas: agendaIds
+      .filter((id) => byId.has(id))
+      .map((id) => ({ id, name: byId.get(id)!.name, profile: byId.get(id)!.profile, horizonDays: byId.get(id)!.booking_horizon_days })),
     locations,
   };
 }
@@ -161,7 +170,7 @@ export async function linkCandidates(db: DbClient, clinicId: string, link: Booki
 export async function loadBookingPage(db: DbClient, clinicId: string, linkId: string, now: Date = new Date()): Promise<BookingPage> {
   const link = await getBookingLink(db, clinicId, linkId);
   const [settings, service, patient] = await Promise.all([
-    db.from("clinic_settings").select("timezone, profile, booking_horizon_days").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
+    db.from("clinic_settings").select("timezone, profile").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
     db
       .from("services")
       .select("id, name, category, scheduling_mode, preparation_instructions")
@@ -185,13 +194,17 @@ export async function loadBookingPage(db: DbClient, clinicId: string, linkId: st
     link.appointmentId ? loadAppointmentView(db, clinicId, link.appointmentId) : Promise.resolve(null),
     state === "form" ? bookingLinkLastDate(db, clinicId, link, now) : Promise.resolve(null),
   ]);
-  // Só datas dentro do prazo da clínica para oferecer horários (cliente, 11/out/2026) e, no retorno, do prazo dele.
-  const lastDate = earliestDate(returnLastDate, horizonLastDate(todayIn(settings.timezone, now), settings.booking_horizon_days));
+  // Só datas dentro do prazo para oferecer horários (cliente, 11/out/2026) e, no retorno, do prazo dele. O prazo e o
+  // perfil são do profissional da agenda (cliente, 08/nov/2026): com mais de uma, o maior prazo e o perfil comum.
+  const horizonDays = candidates.agendas.length ? Math.max(...candidates.agendas.map((a) => a.horizonDays)) : BOOKING_HORIZON_DEFAULT;
+  const profiles = new Set(candidates.agendas.map((a) => a.profile));
+  const profile = profiles.size === 1 ? [...profiles][0] : settings.profile;
+  const lastDate = earliestDate(returnLastDate, horizonLastDate(todayIn(settings.timezone, now), horizonDays));
 
   return {
     clinicId,
     timeZone: settings.timezone,
-    profile: settings.profile,
+    profile,
     link,
     state,
     service: {

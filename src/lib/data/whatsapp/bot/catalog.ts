@@ -1,5 +1,5 @@
 import type { DbClient } from "../../clients";
-import { listAgendas } from "../../config/agendas";
+import { listAgendas, type AgendaAttendance } from "../../config/agendas";
 import { listLocations, type LocationType } from "../../config/locations";
 import { listProfessionals } from "../../config/professionals";
 import { listServices, servicePriceAt, type ServiceCategory } from "../../config/services";
@@ -32,6 +32,8 @@ export type BotAgenda = {
   specialties: { id: string; name: string }[];
   /** Tipos de local com horário nesta agenda. */
   locationTypes: LocationType[];
+  /** Perfil, prazo e idade limite do profissional (ou da Equipe) desta agenda (cliente, 08/nov/2026). */
+  attendance: AgendaAttendance;
 };
 
 export type BotService = {
@@ -133,7 +135,7 @@ export async function loadCatalog(db: DbClient, clinicId: string, features: read
           const agenda = agendaById.get(id)!;
           const professional = agenda.professionalId ? professionalById.get(agenda.professionalId) : undefined;
           const locationTypes = [...new Set(fits.filter((w) => w.agenda_id === id).map((w) => locationById.get(w.location_id)!.type))];
-          return { id, serviceId: service.id, name: agenda.name, professionalName: professional?.displayName ?? null, professionalId: agenda.professionalId ?? null, specialty: professional?.specialty ?? null, specialties: (professional?.specialties ?? []).map((sp) => ({ id: sp.id, name: sp.name })), locationTypes };
+          return { id, serviceId: service.id, name: agenda.name, professionalName: professional?.displayName ?? null, professionalId: agenda.professionalId ?? null, specialty: professional?.specialty ?? null, specialties: (professional?.specialties ?? []).map((sp) => ({ id: sp.id, name: sp.name })), locationTypes, attendance: { profile: agenda.profile, bookingHorizonDays: agenda.bookingHorizonDays, consultationAgeLimitYears: agenda.consultationAgeLimitYears } };
         })
         .sort((a, b) => (a.professionalName ?? a.name).localeCompare(b.professionalName ?? b.name, "pt-BR")),
       locationPrices,

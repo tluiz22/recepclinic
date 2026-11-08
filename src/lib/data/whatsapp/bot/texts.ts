@@ -77,10 +77,13 @@ export const price = (cents: number | null | undefined) => (cents == null ? null
  * Boas-vindas (EA, cliente, 02/nov/2026): com a base de conhecimento ligada, convida a escrever o que precisa;
  * sem ela, o texto de antes (o texto livre não seria entendido).
  */
-export const welcome = (clinicLabel: string, invite = true) =>
-  invite
-    ? `Olá! 👋 Aqui é ${clinicLabel}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.`
-    : `Olá! 👋 Aqui é ${clinicLabel}.`;
+export const welcome = (clinicLabel: string, invite = true, name: string | null = null) => {
+  // Número cadastrado: com o primeiro nome do contato (cliente, 08/nov/2026).
+  const hello = name ? `Olá, ${name}! 👋` : "Olá! 👋";
+  return invite
+    ? `${hello} Aqui é ${clinicLabel}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.`
+    : `${hello} Aqui é ${clinicLabel}.`;
+};
 export const MENU_BODY = "Escolha uma opção abaixo (ou digite o número).";
 /** Menu com a base de conhecimento ligada: convida a perguntar (cliente, 04/nov/2026). */
 export const MENU_BODY_ASK = "Escolha uma opção abaixo ou faça uma pergunta.";

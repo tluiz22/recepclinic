@@ -3,8 +3,11 @@
 > **Frente da nota fiscal (retomar daqui), 07/nov/2026.** Separada da frente de validação a pedido do cliente (07/nov;
 > validação em [`frente-validacao.md`](frente-validacao.md)). Base pronta para a emissão por profissional: serviços,
 > especialidades e convênios por profissional (MS e M1 a M8, no staging). **N-P1 a N-P7 decididas (14.7).**
-> **Em andamento:** N1 a N5 na branch `nota-fiscal`, sem parar, testes por etapa, só local (sem staging); o cliente
-> valida no fim. Bloqueios externos (para a N6): reanálise do BaaS pelo Asaas, contador, advogado.
+> **N1 a N5 feitas (08/nov) na branch `nota-fiscal`** (`23cae85`…`aee7cec`, 7 migrações `20261231120000` a
+> `20261231170000`), só local, testes por etapa (unidade, banco e Playwright). **Próximo passo:** o cliente valida
+> local pelo roteiro da seção 15.2; depois, juntar na `main` (trazer a `main` antes) e decidir staging/produção.
+> Bloqueios externos (para a N6): reanálise do BaaS pelo Asaas, contador (PIS/COFINS), advogado (contrato do
+> profissional pagador).
 >
 > **Estado atual (retomar daqui), 07/nov/2026.** **Asaas pediu ajustes na análise BaaS (13.10):** cláusula do Asaas nos
 > termos e no contrato e selo sem registro de carregamento. Ajustes no ar (07/nov): site `beb9e1c` e app `305efd7` no staging e
@@ -688,6 +691,50 @@ commit na branch. Asaas falso (`src/lib/asaas/fake.ts`) nos testes; Sandbox só 
 | **N4** | PDF e XML do Asaas copiados para o bucket privado; entrega só pelo WhatsApp (`rc_nota_fiscal_v1`) pela saída de entregas, idempotente. |
 | **N4b** | Contrato de notas do profissional pagador (taxa mensal + preço por nota + franquia, N-P4; aceite com login, N-P6), conta de cobrança dele; apuração mensal por pagador (dono "junto da clínica" soma na franquia da clínica, N-P3); cobrança avulsa (clínica: excedente; profissional: taxa + excedente); inadimplência suspende só aquele emissor (N-P5); telas "Minhas notas e cobranças", Assinatura (detalhamento por emissor) e Suporte (valores do contrato do profissional). |
 | **N5** | Desligar e remover o emissor antigo (DPS, assinatura, Sefin, simulação, certificado no Vault, contador da DPS); `EXECUTE` revogado; teste que barra import de `src/lib/nfse/client.ts`. |
+
+### 15.1 Feito (08/nov/2026, branch `nota-fiscal`)
+
+| Etapa | Commit | Migração |
+|---|---|---|
+| N1 | `23cae85` | — |
+| N2a | `d903b36` | `20261231120000_emissores_fiscais` |
+| N2b | `766bf75` | — |
+| N3a | `7603734` | `20261231130000_tomador_da_nota` |
+| N3b | `36584cd` | `20261231140000_emissao_pelo_asaas` (rotina `notas-fiscais` a cada 10 min) |
+| N4 | `2bf705f` | `20261231150000_arquivos_e_entrega_da_nota` (bucket `nfse-pdf`) |
+| N4b | `c9086de` | `20261231160000_cobranca_das_notas` |
+| N5 | `aee7cec` | `20261231170000_remove_emissor_antigo` (apaga `clinic_fiscal_settings`, certificados do Vault, contador da DPS) |
+
+**Decisões do cliente (08/nov, N4b):** a cobrança das notas (excedente da clínica e a do profissional pagador)
+**vence junto da mensalidade** da clínica (dia do vencimento do contrato dela); apuração do mês anterior nos 5
+primeiros dias. Suspensão do profissional pagador com a cobrança **vencida há 15 dias** (como a clínica); paga, libera.
+
+**Pontos técnicos para a validação e a publicação:**
+- Webhook das notas: `/api/asaas/notas`, um token por subconta (gravado no Vault ao criar a subconta). Sem endereço
+  público (local), a nota sai pelo botão "Conferir no Asaas" ou pela rotina.
+- Variáveis: nenhuma nova (`ASAAS_API_KEY`/`ASAAS_BASE_URL` da conta principal e `SITE_URL` para o webhook);
+  `NFSE_SIMULATION` sai.
+- Antes da N5 na produção: conferir que não há notas nem certificados do emissor antigo (a migração apaga os
+  certificados do Vault; as notas antigas ficam só para consulta).
+- Central de Ajuda: captura `config-nota-fiscal` na fila (`capturas-pendentes.md`, na branch).
+- Pendente de terceiros: `pisCofinsTaxStatus` (contador), termos do contrato de notas do profissional
+  (`ISSUER_CONTRACT_TERMS`, provisórios: advogado), cobertura do BaaS para subconta de PJ do médico (Asaas).
+
+### 15.2 Roteiro de validação (local, `npm run dev`; logins do seed, senha `recepclinic-local`)
+
+1. `git switch nota-fiscal`, `npx supabase db reset`, `npm run dev`.
+2. **Administrador** (`admin@exemplo-saude.local`) › Configurações › Nota fiscal: emissor da clínica e a lista de
+   profissionais com busca, especialidade e "Como emite"; trocar o Rafael para "Pelo emissor da clínica" e voltar.
+3. Abrir a Marina: passos até emitir, dados fiscais (erro no CNPJ mantém os campos), "Quem paga as notas".
+4. **Suporte** (`suporte@recepclinic.local`): na página do emissor, "Criar subconta no Asaas" (Sandbox de verdade;
+   atenção ao endereço do webhook local) e os valores do contrato de notas do profissional.
+5. **Profissional** (`psicologa@exemplo-saude.local`): Configurações › Minha nota fiscal; aceitar o contrato;
+   "Minhas notas e cobranças".
+6. Paciente › Financeiro: e-mail e endereço de quem paga (o CEP preenche rua e bairro).
+7. Financeiro › Pagamento: registrar, "Emitir nota" (pede e-mail e endereço se faltar), "Conferir no Asaas",
+   PDF, "Enviar nota" (só WhatsApp), cancelar (Administrador).
+8. Assinatura: cartão "Notas fiscais" (franquia e cobranças).
+9. Testes: `npm test` e `npm run test:db` (com o banco local no ar).
 
 ## Fontes (consultadas em 29/out/2026)
 

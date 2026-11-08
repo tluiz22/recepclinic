@@ -513,17 +513,9 @@ describe("dias e horários (sobreposição por agenda)", () => {
     }
   });
 
-  it("exame cruza com o horário geral da agenda (cliente, 28/out/2026)", async () => {
-    // Exame do próprio profissional (MS: cada serviço tem um dono).
-    const doctorExam = await createService(
-      db(admin),
-      clinicId,
-      { name: "Exame da Dra.", category: "exam", durationMinutes: 20, priceCents: 0, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" },
-      { professionalId: professional.id },
-    );
-    const thursday = { ...base, weekday: 4, agendaId: doctorAgenda.id, locationId: office.id };
-    await addAvailabilityWindow(db(admin), clinicId, { ...thursday, startTime: "08:00", endTime: "12:00" });
-    await addAvailabilityWindow(db(admin), clinicId, { ...thursday, serviceId: doctorExam.id, startTime: "09:00", endTime: "10:00" });
+  it("exame de profissional é recusado: exame só na agenda de Exames (cliente, 08/nov/2026)", async () => {
+    const exam = { name: "Exame da Dra.", category: "exam" as const, durationMinutes: 20, priceCents: 0, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" as const };
+    expect(await codeOf(() => createService(db(admin), clinicId, exam, { professionalId: professional.id }))).toBe("invalid");
   });
 
   it("Recepção não mexe nos horários", async () => {

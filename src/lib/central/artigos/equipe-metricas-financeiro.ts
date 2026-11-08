@@ -47,7 +47,7 @@ export const equipeMetricasFinanceiro = [
       "Em Acesso às agendas, escolha Todas ou Selecionadas. Restrito: a pessoa vê só a agenda do profissional ligado a ela e as marcadas aqui; sem nenhuma, não vê agenda. O Administrador sempre vê todas.",
       "Toque em Convidar. O convite não aceito aparece como \"Convite pendente\"; use Reenviar convite se precisar.",
     ],
-    notes: ["Você não pode tirar o seu próprio papel de Administrador.", "A lista avisa \"Falta ligar ao profissional\" quando alguém tem o papel Profissional sem cadastro ligado.", "Para retirar o acesso, abra a pessoa e use Remover."],
+    notes: ["Você não pode tirar o seu próprio papel de Administrador.", "A lista avisa \"Falta ligar ao profissional\" quando alguém tem o papel Profissional sem cadastro ligado.", "Para retirar o acesso, abra a pessoa e use Remover.", "Foto: abra a pessoa e, no cartão Foto, envie um arquivo PNG, JPG ou WebP de até 4 MB (Remover foto tira). Por enquanto, a foto aparece só no cadastro."],
     contextual: ["/admin/configuracoes/equipe"],
   }),
   article({

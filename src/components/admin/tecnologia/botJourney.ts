@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "07/11/2026";
+export const JOURNEY_UPDATED = "08/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -58,7 +58,7 @@ const CHOOSE_PROFESSIONAL: FlowItem[] = [
   ),
   bot(
     "Daqui em diante, tudo no contexto dele",
-    "Serviços, valores, formas de pagamento, convênios e observações do profissional escolhido. O menu ganha \"Outro profissional\" (volta à especialidade). Remarcar e cancelar mostram todos os atendimentos do paciente. A escolha vale até a conversa recomeçar.",
+    "Serviços, valores, formas de pagamento, convênios e observações do profissional escolhido, sem exames: exame fica sempre na agenda de Exames, na opção \"Exames\" da pergunta da especialidade (cliente, 08/nov/2026; o \"quero marcar exame\" leva para lá). O menu ganha \"Outro profissional\" (volta à especialidade). Remarcar e cancelar mostram todos os atendimentos do paciente. A escolha vale até a conversa recomeçar.",
   ),
 ];
 
@@ -78,7 +78,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot(
               "\"Olá! 👋 Aqui é [clínica]. Sou a assistente virtual e estou aqui para ajudar. Você pode escrever o que precisa ou escolher uma das opções abaixo.\"",
-              "Sem \"Perguntas frequentes no bot\" (o Suporte desligou), só \"Olá! 👋 Aqui é [clínica].\": o texto livre não seria entendido.",
+              "Número cadastrado: \"Olá, [primeiro nome]! 👋…\" (no texto próprio da clínica, onde ela pôs {nome}). Sem \"Perguntas frequentes no bot\" (o Suporte desligou), só \"Olá! 👋 Aqui é [clínica].\": o texto livre não seria entendido.",
             ),
             check("A mensagem já diz o que a pessoa precisa?", "Com \"Perguntas frequentes no bot\" (vem ligado com o bot; item 9). \"Oi\" sozinho: não."),
             branch(
@@ -107,7 +107,7 @@ export const JOURNEY: JourneySection[] = [
     intro: "Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário são escolhidos numa página, com a agenda real.",
     flow: [
       bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sem preço. Com um serviço só, o bot escolhe sozinho e avisa: \"Vamos marcar *Consulta*\"."),
-      check("O serviço tem horário livre no prazo da agenda?"),
+      check("O serviço tem horário livre no prazo da agenda?", "Prazo para oferecer horários do profissional da agenda (ou da Equipe), no cadastro dele (cliente, 08/nov/2026; antes, da clínica)."),
       branch(
         ["Não", [bot("\"No momento não há horários livres\" e pergunta se quer falar com a recepção", "Sim: a recepção assume (item 8). Não: o menu.")]],
         [
@@ -140,7 +140,7 @@ export const JOURNEY: JourneySection[] = [
               ],
             ),
             bot("É para você ou para outra pessoa?", "Clínica pediátrica: só no exame."),
-            bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite na clínica. No \"Primeiro horário\": \"A clínica atende…\"."),
+            bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite no cadastro do profissional da agenda (cliente, 08/nov/2026; antes, da clínica). No \"Primeiro horário\": \"A clínica atende…\"."),
             bot(
               "Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento",
               "Número novo: o paciente primeiro, depois o nome de quem escreve (paciente menor: \"do responsável\"), que recebe os lembretes. Menor de 18 anos marcando para si: só pelo responsável. Acima da idade limite: \"Dr(a). X atende pacientes até N anos. Deseja agendar para outra criança?\"",

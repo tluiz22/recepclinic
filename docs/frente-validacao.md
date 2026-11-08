@@ -35,4 +35,19 @@ Não são validação de tela; ficam aqui para não se perderem.
 
 ## 4. Registro
 
-(vazio: cada validação entra aqui com a data, o resultado e o que foi corrigido)
+- **08/nov:** ajuste pedido pelo cliente ao validar o item 1/2: escolha do profissional em Serviços e Horários (sem
+  lembrar a escolha; só vem escolhido vindo de outra tela), especialidade em negrito e filtro em Agendas e
+  Profissionais. Detalhe e roteiro: seção 11 do [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md).
+- **08/nov, melhorias pedidas pelo cliente (4 itens, um por vez):**
+  1. **Desativar serviço desativa os horários só dele** (decisão: reativar traz de volta só os que saíram junto; o que
+     cruza com outro horário fica desativado e a tela avisa). Migração `20270101120000` (`availability_windows.off_with_service`).
+     Teste `tests/db/horarios-com-o-servico.test.ts`. Validar: serviço com horário próprio › Desativar (o aviso diz
+     quantos horários) › Horários (sumiram) › Reativar (voltam).
+  2. Boas-vindas do bot com o nome de quem já é cadastrado: **feito** (main). Decisões do cliente (08/nov): primeiro nome do contato; no texto próprio da clínica, o campo `{nome}` (sem cadastro, some com a vírgula da frente); número sem cadastro, a mensagem de antes.
+  3. Menu do profissional sem exames e Informações gerais sem exames: **feito** (main, migração 20270101150000). Regra do cliente: exame sempre na agenda de Exames, em todas as clínicas. Detalhe: `planejamento-multiprofissional.md`, seção 13.
+  4. Perfil, prazo para oferecer horários e idade limite por profissional: **feito** (main, migração 20270101140000). Decisões e roteiro: `planejamento-multiprofissional.md`, seção 12.
+- **08/nov, fotos (pedido do cliente):** cartão "Foto" no cadastro do profissional e no da pessoa da Equipe (PNG, JPG
+  ou WebP até 4 MB; bucket privado `profile-photos`; o Administrador envia para todos, o profissional com login a
+  própria). Migração `20270101130000`. Teste `tests/db/fotos-do-cadastro.test.ts`. **Pendente (cliente, 08/nov):**
+  planejar e fazer, numa etapa posterior, onde a foto aparece fora do cadastro (listas, caixa de seleção do
+  profissional, menu, página de agendar, bot).

@@ -9,6 +9,7 @@ import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import { CARD, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas, professionalsWithoutAgenda } from "../../../../lib/data/config/agendas";
+import AttendanceCard from "../../../../components/admin/config/AttendanceCard.astro";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
 import { originPage, setupOrigin, setupParam, withParams } from "../../../../lib/setupFlow";
 
@@ -118,7 +119,7 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
             ) : (
               "Profissionais"
             )}
-            .
+            . Perfil, prazo para oferecer horários e idade limite: no cartão Atendimento do cadastro do profissional.
           </p>
         ) : (
           <p class="text-sm text-ink-mid">
@@ -137,6 +138,8 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
         <a href={ownOnly ? `/admin/configuracoes/agendas/${id}` : back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
+    {/* Perfil e prazo da Equipe (cliente, 08/nov/2026); a Equipe só faz exame: sem idade limite da Consulta. */}
+    {!isNew && agenda!.kind === "resource" && <AttendanceCard action={action} attendance={agenda} who="da Equipe" withAgeLimit={false} />}
     {
       !isNew && !ownOnly && agenda!.isActive && agendas.some((a) => a.isActive && a.id !== agenda!.id) && (
         <section class={`${CARD} flex flex-col gap-2 p-4 sm:p-5`} aria-label="Migrar para outra agenda">

@@ -11,7 +11,7 @@ import {
   type ServiceCategory,
 } from "../../../../../lib/data/config/services";
 import { listLocations } from "../../../../../lib/data/config/locations";
-import { deactivateServiceWindowsOutside } from "../../../../../lib/data/config/availability";
+import { deactivateServiceWindowsOutside, deactivateWindowsWithService, reactivateWindowsWithService } from "../../../../../lib/data/config/availability";
 import { receivedPreparationFile, setPreparationFile, type PreparationFile } from "../../../../../lib/data/config/preparationFile";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
@@ -35,8 +35,20 @@ export const POST: APIRoute = async (context) => {
     context,
     async () => {
       if (acao === "desativar" || acao === "reativar") {
-        await setServiceActive(db, clinicId, id, acao === "reativar");
-        return { redirectTo: page(), message: acao === "reativar" ? "Serviço reativado." : "Serviço desativado." };
+        // Os horários só deste serviço saem e voltam com ele (cliente, 08/nov/2026).
+        const plural = (n: number) => (n === 1 ? "1 horário" : `${n} horários`);
+        if (acao === "desativar") {
+          const off = await deactivateWindowsWithService(db, clinicId, id);
+          await setServiceActive(db, clinicId, id, false);
+          return { redirectTo: page(), message: `Serviço desativado.${off ? ` ${off === 1 ? "1 horário dele também foi desativado" : `${plural(off)} dele também foram desativados`}.` : ""}` };
+        }
+        await setServiceActive(db, clinicId, id, true);
+        const { reactivated, blocked } = await reactivateWindowsWithService(db, clinicId, id);
+        const back = reactivated ? ` ${reactivated === 1 ? "1 horário dele também foi reativado" : `${plural(reactivated)} dele também foram reativados`}.` : "";
+        const stuck = blocked
+          ? ` ${blocked === 1 ? "1 horário ficou desativado porque" : `${plural(blocked)} ficaram desativados porque`} outro horário ocupa o lugar: veja em Horários.`
+          : "";
+        return { redirectTo: page(), message: `Serviço reativado.${back}${stuck}` };
       }
       const category = (id === "novo" ? formText(form, "category") : (await getService(db, clinicId, id)).category) as ServiceCategory;
       const input = {

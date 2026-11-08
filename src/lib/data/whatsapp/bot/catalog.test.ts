@@ -12,6 +12,7 @@ const agenda = (id: string, serviceId: string, professionalName: string | null):
   specialty: null,
   specialties: [],
   locationTypes: ["clinic"],
+  attendance: { profile: "mixed", bookingHorizonDays: 60, consultationAgeLimitYears: null },
 });
 
 const service = (id: string, name: string, priceCents: number, agendas: BotAgenda[], extra: Partial<BotService> = {}): BotService => ({

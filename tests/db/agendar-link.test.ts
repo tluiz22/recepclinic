@@ -85,8 +85,8 @@ describe("link de agendamento na página pública", () => {
     expect(slots.every((s) => s.agendaName === "Dra. Agenda")).toBe(true);
   });
 
-  it("prazo da clínica para oferecer horários: só datas até o último dia do prazo (cliente, 11/out/2026)", async () => {
-    await adminClient().from("clinic_settings").update({ booking_horizon_days: 7 }).eq("clinic_id", fixture.clinicId);
+  it("prazo do profissional para oferecer horários: só datas até o último dia do prazo (cliente, 11/out e 08/nov/2026)", async () => {
+    await adminClient().from("agendas").update({ booking_horizon_days: 7 }).eq("clinic_id", fixture.clinicId);
     try {
       const created = await link("p1", { serviceId: fixture.ids.consulta });
       const page = await loadBookingPage(bot, fixture.clinicId, created.id, NOW);
@@ -95,7 +95,7 @@ describe("link de agendamento na página pública", () => {
       expect((await listLinkDates(bot, fixture.clinicId, page, NOW)).map((d) => d.date)).toEqual([MON1]);
       expect(await listLinkSlots(bot, fixture.clinicId, page, MON2, NOW)).toEqual([]);
     } finally {
-      await adminClient().from("clinic_settings").update({ booking_horizon_days: 60 }).eq("clinic_id", fixture.clinicId);
+      await adminClient().from("agendas").update({ booking_horizon_days: 60 }).eq("clinic_id", fixture.clinicId);
     }
   });
 

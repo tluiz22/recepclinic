@@ -64,7 +64,7 @@ export const problemasArtigos = [
       "O dia é feriado nacional ou da clínica?",
       "Existe bloqueio no período? (Agenda › Bloqueios)",
       "O serviço está ativo e ligado à agenda e ao local?",
-      "No bot e no link, o dia está dentro do prazo para oferecer horários (Configurações › Clínica)? O painel não tem esse limite.",
+      "No bot e no link, o dia está dentro do prazo para oferecer horários do profissional (Configurações › Profissionais › cartão Atendimento)? O painel não tem esse limite.",
       "Todos os horários já têm atendimento (ou o intervalo entre atendimentos da agenda os ocupa)?",
     ],
   }),

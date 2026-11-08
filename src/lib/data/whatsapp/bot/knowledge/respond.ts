@@ -5,7 +5,7 @@ import { publishedKnowledge } from "../../../knowledge/published";
 import { logAbandonment, WELCOME, type HandoffOrigin } from "../../conversations";
 import { logFunnelEvent } from "../../funnel";
 import { BOOKING_STATES, startBooking, startReturn, type BookingContext } from "../booking";
-import { go, KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, tick, type Bot, type KnowledgeHook } from "../engine";
+import { applyProfessionalChoice, EXAMS_CHOICE, go, KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, tick, type Bot, type KnowledgeHook } from "../engine";
 import { startIdentification } from "../entry";
 import { asksForReception, pick, withoutReceptionWords, yesNo, type Selection } from "../input";
 import { askWaitlistType, handoff, startManage } from "../manage";
@@ -402,7 +402,11 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
       const { flow, group, typed } = takeover;
       // Marcar pela base: o submenu, com marcar, retorno, remarcar, cancelar e encaixe (cliente, 31/out/2026).
       if (flow === "book_consultation") return showSubmenu(b, "CONSULTAS_MENU");
-      if (flow === "book_exam") return showSubmenu(b, "EXAMES_MENU");
+      if (flow === "book_exam") {
+        // Exame só na agenda de Exames (cliente, 08/nov/2026): com um profissional escolhido, passa para "Exames".
+        if (b.scope.multi && b.scope.choice && b.scope.choice !== EXAMS_CHOICE && b.scope.examsOption) await applyProfessionalChoice(b, EXAMS_CHOICE);
+        return showSubmenu(b, "EXAMES_MENU");
+      }
       if (flow === "book_return") return startReturn(b);
       if (flow === "reschedule" || flow === "cancel") return startManage(b, flow, group);
       // Encaixe (cliente, 31/out/2026): o "Encaixe ou antecipar"; sem o item Lista de espera, é com a recepção.

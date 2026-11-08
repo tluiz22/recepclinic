@@ -46,3 +46,6 @@ export const ROW_NAME = "text-[16.5px] leading-snug font-bold break-words text-i
 export const ROW_GO = "flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-canvas hover:text-ink lg:order-last";
 /** Célula de dados: linha inteira no celular. */
 export const ROW_CELL = "col-span-2 min-w-0 text-[15px] text-ink lg:col-span-1";
+
+/** A partir de quantos cadastros as listas de Agendas e Profissionais mostram o filtro (cliente, 08/nov/2026). */
+export const LIST_FILTER_FROM = 6;

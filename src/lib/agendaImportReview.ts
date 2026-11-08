@@ -48,7 +48,8 @@ export type ReviewContext = {
   holidays: Set<string>;
   /** Contatos da clínica com os WhatsApps do link. */
   contacts: ExistingContact[];
-  consultationAgeLimit: number | null;
+  /** Idade limite da Consulta de cada agenda (do profissional dela; cliente, 08/nov/2026); sem a agenda = sem limite. */
+  consultationAgeLimits: Record<string, number | null>;
 };
 
 export type PatientKind = "new" | "existing_patient" | "existing_contact";
@@ -195,13 +196,14 @@ export function reviewImport(patients: ImportPatient[], catalog: ImportCatalog, 
         const grid = outsideGrid(appointment, service, locationId, context);
         if (grid) notes.push(grid);
         if (service.category === "return_visit") notes.push("Retorno: entra sem a Consulta de origem e sem conferir o prazo.");
+        const ageLimit = context.consultationAgeLimits[appointment.agendaId] ?? null;
         if (
           service.category === "consultation" &&
-          context.consultationAgeLimit !== null &&
+          ageLimit !== null &&
           isCalendarDate(patient.birthdate) &&
-          isOverConsultationAgeLimit(patient.birthdate, appointment.date, context.consultationAgeLimit)
+          isOverConsultationAgeLimit(patient.birthdate, appointment.date, ageLimit)
         ) {
-          notes.push(`Paciente com ${context.consultationAgeLimit} anos ou mais: acima da idade-limite da Consulta.`);
+          notes.push(`Paciente com ${ageLimit} anos ou mais: acima da idade-limite da Consulta.`);
         }
       }
       return {

@@ -1,0 +1,84 @@
+---
+// Foto do cadastro (cliente, 08/nov/2026): do profissional e da pessoa da
+// Equipe. Um cartão próprio, como Convênios e Informações do bot: a foto atual
+// (ou as iniciais), o campo do arquivo e "Enviar foto"; com foto, "Remover
+// foto" pede confirmação. Envio pelo servidor (como o logo da clínica).
+import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
+import { CARD, DANGER_BUTTON, HINT, PRIMARY_BUTTON, SECTION_TITLE } from "./formStyles";
+import { PHOTO_TYPES } from "../../../lib/data/config/profilePhotos";
+
+interface Props {
+  action: string;
+  /** Link temporário da foto atual (null: sem foto). */
+  photoUrl: string | null;
+  /** Nome da pessoa: iniciais sem foto e texto alternativo. */
+  name: string;
+  /** Inclui o diálogo de confirmação (falso quando a página já tem um). */
+  withDialog?: boolean;
+}
+
+const { action, photoUrl, name, withDialog = true } = Astro.props;
+const initials =
+  name
+    .replace(/^(dra?|dr)\.?\s+/i, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .filter((c, i, all) => i === 0 || i === all.length - 1)
+    .join("")
+    .toLocaleUpperCase("pt-BR") || "?";
+---
+
+<section class={`${CARD} flex min-w-0 flex-col gap-4 p-4 sm:p-5`} aria-labelledby="foto-titulo">
+  <h2 id="foto-titulo" class={SECTION_TITLE}>Foto</h2>
+  <div class="flex min-w-0 flex-wrap items-start gap-4">
+    {
+      photoUrl ? (
+        <img src={photoUrl} alt={`Foto de ${name}`} class="h-24 w-24 shrink-0 rounded-full border border-line object-cover" data-photo-current />
+      ) : (
+        <span
+          class="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-dashed border-line-strong bg-canvas-deep font-display text-2xl font-bold text-ink-soft"
+          aria-label="Sem foto"
+          role="img"
+        >
+          {initials}
+        </span>
+      )
+    }
+    <div class="flex min-w-0 flex-1 flex-col gap-3">
+      {/* min-w-0: sem ele, o campo de arquivo estica a tela no celular (F-04). */}
+      <form method="POST" action={action} enctype="multipart/form-data" class="flex min-w-0 flex-col gap-2">
+        <input type="hidden" name="acao" value="foto" />
+        <label for="photo" class="text-[15px] font-semibold text-ink">{photoUrl ? "Trocar a foto" : "Enviar a foto"}</label>
+        <input
+          type="file"
+          id="photo"
+          name="photo"
+          required
+          accept={Object.keys(PHOTO_TYPES).join(",")}
+          aria-describedby="photo-hint"
+          class="w-full min-w-0 text-[15px] text-ink file:mr-3 file:h-10 file:rounded-lg file:border file:border-line-strong file:bg-white file:px-3 file:text-[15px] file:font-semibold file:text-ink"
+        />
+        <p id="photo-hint" class={`${HINT} mt-0`}>PNG, JPG ou WebP, até 4 MB. De preferência quadrada, com o rosto no centro.</p>
+        <button type="submit" class={`${PRIMARY_BUTTON} self-start`} data-sending-label="Enviando…">Enviar foto</button>
+      </form>
+      {
+        photoUrl && (
+          <form method="POST" action={action}>
+            <input type="hidden" name="acao" value="remover_foto" />
+            <button
+              type="submit"
+              class={`${DANGER_BUTTON} js-confirm-delete`}
+              data-confirm-title="Remover a foto?"
+              data-confirm-message="O cadastro fica sem foto. Dá para enviar outra depois."
+              data-confirm-label="Remover"
+            >
+              Remover foto
+            </button>
+          </form>
+        )
+      }
+    </div>
+  </div>
+</section>
+{photoUrl && withDialog && <ConfirmDeleteDialog />}

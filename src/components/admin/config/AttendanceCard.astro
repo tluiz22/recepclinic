@@ -1,0 +1,113 @@
+---
+// Atendimento do profissional ou da Equipe (cliente, 08/nov/2026; antes, em
+// Configurações › Clínica): perfil, prazo para oferecer horários e idade limite
+// da Consulta. Ficam na agenda dele; sem agenda, o cartão pede para criar.
+import HelpTip from "../ui/HelpTip.astro";
+import { CARD, CHECK, CHOICE, HINT, INPUT_INLINE, LABEL, LEGEND, PRIMARY_BUTTON, SECTION_TITLE } from "./formStyles";
+import type { AgendaAttendance } from "../../../lib/data/config/agendas";
+import { BOOKING_HORIZON_MAX, BOOKING_HORIZON_MIN, CLINIC_PROFILES } from "../../../lib/data/config/clinic";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
+import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
+
+interface Props {
+  action: string;
+  /** Valores da agenda; null = o profissional ainda não tem agenda. */
+  attendance: AgendaAttendance | null;
+  /** Para quem: "do profissional" ou "da Equipe" (textos de apoio). */
+  who: string;
+  /** Link para criar a agenda (sem agenda). */
+  createAgendaHref?: string;
+  /** Idade limite da Consulta (a Equipe só faz exame: sem o campo). */
+  withAgeLimit?: boolean;
+}
+
+const { action, attendance, who, createAgendaHref, withAgeLimit = true } = Astro.props;
+const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
+  const words = vocabularyFor(profile);
+  return `"${words.patient}" e "${words.contact}"`;
+};
+---
+
+<section class={`${CARD} flex min-w-0 flex-col gap-4 p-4 sm:p-5`} aria-labelledby="atendimento-titulo" id="atendimento">
+  <div>
+    <h2 id="atendimento-titulo" class={SECTION_TITLE}>Atendimento</h2>
+    <p class={HINT}>Valem para o bot e o link de agendar nos serviços {who}.</p>
+  </div>
+  {
+    attendance === null ? (
+      <p class="text-[15px] text-ink">
+        Perfil, prazo e idade limite ficam na agenda {who}.{" "}
+        {createAgendaHref && (
+          <a href={createAgendaHref} class="font-semibold text-brand hover:underline">
+            Criar a agenda
+          </a>
+        )}
+      </p>
+    ) : (
+      <form method="POST" action={action} class="flex min-w-0 flex-col gap-5">
+        <input type="hidden" name="acao" value="atendimento" />
+        <fieldset class="flex flex-col gap-1">
+          <legend class={LEGEND}>Perfil</legend>
+          {CLINIC_PROFILES.map((profile) => (
+            <label class={CHOICE}>
+              <input type="radio" name="profile" value={profile} checked={profile === attendance.profile} required class={CHECK} />
+              <span>
+                {PROFILE_LABELS[profile]} <span class="text-ink-soft">({profileHint(profile)})</span>
+              </span>
+            </label>
+          ))}
+          <p class={HINT}>As palavras do bot e do link de agendar. Pediátrica: o bot só pergunta "para quem é" no exame.</p>
+        </fieldset>
+
+        <div class="flex flex-col">
+          <HelpTip subject="Prazo para oferecer horários" text={configuracoes.dicas.clinicaPrazo} id="booking_horizon_days">
+            <label for="booking_horizon_days" class={LABEL}>Prazo para oferecer horários</label>
+          </HelpTip>
+          <div class="mt-1.5 flex items-center gap-2">
+            <input
+              id="booking_horizon_days"
+              type="number"
+              name="booking_horizon_days"
+              min={BOOKING_HORIZON_MIN}
+              max={BOOKING_HORIZON_MAX}
+              required
+              value={attendance.bookingHorizonDays}
+              aria-describedby="booking_horizon_days-hint"
+              class={`${INPUT_INLINE} w-24`}
+            />
+            <span class="text-[15px] text-ink-soft">dias a partir de hoje</span>
+          </div>
+          <p id="booking_horizon_days-hint" class={HINT}>
+            O bot só segue com um serviço que tenha horário livre nesse prazo, e o link de agendar só oferece datas dentro dele. De {BOOKING_HORIZON_MIN} a {BOOKING_HORIZON_MAX} dias.
+          </p>
+        </div>
+
+        {withAgeLimit && (
+        <div class="flex flex-col">
+          <HelpTip subject="Idade limite para consulta" text={configuracoes.dicas.clinicaIdade} id="age_limit">
+            <label class={`${CHOICE} font-semibold`}>
+              <input type="checkbox" name="age_limit_on" checked={attendance.consultationAgeLimitYears !== null} class={CHECK} />
+              Idade limite para consulta
+            </label>
+          </HelpTip>
+          <div class="mt-1.5 flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              max="130"
+              name="age_limit"
+              aria-label="Idade limite em anos"
+              aria-describedby="age_limit-hint"
+              value={attendance.consultationAgeLimitYears ?? ""}
+              class={`${INPUT_INLINE} w-24`}
+            />
+            <span class="text-[15px] text-ink-soft">anos</span>
+          </div>
+          <p id="age_limit-hint" class={HINT}>A partir desta idade, o bot não marca Consulta (só Retorno e Exame) e o Marcar avisa.</p>
+        </div>
+        )}
+        <button type="submit" class={`${PRIMARY_BUTTON} self-start`} data-sending-label="Salvando…">Salvar atendimento</button>
+      </form>
+    )
+  }
+</section>

@@ -190,11 +190,17 @@ async function handleService(b: Bot, selection: Selection): Promise<void> {
  * prazo da clínica; sem nenhum, avisa e a recepção assume.
  */
 async function chooseService(b: Bot, ctx: BookingContext, service: BotService): Promise<void> {
-  const lastDate = horizonLastDate(b.clinic.today, b.clinic.horizonDays);
-  // Cada agenda com a cópia dela (MS).
+  // Cada agenda com a cópia dela (MS) e no prazo do profissional dela (cliente, 08/nov/2026).
   const found = new Map<string, Set<LocationType>>();
-  for (const serviceId of new Set(service.agendas.map((a) => a.serviceId))) {
-    const agendaIds = service.agendas.filter((a) => a.serviceId === serviceId).map((a) => a.id);
+  const groups = new Map<string, { serviceId: string; days: number; agendaIds: string[] }>();
+  for (const a of service.agendas) {
+    const key = `${a.serviceId}|${a.attendance.bookingHorizonDays}`;
+    const group = groups.get(key) ?? { serviceId: a.serviceId, days: a.attendance.bookingHorizonDays, agendaIds: [] };
+    group.agendaIds.push(a.id);
+    groups.set(key, group);
+  }
+  for (const { serviceId, days, agendaIds } of groups.values()) {
+    const lastDate = horizonLastDate(b.clinic.today, days);
     for (const [id, types] of await bookableAgendaLocations(b.db, b.clinicId, { serviceId, agendaIds, lastDate }, b.now)) found.set(id, types);
   }
   const agendas = service.agendas.filter((a) => found.has(a.id));
@@ -462,14 +468,29 @@ async function handleCoverage(b: Bot, selection: Selection): Promise<void> {
 // Para quem e identificação do paciente
 // ---------------------------------------------------------------------------
 
+/**
+ * Perfil e idade limite da marcação (cliente, 08/nov/2026; antes, da clínica): os da agenda escolhida; sem agenda
+ * ("Primeiro horário"), os comuns às agendas do serviço; diferentes, os da conversa (o profissional em uso).
+ */
+async function attendanceOf(b: Bot, ctx: BookingContext): Promise<{ profile: Bot["clinic"]["profile"]; ageLimitYears: number | null }> {
+  const agendas = (await serviceOf(b, ctx))?.agendas ?? [];
+  const chosen = agendas.find((a) => a.id === ctx.agendaId);
+  const pool = chosen ? [chosen] : agendas;
+  const common = <T>(get: (a: (typeof pool)[number]) => T): T | undefined =>
+    pool.length > 0 && pool.every((a) => get(a) === get(pool[0])) ? get(pool[0]) : undefined;
+  const profile = common((a) => a.attendance.profile);
+  const age = common((a) => a.attendance.consultationAgeLimitYears);
+  return { profile: profile ?? b.clinic.profile, ageLimitYears: age === undefined ? b.clinic.ageLimitYears : age };
+}
+
 /** "É para você ou para outra pessoa?" pelo perfil (cliente, 07/out): Pediátrica só no exame; Adultos e Mista na consulta e no exame. */
-function asksForWhom(b: Bot, ctx: BookingContext): boolean {
-  return ctx.category === "exam" || (ctx.category === "consultation" && b.clinic.profile !== "pediatric");
+async function asksForWhom(b: Bot, ctx: BookingContext): Promise<boolean> {
+  return ctx.category === "exam" || (ctx.category === "consultation" && (await attendanceOf(b, ctx)).profile !== "pediatric");
 }
 
 async function afterPlace(b: Bot, ctx: BookingContext): Promise<void> {
   if (ctx.category !== "return_visit" && !ctx.coverage) return enterCoverage(b, ctx);
-  if (!asksForWhom(b, ctx)) return enterPatientSelect(b, ctx);
+  if (!(await asksForWhom(b, ctx))) return enterPatientSelect(b, ctx);
   await sendButtons(b, "bot_book_for_whom", t.FOR_WHOM_QUESTION, t.FOR_WHOM_BUTTONS);
   await go(b, "BOOK_FOR_WHOM", ctx);
 }
@@ -520,7 +541,7 @@ async function enterPatientSelect(b: Bot, ctx: BookingContext): Promise<void> {
 
 /** Consulta com idade limite na clínica: avisa antes de identificar o paciente (cliente, 31/out/2026). */
 async function sayAgeLimitNotice(b: Bot, ctx: BookingContext): Promise<void> {
-  const limit = b.clinic.ageLimitYears;
+  const limit = (await attendanceOf(b, ctx)).ageLimitYears;
   if (ctx.category !== "consultation" || limit === null) return;
   await say(b, "bot_book_age_limit_notice", t.ageLimitNotice(await chosenProfessional(b, ctx), b.clinic.designation, limit));
 }
@@ -777,7 +798,7 @@ export async function handOver(b: Bot, kind: string, lead: string | null, reason
 
 /** Consulta para quem já completou a idade limite: avisa e pergunta se é para outra pessoa. */
 async function refusedByAgeLimit(b: Bot, ctx: BookingContext, birthdate: string): Promise<boolean> {
-  const limit = b.clinic.ageLimitYears;
+  const limit = (await attendanceOf(b, ctx)).ageLimitYears;
   if (ctx.category !== "consultation" || limit === null || !isOverConsultationAgeLimit(birthdate, b.clinic.today, limit)) return false;
   await sendButtons(b, "bot_book_consultation_age_limit", t.ageLimit(await chosenProfessional(b, ctx), b.clinic.designation, limit, b.words), t.YES_NO_BUTTONS);
   await go(b, "BOOK_AGE_LIMIT", keepPath(ctx));
@@ -789,7 +810,7 @@ async function handleAgeLimit(b: Bot, selection: Selection): Promise<void> {
   const answer = yesNo(selection, t.YES_NO_IDS);
   if (answer === null) {
     const buttons = b.convo.notUnderstoodCount > 0 ? t.YES_NO_BACK_BUTTONS : t.YES_NO_BUTTONS;
-    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(await chosenProfessional(b, ctx), b.clinic.designation, b.clinic.ageLimitYears ?? 0, b.words)}`, buttons);
+    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(await chosenProfessional(b, ctx), b.clinic.designation, (await attendanceOf(b, ctx)).ageLimitYears ?? 0, b.words)}`, buttons);
     return;
   }
   if (answer) {
@@ -976,7 +997,7 @@ async function handleReturn(b: Bot, selection: Selection): Promise<void> {
     { patientId: chosen.id, agendaId: chosen.agendaId, returnServiceId: service.id, originAppointmentId: chosen.originId },
     b.now,
   );
-  const lastDate = earliestDate(origin?.lastDate ?? null, horizonLastDate(b.clinic.today, b.clinic.horizonDays));
+  const lastDate = earliestDate(origin?.lastDate ?? null, horizonLastDate(b.clinic.today, agenda?.attendance.bookingHorizonDays ?? b.clinic.horizonDays));
   const free = (await bookableAgendaLocations(b.db, b.clinicId, { serviceId: service.id, agendaIds: [chosen.agendaId], lastDate }, b.now)).get(chosen.agendaId);
   if (!free) return handOver(b, "bot_book_no_free_times", t.noFreeTimesOffer(service.name), "no_free_times");
   // Retorno no consultório, como no piloto (o domiciliar não dá direito a retorno).

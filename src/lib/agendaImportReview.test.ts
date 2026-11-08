@@ -37,7 +37,7 @@ const context = (over: Partial<ReviewContext> = {}): ReviewContext => ({
   blocks: [],
   holidays: new Set(),
   contacts: [],
-  consultationAgeLimit: null,
+  consultationAgeLimits: {},
   ...over,
 });
 
@@ -90,7 +90,7 @@ describe("conferência da agenda atual", () => {
     expect(warningsOf(reviewImport([patient({ appointments: [appt({ serviceId: "s-ret" })] })], catalog, context()))).toEqual([
       "Retorno: entra sem a Consulta de origem e sem conferir o prazo.",
     ]);
-    expect(warningsOf(reviewImport([patient()], catalog, context({ consultationAgeLimit: 14 })))).toEqual([
+    expect(warningsOf(reviewImport([patient()], catalog, context({ consultationAgeLimits: { "ag-ana": 14 } })))).toEqual([
       "Paciente com 14 anos ou mais: acima da idade-limite da Consulta.",
     ]);
   });

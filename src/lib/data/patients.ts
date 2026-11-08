@@ -1,4 +1,4 @@
-import { isAdult, isOverConsultationAgeLimit } from "../age";
+import { isAdult } from "../age";
 import { isAnonymizedPhone } from "../anonymization";
 import { isCalendarDate } from "../clinicTime";
 import { INVALID_PHONE_MESSAGE, normalizePhone } from "../phone";
@@ -449,7 +449,7 @@ export type RegisterPatientInput = {
 };
 
 export type RegisterPatientResult =
-  | { status: "created"; patient: Patient; contact: Contact; overConsultationAgeLimit: boolean }
+  | { status: "created"; patient: Patient; contact: Contact }
   /** Telefone já é de um contato: confirmar que é a mesma pessoa (modo "self"). */
   | { status: "confirm_same_person"; contact: Contact }
   /** O contato já tem paciente ativo com a mesma data de nascimento ou o nome parecido (C19). */
@@ -567,17 +567,8 @@ export async function registerPatient(
   const firstNote = cleanText(input.notes);
   if (firstNote) await addPatientNote(db, clinicId, patient.id, firstNote);
 
-  const settings = unwrapOne(
-    await db.from("clinic_settings").select("consultation_age_limit_years").eq("clinic_id", clinicId).maybeSingle(),
-    "Configuração da clínica",
-  );
-  const limit = settings.consultation_age_limit_years;
-  return {
-    status: "created",
-    patient,
-    contact: { ...contact, isActive: true },
-    overConsultationAgeLimit: limit !== null && isOverConsultationAgeLimit(input.birthdate, today, limit),
-  };
+  // Idade limite (cliente, 08/nov/2026): é do profissional; o aviso fica no Marcar e no bot, não no cadastro.
+  return { status: "created", patient, contact: { ...contact, isActive: true } };
 }
 
 /**

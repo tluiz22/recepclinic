@@ -62,7 +62,6 @@ import ServicePicker from "../../../components/admin/agenda/ServicePicker.astro"
 import OwnerPicker from "../../../components/admin/OwnerPicker.astro";
 import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
-import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../lib/data/config/professionals";
@@ -127,11 +126,10 @@ const link = (changes: Partial<typeof state> & { busca?: string }) => {
 const busca = (params.get("busca") ?? "").trim();
 
 const insuranceOn = clinic.features.includes("insurance");
-const [services, agendas, locations, settings, connection, plans, professionals] = await Promise.all([
+const [services, agendas, locations, connection, plans, professionals] = await Promise.all([
   listServices(db, clinic.clinicId, { includeInactive: !!editing }),
   listAgendas(db, clinic.clinicId),
   listLocations(db, clinic.clinicId),
-  getClinicSettings(db, clinic.clinicId),
   getWhatsappConnection(db, clinic.clinicId),
   insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
   listProfessionals(db, clinic.clinicId),
@@ -431,11 +429,17 @@ const returnNotes =
         }),
       )
     : [];
-const ageWarning =
-  patient && service?.category === "consultation" && settings.consultationAgeLimitYears !== null &&
-  isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
-    ? `${capitalize(vocabulary.patient)} com ${formatAge(patient.birthdate, today)}: a clínica marca Consulta só até ${settings.consultationAgeLimitYears} anos (aviso, não impede).`
-    : null;
+// Idade limite do profissional da agenda (cliente, 08/nov/2026; antes, da clínica): a agenda escolhida ou as do serviço.
+const ageLimitAgendas = (serviceAgendaIds.includes(state.agenda_id) ? [state.agenda_id] : serviceAgendaIds)
+  .map((agendaId) => agendas.find((a) => a.id === agendaId))
+  .filter((a): a is (typeof agendas)[number] => !!a && a.consultationAgeLimitYears !== null);
+const overAgeLimit =
+  patient && service?.category === "consultation"
+    ? ageLimitAgendas.filter((a) => isOverConsultationAgeLimit(patient.birthdate, today, a.consultationAgeLimitYears!))
+    : [];
+const ageWarning = overAgeLimit.length
+  ? `${capitalize(vocabulary.patient)} com ${formatAge(patient!.birthdate, today)}: ${overAgeLimit.map((a) => `${a.name} marca Consulta só até ${a.consultationAgeLimitYears} anos`).join("; ")} (aviso, não impede).`
+  : null;
 const back = `${Astro.url.pathname}${Astro.url.search}`;
 // Série recorrente (D9; cliente, 05/out/2026: criada no próprio Marcar), só
 // com o item "Séries" e fora de turma.

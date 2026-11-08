@@ -27,14 +27,14 @@ isOneToOne: false
                   ]
                 },"agendas": {
                   Row: {
-                    "buffer_minutes": number,"clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id": string | null,"updated_at": string
+                    "booking_horizon_days": number,"buffer_minutes": number,"clinic_id": string,"consultation_age_limit_years": number | null,"created_at": string,"id": string,"is_active": boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id": string | null,"profile": Database["public"]['Enums']["clinic_profile"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "buffer_minutes"?: number,"clinic_id": string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id"?: string | null,"updated_at"?: string
+                    "booking_horizon_days"?: number,"buffer_minutes"?: number,"clinic_id": string,"consultation_age_limit_years"?: number | null,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id"?: string | null,"profile"?: Database["public"]['Enums']["clinic_profile"],"updated_at"?: string
                   }
                   Update: {
-                    "buffer_minutes"?: number,"clinic_id"?: string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind"?: Database["public"]['Enums']["agenda_kind"],"name"?: string,"professional_id"?: string | null,"updated_at"?: string
+                    "booking_horizon_days"?: number,"buffer_minutes"?: number,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind"?: Database["public"]['Enums']["agenda_kind"],"name"?: string,"professional_id"?: string | null,"profile"?: Database["public"]['Enums']["clinic_profile"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -223,14 +223,14 @@ isOneToOne: false
                   ]
                 },"availability_windows": {
                   Row: {
-                    "agenda_id": string,"capacity": number | null,"clinic_id": string,"created_at": string,"end_time": string,"id": string,"is_active": boolean,"location_id": string,"service_id": string | null,"start_time": string,"updated_at": string,"weekday": number
+                    "agenda_id": string,"capacity": number | null,"clinic_id": string,"created_at": string,"end_time": string,"id": string,"is_active": boolean,"location_id": string,"off_with_service": boolean,"service_id": string | null,"start_time": string,"updated_at": string,"weekday": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_id": string,"capacity"?: number | null,"clinic_id": string,"created_at"?: string,"end_time": string,"id"?: string,"is_active"?: boolean,"location_id": string,"service_id"?: string | null,"start_time": string,"updated_at"?: string,"weekday": number
+                    "agenda_id": string,"capacity"?: number | null,"clinic_id": string,"created_at"?: string,"end_time": string,"id"?: string,"is_active"?: boolean,"location_id": string,"off_with_service"?: boolean,"service_id"?: string | null,"start_time": string,"updated_at"?: string,"weekday": number
                   }
                   Update: {
-                    "agenda_id"?: string,"capacity"?: number | null,"clinic_id"?: string,"created_at"?: string,"end_time"?: string,"id"?: string,"is_active"?: boolean,"location_id"?: string,"service_id"?: string | null,"start_time"?: string,"updated_at"?: string,"weekday"?: number
+                    "agenda_id"?: string,"capacity"?: number | null,"clinic_id"?: string,"created_at"?: string,"end_time"?: string,"id"?: string,"is_active"?: boolean,"location_id"?: string,"off_with_service"?: boolean,"service_id"?: string | null,"start_time"?: string,"updated_at"?: string,"weekday"?: number
                   }
                   Relationships: [
                     {
@@ -645,14 +645,14 @@ isOneToOne: false
                   ]
                 },"clinic_members": {
                   Row: {
-                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"can_manage_insurance": boolean,"clinic_id": string,"created_at": string,"display_name": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
+                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"can_manage_insurance": boolean,"clinic_id": string,"created_at": string,"display_name": string | null,"photo_path": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"can_manage_insurance"?: boolean,"clinic_id": string,"created_at"?: string,"display_name"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id": string
+                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"can_manage_insurance"?: boolean,"clinic_id": string,"created_at"?: string,"display_name"?: string | null,"photo_path"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "agenda_scope"?: Database["public"]['Enums']["agenda_scope"],"can_manage_insurance"?: boolean,"clinic_id"?: string,"created_at"?: string,"display_name"?: string | null,"roles"?: (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id"?: string
+                    "agenda_scope"?: Database["public"]['Enums']["agenda_scope"],"can_manage_insurance"?: boolean,"clinic_id"?: string,"created_at"?: string,"display_name"?: string | null,"photo_path"?: string | null,"roles"?: (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1833,14 +1833,14 @@ isOneToOne: false
                   ]
                 },"professionals": {
                   Row: {
-                    "clinic_id": string,"council": string | null,"council_number": string | null,"council_state": string | null,"created_at": string,"display_name": string,"id": string,"is_active": boolean,"phone": string | null,"profession": string,"receives_daily_summary": boolean,"rqe": string | null,"specialty": string | null,"updated_at": string,"user_id": string | null
+                    "clinic_id": string,"council": string | null,"council_number": string | null,"council_state": string | null,"created_at": string,"display_name": string,"id": string,"is_active": boolean,"phone": string | null,"photo_path": string | null,"profession": string,"receives_daily_summary": boolean,"rqe": string | null,"specialty": string | null,"updated_at": string,"user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name": string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession": string,"receives_daily_summary"?: boolean,"rqe"?: string | null,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
+                    "clinic_id": string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name": string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"photo_path"?: string | null,"profession": string,"receives_daily_summary"?: boolean,"rqe"?: string | null,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession"?: string,"receives_daily_summary"?: boolean,"rqe"?: string | null,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
+                    "clinic_id"?: string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"photo_path"?: string | null,"profession"?: string,"receives_daily_summary"?: boolean,"rqe"?: string | null,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {

@@ -8,7 +8,7 @@ export const configuracoes = {
     servicoTipo: [
       { termo: "Consulta", texto: "atendimento comum." },
       { termo: "Retorno", texto: "volta ligada a uma consulta anterior, com prazo e valor próprios." },
-      { termo: "Exame", texto: "pode ter preparo e ser em turma, com vagas por horário." },
+      { termo: "Exame", texto: "fica sempre na agenda de Exames (Equipe); pode ter preparo e ser em turma, com vagas por horário." },
     ],
     // Só exames têm o modo (data-only="exam"); as vagas ficam no horário (capacity, configuracoes/horarios.astro).
     servicoModo: [
@@ -23,7 +23,7 @@ export const configuracoes = {
       "Com arquivo, o preparo é o arquivo com a mensagem curta da prévia; as instruções ficam guardadas, sem ir. Vai uma vez só, depois da confirmação, e pelo bot. Se não chegou, use \"Reenviar preparo\" na Agenda. Para voltar às instruções, marque \"Tirar o arquivo\" e salve.",
     // isOverConsultationAgeLimit em src/lib/age.ts; aviso no Marcar e na ficha do paciente.
     clinicaIdade:
-      "Para quando a clínica marca Consulta só até certa idade, como na pediatria. Ex.: com 18 anos, quem já fez 18 não marca Consulta pelo bot (Retorno e Exame seguem); no painel, o Marcar e a ficha avisam, sem impedir.",
+      "Para quando a clínica marca Consulta só até certa idade, como na pediatria. Ex.: com 18 anos, quem já fez 18 não marca Consulta pelo bot (Retorno e Exame seguem); no painel, o Marcar avisa, sem impedir. Vale para as consultas deste profissional.",
     // professionalRegistry (config/professionals.ts): só nas telas de Profissionais; nenhuma página do paciente usa.
     profissionalRqe:
       "Registro de Qualificação de Especialista: o número que o conselho dá a quem tem especialidade registrada. Preencha só se tiver. Hoje o registro (conselho, número, UF e RQE) aparece só no painel, em Profissionais.",
@@ -70,8 +70,8 @@ export const configuracoes = {
     clinica: {
       serve: "Dizer ao sistema quem é a clínica. Os dados daqui aparecem para o paciente e regem o fuso, os prazos e as palavras do bot.",
       como: [
-        "Identificação, perfil e fuso horário definem como a clínica se apresenta e as palavras das telas e do bot; o fuso vale para a agenda, os lembretes e os resumos.",
-        "O prazo para oferecer horários limita até onde o bot e o link de agendamento mostram vagas; a recepção, pelo painel, não tem esse limite.",
+        "Identificação e fuso horário definem como a clínica se apresenta; o fuso vale para a agenda, os lembretes e os resumos. As palavras das telas saem do perfil dos profissionais.",
+        "Perfil, prazo para oferecer horários e idade limite são de cada profissional: cartão Atendimento no cadastro dele (a Equipe, na agenda Exames).",
         "As páginas públicas (logo, cor e site) e as informações do bot são o que o paciente vê ao agendar e em Informações no WhatsApp.",
         "O horário da recepção diz quando a clínica atende no WhatsApp; fora dele, as conversas entram em Atendimento sem notificação.",
       ],

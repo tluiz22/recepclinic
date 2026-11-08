@@ -15,14 +15,13 @@ import Button from "../../../components/admin/ui/Button.astro";
 import EditCard from "../../../components/admin/ui/EditCard.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { BRAND_COLOR_OPTIONS, DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
-import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
+import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { getReceptionHours } from "../../../lib/data/config/receptionHours";
 import { loadSetupStatus } from "../../../lib/data/config/setup";
 import { describeReceptionHours, WEEKDAY_NAMES } from "../../../lib/receptionHours";
 import { BOT_LIMIT_RANGES, DEFAULT_BOT_LIMITS, NEW_PATIENTS_WINDOW_DAYS, NO_SHOWS_WINDOW_DAYS } from "../../../lib/data/whatsapp/botLimits";
 import { MESSAGE_ARTICLES } from "../../../lib/data/whatsapp/templates";
 import { DESIGNATION_NOUN_MAX, DESIGNATION_PRESETS, designationText, designationTitle, NOUN_ARTICLES } from "../../../lib/designation";
-import { BOOKING_HORIZON_MAX, BOOKING_HORIZON_MIN } from "../../../lib/data/config/clinic";
 import { BRAZIL_TIME_ZONES } from "../../../lib/timeZones";
 import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
 
@@ -65,16 +64,11 @@ const limitFields = [
     hint: `0 desliga. Até ${BOT_LIMIT_RANGES.maxNoShows.max}; padrão ${DEFAULT_BOT_LIMITS.maxNoShows}.`,
   },
 ];
-const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
-  const words = vocabularyFor(profile);
-  return `${PROFILE_LABELS[profile]}: "${words.patient}" e "${words.contact}"`;
-};
 const words = vocabularyFor(settings.profile);
 const action = "/api/admin/configuracoes/clinica";
 const here = "/admin/configuracoes";
 const field = "flex flex-col";
 const actions = "flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4";
-import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
@@ -153,88 +147,27 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
     </form>
   </EditCard>
 
-  <EditCard id="atendimento" title="Atendimento" summary={`${PROFILE_LABELS[settings.profile]} · ${settings.bookingHorizonDays} dias`}>
+  <EditCard id="atendimento" title="Atendimento" summary={zoneLabel}>
     <dl class={KV}>
-      <dt class={DT}>Perfil</dt>
-      <dd class={DD}>
-        {PROFILE_LABELS[settings.profile]} <span class={SOFT}>("{words.patient}" e "{words.contact}")</span>
-      </dd>
       <dt class={DT}>Fuso horário</dt>
       <dd class={DD}>{zoneLabel}</dd>
-      <dt class={DT}>Prazo para oferecer horários</dt>
-      <dd class={DD}>{settings.bookingHorizonDays} dias a partir de hoje</dd>
-      <dt class={DT}>Idade limite para consulta</dt>
+      <dt class={DT}>Palavras das telas</dt>
       <dd class={DD}>
-        {
-          settings.consultationAgeLimitYears === null ? (
-            <span class={SOFT}>Sem limite</span>
-          ) : (
-            <>
-              {settings.consultationAgeLimitYears} anos <span class={SOFT}>(a partir dela, o bot só marca Retorno e Exame)</span>
-            </>
-          )
-        }
+        "{words.patient}" e "{words.contact}" <span class={SOFT}>(pelo perfil dos profissionais: {PROFILE_LABELS[settings.profile]})</span>
       </dd>
     </dl>
+    <p class={`${HINT} mt-3`}>
+      Perfil, prazo para oferecer horários e idade limite da consulta são de cada profissional: no cartão Atendimento do cadastro em{" "}
+      <a href="/admin/configuracoes/profissionais" class="font-semibold text-brand hover:underline">Profissionais</a>.
+    </p>
     <form slot="edit" method="POST" action={action} class="flex flex-col gap-5">
       <input type="hidden" name="bloco" value="atendimento" />
-      <div class={field}>
-        <label for="profile" class={LABEL}>Perfil</label>
-        <select id="profile" name="profile" class={INPUT}>
-          {CLINIC_PROFILES.map((profile) => <option value={profile} selected={profile === settings.profile}>{PROFILE_LABELS[profile]}</option>)}
-        </select>
-        <p class={HINT}>Define as palavras das telas e do bot: {CLINIC_PROFILES.map(profileHint).join("; ")}.</p>
-      </div>
-
       <div class={field}>
         <label for="timezone" class={LABEL}>Fuso horário</label>
         <select id="timezone" name="timezone" class={INPUT}>
           {zones.map((zone) => <option value={zone.value} selected={zone.value === settings.timezone}>{zone.label}</option>)}
         </select>
         <p class={HINT}>Horários da agenda, lembretes e resumos seguem este fuso.</p>
-      </div>
-
-      <div class={field}>
-        <HelpTip subject="Prazo para oferecer horários" text={configuracoes.dicas.clinicaPrazo} id="booking_horizon_days">
-          <label for="booking_horizon_days" class={LABEL}>Prazo para oferecer horários</label>
-        </HelpTip>
-        <div class="mt-1.5 flex items-center gap-2">
-          <input
-            id="booking_horizon_days"
-            type="number"
-            name="booking_horizon_days"
-            min={BOOKING_HORIZON_MIN}
-            max={BOOKING_HORIZON_MAX}
-            required
-            value={settings.bookingHorizonDays}
-            class={`${INPUT_INLINE} w-24`}
-          />
-          <span class="text-[15px] text-ink-soft">dias a partir de hoje</span>
-        </div>
-        <p class={HINT}>
-          O bot só segue com um serviço que tenha horário livre nesse prazo, e a página de marcar só oferece datas dentro dele. De {BOOKING_HORIZON_MIN} a {BOOKING_HORIZON_MAX} dias.
-        </p>
-      </div>
-
-      <div class={field}>
-        <HelpTip subject="Idade limite para consulta" text={configuracoes.dicas.clinicaIdade} id="age_limit">
-          <label class={`${CHOICE} font-semibold`}>
-            <input type="checkbox" name="age_limit_on" checked={settings.consultationAgeLimitYears !== null} class={CHECK} />
-            Idade limite para consulta
-          </label>
-        </HelpTip>
-        <div class="mt-1.5 flex items-center gap-2">
-          <input
-            type="number"
-            min="1"
-            name="age_limit"
-            aria-label="Idade limite em anos"
-            value={settings.consultationAgeLimitYears ?? ""}
-            class={`${INPUT_INLINE} w-24`}
-          />
-          <span class="text-[15px] text-ink-soft">anos</span>
-        </div>
-        <p class={HINT}>A partir desta idade, o bot não marca Consulta (só Retorno e Exame) e a tela avisa.</p>
       </div>
       <div class={actions}>
         <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar atendimento</Button>

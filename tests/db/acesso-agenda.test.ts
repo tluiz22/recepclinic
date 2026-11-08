@@ -234,28 +234,18 @@ describe("acesso às agendas (D6)", () => {
 describe("exame em paralelo (cliente, 28/out/2026)", () => {
   const MON5 = "2031-04-07";
 
-  it("exame não ocupa o horário da consulta, nem consulta o do exame; dois exames no mesmo horário", async () => {
-    // Exame do próprio Dr. Segundo (MS: o exame da equipe não entra na agenda dele).
+  it("exame de profissional: o banco recusa (cliente, 08/nov/2026); na agenda de Exames, dois exames no mesmo horário", async () => {
     const { data: owner } = await adminClient().from("agendas").select("professional_id").eq("id", ids.agendaDra2).single();
-    const { data: own, error } = await adminClient()
+    const { error } = await adminClient()
       .from("services")
       .insert({ clinic_id: clinicId, name: "Exame do Dr. Segundo", category: "exam", duration_minutes: 20, price_cents: 0, professional_id: owner!.professional_id })
       .select("id")
       .single();
-    expect(error).toBeNull();
-    await adminClient().from("service_locations").insert({ clinic_id: clinicId, service_id: own!.id, location_id: ids.office });
-    const exame = own!.id;
-    const free = async (service: string) => times(await getFreeSlots(db(reception), clinicId, { serviceId: service, agendaId: ids.agendaDra2, date: MON5 }, NOW));
-
-    await book(ids.p3, exame, ids.agendaDra2, at(MON5, "08:00"));
-    expect((await free(ids.consulta2))[0]).toBe("08:00");
-    expect((await free(exame))[0]).toBe("08:00");
-
-    await book(ids.p3, ids.consulta2, ids.agendaDra2, at(MON5, "08:00"));
-    expect((await free(ids.consulta2))[0]).toBe("08:30");
-    expect((await free(exame))[0]).toBe("08:00");
-
-    await book(ids.p2, exame, ids.agendaDra2, at(MON5, "08:00"));
+    expect(error?.code).toBe("23514");
+    const free = async () => times(await getFreeSlots(db(reception), clinicId, { serviceId: ids.exame, agendaId: ids.agendaExams, date: MON5 }, NOW));
+    await book(ids.p3, ids.exame, ids.agendaExams, at(MON5, "08:00"));
+    expect((await free())[0]).toBe("08:00");
+    await book(ids.p2, ids.exame, ids.agendaExams, at(MON5, "08:00"));
   });
 });
 

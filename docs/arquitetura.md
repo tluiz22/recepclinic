@@ -196,6 +196,10 @@ cair em "dezenas de configurações" (regra 4 do README), a forma de configurar 
 - **Perfil da clínica**: *Pediátrica*, *Adultos* ou *Mista*. Define o vocabulário dos textos
   ("criança/responsável" × "paciente/contato"; a *Mista* usa **"paciente/responsável"**, decisão do
   cliente em 05/out/2026) e as regras de idade padrão. A idade limite continua ajustável.
+  **Revisto pelo cliente em 08/nov/2026:** perfil, prazo para oferecer horários e idade limite da consulta passam a ser
+  **de cada profissional** (e da Equipe), no cartão Atendimento do cadastro (gravados na agenda dele). O perfil da
+  clínica vira **calculado** pelos perfis das agendas ativas (todos iguais: aquele; diferentes: *Mista*) e só dá as
+  palavras das telas da clínica inteira. Plano em `docs/planejamento-multiprofissional.md`, seção 12.
 - **Identidade**: nome da clínica, profissionais (nome, profissão e especialidade, registro no
   conselho de classe: conselho, número e UF, ex.: CRM, CRO, CRP, CREFITO, CRN; revisão de 04/out; e o
   RQE, opcional, um ou mais números, cliente em 05/out),

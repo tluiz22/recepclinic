@@ -20,17 +20,22 @@ import { listAvailability, WEEKDAY_NAMES } from "../../../lib/data/config/availa
 import { listLocations } from "../../../lib/data/config/locations";
 import { listServiceRefs, listServices } from "../../../lib/data/config/services";
 import ServiceChoice from "../../../components/admin/config/ServiceChoice.astro";
+import OwnerPicker from "../../../components/admin/OwnerPicker.astro";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { TEAM_OWNER } from "../../../lib/data/config/services";
+import { ownerLabel, ownerOptionGroups, type OwnerOptionGroup } from "../../../lib/serviceOwner";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
 // Profissional com login (MS, S1): só os horários da própria agenda.
 const ownOnly = ownSettingsOnly(clinic);
-const [allAgendas, locations, services, serviceRefs] = await Promise.all([
+const [allAgendas, locations, services, serviceRefs, professionals] = await Promise.all([
   listAgendas(db, clinic.clinicId),
   listLocations(db, clinic.clinicId, { includeInactive: true }),
   listServices(db, clinic.clinicId, { includeInactive: true }),
   listServiceRefs(db, clinic.clinicId),
+  listProfessionals(db, clinic.clinicId, { includeInactive: true }),
 ]);
 const agendas = ownOnly ? allAgendas.filter((a) => a.professionalId === clinic.ownProfessionalId) : allAgendas;
 // Cor de cada serviço, a mesma da Agenda (cliente, 19/out/2026).
@@ -40,6 +45,21 @@ const tints = serviceTints(serviceRefs);
 const picked = agendas.find((a) => a.id === Astro.url.searchParams.get("agenda")) ?? null;
 const needsChoice = !picked && agendas.length > 1;
 const agenda = picked ?? (agendas.length === 1 ? agendas[0] : null);
+// Escolha pelo profissional (cliente, 08/nov/2026): a mesma busca de Serviços, agrupada pela especialidade. Pelo menu,
+// a pessoa escolhe sempre; só vem escolhida quando outra tela manda para uma agenda (?agenda=).
+const ownerKeyOf = (a: (typeof agendas)[number]) => (a.kind === "resource" ? TEAM_OWNER : a.professionalId!);
+const agendaByOwner = new Map(agendas.map((a) => [ownerKeyOf(a), a.id]));
+const pickerGroups: OwnerOptionGroup[] = ownerOptionGroups(
+  professionals.filter((p) => agendaByOwner.has(p.id)),
+  { team: agendaByOwner.has(TEAM_OWNER) },
+);
+// Agenda de profissional desativado (rara): aparece pelo nome, no fim.
+const listed = new Set(pickerGroups.flatMap((g) => g.options.map((o) => agendaByOwner.get(o.value))));
+const leftover = agendas.filter((a) => !listed.has(a.id));
+if (leftover.length) pickerGroups.push({ label: "Outras agendas", options: leftover.map((a) => ({ value: a.id, label: a.name })) });
+const pickerHref = (value: string) => `?agenda=${agendaByOwner.get(value) ?? value}${showInactive ? "&todos=1" : ""}`;
+const agendaOwnerLabel = (a: NonNullable<typeof agenda>) =>
+  listed.has(a.id) ? ownerLabel({ professionalId: a.kind === "resource" ? null : a.professionalId, isTeam: a.kind === "resource" }, professionals) : a.name;
 const windows = agenda ? await listAvailability(db, clinic.clinicId, agenda.id, { includeInactive: showInactive }) : [];
 
 const locationName = new Map(locations.map((l) => [l.id, l.name]));
@@ -138,18 +158,13 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 
   {
     needsChoice ? (
-      <form method="GET" class="mt-1 flex flex-col gap-3 rounded-xl border border-line bg-white p-4 sm:p-5">
-        <label for="agenda" class="text-[15px] font-semibold text-ink">Escolha a agenda para ver, incluir ou alterar os horários</label>
-        <select id="agenda" name="agenda" required class={`${INPUT_INLINE} min-w-0 sm:w-72`} data-autosubmit>
-          <option value="">Escolha a agenda…</option>
-          {agendas.map((a) => (
-            <option value={a.id}>{a.name}</option>
-          ))}
-        </select>
-        <noscript>
-          <button type="submit" class={SECONDARY_BUTTON}>Ver horários</button>
-        </noscript>
-      </form>
+      <section aria-labelledby="busca-titulo" class="mt-1 flex max-w-2xl flex-col gap-3 rounded-xl border border-line bg-white p-4 sm:p-5">
+        <div>
+          <h2 id="busca-titulo" class="font-display text-[19px] font-bold text-ink">De qual profissional?</h2>
+          <p class="text-[15px] text-ink-soft">Cada profissional tem a própria agenda. Escolha para ver, incluir ou alterar os horários dele.</p>
+        </div>
+        <OwnerPicker id="busca-profissional" groups={pickerGroups} href={pickerHref} />
+      </section>
     ) : !agenda ? (
       <p class="mt-4 text-sm text-ink-soft">
         Nenhuma agenda ativa. Cadastre uma em{" "}
@@ -164,17 +179,17 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
           <p class="text-[15px] text-ink-soft">Como os horários viram vagas para marcar.</p>
         </HowItWorks>
         <form method="GET" class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-line bg-white px-3.5 py-2.5">
-          <div class="flex min-w-0 flex-1 items-center gap-3 sm:flex-none">
-            <label for="agenda" class="text-[15px] font-semibold text-ink">
-              Agenda
-            </label>
-            <select id="agenda" name="agenda" class={`${INPUT_INLINE} min-w-0 flex-1 sm:w-60 sm:flex-none`} data-autosubmit>
-              {agendas.map((a) => (
-                <option value={a.id} selected={a.id === agenda.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+          <input type="hidden" name="agenda" value={agenda.id} />
+          <div class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1" data-agenda-owner>
+            <p class="text-[15px] text-ink">
+              <span class="text-ink-soft">{agendas.length > 1 ? "Profissional: " : "Agenda: "}</span>
+              <strong class="font-semibold">{agendas.length > 1 ? agendaOwnerLabel(agenda) : agenda.name}</strong>
+            </p>
+            {agendas.length > 1 && (
+              <a href={showInactive ? "?todos=1" : "?"} class="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand no-underline hover:underline">
+                Trocar de profissional
+              </a>
+            )}
           </div>
           <label class="inline-flex min-h-11 items-center gap-2 text-[15px] text-ink">
             <input type="checkbox" name="todos" value="1" checked={showInactive} class={CHECK} data-autosubmit />
