@@ -669,4 +669,9 @@ profissionais". **Origem por link marcado:** "Copiar link para…" (Configuraç�
 celular) pergunta onde vai usar (Instagram, site, Google, mensagem, outro lugar) e o link leva a marca (`?de=…`); o QR
 sai marcado como cartaz; link sem marca conta como "origem não informada". Métricas **aprovadas**. **Vários números de WhatsApp fora desta entrega (cliente,
 08/nov):** pendente para planejar depois (seção 10, F4, RD11); saíram do desenho as telas Números de WhatsApp e
-Desconectar, o selo do número, o filtro Número e a faixa "Respondendo pelo número" em Conversas.
+Desconectar, o selo do número, o filtro Número e a faixa "Respondendo pelo número" em Conversas. **Onde pegar o link (cliente, 08/nov):** **atalho no Meu dia** para mandar no WhatsApp
+("Copiar link" e "Abrir o WhatsApp"): a recepção pega por padrão o **link da clínica** (todos os profissionais); o
+profissional, no Meu dia dele, o **próprio link**. Os links marcados para **redes sociais, site e Google** (e o QR)
+ficam no **perfil do profissional** ("Meu perfil"), e **cada profissional altera tudo o que é dele** (o Administrador
+também). O link da clínica para redes sociais fica em Configurações › Portal. **QR code só pelo botão** (sem QR fixo na tela; a janela tem Baixar imagem e
+Imprimir cartaz). **Configurações › Portal aprovada** (item em Atendimento, depois de Convênios).
