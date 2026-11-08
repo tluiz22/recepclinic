@@ -1,11 +1,10 @@
 # Implementação: recepção digital integrada (Etapa 3)
 
-> **Estado atual (retomar daqui), 08/nov/2026.** Plano da implementação **aprovado pelo cliente** com as decisões I1 a I9
-> (seção 6) e a regra nova da Matriz, bot e portal (seção 1.1). Nenhum código mudou. **Próximo passo: F1 (fundação)**,
-> em branch curta criada da `main`; no fim, testes, merge, staging e parada para a validação (I3). Pedir cedo ao
-> cliente: CNAME de `agendar-teste` e `agendar`, chaves do Turnstile (seção 4). Base:
-> [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md) e
-> [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md).
+> **Estado atual (retomar daqui), 08/nov/2026.** Plano aprovado (decisões I1 a I11, seção 6; regra da Matriz, bot e
+> portal, seção 1.1). **F1 feita, na `main` e no staging** (`aba61a8`, migração `20270102120000` aplicada e conferida:
+> Portal ligado nas 5 clínicas com bot, apelidos nos 11 profissionais). **Aguardando a validação do cliente** pelo
+> roteiro da seção 7.1. Produção: não. Próximo: D4 (desenho de retorno e exames no canvas). Pedir ao cliente: CNAME de
+> `agendar-teste` e `agendar`, chaves do Turnstile (seção 4).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
