@@ -199,6 +199,17 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
   leva a Minhas consultas, que pede o telefone) / "Link não encontrado"; [Agendar pelo portal] (P1); [Pedir novo link no WhatsApp].
 - **Aceite:** cenário 16; status HTTP 404/410 sem revelar se o telefone existe.
 
+### PP. Link do profissional (cliente, 08/nov)
+
+- **Endereço:** `agendar.recepclinic.com.br/{apelido-da-clínica}/{apelido-do-profissional}`; apelido do profissional
+  automático pelo nome do cadastro, fixo (repetido na clínica ganha `-2`).
+- **Uso:** Instagram, site ou mensagem de WhatsApp do profissional; é entrada direta (P7 com celular e código).
+- **Início do profissional:** foto (ou iniciais), nome, registro, especialidades, próximo horário, [Agendar consulta
+  com {nome}], [Minhas consultas], valores e convênios, local com "Ver no mapa", orientações.
+- **Jornada:** início → P5 → P6 → P7 → P8/P8b → P9 → P10; "Passo n de 4" (3 com um só atendimento); sem "Trocar
+  médico" e **sem mostrar outros médicos da clínica**; sem horário: só "Falar com a recepção".
+- **Clínica de um só profissional (como o piloto):** o endereço da clínica abre direto no início do profissional.
+
 ---
 
 ## 2. Painel da recepção

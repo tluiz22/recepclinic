@@ -601,4 +601,5 @@ endereço da clínica abre direto nessa página. Link compartilhado (Instagram, 
 direta: pede celular e código; só o link do bot na conversa dispensa o código. **Endereço (cliente, 08/nov): `agendar.recepclinic.com.br/{apelido-da-clínica}/{apelido-do-profissional}`** (ex.:
 `/vila-serena/dra-ana-lima`). **Apelido do profissional (cliente, 08/nov): automático e fixo**, montado pelo nome do cadastro na criação
 (Dra. Ana Lima → `dra-ana-lima`; nome repetido na clínica ganha `-2`); ninguém muda depois, para o link nunca quebrar.
-Pendente: se mostra os outros médicos da clínica.
+**Outros médicos (cliente, 08/nov): nunca** aparecem no link do profissional; sem horário, só "Falar com a recepção".
+O link (copiar e QR code) aparece no cadastro do profissional e em Configurações › Portal (desenho na rodada 3).
