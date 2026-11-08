@@ -588,4 +588,6 @@ clínica de 18:** no computador, P2 com 12 especialidades em 3 colunas e busca q
 com 6 ou mais em lista (colunas Médico, Atendimento, Próximo horário; busca pelo nome e filtro de convênio); P7
 (celular no computador, código lido no WhatsApp do celular e digitado no computador); P8 (pacientes em 2 colunas;
 "Confirmação no WhatsApp final 4321 / Usar outro" na coluna da direita). A ordem é a mesma do celular: P6 → P7 (só sem
-link do WhatsApp) → P8/P8b → P9 → P10. Escolhas do cliente: pendentes.
+link do WhatsApp) → P8/P8b → P9 → P10. **Cliente (08/nov): computador aprovado; P13 "já usado" não mostra nada da
+consulta** (só "Ele já foi usado para marcar uma consulta" e o caminho para Minhas consultas, que pede o telefone).
+P11 e P12: em avaliação.

@@ -195,8 +195,8 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 
 ### P13. Link inválido, vencido ou usado
 
-- **Exibe:** "Este link não vale mais" (vencido) / "Este link já foi usado" (com o resumo do que foi marcado, sem dado
-  além do primeiro nome) / "Link não encontrado"; [Agendar pelo portal] (P1); [Pedir novo link no WhatsApp].
+- **Exibe:** "Este link não vale mais" (vencido) / "Este link já foi usado" (sem nenhum dado da consulta, cliente 08/nov;
+  leva a Minhas consultas, que pede o telefone) / "Link não encontrado"; [Agendar pelo portal] (P1); [Pedir novo link no WhatsApp].
 - **Aceite:** cenário 16; status HTTP 404/410 sem revelar se o telefone existe.
 
 ---
