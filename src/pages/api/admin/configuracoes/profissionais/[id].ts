@@ -9,6 +9,7 @@ import {
 } from "../../../../../lib/data/config/professionals";
 import { DataError } from "../../../../../lib/data/errors";
 import { listInsurancePlans, listProfessionalPlans, setProfessionalPlans } from "../../../../../lib/data/config/insurance";
+import { removeProfilePhoto, uploadProfilePhoto } from "../../../../../lib/data/config/profilePhotos";
 import { setProfessionalBotInfo } from "../../../../../lib/data/config/professionalBotInfo";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
@@ -33,6 +34,18 @@ export const POST: APIRoute = async (context) => {
   return runFormAction(
     context,
     async () => {
+      if (acao === "foto" || acao === "remover_foto") {
+        // Foto (cliente, 08/nov/2026).
+        const owner = { kind: "professional" as const, id };
+        if (acao === "remover_foto") {
+          await removeProfilePhoto(db, clinic.clinicId, owner);
+          return { redirectTo: page(id), message: "Foto removida." };
+        }
+        const file = form?.get("photo");
+        if (!(file instanceof File) || file.size === 0) throw new DataError("invalid", "Foto: escolha o arquivo", { photo: "Escolha o arquivo da foto." });
+        await uploadProfilePhoto(db, clinic.clinicId, owner, file);
+        return { redirectTo: page(id), message: "Foto salva." };
+      }
       if (acao === "bot_info") {
         await setProfessionalBotInfo(db, clinic.clinicId, id, {
           paymentInfo: formOptionalText(form, "payment_info"),

@@ -55,7 +55,7 @@ export const configuracoesArtigos = [
       { name: "WhatsApp", text: "Para ele receber, pelo WhatsApp da clínica, a lista dos atendimentos das agendas dele, como definido em Lembretes." },
       { name: "Limite de profissionais ativos", text: "A tela mostra \"X de Y ativos\". Atingido o limite, é preciso desativar um ou falar com o suporte." },
     ],
-    notes: ["Cada profissional ativo precisa de uma agenda; sem ela a lista mostra \"sem agenda\".", "Com muitos profissionais, use Buscar profissional acima da lista (nome, especialidade ou registro).", "Para dar login ao profissional, convide-o em Equipe com o papel Profissional e ligue ao cadastro dele."],
+    notes: ["Cada profissional ativo precisa de uma agenda; sem ela a lista mostra \"sem agenda\".", "Com muitos profissionais, use Buscar profissional acima da lista (nome, especialidade ou registro).", "Foto: depois de cadastrar, envie no cartão Foto do cadastro (PNG, JPG ou WebP, até 4 MB). O profissional com login também envia a própria. Por enquanto, a foto aparece só no cadastro.", "Para dar login ao profissional, convide-o em Equipe com o papel Profissional e ligue ao cadastro dele."],
     contextual: ["/admin/configuracoes/profissionais"],
   }),
   article({

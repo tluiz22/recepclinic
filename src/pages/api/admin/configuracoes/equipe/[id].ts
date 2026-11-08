@@ -4,6 +4,7 @@ import type { AgendaScope } from "../../../../../lib/data/config/agendas";
 import { inviteMember, listTeam, removeMember, updateMember, type MemberAccessInput } from "../../../../../lib/data/config/team";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
+import { removeProfilePhoto, uploadProfilePhoto } from "../../../../../lib/data/config/profilePhotos";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { resendInvitation } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
@@ -55,6 +56,19 @@ export const POST: APIRoute = async (context) => {
           if (!member?.invitation) throw new DataError("not_found", "Convite: não encontrado");
           const email = await resendInvitation(db, { id: clinic.clinicId, name: clinic.clinicName }, member.invitation.id, onboardingDeps(url));
           return { redirectTo: page(id), message: `Convite reenviado.${email.sent ? "" : notSent(email.reason)}` };
+        }
+        case "foto":
+        case "remover_foto": {
+          // Foto (cliente, 08/nov/2026).
+          const owner = { kind: "member" as const, id };
+          if (formText(form, "acao") === "remover_foto") {
+            await removeProfilePhoto(db, clinic.clinicId, owner);
+            return { redirectTo: page(id), message: "Foto removida." };
+          }
+          const file = form?.get("photo");
+          if (!(file instanceof File) || file.size === 0) throw new DataError("invalid", "Foto: escolha o arquivo", { photo: "Escolha o arquivo da foto." });
+          await uploadProfilePhoto(db, clinic.clinicId, owner, file);
+          return { redirectTo: page(id), message: "Foto salva." };
         }
         case "remover":
           await removeMember(db, actorId, clinic.clinicId, id);

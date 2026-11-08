@@ -162,6 +162,8 @@
 > `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
 >
 > **Pendências**
+> - **Fotos (cliente, 08/nov):** cadastradas no profissional e na pessoa da Equipe; onde mostrar fora do cadastro fica
+>   para uma etapa posterior, a planejar ([`frente-validacao.md`](frente-validacao.md), registro).
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
 > - **Operação:** 1º backup diário da produção; sessão do painel que caiu (parte P do `staging.md`).
 > - **Clínica piloto (03/nov):** conferir os lembretes de hoje (1º lote depois do cartão na Meta); verificação da

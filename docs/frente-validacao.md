@@ -46,3 +46,8 @@ Não são validação de tela; ficam aqui para não se perderem.
   2. Boas-vindas do bot com o nome de quem já é cadastrado: a fazer.
   3. Menu do profissional sem exames e Informações gerais sem exames (com vários profissionais): a fazer.
   4. Perfil, prazo para oferecer horários e idade limite por profissional: a fazer (plano antes, tem migração).
+- **08/nov, fotos (pedido do cliente):** cartão "Foto" no cadastro do profissional e no da pessoa da Equipe (PNG, JPG
+  ou WebP até 4 MB; bucket privado `profile-photos`; o Administrador envia para todos, o profissional com login a
+  própria). Migração `20270101130000`. Teste `tests/db/fotos-do-cadastro.test.ts`. **Pendente (cliente, 08/nov):**
+  planejar e fazer, numa etapa posterior, onde a foto aparece fora do cadastro (listas, caixa de seleção do
+  profissional, menu, página de agendar, bot).
