@@ -535,7 +535,7 @@ Planejamento aprovado pelo cliente em 08/nov; RD1 a RD14 respondidas no mesmo di
 | RD11 | Por qual número sai a confirmação de quem marcou pelo portal direto | **Número do médico**; sem ele, o número principal da clínica |
 | RD12 | Como mostrar os pacientes de um telefone | **Primeiro nome + inicial do sobrenome**. **Revista pelo cliente em 08/nov (Etapa 2):** nome completo nas telas depois do telefone comprovado (P8 a P10) |
 | RD13 | Foto do profissional no portal | **Sempre que houver foto** no cadastro (sem opção por médico). O cadastro avisa "Esta foto aparece no portal de agendamento"; sem foto, iniciais |
-| RD14 | Recepção restrita por profissional nas conversas; equipes de recepção | **Mesma restrição da agenda** (médicos liberados à pessoa, padrão todos; número geral: todas veem); sem equipes na 1ª versão |
+| RD14 | Recepção restrita por profissional nas conversas; equipes de recepção | **Mesma restrição da agenda** (médicos liberados à pessoa, padrão todos; número geral: todas veem); sem equipes na 1ª versão. **Revista em 08/nov (rodada 3):** conversa sem profissional; toda a recepção vê todas as conversas; restrição por profissional só na Agenda |
 
 Em aberto para a reunião com a clínica: RD6 (se usam limitação de horário por convênio) e as perguntas do roteiro.
 A decidir na F3: se o prazo da RD10 vale também para cancelar pelo WhatsApp.
@@ -627,3 +627,24 @@ antecedência, quem aparece, textos do início); folha do QR (Baixar imagem, Imp
 do profissional com o bloco **"Link de agendamento"** no topo (Copiar, QR, Ver como o paciente vê, Mostrar no
 portal). Celular (390 px): Meu dia, Conversas, conversa aberta, Agenda de um profissional por vez com "Próximos
 horários livres" e o link no cadastro com "Compartilhar". **Aguardando a avaliação do cliente.**
+**Revisão da rodada 3, tela por tela (cliente, 08/nov):** **Meu dia:** consulta do portal só aparece quando precisa
+da recepção ("Consultas do portal para conferir": cadastro incompleto → Completar dados; data de nascimento diferente
+→ Conferir data), e some quando resolvida; **sem "Revisado"** (saiu também do atendimento na Agenda) e sem a coluna
+Portal na tabela; o volume do portal fica só em Métricas › Portal. Tabela "Por profissional": **mantida**. **Conversas:** aguardando primeiro (pela espera), depois pela última mensagem; horários
+livres da especialidade e do convênio **sempre** no painel do paciente; "Aguardando" como **botão com contador** junto
+dos filtros; abas de hoje mantidas (Abertas, Finalizadas, Pessoal e admin.). **Conversa sem profissional (cliente, 08/nov):** a conversa **não é
+ligada a profissional** ("profissional em foco" sai da proposta: filtros Profissional e Especialidade, "Direcionar a
+outro profissional" e a coluna "aguardando" por profissional no Meu dia); o único vínculo é **com quem está** (o
+responsável), além do número em que o paciente escreveu (a resposta sai por ele). Filtros: Responsável, Situação,
+Número e Aguardando. **Painel do paciente:** paciente cadastrado → horários dos **profissionais com quem ele já
+consulta** (com a última consulta), "Outro horário" em cada um e "Agendar com outro profissional"; sem cadastro →
+"Marcar consulta". Tabela "Por profissional" do Meu dia passa a ter: conferir (portal), cancelamentos, a confirmar e
+atendimentos de hoje. **RD14 revista (cliente, 08/nov):** sem profissional na conversa, **toda a recepção vê todas as conversas**
+de todos os números (o filtro Responsável separa o trabalho); a restrição por profissional fica só na Agenda. **Agenda em grade (cliente, 08/nov):** mostra **sempre todas as agendas a que a pessoa
+tem acesso**; para estreitar, a pessoa escolhe a especialidade ou o profissional (sem "só quem atende hoje" e sem
+lembrar filtro); **barra de rolagem em destaque** no topo da grade (setas, trilho largo, "Profissionais 1 a 7 de 18") e
+botão "Mais 11" na borda direita. Desenhada também a agenda de **clínica pequena** (2 profissionais e Exames): colunas
+na largura toda, sem rolagem, só o filtro "Agenda" como hoje. **Filtros da Agenda (cliente, 08/nov):** até 7 agendas (cabem sem
+rolagem), só o filtro "Agenda"; a partir de 8, Especialidade e Profissional, **um de cada vez** (ou todos), com a barra
+de rolagem. **Filtro "Origem" retirado:** a origem aparece no selo do atendimento (Portal, WhatsApp · bot, Recepção ·
+nome) e o volume fica em Métricas. Agenda da clínica pequena **aprovada**.
