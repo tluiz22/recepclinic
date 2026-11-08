@@ -238,3 +238,149 @@ alter table public.appointments
 alter table public.clinic_settings
   add column portal_hold_minutes smallint not null default 5 check (portal_hold_minutes between 3 and 10),
   add column portal_cancel_lead_hours smallint not null default 24 check (portal_cancel_lead_hours between 0 and 168);
+
+-- ---------------------------------------------------------------------------
+-- 7. Prazo do retorno sem os dias bloqueados inteiros também nas Métricas (I11, cliente, 08/nov/2026)
+-- ---------------------------------------------------------------------------
+-- A mesma regra de src/lib/data/agenda/blockedDays.ts e returnLastDate: dia bloqueado inteiro = os bloqueios da
+-- agenda cobrem todo o horário de atendimento dela naquele dia (dia sem horário nunca conta; feriados não entram).
+-- Os dias bloqueados só são procurados até o prazo + 366 dias, como no código.
+create function app.is_whole_blocked_day(p_clinic_id uuid, p_agenda_id uuid, p_date date, p_timezone text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with windows as (
+    select tstzrange((p_date + w.start_time) at time zone p_timezone, (p_date + w.end_time) at time zone p_timezone) as r
+      from public.availability_windows w
+     where w.clinic_id = p_clinic_id and w.agenda_id = p_agenda_id and w.is_active
+       and w.weekday = extract(dow from p_date)
+  ), blocks as (
+    select range_agg(tstzrange(b.starts_at, b.ends_at)) as m
+      from public.schedule_blocks b
+     where b.clinic_id = p_clinic_id and b.agenda_id = p_agenda_id and b.removed_at is null
+       and b.starts_at < (p_date + 1)::timestamp at time zone p_timezone
+       and b.ends_at > p_date::timestamp at time zone p_timezone
+  )
+  select exists (select 1 from windows)
+     and coalesce((select bool_and(blocks.m @> windows.r) from windows, blocks), false)
+$$;
+
+create function app.return_last_date(p_clinic_id uuid, p_agenda_id uuid, p_origin date, p_days integer, p_timezone text)
+returns date
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_date date := p_origin;
+  v_counted integer := 0;
+  v_limit date := p_origin + p_days + 366;
+begin
+  if p_days is null then return null; end if;
+  -- Sem bloqueio no período, o prazo corrido (o caso comum, sem olhar dia a dia).
+  if not exists (
+    select 1 from public.schedule_blocks b
+     where b.clinic_id = p_clinic_id and b.agenda_id = p_agenda_id and b.removed_at is null
+       and b.starts_at < (v_limit + 1)::timestamp at time zone p_timezone
+       and b.ends_at > (p_origin + 1)::timestamp at time zone p_timezone
+  ) then
+    return p_origin + p_days;
+  end if;
+  while v_counted < p_days loop
+    v_date := v_date + 1;
+    if v_date > v_limit or not app.is_whole_blocked_day(p_clinic_id, p_agenda_id, v_date, p_timezone) then
+      v_counted := v_counted + 1;
+    end if;
+  end loop;
+  return v_date;
+end
+$$;
+
+revoke execute on function app.is_whole_blocked_day(uuid, uuid, date, text) from public, anon;
+revoke execute on function app.return_last_date(uuid, uuid, date, integer, text) from public, anon;
+grant execute on function app.is_whole_blocked_day(uuid, uuid, date, text) to authenticated, clinic_service;
+grant execute on function app.return_last_date(uuid, uuid, date, integer, text) to authenticated, clinic_service;
+
+create or replace function public.metrics_return_rights(
+  p_clinic_id uuid,
+  p_start timestamptz,
+  p_end timestamptz,
+  p_agenda_ids uuid[],
+  p_location_ids uuid[] default null,
+  p_now timestamptz default now()
+) returns table (
+  appointment_id uuid,
+  patient_id uuid,
+  agenda_id uuid,
+  scheduled_at timestamptz,
+  last_date date,
+  has_return boolean,
+  has_upcoming boolean,
+  status text
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with tz as (
+    select timezone from public.clinic_settings where clinic_id = p_clinic_id
+  ), deadlines as (
+    select sa.agenda_id, max(s.return_deadline_days) as days, bool_or(s.return_deadline_days is null) as unlimited
+      from public.services s
+      join public.service_agendas sa on sa.service_id = s.id
+     where s.clinic_id = p_clinic_id and s.category = 'return_visit' and s.is_active
+     group by sa.agenda_id
+  ), consults as (
+    select a.id, a.patient_id, a.agenda_id, a.scheduled_at,
+           app.return_last_date(p_clinic_id, a.agenda_id, (a.scheduled_at at time zone tz.timezone)::date, d.days, tz.timezone) as last_date
+      from public.appointments a
+      join public.services s on s.id = a.service_id and s.category = 'consultation'
+      join public.locations l on l.id = a.location_id and l.type <> 'home_visit'
+      join deadlines d on d.agenda_id = a.agenda_id and not d.unlimited and d.days is not null
+      cross join tz
+     where a.clinic_id = p_clinic_id
+       and a.status = 'completed'
+       and a.agenda_id = any ((select app.metrics_agendas(p_clinic_id, p_agenda_ids))::uuid[])
+       and (p_location_ids is null or a.location_id = any (p_location_ids))
+       -- Prazo terminando a partir do início do período (os de antes não interessam). Corte largo aqui (os dias
+       -- bloqueados esticam o prazo em até um ano); o exato fica no filtro de baixo.
+       and (a.scheduled_at at time zone tz.timezone)::date + d.days + 366 >= (p_start at time zone tz.timezone)::date
+       and a.scheduled_at < p_end
+  )
+  select c.id, c.patient_id, c.agenda_id, c.scheduled_at, c.last_date,
+         exists (
+           select 1 from public.appointments r
+            where r.clinic_id = p_clinic_id and r.origin_appointment_id = c.id and r.status <> 'canceled'
+              and r.agenda_id = any ((select app.metrics_agendas(p_clinic_id, p_agenda_ids))::uuid[])
+         ),
+         exists (
+           select 1 from public.appointments f
+             join public.services fs on fs.id = f.service_id and fs.category in ('consultation', 'return_visit')
+            where f.clinic_id = p_clinic_id and f.patient_id = c.patient_id and f.agenda_id = c.agenda_id
+              and f.status in ('scheduled', 'confirmed') and f.scheduled_at > p_now
+         ),
+         case
+           when c.last_date < (p_now at time zone tz.timezone)::date
+                and c.last_date >= (p_start at time zone tz.timezone)::date
+                and c.last_date < (p_end at time zone tz.timezone)::date then 'due'
+           when c.last_date >= (p_now at time zone tz.timezone)::date then 'open'
+           else 'other'
+         end
+    from consults c
+    cross join tz
+   where c.last_date >= (p_start at time zone tz.timezone)::date
+     and not exists (
+     -- A última Consulta do paciente na agenda (realizada ou ainda pendente).
+     select 1 from public.appointments later
+       join public.services ls on ls.id = later.service_id and ls.category = 'consultation'
+      where later.clinic_id = p_clinic_id and later.patient_id = c.patient_id and later.agenda_id = c.agenda_id
+        and later.status in ('completed', 'scheduled', 'confirmed')
+        and later.scheduled_at > c.scheduled_at and later.scheduled_at <= p_now
+   )
+$$;
+

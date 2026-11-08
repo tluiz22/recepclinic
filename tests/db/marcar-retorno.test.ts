@@ -5,6 +5,7 @@ import { listReturnReady } from "../../src/lib/data/agenda/returnReady";
 import { listAgendaAppointmentsByIds } from "../../src/lib/data/agenda/view";
 import { registerPatient } from "../../src/lib/data/patients";
 import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { withDatabase } from "./helpers";
 
 // "Marcar retorno" no cartão da Consulta realizada (cliente, 19/out/2026): só
 // na Consulta apta, pelas 7 regras do bot. Retorno da fixture: só na agenda da
@@ -122,5 +123,10 @@ describe("prazo do retorno sem os dias bloqueados inteiros (I9, cliente, 08/nov/
     await block("2031-03-31", "07:00", "16:00");
     await block("2031-04-07", "08:00", "12:00");
     expect((await origin())?.lastDate).toBe("2031-04-11");
+    // A mesma conta no banco, usada pelas Métricas › Retomar contato (I11).
+    const sql = await withDatabase((pg) =>
+      pg.query("select app.return_last_date($1, $2, $3::date, 30, $4)::text as d", [clinicId, ids.agendaDra, MON1, tz]),
+    );
+    expect(sql.rows[0].d).toBe("2031-04-11");
   });
 });
