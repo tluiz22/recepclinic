@@ -569,4 +569,6 @@ duplicado por **nome parecido + data de nascimento** entre os pacientes do núme
 cadastro neste número: {nome completo}, nascido em {data}. É ele?"; data diferente → mostra a data cadastrada e a
 digitada, "Sim, é ele (manter {data})" / "Não, é outra pessoa". Data errada: bloqueia data impossível (dia do mês,
 futura, ano com 4 números, mais de 110 anos), mostra a data por extenso com a idade abaixo dos campos e de novo na P9
-(com Alterar). "Seu nome" só aparece quando o número não tem cadastro. Aguardando a conferência do cliente.
+(com Alterar). "Seu nome" só aparece quando o número não tem cadastro. **Data diferente com "Sim, é ele" (cliente, 08/nov):** vale a
+data cadastrada; a consulta vai para o cadastro existente e a recepção vê o selo "Data informada diferente no portal"
+(R4) para conferir com o paciente. Aguardando a conferência do cliente.
