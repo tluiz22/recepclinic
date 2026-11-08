@@ -151,7 +151,8 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
   anos; abaixo dos campos, a data por extenso com a idade ("14 de março de 2019, 7 anos"). Duplicado (cliente, 08/nov):
   nome parecido com um paciente do mesmo telefone **e** mesma data → "Já existe um cadastro neste número: João Souza
   Lima, nascido em 14/03/2019. É ele?"; nome parecido com data diferente → mostra as duas datas, "Sim, é ele (manter
-  14/03/2019)" / "Não, é outra pessoa"; com "Sim", vale a data cadastrada e a recepção vê o selo "Data informada
+  14/03/2019)" / "É ele, mas a data certa é 14/03/2018" (aviso: corrigir com a recepção no dia da consulta; o
+  portal não altera o cadastro) / "Não, é outra pessoa"; com "Sim", vale a data cadastrada e a recepção vê o selo "Data informada
   diferente no portal" (R4). A P9 repete a data com a idade.
 - **Regras:** só o indispensável (P§5.3); limite de pacientes novos por telefone; sem CPF, e-mail ou endereço.
 - **Aceite:** dados preservados após erro; teclado de data adequado no celular.

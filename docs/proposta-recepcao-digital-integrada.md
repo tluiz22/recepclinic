@@ -571,4 +571,7 @@ digitada, "Sim, é ele (manter {data})" / "Não, é outra pessoa". Data errada: 
 futura, ano com 4 números, mais de 110 anos), mostra a data por extenso com a idade abaixo dos campos e de novo na P9
 (com Alterar). "Seu nome" só aparece quando o número não tem cadastro. **Data diferente com "Sim, é ele" (cliente, 08/nov):** vale a
 data cadastrada; a consulta vai para o cadastro existente e a recepção vê o selo "Data informada diferente no portal"
-(R4) para conferir com o paciente. Aguardando a conferência do cliente.
+(R4) para conferir com o paciente. **Terceira opção (cliente, 08/nov):** "É ele, mas a data certa é {digitada}" → aviso
+"Vamos marcar a consulta no cadastro de {nome completo}. Para corrigir a data de nascimento do cadastro, fale com a
+recepção no dia da consulta. Avisamos a recepção que você informou {data}." (o portal não altera o cadastro; o selo
+leva a data informada). Aguardando a conferência do cliente.
