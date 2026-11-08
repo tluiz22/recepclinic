@@ -293,7 +293,7 @@ describe("NA2: bot e webhook no número marcado", () => {
     await setConversationClassification(reception(), f.clinicId, P, "patient");
     expect(sent).toEqual([]);
     const reply = await say(P, "Oi");
-    expect(reply[0]).toMatch(/^Olá! 👋/);
+    expect(reply[0]).toMatch(/^Olá(, [^!]+)?! 👋/);
     await say(P, "4");
     expect(await conversation(P)).toMatchObject({ human_handoff: true, handoff_status: "waiting_clinic" });
     // E o eco volta a pausar como sempre.

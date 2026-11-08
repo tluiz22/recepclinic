@@ -6,7 +6,7 @@ import type { DbClient } from "../../clients";
 import { unwrap, unwrapOne } from "../../errors";
 import { getClinicFeatures } from "../../features";
 import { getWhatsappConnection } from "../connection";
-import { listBotMessages, renderMarkers, type BotMessageKey } from "../customMessages";
+import { listBotMessages, renderMarkers, renderWelcome, type BotMessageKey } from "../customMessages";
 import { logFunnelStep, markHandoffSubjectAsked, setConversationState, WELCOME, type Conversation } from "../conversations";
 import { recordOutboundMessage, type SendOutcome } from "../messages";
 import { botRetryContext } from "../retryRules";
@@ -14,6 +14,8 @@ import { sendPreparationFile, type ClinicSender, type ListSection, type ReplyBut
 import { downloadPreparationFile } from "../preparation";
 import type { PreparationFile } from "../../config/preparationFile";
 import { preparationFileCaption } from "../../../preparationMessage";
+import { logError } from "../../../log";
+import { firstName } from "../templates";
 import { loadCatalog, type BotCatalog } from "./catalog";
 import { buildScope, EXAMS_CHOICE, PROFESSIONAL_KEY, scopeCatalog, type ProfessionalScope } from "./professionalScope";
 import {
@@ -487,9 +489,24 @@ export function textFor(b: Bot, key: BotMessageKey, fallback: string, values: Re
   return custom ? renderMarkers(custom, values) : fallback;
 }
 
-/** Boas-vindas: o texto próprio da clínica ou o padrão (com a base ligada, convida a escrever; EA, 02/nov/2026). */
-export function welcomeText(b: Bot): string {
-  return textFor(b, "welcome", welcome(b.clinic.label, b.features.includes("knowledge_base")), { clinica: b.clinic.label });
+/** Primeiro nome do contato da conversa (número cadastrado); null sem cadastro ou se a leitura falhar. */
+async function contactFirstName(b: Bot): Promise<string | null> {
+  if (!b.convo.contactId) return null;
+  const { data, error } = await b.db.from("contacts").select("full_name").eq("clinic_id", b.clinicId).eq("id", b.convo.contactId).maybeSingle();
+  if (error) logError("bot: nome do contato", error, { clinica: b.clinicId });
+  const name = data?.full_name?.trim();
+  return name ? firstName(name) : null;
+}
+
+/**
+ * Boas-vindas: o texto próprio da clínica ou o padrão (com a base ligada, convida a escrever; EA, 02/nov/2026). Número
+ * cadastrado: com o primeiro nome (cliente, 08/nov/2026); no texto próprio, onde a clínica pôs {nome}.
+ */
+export async function welcomeText(b: Bot): Promise<string> {
+  const name = await contactFirstName(b);
+  const custom = b.custom.get("welcome");
+  if (!custom) return welcome(b.clinic.label, b.features.includes("knowledge_base"), name);
+  return renderWelcome(custom, b.clinic.label, name);
 }
 
 /** Depois de passar a conversa para a recepção (jornada E4): pergunta o assunto, uma vez por pausa. */

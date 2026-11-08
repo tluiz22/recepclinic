@@ -80,6 +80,8 @@ const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
 const MENU_INTRO =
   "Estamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar ou remarcar consultas e exames.\n\n🔄 Solicitar cancelamentos ou entrar na fila de espera.\n\nℹ️ Consultar informações sobre atendimentos.\n\nComo podemos ajudar?\nEscolha uma das opções abaixo ou escreva sua pergunta.";
 const WELCOME = "Olá! 👋 Aqui é da Clínica Base.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
+/** Número cadastrado: com o primeiro nome do contato (cliente, 08/nov/2026). */
+const WELCOME_KNOWN = WELCOME.replace("Olá! 👋", "Olá, Resp.! 👋");
 const titles = (reply: Sent[]) => reply.at(-1)!.options.map((o) => o.title);
 
 async function reset(phone: string, state = "MENU") {
@@ -119,13 +121,13 @@ afterAll(async () => {
 describe("primeira mensagem", () => {
   it("pergunta da base: boas-vindas, a resposta e o menu, sem \"Isso resolve sua dúvida?\" (cliente, 04/nov/2026)", async () => {
     const reply = await say("+5584991337001", "Oi, vocês aceitam Unimed?");
-    expect(bodies(reply)).toEqual([WELCOME, "Sim, atendemos *Unimed*.", MENU_INTRO]);
+    expect(bodies(reply)).toEqual([WELCOME_KNOWN, "Sim, atendemos *Unimed*.", MENU_INTRO]);
     expect((await convo("+5584991337001")).state).toBe("MENU");
   });
 
   it("só \"oi\": boas-vindas (convidando a escrever) e o menu", async () => {
     const reply = await say("+5584991337002", "Oi");
-    expect(bodies(reply)).toEqual([WELCOME, MENU_INTRO]);
+    expect(bodies(reply)).toEqual([WELCOME_KNOWN, MENU_INTRO]);
   });
 
   it("1º menu: opções com descrição e \"Ver opções\"; nas outras vezes, o menu curto (cliente, 04/nov/2026)", async () => {
@@ -149,7 +151,7 @@ describe("primeira mensagem", () => {
 
   it("pedido claro na 1ª mensagem: abre o fluxo, sem o menu", async () => {
     const reply = await say("+5584991337003", "quero marcar uma consulta");
-    expect(bodies(reply)).toEqual([WELCOME, "O que você precisa sobre consultas?"]);
+    expect(bodies(reply)).toEqual([WELCOME_KNOWN, "O que você precisa sobre consultas?"]);
   });
 });
 

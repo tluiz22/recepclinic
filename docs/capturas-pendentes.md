@@ -11,3 +11,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 - `config-horarios` — escolha da agenda virou "De qual profissional?" (busca) e a barra "Profissional: … · Trocar de profissional" (08/11/2026)
 - `config-servicos` — especialidade em negrito na busca de profissional (08/11/2026)
+- `config-mensagens` — prévia das boas-vindas com o nome ("Olá, Maria! 👋…") e o campo {nome} (08/11/2026)

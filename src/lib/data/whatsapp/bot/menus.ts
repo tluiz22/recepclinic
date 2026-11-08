@@ -56,7 +56,7 @@ const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" 
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false, intro = false } = {}): Promise<void> {
   // Mais de um profissional e nenhum escolhido: a especialidade e o profissional antes do menu (MB, 07/nov/2026).
   if (b.scope.multi && !b.scope.choice) return askSpecialty(b, { withWelcome, notUnderstood });
-  if (withWelcome) await say(b, "bot_welcome", welcomeText(b));
+  if (withWelcome) await say(b, "bot_welcome", await welcomeText(b));
   const items = await mainItems(b);
   // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
   if (!items.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);

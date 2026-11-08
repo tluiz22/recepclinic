@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "07/11/2026";
+export const JOURNEY_UPDATED = "08/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -78,7 +78,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot(
               "\"Olá! 👋 Aqui é [clínica]. Sou a assistente virtual e estou aqui para ajudar. Você pode escrever o que precisa ou escolher uma das opções abaixo.\"",
-              "Sem \"Perguntas frequentes no bot\" (o Suporte desligou), só \"Olá! 👋 Aqui é [clínica].\": o texto livre não seria entendido.",
+              "Número cadastrado: \"Olá, [primeiro nome]! 👋…\" (no texto próprio da clínica, onde ela pôs {nome}). Sem \"Perguntas frequentes no bot\" (o Suporte desligou), só \"Olá! 👋 Aqui é [clínica].\": o texto livre não seria entendido.",
             ),
             check("A mensagem já diz o que a pessoa precisa?", "Com \"Perguntas frequentes no bot\" (vem ligado com o bot; item 9). \"Oi\" sozinho: não."),
             branch(

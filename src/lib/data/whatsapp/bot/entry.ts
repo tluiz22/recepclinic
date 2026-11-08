@@ -53,7 +53,7 @@ export async function startConversation(b: Bot, { afterWelcome }: { afterWelcome
     logError("bot: atendimentos da entrada", error, { clinica: b.clinicId });
   }
   if (!count && !afterWelcome) return showMenu(b, { withWelcome: true });
-  await say(b, "bot_welcome", welcomeText(b));
+  await say(b, "bot_welcome", await welcomeText(b));
   if (afterWelcome && !(await afterWelcome())) return;
   if (!count) return showMenu(b, { intro: true });
   await askAbout(b, count);

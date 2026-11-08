@@ -232,7 +232,10 @@ export const configuracoesArtigos = [
       { name: "Mensagens do bot", text: "As respostas da conversa, quando o paciente escreve para a clínica. Valem assim que você salva." },
       { name: "Mensagens aprovadas pela Meta", text: "Os avisos que a clínica manda primeiro (lembrete, cancelamento e outros). Um texto novo passa pela revisão do Suporte e pela aprovação da Meta; até lá, segue o texto atual." },
     ],
-    notes: ["Mensagem livre só vai para quem escreveu para a clínica nas últimas 24 horas; para os outros, vai a mensagem aprovada pela Meta."],
+    notes: [
+      "Mensagem livre só vai para quem escreveu para a clínica nas últimas 24 horas; para os outros, vai a mensagem aprovada pela Meta.",
+      "Boas-vindas: número cadastrado recebe o primeiro nome (\"Olá, Maria! 👋…\"). No seu próprio texto, escreva {nome} onde quer o nome; para quem não tem cadastro, o {nome} some (\"Olá, {nome}!\" vira \"Olá!\").",
+    ],
     contextual: ["/admin/configuracoes/mensagens"],
   }),
   article({

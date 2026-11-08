@@ -117,7 +117,7 @@ describe("bot com mais de um profissional (MB)", () => {
   it("boas-vindas e a pergunta da especialidade, com Exames; um profissional na especialidade: só o nome e o menu dele", async () => {
     const phone = "+5584991229001";
     let reply = await say(phone, "Oi");
-    expect(reply[0].body).toContain("Olá! 👋");
+    expect(reply[0].body).toContain("Olá, Resp.! 👋");
     expect(reply.at(-1)!.body).toBe("Para qual especialidade é o atendimento?");
     expect(titles(reply)).toEqual(["1. Cardiologia", "2. Pediatria", "3. Exames"]);
     reply = await say(phone, "1");

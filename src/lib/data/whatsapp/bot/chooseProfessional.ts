@@ -50,7 +50,7 @@ const specialtyRows = (b: Bot): Row[] => [
 
 /** A pergunta da especialidade (com as boas-vindas, no começo da conversa). Uma só opção: segue sem perguntar. */
 export async function askSpecialty(b: Bot, { withWelcome = false, notUnderstood = false, page = 0 } = {}): Promise<void> {
-  if (withWelcome) await say(b, "bot_welcome", welcomeText(b));
+  if (withWelcome) await say(b, "bot_welcome", await welcomeText(b));
   const all = specialtyRows(b);
   if (all.length === 1) return chooseSpecialty(b, all[0].id.slice("specialty_".length));
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));

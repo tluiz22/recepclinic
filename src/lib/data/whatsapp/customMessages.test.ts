@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DataError } from "../errors";
-import { markersToTemplate, renderMarkers, templateToMarkers, validateBotMessage } from "./customMessages";
+import { markersToTemplate, renderMarkers, renderWelcome, templateToMarkers, validateBotMessage } from "./customMessages";
 import { defaultTemplate } from "./templates";
 
 const fieldError = (run: () => unknown) => {
@@ -54,5 +54,21 @@ describe("conversa do bot (F6.6)", () => {
     expect(renderMarkers("Para *{servico}* de {paciente}: {link}", { servico: "Consulta", paciente: "João", link: "https://x" })).toBe(
       "Para *Consulta* de João: https://x",
     );
+  });
+});
+
+describe("boas-vindas com o nome (cliente, 08/nov/2026)", () => {
+  it("número cadastrado: o primeiro nome no lugar do {nome}", () => {
+    expect(renderWelcome("Olá, {nome}! 👋 Aqui é {clinica}.", "da Clínica X", "Thiago")).toBe("Olá, Thiago! 👋 Aqui é da Clínica X.");
+  });
+  it("sem cadastro: o {nome} sai com a vírgula ou o espaço da frente", () => {
+    expect(renderWelcome("Olá, {nome}! 👋 Aqui é {clinica}.", "da Clínica X", null)).toBe("Olá! 👋 Aqui é da Clínica X.");
+    expect(renderWelcome("Oi {nome}, tudo bem?", "da Clínica X", null)).toBe("Oi, tudo bem?");
+  });
+  it("texto sem {nome}: fica como a clínica escreveu", () => {
+    expect(renderWelcome("Oi! Aqui é {clinica} 😊", "da Clínica X", "Thiago")).toBe("Oi! Aqui é da Clínica X 😊");
+  });
+  it("o {nome} é aceito no texto próprio das boas-vindas", () => {
+    expect(validateBotMessage("welcome", "Olá, {nome}! Aqui é {clinica}.")).toBe("Olá, {nome}! Aqui é {clinica}.");
   });
 });

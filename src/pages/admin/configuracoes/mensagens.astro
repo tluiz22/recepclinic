@@ -151,7 +151,7 @@ const rows = visibleTemplates.map((standard) => {
 });
 
 const botDefaults: Record<string, string> = {
-  welcome: bot.welcome(label),
+  welcome: bot.welcome(label, true, example.nome),
   menu: clinic.features.includes("knowledge_base") ? bot.MENU_BODY_ASK : bot.MENU_BODY,
   not_understood: bot.notUnderstood(),
   handoff: bot.HANDOFF,
@@ -358,6 +358,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
                             <p class={HINT}>
                               Campos automáticos (trocam pelos dados de verdade): {markerHint(row.markers)}
                               {row.required.length > 0 && ` (obrigatório: ${row.required.map((m) => `{${m}}`).join(", ")})`}.
+                              {row.key === "welcome" && ' Para quem não tem cadastro, o {nome} some ("Olá, {nome}!" vira "Olá!").'}
                             </p>
                           )}
                           <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar</button>
