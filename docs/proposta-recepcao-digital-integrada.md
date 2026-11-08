@@ -352,6 +352,9 @@ nunca desfaz o atendimento**; ela aparece na Agenda como hoje (FE).
 
 ## 10. Vários profissionais e vários números de WhatsApp
 
+> **Vários números de WhatsApp: fora desta entrega (cliente, 08/nov).** Fica pendente para planejamento e
+> implementação depois desta entrega ou quando o cliente decidir. O que vale agora: um número por clínica, como hoje.
+
 ### 10.1 Modelo conceitual
 
 ```
@@ -456,7 +459,7 @@ para a produção).
 | **F1 Fundação** | Modelo pronto para vários números e portal | Conexões com `id`, `connection_id` em conversas/mensagens/templates; canal `portal`; observação por convênio; "só convênio"; consultas únicas do motor; fila de notificações | F0 | Migração das conexões em produção | Média | Testes de banco: clínica de um número igual a antes; isolamento | Nada visível (base) |
 | **F2 Portal + segurança** | Paciente marca sozinho | Portal (passos 1–9), apelido da clínica, sessão/token com finalidade, código pelo WhatsApp, reserva 5 min, limites, CAPTCHA adaptativo, confirmação pela fila, canal "Portal" na Agenda | F1, RD1–RD9 | Abuso; template de autenticação aprovado | Alta | Cenários 1–12, 15–17 (seção 15) no staging com Playwright | **Jornada completa no celular** |
 | **F3 Bot → portal** | WhatsApp leva ao portal | "Agendar" envia o link; informações com "Ver no portal"; remarcar/cancelar e "Minhas consultas" no portal; antecedência | F2 | Mudar o caminho do bot em produção | Média | Jornada do bot atualizada; clínica sem o item igual a antes | WhatsApp → portal → confirmação no WhatsApp |
-| **F4 Vários números + caixa unificada** | Cada médico com o número dele | Conectar vários números, destino por profissional, roteamento, resposta pelo número certo, filtros da Central, acesso da Recepção por profissional | F1, conferência Meta | Limites e custo da Meta; coexistência | Alta | Cenários 13–14; resposta sempre pela conexão da conversa | Secretária atende 2 médicos de números diferentes numa tela |
+| **F4 Vários números + caixa unificada** — **fora desta entrega (cliente, 08/nov): pendente, para planejar depois da entrega ou quando o cliente decidir** | Cada médico com o número dele | Conectar vários números, destino por profissional, roteamento, resposta pelo número certo, filtros da Central, acesso da Recepção por profissional | F1, conferência Meta | Limites e custo da Meta; coexistência | Alta | Cenários 13–14; resposta sempre pela conexão da conversa | Secretária atende 2 médicos de números diferentes numa tela |
 | **F5 Agenda da clínica grande** | 18 profissionais sem 18 telas | Agenda em grade, "Próximos horários livres", Início com pendências por profissional | F0 | Desempenho com 18 agendas | Média | 18 agendas carregam em < 2 s no staging | Visão da manhã da clínica inteira |
 | **F6 Métricas e otimização** | Medir e recuperar | Funil do portal, aba Portal, recuperação de abandono em 15 min, horários por modalidade (se RD6), ajustes | F2–F3 | Excesso de mensagens | Média | Números conferidos com uma semana de uso | Painel de conversão |
 
@@ -532,7 +535,7 @@ Planejamento aprovado pelo cliente em 08/nov; RD1 a RD14 respondidas no mesmo di
 | RD8 | Data de nascimento no cadastro novo | **Obrigatória** (idade limite e perfil dependem dela) |
 | RD9 | CAPTCHA | **Cloudflare Turnstile, só quando há risco**: entrada direta ao pedir o código ou com sinal de abuso; quem vem do link do WhatsApp não vê |
 | RD10 | Antecedência para cancelar/remarcar pelo portal | **A clínica define, padrão 24 h**; dentro do prazo, só "Falar com a recepção" |
-| RD11 | Por qual número sai a confirmação de quem marcou pelo portal direto | **Número do médico**; sem ele, o número principal da clínica |
+| RD11 | Por qual número sai a confirmação de quem marcou pelo portal direto | **Número do médico**; sem ele, o número principal da clínica **Sem efeito nesta entrega (um número só; vários números pendentes, 08/nov).** |
 | RD12 | Como mostrar os pacientes de um telefone | **Primeiro nome + inicial do sobrenome**. **Revista pelo cliente em 08/nov (Etapa 2):** nome completo nas telas depois do telefone comprovado (P8 a P10) |
 | RD13 | Foto do profissional no portal | **Sempre que houver foto** no cadastro (sem opção por médico). O cadastro avisa "Esta foto aparece no portal de agendamento"; sem foto, iniciais |
 | RD14 | Recepção restrita por profissional nas conversas; equipes de recepção | **Mesma restrição da agenda** (médicos liberados à pessoa, padrão todos; número geral: todas veem); sem equipes na 1ª versão. **Revista em 08/nov (rodada 3):** conversa sem profissional; toda a recepção vê todas as conversas; restrição por profissional só na Agenda |
@@ -664,4 +667,6 @@ em Desempenho › "De onde vêm as marcações"**: Recepção (painel), WhatsApp
 conversa), Link da clínica e Links dos profissionais, com o detalhe por lugar e a tabela "Pelos links dos
 profissionais". **Origem por link marcado:** "Copiar link para…" (Configurações › Portal, cadastro do profissional,
 celular) pergunta onde vai usar (Instagram, site, Google, mensagem, outro lugar) e o link leva a marca (`?de=…`); o QR
-sai marcado como cartaz; link sem marca conta como "origem não informada".
+sai marcado como cartaz; link sem marca conta como "origem não informada". Métricas **aprovadas**. **Vários números de WhatsApp fora desta entrega (cliente,
+08/nov):** pendente para planejar depois (seção 10, F4, RD11); saíram do desenho as telas Números de WhatsApp e
+Desconectar, o selo do número, o filtro Número e a faixa "Respondendo pelo número" em Conversas.
