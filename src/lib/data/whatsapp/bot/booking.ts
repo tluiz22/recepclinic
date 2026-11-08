@@ -392,9 +392,14 @@ async function pathAcceptsPrivate(b: Bot, ctx: BookingContext): Promise<boolean>
 }
 
 async function enterCoverage(b: Bot, ctx: BookingContext): Promise<void> {
-  if (!(await activePlans(b, ctx)).length) return choosePrivate(b, ctx);
+  const acceptsPrivate = await pathAcceptsPrivate(b, ctx);
+  if (!(await activePlans(b, ctx)).length) {
+    if (acceptsPrivate) return choosePrivate(b, ctx);
+    // Só convênio e nenhum plano ativo (ex.: planos desativados): não há como marcar por aqui.
+    return handOver(b, "bot_book_no_coverage", t.NO_COVERAGE_OPTION, "no_coverage_option", "requested");
+  }
   // Só convênio: não pergunta "particular ou convênio", vai direto ao plano.
-  if (!(await pathAcceptsPrivate(b, ctx))) {
+  if (!acceptsPrivate) {
     await step(b, "coverage", { answer: "insurance" });
     return askPlan(b, ctx);
   }

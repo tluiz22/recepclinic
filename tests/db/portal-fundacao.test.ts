@@ -87,8 +87,22 @@ describe("particular e convênios do profissional", () => {
     expect(log!.length).toBe(1);
   });
 
-  it("sem particular e sem convênio é recusado", async () => {
+  it("sem particular e sem convênio ativo é recusado (plano desativado não conta)", async () => {
     expect(await codeOf(() => setProfessionalCoverage(asDb(fixture.admin), fixture.clinicId, draId, { acceptsPrivate: false, plans: [] }))).toBe("invalid");
+    expect(
+      await codeOf(() => setProfessionalCoverage(asDb(fixture.admin), fixture.clinicId, draId, { acceptsPrivate: false, plans: [], keepPlanIds: [amil] })),
+    ).toBe("invalid");
+  });
+
+  it("apelido repetido pula o que já existe (\"Ana\", \"Ana 2\" e \"Ana\")", async () => {
+    const { clinicId, admin } = fixture;
+    const make = (displayName: string) =>
+      createProfessional(asDb(admin), clinicId, { userId: null, displayName, profession: "Médica", specialtyIds: undefined, council: null, councilNumber: null, councilState: null });
+    const a = await make("Ana");
+    const b = await make("Ana 2");
+    const c = await make("Ana");
+    const all = await listProfessionals(asDb(admin), clinicId, { includeInactive: true });
+    expect([a, b, c].map((p) => all.find((x) => x.id === p.id)?.portalSlug)).toEqual(["ana", "ana-2", "ana-3"]);
   });
 
   it("a Recepção sem a permissão de convênios não muda nada", async () => {

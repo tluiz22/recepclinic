@@ -123,6 +123,14 @@ Migração `20270102120000_portal_fundacao.sql`:
 são usadas (criar antes, sem uso, só arriscava retrabalho). **Fica para a F3:** "Informações › Convênios" do bot
 não diz que o profissional não atende particular.
 
+**Revisão de código (08/nov, `/code-review`):** corrigidos o apelido com hífen no fim (corte em 60), o apelido
+repetido no preenchimento dos atuais ("Ana", "Ana 2", "Ana" → ana, ana-2, ana-2-2; os novos pulam o que existe), o
+canal `portal` na trilha (`appointment_events`), o plano desativado contando como convênio, a ordem da gravação
+(particular antes das ligações), o só convênio sem plano ativo (vai para a recepção) e o custo dos dias bloqueados
+(só os dias tocados por bloqueio). Sem efeito: "Primeiro horário" com particular (desde a MS não junta
+profissionais). **Pendente para o cliente:** Métricas › Retomar contato ainda conta o prazo corrido (sem os dias
+bloqueados).
+
 Testes: unidade (matriz, planos, dias bloqueados, prazo), banco (`portal-fundacao.test.ts`, retorno com bloqueio em
 `marcar-retorno.test.ts`, só convênio em `bot-convenio.test.ts`) e Playwright no cartão (390 e 1280 px; salvar só
 convênios com observação; erro sem nenhuma opção com as escolhas preservadas; correção sem repreencher).

@@ -34,7 +34,8 @@ immutable
 set search_path = ''
 as $$
   select coalesce(
-    nullif(left(trim(both '-' from regexp_replace(lower(extensions.unaccent(coalesce(p_text, ''))), '[^a-z0-9]+', '-', 'g')), 60), ''),
+    -- Corta em 60 antes de tirar os hífens das pontas (o corte pode cair num separador).
+    nullif(trim(both '-' from left(regexp_replace(lower(extensions.unaccent(coalesce(p_text, ''))), '[^a-z0-9]+', '-', 'g'), 60)), ''),
     'profissional')
 $$;
 
@@ -50,16 +51,28 @@ alter table public.professionals
   add column show_in_portal boolean not null default true,
   add column accepts_private boolean not null default true;
 
--- Os de hoje, na ordem do cadastro: o primeiro nome repetido fica sem número.
-with numbered as (
-  select id, app.portal_slug_of(display_name) as base,
-         row_number() over (partition by clinic_id, app.portal_slug_of(display_name) order by created_at, id) as n
-    from public.professionals
-)
-update public.professionals p
-   set portal_slug = case when numbered.n = 1 then numbered.base else left(numbered.base, 56) || '-' || numbered.n end
-  from numbered
- where numbered.id = p.id;
+-- Os de hoje, na ordem do cadastro, pela mesma regra dos novos: o primeiro nome repetido fica sem número e o
+-- número pula o apelido que já existe (ex.: "Ana", "Ana 2" e "Ana" → ana, ana-2, ana-3).
+do $$
+declare
+  v_row record;
+  v_base text;
+  v_slug text;
+  v_n integer;
+begin
+  for v_row in select id, clinic_id, display_name from public.professionals order by clinic_id, created_at, id loop
+    v_base := app.portal_slug_of(v_row.display_name);
+    v_slug := v_base;
+    v_n := 1;
+    -- Os ainda não preenchidos estão nulos: só conta o que já foi dado.
+    while exists (select 1 from public.professionals where clinic_id = v_row.clinic_id and portal_slug = v_slug) loop
+      v_n := v_n + 1;
+      v_slug := rtrim(left(v_base, 56), '-') || '-' || v_n;
+    end loop;
+    update public.professionals set portal_slug = v_slug where id = v_row.id;
+  end loop;
+end
+$$;
 
 -- O padrão vazio só deixa o cadastro sem informar o apelido: o gatilho abaixo sempre o preenche antes da checagem.
 alter table public.professionals
@@ -90,7 +103,7 @@ begin
   v_slug := v_base;
   while exists (select 1 from public.professionals where clinic_id = new.clinic_id and portal_slug = v_slug) loop
     v_n := v_n + 1;
-    v_slug := left(v_base, 56) || '-' || v_n;
+    v_slug := rtrim(left(v_base, 56), '-') || '-' || v_n;
   end loop;
   -- Dois cadastros ao mesmo tempo com o mesmo nome: a chave única recusa o segundo, que tenta de novo.
   new.portal_slug := v_slug;
@@ -206,6 +219,12 @@ create trigger professional_insurance_plans_note_log after update of note on pub
 -- 5. Canal e origem
 -- ---------------------------------------------------------------------------
 alter type public.action_channel add value if not exists 'portal';
+
+-- A trilha do atendimento também aceita o canal do portal.
+alter table public.appointment_events drop constraint appointment_events_channel_check;
+alter table public.appointment_events add constraint appointment_events_channel_check check (channel in (
+  'admin', 'whatsapp_bot', 'booking_link', 'cron', 'mass_cancel', 'schedule_block', 'portal'
+));
 
 -- Entrada (R5, filtro "Entrada"): link do bot na conversa, link da clínica ou de profissional.
 -- Lugar (R7, "?de="): onde o link foi posto; sem marca = não informado.

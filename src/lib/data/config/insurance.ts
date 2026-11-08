@@ -173,25 +173,26 @@ export const PLAN_NOTE_MAX = 300;
 
 /**
  * Como o profissional atende (recepção digital, F1, cliente, 08/nov/2026): particular sim/não, os convênios
- * marcados e a observação de cada um. Precisa atender de algum jeito: particular ou ao menos um convênio.
+ * marcados e a observação de cada um. Precisa atender de algum jeito: particular ou ao menos um convênio ativo
+ * (`plans`). `keepPlanIds`: ligações a planos desativados, que ficam como estão e não contam.
+ * Ordem: "Atende particular" primeiro (é a que pode faltar permissão), depois as ligações e as observações.
  */
 export async function setProfessionalCoverage(
   db: DbClient,
   clinicId: string,
   professionalId: string,
-  input: { acceptsPrivate: boolean; plans: { planId: string; note: string | null }[] },
+  input: { acceptsPrivate: boolean; plans: { planId: string; note: string | null }[]; keepPlanIds?: string[] },
 ): Promise<void> {
   const v = new Validation();
   const plans = [...new Map(input.plans.map((p) => [p.planId, { planId: p.planId, note: cleanText(p.note ?? "") }])).values()];
   v.check(input.acceptsPrivate || plans.length > 0, "coverage", "Marque Particular ou ao menos um convênio");
   v.check(plans.every((p) => (p.note?.length ?? 0) <= PLAN_NOTE_MAX), "note", `Observação com até ${PLAN_NOTE_MAX} caracteres`);
   v.throwIfInvalid("Convênios atendidos");
-  await setProfessionalPlans(
-    db,
-    clinicId,
-    professionalId,
-    plans.map((p) => p.planId),
+  unwrap(
+    await db.rpc("set_professional_accepts_private", { p_clinic_id: clinicId, p_professional_id: professionalId, p_accepts: input.acceptsPrivate }),
+    "Atende particular",
   );
+  await setProfessionalPlans(db, clinicId, professionalId, [...plans.map((p) => p.planId), ...(input.keepPlanIds ?? [])]);
   const notes = await listProfessionalPlanNotes(db, clinicId, professionalId);
   for (const plan of plans) {
     if ((notes.get(plan.planId) ?? null) === plan.note) continue;
@@ -207,8 +208,4 @@ export async function setProfessionalCoverage(
       "Observação do convênio",
     );
   }
-  unwrap(
-    await db.rpc("set_professional_accepts_private", { p_clinic_id: clinicId, p_professional_id: professionalId, p_accepts: input.acceptsPrivate }),
-    "Atende particular",
-  );
 }

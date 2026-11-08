@@ -8,7 +8,7 @@ import {
   type ProfessionalInput,
 } from "../../../../../lib/data/config/professionals";
 import { DataError } from "../../../../../lib/data/errors";
-import { listInsurancePlans, listProfessionalPlanNotes, listProfessionalPlans, setProfessionalCoverage } from "../../../../../lib/data/config/insurance";
+import { listInsurancePlans, listProfessionalPlans, setProfessionalCoverage } from "../../../../../lib/data/config/insurance";
 import { removeProfilePhoto, uploadProfilePhoto } from "../../../../../lib/data/config/profilePhotos";
 import { setProfessionalBotInfo } from "../../../../../lib/data/config/professionalBotInfo";
 import { runFormAction } from "../../../../../lib/data/formAction";
@@ -66,20 +66,14 @@ export const POST: APIRoute = async (context) => {
       if (acao === "convenios") {
         // Particular e convênios (MC; F1 da recepção digital): particular sim/não, os planos ativos marcados e a
         // observação de cada um; a ligação a planos desativados fica, com a observação dela.
-        const [active, current, notes] = await Promise.all([
-          listInsurancePlans(db, clinic.clinicId),
-          listProfessionalPlans(db, clinic.clinicId, id),
-          listProfessionalPlanNotes(db, clinic.clinicId, id),
-        ]);
+        const [active, current] = await Promise.all([listInsurancePlans(db, clinic.clinicId), listProfessionalPlans(db, clinic.clinicId, id)]);
         const activeIds = new Set(active.map((p) => p.id));
         const marked = formAll(form, "plan_id").filter((pid) => activeIds.has(pid));
         const acceptsPrivate = form?.get("accepts_private") === "1";
         await setProfessionalCoverage(db, clinic.clinicId, id, {
           acceptsPrivate,
-          plans: [
-            ...marked.map((pid) => ({ planId: pid, note: formOptionalText(form, `note_${pid}`) })),
-            ...current.filter((pid) => !activeIds.has(pid)).map((pid) => ({ planId: pid, note: notes.get(pid) ?? null })),
-          ],
+          plans: marked.map((pid) => ({ planId: pid, note: formOptionalText(form, `note_${pid}`) })),
+          keepPlanIds: current.filter((pid) => !activeIds.has(pid)),
         });
         const message = !marked.length ? "Salvo: só particular." : acceptsPrivate ? "Salvo: particular e convênios." : "Salvo: só convênios.";
         return { redirectTo: page(id), message };

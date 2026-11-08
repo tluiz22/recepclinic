@@ -1,4 +1,4 @@
-import { addDays, toInstant, weekdayOf } from "../../clinicTime";
+import { addDays, localDateOf, toInstant, weekdayOf } from "../../clinicTime";
 import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
 
@@ -46,7 +46,14 @@ export function wholeBlockedDays({
   const result = new Set<string>();
   const merged = merge(blocks);
   if (!merged.length || !windows.length) return result;
-  for (let date = fromDate; date <= toDate; date = addDays(date, 1)) {
+  // Só os dias tocados por algum bloqueio (uma janela longa sem bloqueio não custa nada).
+  const candidates = new Set<string>();
+  for (const b of merged) {
+    const first = localDateOf(b.start, timeZone);
+    const last = localDateOf(new Date(b.end.getTime() - 1), timeZone);
+    for (let date = first < fromDate ? fromDate : first; date <= last && date <= toDate; date = addDays(date, 1)) candidates.add(date);
+  }
+  for (const date of [...candidates].sort()) {
     const weekday = weekdayOf(date);
     const today = windows.filter((w) => w.weekday === weekday);
     if (!today.length) continue;
