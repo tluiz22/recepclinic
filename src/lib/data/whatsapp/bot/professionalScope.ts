@@ -5,7 +5,7 @@ import type { BotCatalog } from "./catalog";
 // profissional antes do menu, e a conversa segue no contexto dele (serviços,
 // valores e as informações que o bot responde). Clínica de um profissional
 // (como a piloto): nada muda. "Exames" (agenda sem profissional, M8) leva
-// direto aos exames, sem profissional.
+// direto aos exames da equipe (MS, S3), sem profissional.
 //
 // A escolha fica no contexto da conversa (PROFESSIONAL_KEY) até a conversa
 // recomeçar. Remarcar, cancelar e "meus atendimentos" continuam mostrando
@@ -53,8 +53,17 @@ export function buildScope(catalog: BotCatalog, context: unknown): ProfessionalS
 export function scopeCatalog(catalog: BotCatalog, scope: ProfessionalScope): BotCatalog {
   if (!scope.multi || !scope.choice) return catalog;
   if (scope.choice === EXAMS_CHOICE) {
-    const exams = (list: BotCatalog["services"]) => list.filter((s) => s.category === "exam");
-    return { ...catalog, services: exams(catalog.services), copies: exams(catalog.copies) };
+    // Serviços da equipe (MS, S3; cliente, 07/nov/2026): em "Exames", só os exames da agenda sem profissional.
+    const team = (list: BotCatalog["services"]) =>
+      list
+        .filter((s) => s.category === "exam")
+        .map((s) => ({ ...s, agendas: s.agendas.filter((a) => !a.professionalId) }))
+        .filter((s) => s.agendas.length > 0);
+    const services = team(catalog.services).map((s) => {
+      const copy = s.agendas[0].serviceId !== s.id ? catalog.copies.find((c) => c.id === s.agendas[0].serviceId) : undefined;
+      return copy ? { ...copy, agendas: s.agendas } : s;
+    });
+    return { ...catalog, services, copies: team(catalog.copies) };
   }
   const id = scope.choice;
   const mine = (list: BotCatalog["services"]) =>

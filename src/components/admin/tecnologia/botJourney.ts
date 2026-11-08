@@ -44,7 +44,7 @@ const CHOOSE_PROFESSIONAL: FlowItem[] = [
     "Profissional sem especialidade fica em \"Outros profissionais\". O nome escrito também vale (\"cardiologia\"). Mais de 10 opções: \"Mais opções\".",
   ),
   branch(
-    ["Exames", [bot("\"Certo, vamos ver os exames.\" e o submenu Exames, sem profissional")]],
+    ["Exames", [bot("\"Certo, vamos ver os exames.\" e o submenu Exames, sem profissional", "Só os exames da equipe (serviços sem profissional; MS, 07/11). O exame de um profissional fica no menu dele.")]],
     [
       "Uma especialidade",
       [

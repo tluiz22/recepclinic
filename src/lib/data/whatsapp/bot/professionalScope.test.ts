@@ -70,7 +70,8 @@ describe("escopo do profissional (MB)", () => {
       ["raio", ["a-exames"]],
     ]);
     const exams = scopeCatalog(catalog, buildScope(catalog, { [PROFESSIONAL_KEY]: EXAMS_CHOICE }));
-    expect(exams.services.map((s) => s.id)).toEqual(["eco", "raio"]);
+    // Serviços da equipe (MS, S3): em "Exames", só os da agenda sem profissional (o eco é do Dr. João).
+    expect(exams.services.map((s) => s.id)).toEqual(["raio"]);
   });
 
   it("escolha que não vale mais (profissional saiu do bot) é ignorada", () => {

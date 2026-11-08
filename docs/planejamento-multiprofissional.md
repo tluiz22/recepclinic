@@ -219,3 +219,8 @@ na opção A ("Com quem" com busca antes do serviço). Migrar agenda (cliente, 0
 tipo do novo profissional ou cria a cópia. Bot: as cópias de mesmo nome viram uma opção, e a agenda escolhida segue com
 a cópia dela (sem "Primeiro horário" entre cópias). Marcar fecha os links pendentes das cópias do mesmo serviço.
 Importação da agenda: nome repetido leva a agenda. Arquivo do preparo compartilhado só sai sem uso.
+
+**S3, serviços da equipe:** exame com "Equipe (exames)" como dono (só exame; o banco recusa outro tipo e a tela tira a
+equipe ao trocar o tipo); na Marcar, "Equipe (exames)" mostra só os exames dela; no bot, "Exames" lista só os exames
+da equipe (o exame de um profissional fica no menu dele). Só o Administrador grava (a RLS do S1 libera ao profissional
+só os serviços dele).
