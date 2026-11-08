@@ -1,7 +1,9 @@
 # RecepClinic
 
-> **Próxima sessão: planejar uma nova melhoria (o cliente traz o tema). Frente da nota fiscal encerrada em 08/nov com a
-> validação pendente.**
+> **Nova frente (08/nov): recepção digital integrada** (portal do paciente, vários números de WhatsApp, caixa unificada,
+> clínica de 18 profissionais). **Etapa 1 (planejamento) aprovada e RD1 a RD14 decididas**; retomar pelo bloco do
+> [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md). Próximo: Etapa 2 (design), **só
+> com autorização do cliente**. Frente da nota fiscal encerrada em 08/nov com a validação pendente.
 >
 > **Duas frentes (cliente, 07/nov):**
 > - **Validação do que está pendente:** [`frente-validacao.md`](frente-validacao.md) (multiprofissional ME, MC, MI, MB

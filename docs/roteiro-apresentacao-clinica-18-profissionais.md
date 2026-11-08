@@ -52,29 +52,29 @@ de quem marcou (Portal, WhatsApp ou Recepção).
 
 ## 6. O que já existe × o que está sendo proposto (obrigatório deixar claro)
 
-| Já em uso (produção) | Pronto, em validação (staging) | Proposto (a desenvolver) |
-|---|---|---|
-| Bot no WhatsApp: marcar, remarcar, cancelar, informações, falar com a recepção | Especialidades por médico; bot pergunta especialidade → médico | Portal da clínica com a jornada completa |
-| Link de agendar com horários reais | Convênios por médico; serviços e valores por médico | Entrada pelo site/Instagram/Google com código no WhatsApp |
-| Lembrete com Confirmar/Remarcar/Cancelar; confirmação automática | Informações do bot por médico; perfil e idade por médico; fotos no cadastro | Vários números de WhatsApp na mesma clínica |
-| Central de Atendimento: conversas no painel, assumir, transferir | | Caixa unificada com filtro por médico, especialidade e número |
-| Agenda Dia/Semana/Mês com escolha de agendas; trava de horário duplicado | | Agenda em grade e "Próximos horários livres" |
-| Pacientes com responsável e dependentes; sem CPF no agendamento | | Reserva do horário por 5 min, proteções contra agendamento falso |
-| Métricas e funil do bot; limites contra abuso | | Métricas do portal e recuperação de agendamento abandonado |
+| Já em uso (produção) | Proposto (a desenvolver) |
+|---|---|
+| Bot no WhatsApp: marcar, remarcar, cancelar, informações, falar com a recepção | Portal da clínica com a jornada completa |
+| Especialidades por médico; bot pergunta especialidade → médico | Entrada pelo site/Instagram/Google com código no WhatsApp |
+| Convênios, serviços e valores por médico; informações do bot por médico; perfil e idade por médico; fotos no cadastro | Vários números de WhatsApp na mesma clínica |
+| Link de agendar com horários reais; lembrete com Confirmar/Remarcar/Cancelar; confirmação automática | Caixa unificada com filtro por médico, especialidade e número |
+| Central de Atendimento: conversas no painel, assumir, transferir | Agenda em grade e "Próximos horários livres" |
+| Agenda Dia/Semana/Mês com escolha de agendas; trava de horário duplicado | Reserva do horário por 5 min, proteções contra agendamento falso |
+| Pacientes com responsável e dependentes; sem CPF no agendamento; métricas, funil do bot e limites contra abuso | Métricas do portal e recuperação de agendamento abandonado |
 
-Frase para a reunião: "O que está na primeira coluna a clínica usa amanhã. A segunda está pronta e em validação. A
-terceira é a evolução que estamos planejando com vocês, em fases."
+Frase para a reunião: "O que está na primeira coluna a clínica usa amanhã. A segunda é a evolução que estamos
+planejando com vocês, em fases."
 
 ## 7. Evolução prevista (sem prazos fechados)
 
-F0 publicar o multiprofissional → F1 base técnica → **F2 portal com segurança** → F3 WhatsApp levando ao portal →
+F0 multiprofissional (publicado em 08/nov) → F1 base técnica → **F2 portal com segurança** → F3 WhatsApp levando ao portal →
 F4 vários números e caixa unificada → F5 agenda da clínica grande → F6 métricas e recuperação. A clínica pode ajudar a
 definir a ordem de F4 e F5 conforme a dor maior.
 
 ## 8. Sequência recomendada da demonstração (30–40 min)
 
 1. (5 min) Perguntas de abertura (seção 9, primeiras 4) — ouvir a operação.
-2. (5 min) O que já existe: WhatsApp de testes ao vivo (bot com especialidade → médico, no staging).
+2. (5 min) O que já existe: WhatsApp de testes ao vivo (bot com especialidade → médico, numa clínica de demonstração).
 3. (10 min) Jornada do paciente no celular (protótipo da Etapa 2), contando a história da seção 3.
 4. (10 min) Jornada da secretária no computador (protótipo): Início → Conversas filtradas → Próximos horários livres → Agenda em grade.
 5. (5 min) Segurança e privacidade em linguagem simples: sem CPF, código no WhatsApp, horário reservado, ninguém marca
@@ -90,10 +90,10 @@ Material: celular com o WhatsApp de testes, notebook com o painel, protótipos d
 3. As 3 secretárias atendem todos os médicos ou cada uma tem os seus?
 4. Quais convênios? Há médico que só atende convênio? Há regra de horário por convênio (ex.: Unimed só à tarde)? (RD6)
 5. Convênio exige autorização ou encaminhamento antes da consulta? Para quais?
-6. A consulta de retorno é marcada pela recepção ou o paciente pode marcar? Há exames/procedimentos para o portal? (RD5)
-7. Qual antecedência mínima para cancelar ou remarcar? (RD10)
+6. A 1ª versão do portal marca só consultas (RD5): a clínica precisaria de retorno ou exames pelo portal depois?
+7. Qual antecedência mínima para cancelar ou remarcar? (RD10: a clínica define; padrão 24 h)
 8. O paciente marca para filhos/pais com frequência?
-9. Os médicos querem foto no portal? (RD13)
+9. Os médicos têm foto profissional para o portal? (a foto do cadastro aparece no portal, RD13)
 10. Onde o portal seria divulgado (site, Instagram, Google)? Têm site próprio?
 11. O que mais gera erro de marcação hoje?
 12. Quem decide e quem usa no dia a dia (gestor, secretárias, médicos)?

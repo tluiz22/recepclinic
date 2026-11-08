@@ -50,7 +50,7 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 
 - **Objetivo:** apresentar a clínica e levar ao agendamento em um toque.
 - **Usuário:** paciente ou responsável (qualquer familiaridade com tecnologia).
-- **Entrada:** `agendar.recepclinic.com.br/{apelido}` [RD1] ou `/s/{token}` (com token, abre direto em P2/P3/P4
+- **Entrada:** `agendar.recepclinic.com.br/{apelido}` (RD1) ou `/s/{token}` (com token, abre direto em P2/P3/P4
   conforme o escopo).
 - **Exibe:** logo e nome da clínica; frase curta ("Agende sua consulta em poucos passos"); endereço(s) com "Ver no
   mapa"; horário da recepção; especialidades em destaque (até 6) ou o nome do profissional (clínica de um só).
@@ -66,16 +66,17 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
   especialidades (com sinônimos: "coração" → Cardiologia); atalho "Já sei o nome do médico" (busca por nome).
 - **Ações:** tocar no cartão → P3 (ou P4 se só um médico); busca filtra ao digitar (sem acento, sem maiúsculas).
 - **Vazio da busca:** "Não encontramos '{termo}'. Veja todas as especialidades ou fale com a recepção."
-- **Regras:** só especialidades com profissional ativo e com horário no prazo; "Exames" não aparece no MVP [RD5].
+- **Regras:** só especialidades com profissional ativo e com horário no prazo; "Exames" não aparece no MVP (RD5).
 - **Aceite:** clínica com uma especialidade pula a tela; a escolha fica no endereço (Voltar do navegador funciona).
 
 ### P3. Seleção do médico
 
 - **Objetivo:** escolher o profissional entendendo as diferenças.
-- **Exibe:** "Médicos de {especialidade}"; cartão por profissional: foto ou iniciais [RD13], nome, registro (CRM
+- **Exibe:** "Médicos de {especialidade}", em **ordem alfabética** (RD7); cartão por profissional: foto (sempre que
+  houver no cadastro, RD13) ou iniciais, nome, registro (CRM
   12345/RN), especialidades (principal em destaque), selos de modalidade ("Particular R$ 350", "Unimed", "+2"),
   próximo horário livre ("Amanhã, 14:00" / "Sem horário nos próximos 60 dias").
-- **Filtros:** "Atende meu convênio" (lista dos convênios da clínica) e ordem [RD7].
+- **Filtros:** "Atende meu convênio" (lista dos convênios da clínica).
 - **Ações:** tocar no cartão → P4; profissional sem horário: cartão visível, botão "Avisar a recepção" → P11.
 - **Vazio do filtro:** "Nenhum médico de {especialidade} atende {convênio}. [Ver todos] [Falar com a recepção]."
 - **Regras:** só ativos com serviço Consulta ativo; convênio do filtro usa a associação positiva (MC).
@@ -105,7 +106,7 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 - **Objetivo:** escolher data e hora entre os horários realmente livres.
 - **Exibe:** resumo no topo (médico · modalidade · [Trocar]); faixa de dias com setas (só dias com horário; existe);
   horários do dia por turno (Manhã, Tarde, Noite); local quando houver mais de um; tipo de consulta se houver mais de um
-  [RD5] (antes da faixa de dias, porque a duração muda os horários).
+  (RD5) (antes da faixa de dias, porque a duração muda os horários).
 - **Ações:** tocar no horário → seleciona (barra fixa: "Ter, 12/11 às 14:00 · [Continuar]"); Continuar → P7 (sempre
   passa por P7 e P8, mesmo com o link do bot).
 - **Vazio:** "Sem horários nos próximos {n} dias. [Ver outro médico da especialidade] [Falar com a recepção]."
@@ -119,7 +120,7 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 - **Com link do bot:** tela curta "Agendando pelo WhatsApp ·· 4321" + [Continuar] + "Não sou eu / usar outro número"
   (vai para a forma direta).
 - **Entrada direta:** campo "Seu celular com WhatsApp" (DDD + número, máscara); CAPTCHA adaptativo quando exigido
-  [RD9]; [Receber código no WhatsApp] → campo do código (6 dígitos, colar funciona), "Reenviar em 0:59", "Trocar número".
+  (RD9); [Receber código no WhatsApp] → campo do código (6 dígitos, colar funciona), "Reenviar em 0:59", "Trocar número".
 - **Mensagens:** código errado "Código incorreto. Restam {n} tentativas."; vencido "O código venceu. [Enviar outro]";
   limite "Muitas tentativas. Tente de novo em 15 minutos ou fale com a recepção."; número inválido "Confira o DDD e o
   número."
@@ -130,7 +131,7 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 ### P8. Quem será atendido
 
 - **Objetivo:** escolher o paciente sem presumir o titular.
-- **Exibe:** "Para quem é a consulta?"; pacientes do contato (primeiro nome + inicial, [RD12]; "(você)" quando
+- **Exibe:** "Para quem é a consulta?"; pacientes do contato (primeiro nome + inicial, (RD12); "(você)" quando
   `is_contact_self`); **Outra pessoa** → P8b; se não há cadastro, vai direto a P8b; contador da reserva visível.
 - **Erros:** idade fora do limite do médico → "A Dra. X atende até {n} anos. [Escolher outro médico]"; carteirinha
   exigida e ausente → campo da carteirinha nesta tela.
@@ -178,7 +179,7 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 
 - **Exibe:** telefone comprovado (P7) → próximas consultas do contato (paciente parcial, médico, data); cada uma com
   [Remarcar] (P6 com o mesmo médico e modalidade) e [Cancelar] ("Tem certeza? A vaga será liberada.").
-- **Regras:** antecedência [RD10]; dentro dela, só "Falar com a recepção"; sessão de série remarca/cancela só a sessão (D9).
+- **Regras:** antecedência (RD10); dentro dela, só "Falar com a recepção"; sessão de série remarca/cancela só a sessão (D9).
 - **Vazio:** "Nenhuma consulta marcada neste número. [Agendar consulta]".
 
 ### P13. Link inválido, vencido ou usado
@@ -263,8 +264,8 @@ paciente), **Agenda** (grade de profissionais, com filtro do portal), **Paciente
 
 ### R7. Configurações › Portal (Administrador)
 
-- **Exibe:** apelido e endereço do portal [RD1] com "Copiar" e QR code; o que aparece (especialidades, foto de cada
-  médico [RD13]); antecedência de cancelamento [RD10]; textos do início; observações por convênio (no cadastro do
+- **Exibe:** apelido e endereço do portal (RD1) com "Copiar" e QR code; o que aparece (especialidades); antecedência
+  de cancelamento (RD10, padrão 24 h); a foto do médico vem do cadastro, que avisa que ela é pública (RD13); textos do início; observações por convênio (no cadastro do
   profissional, seção Convênios).
 
 ## 3. Fluxos completos de uso (para o design)
