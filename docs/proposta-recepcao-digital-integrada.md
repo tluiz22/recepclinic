@@ -647,4 +647,21 @@ botão "Mais 11" na borda direita. Desenhada também a agenda de **clínica pequ
 na largura toda, sem rolagem, só o filtro "Agenda" como hoje. **Filtros da Agenda (cliente, 08/nov):** até 7 agendas (cabem sem
 rolagem), só o filtro "Agenda"; a partir de 8, Especialidade e Profissional, **um de cada vez** (ou todos), com a barra
 de rolagem. **Filtro "Origem" retirado:** a origem aparece no selo do atendimento (Portal, WhatsApp · bot, Recepção ·
-nome) e o volume fica em Métricas. Agenda da clínica pequena **aprovada**.
+nome) e o volume fica em Métricas. Agenda da clínica pequena **aprovada**. **Próximos horários livres:** filtros Especialidade, Atendimento e "A partir de" (**sem
+convênio**; cada profissional mostra os convênios que atende); os **2 primeiros dias com vaga** de cada um, com "Ver
+mais dias"; horário em reserva do portal **aparece apagado**, sem marcar. **Atendimento aberto na grade (cliente, 08/nov):** clicar num atendimento abre
+uma **coluna à direita, como hoje**, com "Fechar"; a agenda dele passa para a **primeira coluna** (destacada) e as
+outras que couberem continuam visíveis (com a coluna aberta, 4 de 18). **Origem** (Portal · Instagram, WhatsApp · bot,
+Recepção · nome) **só nos dados do atendimento**, não na grade. **Sem "completar cadastro":** o portal pega os mesmos
+dados do WhatsApp (nome, data de nascimento, telefone e responsável quando precisa) e **não guarda endereço**; saem o
+aviso "Cadastro novo: completar dados" e o selo "Dados a completar". No Meu dia, consulta do portal para conferir é só a
+de **data de nascimento diferente**. Coluna do atendimento **aprovada**. **Pacientes:** sem a aba "Do portal" (fica como hoje); o selo
+"Cadastrado pelo portal" só na ficha; quadro "Data de nascimento a conferir" (Corrigir / Manter) **aprovado**. **Métricas (cliente, 08/nov):** as 5 abas de hoje
+ficam (Desempenho, Agendamento digital, Retomar contato, Faltosos, Financeiro; remarcação e cancelamento seguem no
+WhatsApp e no Agendamento digital); **aba nova "Portal"** com os números do portal, onde as pessoas param (filtro
+"Entrada": link do WhatsApp, link da clínica, link de profissional) e tentativas bloqueadas. **Percentuais de origem
+em Desempenho › "De onde vêm as marcações"**: Recepção (painel), WhatsApp (bot marcou), WhatsApp (link do portal na
+conversa), Link da clínica e Links dos profissionais, com o detalhe por lugar e a tabela "Pelos links dos
+profissionais". **Origem por link marcado:** "Copiar link para…" (Configurações › Portal, cadastro do profissional,
+celular) pergunta onde vai usar (Instagram, site, Google, mensagem, outro lugar) e o link leva a marca (`?de=…`); o QR
+sai marcado como cartaz; link sem marca conta como "origem não informada".
