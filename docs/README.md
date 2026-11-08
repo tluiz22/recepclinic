@@ -1,13 +1,16 @@
 # RecepClinic
 
-> **Próxima sessão (08/nov): o cliente valida a nota fiscal (N1 a N5) local, na branch `nota-fiscal`.**
+> **Próxima sessão: planejar uma nova melhoria (o cliente traz o tema). Frente da nota fiscal encerrada em 08/nov com a
+> validação pendente.**
 >
 > **Duas frentes (cliente, 07/nov):**
 > - **Validação do que está pendente:** [`frente-validacao.md`](frente-validacao.md) (multiprofissional ME, MC, MI, MB
 >   e MS no staging; o ajuste `9b22e00` da Central; depois, produção com autorização).
 > - **Nota fiscal:** bloco "Frente da nota fiscal" do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md).
 >   N-P1 a N-P7 decididas; **N1 a N5 feitas na branch `nota-fiscal`** (só local, 7 migrações); roteiro de validação
->   na seção 15.2. Depois: juntar na `main` e decidir staging/produção (N6 depende do Asaas, contador e advogado).
+>   na seção 15.2. **Pendente: validação do cliente** (tudo da N1 à N5) e a recaptura de `config-nota-fiscal` (fila da
+>   branch). Depois: trazer a `main` para a branch, juntar na `main` e decidir staging/produção (N6 depende do Asaas,
+>   contador e advogado).
 >
 > Staging = `main` em `c60ae26` (com o bloco multiprofissional e a MS); produção sem o bloco multiprofissional (última
 > publicação no [`producao.md`](producao.md)). Capturas da ajuda: fila vazia.
