@@ -2,8 +2,8 @@
 
 > **Estado atual (retomar daqui), 08/nov/2026.** Plano aprovado (decisões I1 a I11, seção 6; regra da Matriz, bot e
 > portal, seção 1.1). **F1 feita, na `main` e no staging** (`aba61a8`, migração `20270102120000` aplicada e conferida:
-> Portal ligado nas 5 clínicas com bot, apelidos nos 11 profissionais). **Aguardando a validação do cliente** pelo
-> roteiro da seção 7.1. Produção: não. Próximo: D4 (desenho de retorno e exames no canvas). Pedir ao cliente: CNAME de
+> Portal ligado nas 5 clínicas com bot, apelidos nos 11 profissionais). **Validada pelo cliente no staging (08/nov)**,
+> roteiro da seção 7.1 completo, sem ajustes. Produção: não. Próximo: D4 (desenho de retorno e exames no canvas). Pedir ao cliente: CNAME de
 > `agendar-teste` e `agendar`, chaves do Turnstile (seção 4).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
@@ -146,3 +146,8 @@ convênios com observação; erro sem nenhuma opção com as escolhas preservada
    "Outro convênio" não oferece particular.
 4. Agenda: bloquear um dia inteiro de um profissional dentro do prazo de retorno de uma consulta; o "Marcar retorno"
    e o bot aceitam o retorno um dia a mais.
+
+**Validação (cliente, 08/nov/2026):** os 4 passos conferidos no staging, sem ajustes. Passo 3 feito com uma consulta
+que só o profissional "só convênio" faz (o bot olha todos os profissionais do serviço: se algum atende particular,
+a pergunta "particular ou convênio" continua, como previsto). Passo 4 com prazo de 5 dias, consulta em 07/11 e
+10/11 bloqueado o dia inteiro: retorno até 13/11 no "Marcar retorno" (aviso "Fora do prazo" só depois) e no bot.
