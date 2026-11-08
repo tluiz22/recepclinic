@@ -591,3 +591,12 @@ com 6 ou mais em lista (colunas Médico, Atendimento, Próximo horário; busca p
 link do WhatsApp) → P8/P8b → P9 → P10. **Cliente (08/nov): computador aprovado; P13 "já usado" não mostra nada da
 consulta** (só "Ele já foi usado para marcar uma consulta" e o caminho para Minhas consultas, que pede o telefone).
 **P11 e P12 aprovadas (08/nov). Desenho do portal fechado (rodadas 1 e 2).**
+
+**Link do profissional (pedido do cliente, 08/nov/2026).** Cada profissional tem um link próprio de agendamento, com a
+mesma jornada da clínica sem escolher especialidade e médico; pode ser posto no Instagram ou no site do profissional e
+mandado em mensagem de WhatsApp. Desenho no canvas: início do profissional (foto, nome, CRM, especialidades, próximo
+horário, "Agendar consulta com a Dra. Ana", valores e convênios, local, orientações) → P5 → P6 → P7 → P8 → P9 → P10,
+"Passo n de 4" (3 com um só atendimento), sem "Trocar médico". Clínica de um só profissional (como o piloto): o
+endereço da clínica abre direto nessa página. Link compartilhado (Instagram, site, mensagem de WhatsApp) é entrada
+direta: pede celular e código; só o link do bot na conversa dispensa o código. Decisões pendentes: endereço do link,
+quem cria o apelido do profissional, se mostra os outros médicos da clínica.
