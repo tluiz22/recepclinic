@@ -583,4 +583,9 @@ faixa e 6 horários por linha; P9 com o cartão de data e hora ao lado das linha
 Confirmar na coluna da direita. Celular: P11 em folha sobre a tela (mensagem pronta com o código da sessão, botão
 "Abrir conversa no WhatsApp", telefone da recepção em texto); P12 com as consultas do número (nome completo,
 Remarcar/Cancelar; dentro do prazo, só "Falar com a recepção") e a confirmação do cancelamento; P13 "já usado" (só
-primeiro nome e data, porque o telefone não foi comprovado) e "vencido". Escolhas do cliente: pendentes.
+primeiro nome e data, porque o telefone não foi comprovado) e "vencido". **Complemento pedido pelo cliente (08/nov),
+clínica de 18:** no computador, P2 com 12 especialidades em 3 colunas e busca que também acha o médico pelo nome; P3
+com 6 ou mais em lista (colunas Médico, Atendimento, Próximo horário; busca pelo nome e filtro de convênio); P7
+(celular no computador, código lido no WhatsApp do celular e digitado no computador); P8 (pacientes em 2 colunas;
+"Confirmação no WhatsApp final 4321 / Usar outro" na coluna da direita). A ordem é a mesma do celular: P6 → P7 (só sem
+link do WhatsApp) → P8/P8b → P9 → P10. Escolhas do cliente: pendentes.
