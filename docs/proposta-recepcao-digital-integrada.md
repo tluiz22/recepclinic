@@ -1,9 +1,9 @@
 # Proposta: recepção digital integrada (WhatsApp, Portal e Painel)
 
 > **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 revista).
-> **Etapa 2 (design):** rodada 1 (portal no celular, P1 a P10) **aprovada** no canvas
-> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Rodada 2 (1280 px, P11 a P13) no canvas, aguardando o
-> cliente; depois o painel da recepção (R1 a R7). Nenhum código mudou.
+> **Etapa 2 (design): portal aprovado** (celular e computador, P1 a P13) no canvas
+> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Próximo: rodada 3, painel da recepção (R1 a R7), com o
+> OK do cliente. Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
@@ -590,4 +590,4 @@ com 6 ou mais em lista (colunas Médico, Atendimento, Próximo horário; busca p
 "Confirmação no WhatsApp final 4321 / Usar outro" na coluna da direita). A ordem é a mesma do celular: P6 → P7 (só sem
 link do WhatsApp) → P8/P8b → P9 → P10. **Cliente (08/nov): computador aprovado; P13 "já usado" não mostra nada da
 consulta** (só "Ele já foi usado para marcar uma consulta" e o caminho para Minhas consultas, que pede o telefone).
-P11 e P12: em avaliação.
+**P11 e P12 aprovadas (08/nov). Desenho do portal fechado (rodadas 1 e 2).**
