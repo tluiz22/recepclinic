@@ -1,10 +1,10 @@
 # Proposta: recepção digital integrada (WhatsApp, Portal e Painel)
 
-> **Estado atual (retomar daqui), 08/nov/2026 (sessão encerrada).** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17;
-> RD12 revista). **Etapa 2 (design): portal aprovado** (celular e computador, P1 a P13) e **link do profissional
-> decidido** (seção 18), no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (para editar, ler os arquivos
-> `project/*` do canvas pela ferramenta de Artifact). **Próximo: rodada 3, painel da recepção (R1 a R7)**, incluindo
-> onde copiar o link e o QR do profissional; começar só com o OK do cliente. Nenhum código mudou.
+> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 revista).
+> **Etapa 2 (design):** portal aprovado (P1 a P13, celular e computador) e link do profissional decidido; **rodada 3
+> desenhada (painel da recepção, R1 a R7, com o link e o QR do profissional), aguardando a avaliação do cliente** (seção
+> 18), no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (para editar, ler os arquivos `project/*` do canvas
+> pela ferramenta de Artifact). Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
@@ -604,3 +604,26 @@ direta: pede celular e código; só o link do bot na conversa dispensa o código
 (Dra. Ana Lima → `dra-ana-lima`; nome repetido na clínica ganha `-2`); ninguém muda depois, para o link nunca quebrar.
 **Outros médicos (cliente, 08/nov): nunca** aparecem no link do profissional; sem horário, só "Falar com a recepção".
 O link (copiar e QR code) aparece no cadastro do profissional e em Configurações › Portal (desenho na rodada 3).
+
+**Rodada 3 (08/nov/2026), painel da recepção (R1 a R7) e onde copiar o link e o QR do profissional.** Mesmo canvas,
+mesma cara do painel de hoje (menu lateral, verde `#0B7A62`, Bricolage nos títulos, Source Sans 3), clínica fictícia de
+18 profissionais e 3 números. Novo no visual: **selo do número** (quadradinho com iniciais e cor do número + final do
+telefone: RG Recepção geral ·· 0001, PM Dr. Paulo Mendes ·· 1234, AL Dra. Ana Lima ·· 5678); **origem** em selo com
+contorno (Portal, WhatsApp, Recepção com o nome) e **situação** em selo preenchido, como hoje. Computador (1280 px):
+R5 Meu dia (pendências com o profissional, bloco "marcadas pelo portal" com Abrir/Revisado, tabela por profissional);
+R1 Conversas (filtros Profissional, Especialidade, Número, Situação, Responsável e "Aguardando"; linha com selo do
+número, profissional em foco e "Veio do portal"; faixa fixa "Respondendo pelo número do Dr. Paulo ·· 1234" sobre a
+resposta; painel do paciente com horários livres da especialidade e convênio); R1 filtro de profissional aberto
+(busca, grupos por especialidade, "com conversa aguardando"); R1 Direcionar a outro profissional (o número não muda);
+R3 Agenda em grade (18 colunas agrupadas por especialidade, rolagem só dentro da grade, reserva do portal tracejada
+"Em reserva até 10:42", bloqueio hachurado); R3 Próximos horários livres (especialidade, convênio, atendimento, a
+partir de; horário abre a Marcar preenchida); R2 Agenda com "Origem: Portal" e o atendimento aberto (origem, quando e
+por onde entrou, "Cadastro novo: completar dados", Marcar como revisado); R4 Pacientes, aba "Do portal", e contato com
+dependentes e o bloco "Data de nascimento a conferir" (Corrigir / Manter); R5 Métricas › Portal (funil por passo com a
+perda, origem, bloqueios, tabela por profissional); R6 Números de WhatsApp (para quem é, padrão, qualidade e limite da
+Meta, modelos; regra de qual número sai cada mensagem) e a confirmação de Desconectar com o impacto; R7 Configurações ›
+Portal (endereço da clínica com Copiar/QR/Abrir, **lista do link de cada profissional com busca e filtro**,
+antecedência, quem aparece, textos do início); folha do QR (Baixar imagem, Imprimir cartaz A4, Copiar link); cadastro
+do profissional com o bloco **"Link de agendamento"** no topo (Copiar, QR, Ver como o paciente vê, Mostrar no
+portal). Celular (390 px): Meu dia, Conversas, conversa aberta, Agenda de um profissional por vez com "Próximos
+horários livres" e o link no cadastro com "Compartilhar". **Aguardando a avaliação do cliente.**
