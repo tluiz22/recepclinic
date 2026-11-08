@@ -1,10 +1,12 @@
 # Proposta: recepção digital integrada (WhatsApp, Portal e Painel)
 
-> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 revista).
-> **Etapa 2 (design):** portal aprovado (P1 a P13, celular e computador) e link do profissional decidido; **rodada 3
-> desenhada (painel da recepção, R1 a R7, com o link e o QR do profissional), aguardando a avaliação do cliente** (seção
-> 18), no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (para editar, ler os arquivos `project/*` do canvas
-> pela ferramenta de Artifact). Nenhum código mudou.
+> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 e RD14
+> revistas). **Etapa 2 (design) fechada:** portal (P1 a P13, celular e computador), link do profissional e **painel da
+> recepção (rodada 3, revisada tela por tela e aprovada)**, no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb
+> (seção 18). Decisões da rodada 3 que mudam a proposta: conversa **sem profissional** (só com quem está); **vários
+> números de WhatsApp fora desta entrega** (seção 10, F4, RD11: pendentes); link no Meu dia e no perfil do profissional;
+> aba Métricas › Portal e origens em Desempenho; links marcados por lugar. **Próximo:** atualizar a especificação das
+> telas com essas decisões e planejar a implementação (fases sem a F4), com o OK do cliente. Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
@@ -674,4 +676,7 @@ Desconectar, o selo do número, o filtro Número e a faixa "Respondendo pelo nú
 profissional, no Meu dia dele, o **próprio link**. Os links marcados para **redes sociais, site e Google** (e o QR)
 ficam no **perfil do profissional** ("Meu perfil"), e **cada profissional altera tudo o que é dele** (o Administrador
 também). O link da clínica para redes sociais fica em Configurações › Portal. **QR code só pelo botão** (sem QR fixo na tela; a janela tem Baixar imagem e
-Imprimir cartaz). **Configurações › Portal aprovada** (item em Atendimento, depois de Convênios).
+Imprimir cartaz). **Configurações › Portal aprovada** (item em Atendimento, depois de Convênios). Janela do QR e **Meu perfil** do profissional
+**aprovados**. **Celular:** **barra embaixo** com Meu dia, Conversas, Agenda e Pacientes (o resto no menu); Meu dia,
+Conversas e conversa aberta **aprovados** (capturas da ajuda do celular a refazer, com autorização, na implementação). Agenda no celular e link no perfil pelo celular **aprovados**.
+**Rodada 3 aprovada pelo cliente (08/nov). Desenho da Etapa 2 fechado (portal e painel da recepção).**
