@@ -123,7 +123,7 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 
 - **Objetivo:** comprovar o telefone sem CPF.
 - **Com link do bot:** tela curta "Agendando pelo WhatsApp ·· 4321" + [Continuar] + "Não sou eu / usar outro número"
-  (vai para a forma direta).
+  (vai para a forma direta, com o código no número novo e a saída "Continuar com o final 4321"; cliente, 08/nov).
 - **Entrada direta:** campo "Seu celular com WhatsApp" (DDD + número, máscara); CAPTCHA adaptativo quando exigido
   (RD9); [Receber código no WhatsApp] → campo do código (6 dígitos, colar funciona), "Reenviar em 0:59", "Trocar número".
 - **Mensagens:** código errado "Código incorreto. Restam {n} tentativas."; vencido "O código venceu. [Enviar outro]";

@@ -558,3 +558,6 @@ Escolhas do cliente (08/nov): **P3 mista** (cartão A até 5 médicos na especia
 retirada da jornada** (P3 → P5); os dados do profissional da P4 (foto, nome, CRM, especialidades, local com "Ver no
 mapa", orientações) entram no topo da P5 e da P6, com "Trocar"; a P6 também mostra a observação do convênio escolhido
 e "Ver valores e convênios aceitos" (fechado). **P1 a P6 aprovadas pelo cliente (08/nov).** P7 em diante: em avaliação.
+**P7, código (cliente, 08/nov):** link do WhatsApp não pede código (número já comprovado); entrada direta pede celular
+e código. "Usar outro número" no caminho do WhatsApp manda o código ao número novo, com a saída "Continuar com o
+final 4321" para quem não está com aquele celular (volta ao número da conversa sem perder as escolhas).
