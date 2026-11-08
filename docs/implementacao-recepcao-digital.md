@@ -93,5 +93,57 @@ Em cada etapa: unidade e banco; Playwright em 390 e 1280 px; `security-review` n
 | I7 | Remarcar e cancelar pelo WhatsApp (revê a RD3) | **Decidido (cliente, 08/nov): Remarcar abre o portal nos horários do mesmo médico e modalidade (troca o link de hoje); Cancelar segue na conversa, com confirmação** |
 | I8 | Retorno e exames (revê a RD5) | **Decidido (cliente, 08/nov): os dois também no portal.** Botão **Retorno** no início do portal; o portal confere quais consultas dão direito a retorno (mesmas regras do bot, Fase 17: última consulta na agenda, não domiciliar, um retorno por consulta, sem atendimento futuro na agenda, dentro do prazo); sem nenhuma, avisa que o prazo do retorno acabou e, se precisar, falar com a recepção. **No prazo do retorno, os dias em que a agenda do profissional está bloqueada não contam** (hoje: data da consulta + N dias corridos, `returnLastDate`, `appointments.ts:267`). Telas de retorno e exames ainda sem desenho: rodada 4 no canvas antes de implementar |
 | I9 | Quais dias bloqueados saem do prazo do retorno | **Decidido (cliente, 08/nov): só dias bloqueados inteiros** (o bloqueio cobre todo o horário de atendimento da agenda naquele dia); bloqueio de parte do dia não muda o prazo; feriados não entram. Vale no portal, no bot e no "Marcar retorno" da Agenda (uma função só) |
+| I10 | Como o Portal entra nos planos de venda | **Decidido (cliente, 08/nov): item próprio no Básico**, sem mudar o preço (Básico: Portal, Bot, Lembrete e Resumo do dia) |
+| I11 | Métricas › Retomar contato com o prazo do retorno da I9 | **Decidido (cliente, 08/nov): sim, igual ao bot, já na F1** (função `app.return_last_date` no banco, usada por `metrics_return_rights`) |
 
 A decidir na F3 (proposta, seção 17): se a antecedência da RD10 vale também para cancelar pelo WhatsApp.
+
+## 7. F1 feita (08/nov/2026, branch `recepcao-f1`)
+
+Migração `20270102120000_portal_fundacao.sql`:
+
+- **Matriz:** item `portal` ("Portal de agendamento", área Agenda); `whatsapp_bot` depende dele; a migração liga o
+  Portal em toda clínica com o bot (I6). Planos: Portal no Básico (I10). Texto do item em Sistema › Matriz.
+- **Apelidos:** `clinics.portal_slug` (só o Suporte, `set_clinic_portal_slug`; formato e endereço único conferidos;
+  tela do Suporte na F2a) e `professionals.portal_slug` (automático pelo nome, sem acento, `-2` se repetido, nunca
+  muda; os de hoje preenchidos na ordem do cadastro). `professionals.show_in_portal` (tela na F3).
+- **Particular e convênios:** `professionals.accepts_private` (função `set_professional_accepts_private`: quem mantém
+  convênios ou o próprio profissional) e `professional_insurance_plans.note` (até 300 caracteres; trilha
+  `note_updated`). Tela: cartão "Particular e convênios" no cadastro do profissional (antes "Convênios atendidos"),
+  com "Atende particular" e a observação de cada convênio marcado; recusa sem particular e sem convênio.
+- **Bot (até a F3):** profissional só convênio não pergunta "particular ou convênio" e vai direto ao plano; plano não
+  atendido não oferece particular (avisa e oferece a recepção). Jornada do bot atualizada.
+- **Canal e origem:** `action_channel` ganha `portal`; `appointments.portal_entry` e `portal_place`; trilha "pelo
+  portal de agendamento".
+- **Prazos:** `clinic_settings.portal_hold_minutes` (3 a 10, padrão 5) e `portal_cancel_lead_hours` (padrão 24).
+- **Prazo do retorno (I9):** `blockedDays.ts` acha os dias em que os bloqueios cobrem todo o horário de atendimento
+  da agenda; `returnLastDate` não os conta. Vale em `findReturnOrigin` (bot, Marcar, link de agendar, remarcar) e no
+  "Marcar retorno" da Agenda (`returnReady.ts`). Métricas › Retomar contato também (I11, abaixo).
+
+**Movido (Claude, 08/nov):** a fila de confirmação vai para a F2c e as funções únicas de horários para a F2a, onde
+são usadas (criar antes, sem uso, só arriscava retrabalho). **Fica para a F3:** "Informações › Convênios" do bot
+não diz que o profissional não atende particular.
+
+**Revisão de código (08/nov, `/code-review`):** corrigidos o apelido com hífen no fim (corte em 60), o apelido
+repetido no preenchimento dos atuais ("Ana", "Ana 2", "Ana" → ana, ana-2, ana-2-2; os novos pulam o que existe), o
+canal `portal` na trilha (`appointment_events`), o plano desativado contando como convênio, a ordem da gravação
+(particular antes das ligações), o só convênio sem plano ativo (vai para a recepção) e o custo dos dias bloqueados
+(só os dias tocados por bloqueio). Sem efeito: "Primeiro horário" com particular (desde a MS não junta
+profissionais). Métricas › Retomar contato (e o Relacionamento, que usa a mesma função) passou a descontar os dias
+bloqueados inteiros (I11): `app.return_last_date` e `app.is_whole_blocked_day`, com a mesma regra do código (um teste
+confere que as duas contas dão o mesmo dia).
+
+Testes: unidade (matriz, planos, dias bloqueados, prazo), banco (`portal-fundacao.test.ts`, retorno com bloqueio em
+`marcar-retorno.test.ts`, só convênio em `bot-convenio.test.ts`) e Playwright no cartão (390 e 1280 px; salvar só
+convênios com observação; erro sem nenhuma opção com as escolhas preservadas; correção sem repreencher).
+
+### 7.1 Roteiro de validação da F1 (staging)
+
+1. Sistema › Matriz de uma clínica: o item "Portal de agendamento" aparece; desligá-lo desliga o bot; clínicas que
+   tinham o bot estão com o Portal ligado.
+2. Configurações › Profissionais › um profissional: cartão "Particular e convênios"; desmarcar "Atende particular",
+   marcar um convênio com observação e salvar ("Salvo: só convênios."); desmarcar tudo e salvar mostra o erro.
+3. No WhatsApp de testes, marcar consulta com esse profissional: o bot vai direto a "Qual é o seu convênio?";
+   "Outro convênio" não oferece particular.
+4. Agenda: bloquear um dia inteiro de um profissional dentro do prazo de retorno de uma consulta; o "Marcar retorno"
+   e o bot aceitam o retorno um dia a mais.

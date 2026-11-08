@@ -243,6 +243,23 @@ describe("clínica com convênios", () => {
     }
   });
 
+  it("profissional só convênio (F1 da recepção digital, 08/nov/2026): vai direto ao plano; plano não atendido não oferece particular", async () => {
+    const { data: agenda } = await adminClient().from("agendas").select("professional_id").eq("id", f.ids.agendaDra2).single();
+    await adminClient().from("professionals").update({ accepts_private: false }).eq("id", agenda!.professional_id);
+    try {
+      let reply = await upToProfessional(phone, "Dr. Segundo");
+      expect(reply.at(-1)!.body).toBe("Qual é o seu convênio?");
+      expect(titles(reply)).toEqual(["1. Unimed", "2. Outro convênio", "3. Voltar ao menu"]);
+      reply = await say(phone, { id: "plan_other" });
+      expect(bodies(reply)).toEqual([
+        "Infelizmente a clínica não atende por esse convênio, e o atendimento é só por convênio.\n\nVocê quer que a clínica entre em contato por aqui?",
+      ]);
+      expect(transcript.join("\n")).not.toContain("R$");
+    } finally {
+      await adminClient().from("professionals").update({ accepts_private: true }).eq("id", agenda!.professional_id);
+    }
+  });
+
   it("sem \"Primeiro horário\" entre profissionais (MS, 07/nov/2026): o paciente escolhe com quem", async () => {
     await reset(phone);
     await say(phone, "Oi");

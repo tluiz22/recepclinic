@@ -41,6 +41,7 @@ export type TrailEntry = { at: Date; text: string; tone: "neutral" | "success" |
 const VIA: Record<TrailChannel, string> = {
   admin: "pelo painel",
   whatsapp_bot: "pelo WhatsApp",
+  portal: "pelo portal de agendamento",
   booking_link: "pelo link de agendamento",
   cron: "automaticamente",
   mass_cancel: "pela clínica (cancelamento em massa)",

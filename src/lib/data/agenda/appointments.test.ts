@@ -72,6 +72,16 @@ describe("retorno (Fase 17, mesma agenda e prazo do serviço)", () => {
     expect(returnLastDate("2031-03-03", null)).toBeNull();
   });
 
+  it("dias bloqueados inteiros não contam no prazo (I9, cliente, 08/nov/2026)", () => {
+    const ferias = new Set(["2031-12-10", "2031-12-11", "2031-12-12", "2031-12-13", "2031-12-14"]);
+    expect(returnLastDate("2031-12-01", 30)).toBe("2031-12-31");
+    expect(returnLastDate("2031-12-01", 30, ferias)).toBe("2032-01-05");
+    // Bloqueio depois do fim original, mas dentro do prazo esticado, também conta.
+    expect(returnLastDate("2031-12-01", 30, new Set([...ferias, "2032-01-02"]))).toBe("2032-01-06");
+    // O dia da consulta não entra na conta; o último dia nunca é um dia bloqueado.
+    expect(returnLastDate("2031-12-01", 1, new Set(["2031-12-01", "2031-12-02"]))).toBe("2031-12-03");
+  });
+
   it("ordem das regras: sem consulta/fora do prazo, domiciliar, já usado, futuro, elegível", () => {
     expect(evaluateReturnEligibility(null, "2031-03-10", null).status).toBe("no_recent_consultation");
     expect(evaluateReturnEligibility(origin(), "2031-04-03", null).status).toBe("no_recent_consultation");

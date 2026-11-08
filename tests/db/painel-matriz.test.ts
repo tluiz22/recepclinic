@@ -27,8 +27,8 @@ afterAll(async () => {
 
 describe("matriz de acesso pela tela", () => {
   it("o Suporte libera e desliga; a tela mostra quem e quando", async () => {
-    await setClinicFeatures(asDb(support), clinicId, ["whatsapp_bot", "waitlist", "exams"]);
-    await setClinicFeatures(asDb(support), clinicId, ["whatsapp_bot", "exams"]);
+    await setClinicFeatures(asDb(support), clinicId, ["portal", "whatsapp_bot", "waitlist", "exams"]);
+    await setClinicFeatures(asDb(support), clinicId, ["portal", "whatsapp_bot", "exams"]);
 
     const names = await listPlatformStaffNames(asDb(support));
     expect(names.get(support.id)).toBe("Ana do Suporte");
@@ -36,6 +36,7 @@ describe("matriz de acesso pela tela", () => {
     const clinic = (await listClinicsAccess(asDb(support))).find((c) => c.id === clinicId)!;
     expect(clinic.features.map((f) => [f.key, f.enabledBy]).sort()).toEqual([
       ["exams", support.id],
+      ["portal", support.id],
       ["whatsapp_bot", support.id],
     ]);
 
@@ -53,11 +54,11 @@ describe("matriz de acesso pela tela", () => {
     const other = await createClinic("Clínica da matriz EA", []);
     try {
       const keys = async () => (await listClinicsAccess(asDb(support))).find((c) => c.id === other)!.features.map((f) => f.key).sort();
-      await setClinicFeatures(asDb(support), other, ["whatsapp_bot"]);
-      expect(await keys()).toEqual(["knowledge_base", "whatsapp_bot"]);
+      await setClinicFeatures(asDb(support), other, ["portal", "whatsapp_bot"]);
+      expect(await keys()).toEqual(["knowledge_base", "portal", "whatsapp_bot"]);
       // Com o bot já ligado, tirar o item vale.
-      await setClinicFeatures(asDb(support), other, ["whatsapp_bot"]);
-      expect(await keys()).toEqual(["whatsapp_bot"]);
+      await setClinicFeatures(asDb(support), other, ["portal", "whatsapp_bot"]);
+      expect(await keys()).toEqual(["portal", "whatsapp_bot"]);
       // Sem o bot, nada é acrescentado.
       await setClinicFeatures(asDb(support), other, ["exams"]);
       expect(await keys()).toEqual(["exams"]);

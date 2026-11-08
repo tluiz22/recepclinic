@@ -12,7 +12,7 @@ import { CARD, CHECK, CHOICE, HINT, LEGEND, SECTION_TITLE, INPUT, LABEL, PRIMARY
 import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listProfessionals, listSpecialtyOptions, professionalRegistry } from "../../../../lib/data/config/professionals";
-import { listInsurancePlans, listProfessionalPlans } from "../../../../lib/data/config/insurance";
+import { listInsurancePlans, listProfessionalPlanNotes, listProfessionalPlans, PLAN_NOTE_MAX } from "../../../../lib/data/config/insurance";
 import { EMPTY_BOT_INFO, getProfessionalBotInfo } from "../../../../lib/data/config/professionalBotInfo";
 import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
@@ -47,14 +47,17 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 const chosen = professional?.specialties ?? [];
 const chosenIds = new Set(chosen.map((s) => s.id));
 const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(createUserClient(Astro.request, Astro.cookies))).filter((s) => !chosenIds.has(s.id))];
-// Convênios atendidos (MC, 07/nov/2026): só com o item "Convênios"; nenhum = só particular.
+// Particular e convênios (MC, 07/nov/2026; F1 da recepção digital, 08/nov/2026): só com o item "Convênios";
+// particular sim/não, os convênios marcados e a observação de cada um (o paciente vê ao escolher o convênio).
 const insuranceOn = clinic.features.includes("insurance") && !isNew;
-const [plans, acceptedPlans] = insuranceOn
+const [plans, acceptedPlans, planNotes] = insuranceOn
   ? await Promise.all([
       listInsurancePlans(createUserClient(Astro.request, Astro.cookies), clinic.clinicId),
       listProfessionalPlans(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!),
+      listProfessionalPlanNotes(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!),
     ])
-  : [[], [] as string[]];
+  : [[], [] as string[], new Map<string, string>()];
+const acceptsPrivate = professional?.acceptsPrivate ?? true;
 // Informações que o bot responde (MI, 07/nov/2026, M5): só por profissional, com o bot.
 const botOn = clinic.features.includes("whatsapp_bot") && !isNew;
 const botInfo = botOn ? await getProfessionalBotInfo(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!) : EMPTY_BOT_INFO;
@@ -213,14 +216,19 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
     }
     {
       insuranceOn && (
-        <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 p-4 sm:p-5`} aria-labelledby="convenios-titulo">
+        <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 p-4 sm:p-5`} aria-labelledby="convenios-titulo" data-coverage>
           <input type="hidden" name="acao" value="convenios" />
           <div>
-            <h2 id="convenios-titulo" class={SECTION_TITLE}>Convênios atendidos</h2>
-            <p class={HINT}>
-              Nenhum marcado: só particular. No WhatsApp e no link de agendar, o paciente de um convênio só vê quem o atende.
-            </p>
+            <h2 id="convenios-titulo" class={SECTION_TITLE}>Particular e convênios</h2>
+            <p class={HINT}>No WhatsApp e no agendamento online, o paciente só vê o que estiver marcado aqui.</p>
           </div>
+          <label class={`${CHOICE} rounded-lg border border-line-strong px-3 py-3`}>
+            <input type="checkbox" name="accepts_private" value="1" checked={acceptsPrivate} class={CHECK} />
+            <span>
+              <span class="font-semibold text-ink">Atende particular</span>
+              <span class="block text-sm text-ink-soft">Desmarcado: atende só pelos convênios abaixo.</span>
+            </span>
+          </label>
           {plans.length === 0 ? (
             <p class={HINT}>
               Nenhum convênio cadastrado.{" "}
@@ -228,25 +236,49 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
             </p>
           ) : (
             <fieldset class="min-w-0">
-              <legend class="sr-only">Convênios atendidos</legend>
-              <div class="grid gap-x-6 sm:grid-cols-2">
-                {plans.map((plan) => (
-                  <label class={`${CHOICE} py-1`}>
-                    <input type="checkbox" name="plan_id" value={plan.id} checked={acceptedPlans.includes(plan.id)} class={CHECK} />
-                    {plan.name}
-                  </label>
-                ))}
-              </div>
+              <legend class={LEGEND}>Convênios atendidos</legend>
+              <p id="nota-convenio-orientacao" class={HINT}>
+                A observação aparece para o paciente quando ele escolhe o convênio. Ex.: precisa de autorização prévia.
+              </p>
+              <ul class="mt-2 divide-y divide-[#e6ecea] rounded-lg border border-line-strong">
+                {plans.map((plan) => {
+                  const checked = acceptedPlans.includes(plan.id);
+                  return (
+                    <li class="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:gap-4" data-plan-row>
+                      <label class={`${CHOICE} py-1 sm:w-56 sm:shrink-0`}>
+                        <input type="checkbox" name="plan_id" value={plan.id} checked={checked} class={CHECK} />
+                        {plan.name}
+                      </label>
+                      <div class="min-w-0 flex-1" data-plan-note hidden={!checked}>
+                        <label for={`note_${plan.id}`} class="sr-only">Observação de {plan.name}</label>
+                        <input
+                          id={`note_${plan.id}`}
+                          name={`note_${plan.id}`}
+                          maxlength={PLAN_NOTE_MAX}
+                          value={planNotes.get(plan.id) ?? ""}
+                          placeholder="Observação (opcional)"
+                          aria-describedby="nota-convenio-orientacao"
+                          class={INPUT}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </fieldset>
           )}
-          {plans.length > 0 && (
-            <div class="flex flex-wrap items-center gap-3 border-t border-[#e6ecea] pt-4">
-              <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar convênios</button>
-              <span class="text-sm text-ink-soft" role="status">
-                {acceptedPlans.filter((pid) => plans.some((p) => p.id === pid)).length === 0 ? "Hoje: só particular." : ""}
-              </span>
-            </div>
-          )}
+          <div class="flex flex-wrap items-center gap-3 border-t border-[#e6ecea] pt-4">
+            <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar particular e convênios</button>
+            <span class="text-sm text-ink-soft" role="status" data-coverage-summary>
+              {
+                acceptedPlans.filter((pid) => plans.some((p) => p.id === pid)).length === 0
+                  ? "Hoje: só particular."
+                  : acceptsPrivate
+                    ? "Hoje: particular e convênios."
+                    : "Hoje: só convênios."
+              }
+            </span>
+          </div>
         </form>
       )
     }
@@ -288,6 +320,20 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
 </ConfigShell>
 
 <script>
+  // Particular e convênios: a observação só aparece no convênio marcado (desmarcado, o valor some ao salvar).
+  const coverage = document.querySelector<HTMLFormElement>("[data-coverage]");
+  if (coverage) {
+    const sync = () => {
+      for (const row of coverage.querySelectorAll<HTMLElement>("[data-plan-row]")) {
+        const checked = row.querySelector<HTMLInputElement>("input[name='plan_id']")!.checked;
+        row.querySelector<HTMLElement>("[data-plan-note]")!.hidden = !checked;
+      }
+    };
+    coverage.addEventListener("change", sync);
+    sync();
+    window.addEventListener("load", sync);
+  }
+
   // Busca na lista (sem acento) e a escolha da principal entre as marcadas.
   const box = document.querySelector<HTMLElement>("[data-specialties]");
   if (box) {

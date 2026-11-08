@@ -373,8 +373,36 @@ function pathAgendas(service: BotService, ctx: BookingContext): string[] {
     .map((a) => a.id);
 }
 
+/**
+ * Algum profissional do caminho atende particular (F1 da recepção digital, 08/nov/2026: "Atende particular" no
+ * cadastro). Sem o item Convênios ou com agenda sem profissional (exames), sempre.
+ */
+async function pathAcceptsPrivate(b: Bot, ctx: BookingContext): Promise<boolean> {
+  if (!b.features.includes("insurance")) return true;
+  const service = await serviceOf(b, ctx);
+  if (!service) return true;
+  const ids = new Set(pathAgendas(service, ctx));
+  const agendas = service.agendas.filter((a) => ids.has(a.id));
+  if (!agendas.length || agendas.some((a) => !a.professionalId)) return true;
+  const rows = unwrap(
+    await b.db.from("professionals").select("accepts_private").eq("clinic_id", b.clinicId).in("id", agendas.map((a) => a.professionalId!)),
+    "Atende particular",
+  );
+  return rows.some((row) => row.accepts_private);
+}
+
 async function enterCoverage(b: Bot, ctx: BookingContext): Promise<void> {
-  if (!(await activePlans(b, ctx)).length) return choosePrivate(b, ctx);
+  const acceptsPrivate = await pathAcceptsPrivate(b, ctx);
+  if (!(await activePlans(b, ctx)).length) {
+    if (acceptsPrivate) return choosePrivate(b, ctx);
+    // Só convênio e nenhum plano ativo (ex.: planos desativados): não há como marcar por aqui.
+    return handOver(b, "bot_book_no_coverage", t.NO_COVERAGE_OPTION, "no_coverage_option", "requested");
+  }
+  // Só convênio: não pergunta "particular ou convênio", vai direto ao plano.
+  if (!acceptsPrivate) {
+    await step(b, "coverage", { answer: "insurance" });
+    return askPlan(b, ctx);
+  }
   await sendButtons(b, "bot_book_coverage", t.COVERAGE_QUESTION, t.COVERAGE_BUTTONS);
   await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "coverage" });
 }
@@ -414,6 +442,10 @@ async function acceptPlan(b: Bot, ctx: BookingContext, service: BotService, plan
 
 async function refusePlan(b: Bot, ctx: BookingContext, planName: string | null, forThisService: boolean): Promise<void> {
   await step(b, "insurance_not_accepted");
+  // Só convênio: não oferece particular; a recepção ajuda (item 8 da jornada).
+  if (!(await pathAcceptsPrivate(b, ctx))) {
+    return handOver(b, "bot_book_plan_not_accepted", t.planNotAcceptedNoPrivate(planName, b.clinic.designation, forThisService), "insurance_not_accepted", "requested");
+  }
   await sendButtons(b, "bot_book_plan_not_accepted", t.planNotAccepted(planName, b.clinic.designation, forThisService), t.YES_NO_BUTTONS);
   await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "private_offer", planCandidates: undefined, refusedPlan: { name: planName, forThisService } });
 }

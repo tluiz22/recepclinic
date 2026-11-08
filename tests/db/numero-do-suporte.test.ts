@@ -34,7 +34,7 @@ const echo = (id: string, to: string) => ({
 });
 
 beforeAll(async () => {
-  clinic = await createClinic("Clínica (suporte)", ["whatsapp_bot"]);
+  clinic = await createClinic("Clínica (suporte)", ["portal", "whatsapp_bot"]);
   await adminClient().from("clinics").update({ status: "active" }).eq("id", clinic);
   await adminClient().from("whatsapp_connections").insert({ clinic_id: clinic, phone_number_id: NUMBER, waba_id: "waba-sup", status: "connected" });
   [staff, admin] = await Promise.all([createUser("sup-staff"), createUser("sup-admin")]);

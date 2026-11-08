@@ -15,6 +15,7 @@ export type FeatureKey =
   | "home_visit"
   | "series"
   | "insurance"
+  | "portal"
   | "whatsapp_bot"
   | "reminders"
   | "waitlist"
@@ -40,7 +41,10 @@ export const FEATURES: readonly Feature[] = [
   { key: "home_visit", area: "agenda", label: "Atendimento domiciliar", dependsOn: [] },
   { key: "series", area: "agenda", label: "Séries recorrentes", dependsOn: [] },
   { key: "insurance", area: "agenda", label: "Convênios", dependsOn: [] },
-  { key: "whatsapp_bot", area: "whatsapp", label: "Bot de WhatsApp", dependsOn: [] },
+  // Recepção digital (cliente, 08/nov/2026): o Portal decide só se a clínica tem os links do portal; o bot tem uma
+  // jornada só, que leva ao portal, e por isso depende dele.
+  { key: "portal", area: "agenda", label: "Portal de agendamento", dependsOn: [] },
+  { key: "whatsapp_bot", area: "whatsapp", label: "Bot de WhatsApp", dependsOn: ["portal"] },
   { key: "reminders", area: "whatsapp", label: "Lembrete automático", dependsOn: [] },
   { key: "waitlist", area: "whatsapp", label: "Lista de espera", dependsOn: ["whatsapp_bot"] },
   // Base de Conhecimento Global (cliente, 31/out/2026): o bot responde as perguntas frequentes.

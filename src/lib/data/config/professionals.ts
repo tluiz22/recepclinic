@@ -31,17 +31,26 @@ export type Professional = {
   phone: string | null;
   receivesDailySummary: boolean;
   isActive: boolean;
+  /** Atende particular (recepção digital, F1): false = só pelos convênios marcados. */
+  acceptsPrivate: boolean;
+  /** Apelido do endereço no portal (automático pelo nome, fixo). */
+  portalSlug: string;
+  /** Aparece no portal de agendamento (R7). */
+  showInPortal: boolean;
 };
 
 /**
  * RQE, telefone, resumo e especialidades são opcionais: ausentes, ficam como
  * estão (vazio na criação). Especialidades informadas: ao menos uma.
  */
-export type ProfessionalInput = Omit<Professional, "id" | "isActive" | "rqe" | "phone" | "receivesDailySummary" | "specialties" | "specialty"> &
+export type ProfessionalInput = Omit<
+  Professional,
+  "id" | "isActive" | "rqe" | "phone" | "receivesDailySummary" | "specialties" | "specialty" | "acceptsPrivate" | "portalSlug" | "showInPortal"
+> &
   Partial<Pick<Professional, "rqe" | "phone" | "receivesDailySummary">> & { specialtyIds?: string[] };
 
 const COLUMNS =
-  "id, user_id, display_name, profession, council, council_number, council_state, rqe, phone, receives_daily_summary, is_active, professional_specialties(position, kb_specialties(id, name, is_active))";
+  "id, user_id, display_name, profession, council, council_number, council_state, rqe, phone, receives_daily_summary, is_active, accepts_private, portal_slug, show_in_portal, professional_specialties(position, kb_specialties(id, name, is_active))";
 
 type Row = {
   id: string;
@@ -56,6 +65,9 @@ type Row = {
   phone: string | null;
   receives_daily_summary: boolean;
   is_active: boolean;
+  accepts_private: boolean;
+  portal_slug: string;
+  show_in_portal: boolean;
 };
 
 const toSpecialties = (row: Row): SpecialtyRef[] =>
@@ -79,6 +91,9 @@ const toProfessional = (row: Row): Professional => {
   phone: row.phone,
   receivesDailySummary: row.receives_daily_summary,
   isActive: row.is_active,
+  acceptsPrivate: row.accepts_private,
+  portalSlug: row.portal_slug,
+  showInPortal: row.show_in_portal,
   };
 };
 
