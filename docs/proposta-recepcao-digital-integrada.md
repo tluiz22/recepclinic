@@ -561,3 +561,6 @@ e "Ver valores e convênios aceitos" (fechado). **P1 a P6 aprovadas pelo cliente
 **P7, código (cliente, 08/nov):** link do WhatsApp não pede código (número já comprovado); entrada direta pede celular
 e código. "Usar outro número" no caminho do WhatsApp manda o código ao número novo, com a saída "Continuar com o
 final 4321" para quem não está com aquele celular (volta ao número da conversa sem perder as escolhas).
+**P7 do WhatsApp retirada (cliente, 08/nov):** quem vem pelo link vai da P6 direto à P8, que mostra no topo
+"Confirmação no WhatsApp final 4321" com "Usar outro número" (abre a tela do código para o número novo). A P7 com
+celular e código fica só para a entrada direta.

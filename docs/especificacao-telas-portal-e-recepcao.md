@@ -122,7 +122,8 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 ### P7. Identificação pelo telefone
 
 - **Objetivo:** comprovar o telefone sem CPF.
-- **Com link do bot:** tela curta "Agendando pelo WhatsApp ·· 4321" + [Continuar] + "Não sou eu / usar outro número"
+- **Com link do bot:** **sem tela (cliente, 08/nov)**: P6 vai direto à P8, que mostra "Confirmação no WhatsApp
+  final 4321" e "Usar outro número" no topo. Desenho anterior: tela curta "Agendando pelo WhatsApp ·· 4321" + [Continuar] + "Não sou eu / usar outro número"
   (vai para a forma direta, com o código no número novo e a saída "Continuar com o final 4321"; cliente, 08/nov).
 - **Entrada direta:** campo "Seu celular com WhatsApp" (DDD + número, máscara); CAPTCHA adaptativo quando exigido
   (RD9); [Receber código no WhatsApp] → campo do código (6 dígitos, colar funciona), "Reenviar em 0:59", "Trocar número".
