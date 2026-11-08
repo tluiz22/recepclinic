@@ -1,9 +1,14 @@
 # RecepClinic
 
-> **Nova frente (08/nov): recepção digital integrada** (portal do paciente, vários números de WhatsApp, caixa unificada,
-> clínica de 18 profissionais). **Etapa 1 aprovada, RD1 a RD14 decididas; Etapa 2 (design) em andamento**: **portal aprovado**
-> (celular e computador, P1 a P13) e link do profissional decidido; **rodada 3 (painel da recepção) aprovada; design fechado**; **vários números de WhatsApp fora desta entrega (pendente)**; especificação atualizada; **próxima sessão: planejar a implementação**; retomar pelo bloco do
-> [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md). Frente da nota fiscal encerrada em 08/nov com a validação pendente.
+> **Frente ativa (08/nov): recepção digital integrada.** Retomar pelo bloco do
+> [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md).
+> - **Feito:** Etapa 1 (proposta, RD1 a RD14) e Etapa 2 (design: portal P1 a P13, link do profissional, painel da
+>   recepção R1 a R7), aprovadas; especificação em `especificacao-telas-portal-e-recepcao.md`. Nenhum código mudou.
+> - **Fora desta entrega:** vários números de WhatsApp (F4, RD11), pendente.
+> - **Próxima tarefa: Etapa 3, planejar a implementação** das fases F1 (fundação), F2 (portal + segurança), F3 (bot →
+>   portal), F5 (agenda da clínica grande) e F6 (métricas), seção 13. Código em branch curta, criada da `main`.
+>
+> Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >
 > **Duas frentes (cliente, 07/nov):**
 > - **Validação do que está pendente:** [`frente-validacao.md`](frente-validacao.md) (multiprofissional ME, MC, MI, MB
