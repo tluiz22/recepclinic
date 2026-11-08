@@ -205,17 +205,17 @@ export const configuracoes = {
     },
     // configuracoes/nota-fiscal.astro (certificado, ambiente) e "Emitir nota" em financeiro/pagamento/[id].astro; F11.3 e F11.4.
     notaFiscal: {
-      serve: "Emitir a NFS-e nacional (a nota fiscal de serviço) pelo próprio painel.",
+      serve: "Emitir a nota fiscal de cada atendimento pelo Asaas, pelo CNPJ da clínica ou pelo CNPJ do próprio profissional.",
       como: [
-        "Preencha os dados fiscais da clínica e, se algum serviço tiver código diferente do padrão, o código dele.",
-        "Envie o certificado A1 (arquivo .pfx ou .p12 e a senha), do mesmo CNPJ. O arquivo e a senha ficam criptografados e nunca aparecem na tela, nem para o suporte.",
-        "A nota é emitida no Financeiro, na tela do pagamento, no CPF de quem pagou.",
-        "Toda clínica começa em testes, sem valor fiscal; o suporte passa a nota a valer depois que o contador confere uma nota de teste.",
+        "Cadastre o emissor da clínica e, para quem tem CNPJ próprio, o emissor do profissional; quem não tem emite pela clínica ou não emite pelo sistema.",
+        "O Suporte cria a conta do emissor no Asaas; o Asaas pede os documentos e aprova o cadastro.",
+        "Envie a configuração fiscal e o certificado A1 ao Asaas pela página do emissor e ligue a emissão.",
+        "A nota sai no Financeiro, na tela do pagamento, pelo CNPJ do profissional do atendimento, no CPF de quem pagou.",
       ],
-      erro: "Certificado vencido desliga a emissão até o novo ser enviado. Nota recusada pela Receita mostra o motivo na tela do pagamento.",
+      erro: "Nota recusada mostra o motivo na tela do pagamento. Certificado vencido ou cobrança das notas atrasada param só a emissão daquele CNPJ.",
       depende: [
         { texto: "Clínica: o nome e os dados da clínica.", href: "/admin/configuracoes" },
-        { texto: "Serviços: o código fiscal de cada serviço, se for diferente do padrão.", href: "/admin/configuracoes/servicos" },
+        { texto: "Profissionais: o profissional de cada agenda decide por qual CNPJ a nota sai.", href: "/admin/configuracoes/profissionais" },
       ],
       alimenta: [{ texto: "Financeiro: a nota é emitida na tela do pagamento." }],
     },

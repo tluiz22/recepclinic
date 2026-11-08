@@ -7,13 +7,12 @@ import { DataError } from "../../../../../lib/data/errors";
 import { describeDataError, runFormAction } from "../../../../../lib/data/formAction";
 import { logError } from "../../../../../lib/log";
 import { getContact, getPatient } from "../../../../../lib/data/patients";
-import { cancelNfse, checkNfse, listPaymentInvoices } from "../../../../../lib/data/nfse";
-import { deliverAfterIssue, deliverInvoice, describeDelivery, type DeliveryDeps } from "../../../../../lib/data/nfseDelivery";
+import { deliverInvoice, describeDelivery, type DeliveryDeps } from "../../../../../lib/data/nfseDelivery";
 import { clinicSenderFor } from "../../../../../lib/data/whatsapp/clinicSender";
 import { smtpSender } from "../../../../../lib/email";
 import { platformEnv } from "../../../../../lib/env";
 import { deletePayment, registerPayment } from "../../../../../lib/data/payments";
-import { formChecked, formInt, formMoneyCents, formOptionalText, formText, payerContactFromForm } from "../../../../../lib/forms";
+import { formChecked, formMoneyCents, formOptionalText, formText, payerContactFromForm } from "../../../../../lib/forms";
 import { cancelAsaasInvoice, checkAsaasInvoice, issueAsaasInvoice } from "../../../../../lib/data/nfseAsaas";
 import { parsePayerContact, setPaymentPayerContact } from "../../../../../lib/data/finance";
 import { formatCentsBRL } from "../../../../../lib/money";
@@ -38,20 +37,6 @@ export const POST: APIRoute = async (context) => {
   const acao = formText(form, "acao");
   // Envio da nota (F11.5): WhatsApp da clínica e e-mail do sistema.
   const deliveryDeps = async (): Promise<DeliveryDeps> => ({ sender: await clinicSenderFor(clinic.clinicId, request.url), sendEmail: smtpSender(platformEnv().email) });
-  /** Nota emitida: em Produção, vai sozinha para o contato (e os destinos com "enviar sempre"). */
-  const afterIssue = async (paymentId: string, status: string): Promise<string> => {
-    if (status !== "issued") return "";
-    try {
-      const [invoice] = (await listPaymentInvoices(db, clinic.clinicId, [paymentId])).get(paymentId) ?? [];
-      if (!invoice || invoice.status !== "issued") return "";
-      const lines = await deliverAfterIssue(db, clinic.clinicId, invoice.id, await deliveryDeps());
-      return lines.length ? ` ${describeDelivery(lines)}.` : "";
-    } catch (error) {
-      logError("nota fiscal: envio automático", error, { clinica: clinic.clinicId, pagamento: paymentId });
-      return " A nota não foi enviada sozinha: use \"Enviar nota\".";
-    }
-  };
-
   return runFormAction(
     context,
     async () => {
@@ -91,18 +76,10 @@ export const POST: APIRoute = async (context) => {
         const invoiceId = formText(form, "invoice_id");
         if (!isUuid(invoiceId)) throw new DataError("not_found", "Nota fiscal: não encontrada");
         const { data: found } = await db.from("nfse_invoices").select("provider").eq("clinic_id", clinic.clinicId).eq("id", invoiceId).maybeSingle();
-        if (found?.provider === "asaas") {
-          const result =
-            acao === "conferir_nota" ? await checkAsaasInvoice(db, clinic.clinicId, invoiceId) : await cancelAsaasInvoice(db, invoiceId, formText(form, "motivo_texto"));
-          return { redirectTo: page, message: result.message };
-        }
+        if (found?.provider !== "asaas") throw new DataError("invalid", "Nota antiga (emissor anterior ao Asaas): consulte e cancele no portal da prefeitura.");
         const result =
-          acao === "conferir_nota"
-            ? await checkNfse(db, clinic.clinicId, invoiceId)
-            : await cancelNfse(db, clinic.clinicId, invoiceId, { code: formInt(form, "motivo"), text: formText(form, "motivo_texto") }, clinic.timezone);
-        const paymentId = formText(form, "payment_id");
-        const sent = acao === "conferir_nota" && isUuid(paymentId) ? await afterIssue(paymentId, result.status) : "";
-        return { redirectTo: page, message: `${result.message}${sent}` };
+          acao === "conferir_nota" ? await checkAsaasInvoice(db, clinic.clinicId, invoiceId) : await cancelAsaasInvoice(db, invoiceId, formText(form, "motivo_texto"));
+        return { redirectTo: page, message: result.message };
       }
       if (acao === "excluir") {
         const paymentId = formText(form, "payment_id");

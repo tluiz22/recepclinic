@@ -4,26 +4,22 @@ import { todayIn } from "../../src/lib/clinicTime";
 import type { Email } from "../../src/lib/email";
 import { formatCentsBRL } from "../../src/lib/money";
 import { saveContactCpf } from "../../src/lib/data/finance";
-import { saveFiscalSettings, setFiscalEnvironment, uploadFiscalCertificate } from "../../src/lib/data/fiscal";
-import { issueNfse, listPaymentInvoices, type NfseDeps } from "../../src/lib/data/nfse";
-import { deliverAfterIssue, deliverInvoice, getSavedDestinations, invoicePdf, listInvoiceDeliveries, type DeliveryDeps } from "../../src/lib/data/nfseDelivery";
+import { deliverInvoice, getSavedDestinations, invoicePdf, listInvoiceDeliveries, type DeliveryDeps } from "../../src/lib/data/nfseDelivery";
 import { anonymizePatient, getContact, getPatient } from "../../src/lib/data/patients";
 import { registerPayment } from "../../src/lib/data/payments";
 import type { SendOutcome } from "../../src/lib/data/whatsapp/messages";
 import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
-import { gzipBase64, type SefinTransport } from "../../src/lib/nfse/client";
-import { addMember, adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser, signInvoicingContract } from "./helpers";
+import { addMember, adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser, signInvoicingContract, withDatabase } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
-import { makeTestPfx } from "./pfx";
 
 // F11.5 — Envio da nota: o PDF (do XML guardado) pelo WhatsApp do contato,
 // por outro número e por e-mail (PDF e XML); template aprovado ou janela
 // aberta; cada envio registrado; destinos guardados no Financeiro; envio
-// automático só em Produção; o Profissional não vê; a anonimização apaga os
-// destinos.
+// automático das notas novas (Asaas) em entrega-nota-asaas.test.ts; o
+// Profissional não vê; a anonimização apaga os destinos. Desde a N5 (emissor
+// antigo removido), a nota antiga entra direto no banco, com o XML guardado.
 const CNPJ = "11222333000181";
 const today = todayIn("America/Fortaleza");
-const PFX = makeTestPfx(CNPJ, "senha");
 const NFSE_XML = readFileSync(new URL("../../src/lib/nfse/fixtures/nfse-exemplo.xml", import.meta.url), "utf8");
 
 let fixture: AgendaFixture;
@@ -31,12 +27,6 @@ let clinicId: string;
 let professional: TestUser;
 let support: TestUser;
 let seq = 0;
-
-const receita: NfseDeps = {
-  transport: (async () => ({ status: 201, body: { chaveAcesso: String(++seq).padStart(50, "8"), nfseXmlGZipB64: gzipBase64(NFSE_XML) } })) as SefinTransport,
-  loadCertificate: async () => ({ pfx: PFX, password: "senha" }),
-  now: () => new Date(),
-};
 
 type Sent = { kind: string; to: string; template?: string; params?: string[]; filename?: string };
 function fakeDeps(): { deps: DeliveryDeps; sent: Sent[]; emails: Email[] } {
@@ -88,9 +78,20 @@ async function issuedInvoice(): Promise<{ invoiceId: string; patientId: string }
   const patient = await getPatient(db, clinicId, fixture.ids.p1);
   const contact = await getContact(db, clinicId, patient.contactId);
   const payment = await registerPayment(db, clinicId, { appointmentId: appointment.id, status: appointment.status, patient, contact, today }, { amountCents: 30000, method: "pix", paidOn: today, payer: "contact" });
-  await issueNfse(db, clinicId, payment.id, receita);
-  const [invoice] = (await listPaymentInvoices(db, clinicId, [payment.id])).get(payment.id)!;
-  return { invoiceId: invoice.id, patientId: fixture.ids.p1 };
+  // Nota antiga (Sefin, emitida antes da N5): direto no banco, com o XML no bucket.
+  seq++;
+  const invoiceId = await withDatabase(async (pg) => {
+    const { rows } = await pg.query(
+      `insert into public.nfse_invoices (clinic_id, payment_id, environment, series, dps_number, dps_id, status, access_key, nfse_number, issued_at)
+       values ($1, $2, 'restricted', '1', $3, $4, 'issued', $5, '123', now()) returning id`,
+      [clinicId, payment.id, seq, `DPS2408003${"2"}${CNPJ}${"00001"}${String(seq).padStart(15, "0")}`, String(seq).padStart(50, "8")],
+    );
+    return rows[0].id as string;
+  });
+  const path = `${clinicId}/${invoiceId}.xml`;
+  await adminClient().storage.from("nfse-xml").upload(path, new Blob([NFSE_XML], { type: "application/xml" }), { contentType: "application/xml" });
+  await withDatabase((pg) => pg.query(`update public.nfse_invoices set xml_path = $2 where id = $1`, [invoiceId, path]));
+  return { invoiceId, patientId: fixture.ids.p1 };
 }
 
 beforeAll(async () => {
@@ -101,16 +102,6 @@ beforeAll(async () => {
   await addMember(clinicId, professional.id, ["professional"]);
   support = await createUser("envio-suporte");
   await makePlatformStaff(support.id);
-  await saveFiscalSettings(asDb(fixture.admin), clinicId, {
-    cnpj: CNPJ,
-    legalName: "Clínica do Envio Ltda",
-    municipalityIbge: "2408003",
-    simplesNacional: "not_optant",
-    specialRegime: "none",
-    serviceCode: "04.01.01",
-    issRate: "2",
-  });
-  await uploadFiscalCertificate(asDb(fixture.admin), clinicId, { pfx: PFX, password: "senha", acceptedTerms: true });
   const p1 = await getPatient(asDb(fixture.admin), clinicId, fixture.ids.p1);
   await saveContactCpf(asDb(fixture.admin), clinicId, p1.contactId, "52998224725");
 });
@@ -172,25 +163,11 @@ describe("Envio da nota (F11.5)", () => {
     expect(await codeOf(() => deliverInvoice(asDb(fixture.reception), clinicId, invoiceId, { contact: false }, deps))).toBe("invalid");
   });
 
-  it("guarda os destinos; o automático só vale em Produção, com o contato e os guardados com \"enviar sempre\"", async () => {
+  it("guarda os destinos no Financeiro do paciente", async () => {
     const test = await issuedInvoice();
-    const { deps, sent, emails } = fakeDeps();
+    const { deps } = fakeDeps();
     await deliverInvoice(asDb(fixture.reception), clinicId, test.invoiceId, { contact: false, phone: "84988880002", email: "mae@exemplo.com", save: true, autoSend: true }, deps);
     expect(await getSavedDestinations(asDb(fixture.reception), clinicId, fixture.ids.p1)).toEqual({ phone: "+5584988880002", email: "mae@exemplo.com", autoSend: true });
-    sent.length = 0;
-    emails.length = 0;
-    expect(await deliverAfterIssue(asDb(fixture.reception), clinicId, test.invoiceId, deps)).toEqual([]);
-
-    await setFiscalEnvironment(asDb(support), clinicId, "production");
-    try {
-      const real = await issuedInvoice();
-      const lines = await deliverAfterIssue(asDb(fixture.reception), clinicId, real.invoiceId, deps);
-      expect(lines.map((l) => l.destination)).toEqual(["+5561991100001", "+5584988880002", "mae@exemplo.com"]);
-      const recorded = (await listInvoiceDeliveries(asDb(fixture.admin), clinicId, [real.invoiceId])).get(real.invoiceId)!;
-      expect(recorded.every((d) => d.automatic)).toBe(true);
-    } finally {
-      await setFiscalEnvironment(asDb(support), clinicId, "restricted");
-    }
   });
 
   it("o Profissional não vê os envios; ninguém altera; a anonimização apaga os destinos", async () => {

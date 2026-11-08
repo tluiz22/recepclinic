@@ -233,18 +233,9 @@ begin
   insert into public.patient_finance (clinic_id, patient_id, payer, payer_name, payer_cpf)
     values (c_a, pt_ana, 'other', 'Pedro Souza', '12345678909');
 
-  -- Dados fiscais (F11.3): CNPJ fictício com dígitos válidos, Mossoró, Simples
-  -- Nacional; a psicoterapia com código próprio. Certificado de mentira (o
-  -- "arquivo" no Vault não é um .pfx de verdade): só para as telas e a
-  -- varredura de isolamento, nunca para emitir.
-  insert into public.clinic_fiscal_settings (clinic_id, cnpj, legal_name, municipal_registration, municipality_ibge, simples_nacional, simples_regime, simples_total_rate, special_regime, service_code, iss_rate)
-    values (c_a, '11222333000181', 'Clínica Exemplo Saúde Ltda', '123456', '2408003', 'me_epp', '1', 6.00, 'none', '04.01.01', 2.00);
-  insert into public.service_fiscal_codes (clinic_id, service_id, service_code) values (c_a, s_psi, '04.16.01');
-  insert into public.clinic_fiscal_certificates (clinic_id, pfx_secret_id, password_secret_id, subject_name, subject_cnpj, valid_from, valid_until, terms_version)
-    values (c_a, vault.create_secret('seed-nao-e-um-pfx', 'fiscal_pfx_' || c_a::text), vault.create_secret('seed', 'fiscal_pfx_password_' || c_a::text),
-      'CLINICA EXEMPLO SAUDE LTDA', '11222333000181', now() - interval '11 months', now() + interval '20 days', 'seed');
+  -- Trilha fiscal (desde a N5, os dados fiscais e o certificado ficam no emissor; ver abaixo).
   insert into public.fiscal_audit_log (clinic_id, event, details)
-    values (c_a, 'certificate_uploaded', '{"subject_name": "CLINICA EXEMPLO SAUDE LTDA", "cnpj": "11222333000181"}');
+    values (c_a, 'issuer_saved', '{"kind": "clinic"}');
 
   -- Emissores fiscais (N2a): o da clínica (sem subconta ainda), o da psicóloga
   -- (CNPJ próprio, fictício) e a fisioterapia (Rafael Lima) sem CNPJ, que não emite (N-P1).
@@ -300,8 +291,7 @@ begin
   insert into public.payments (clinic_id, appointment_id, patient_id, amount_cents, method, paid_on, payer, payer_name, payer_cpf)
     values (c_a, ap_past, pt_joao, 30000, 'pix', monday - 14, 'contact', 'Maria Souza', '52998224725')
     returning id into pay_past;
-  -- Nota de teste (F11.4) desse pagamento, na Produção Restrita; chave fictícia.
-  insert into public.nfse_dps_counters (clinic_id, environment, last_number) values (c_a, 'restricted', 1);
+  -- Nota antiga (emissor anterior ao Asaas, F11.4) desse pagamento, na Produção Restrita; chave fictícia.
   insert into public.nfse_invoices (clinic_id, payment_id, environment, series, dps_number, dps_id, status, access_key, nfse_number, issued_at)
     values (c_a, pay_past, 'restricted', '1', 1, 'DPS240800321122233300018100001000000000000001', 'issued',
       '24080032112223330001812610000000000000000000000000', '1', now() - interval '14 days')

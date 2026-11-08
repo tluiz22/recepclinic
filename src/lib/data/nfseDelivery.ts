@@ -263,21 +263,6 @@ export async function deliverInvoice(
   return lines;
 }
 
-/** Ao emitir em Produção: o contato e, com "enviar sempre", o número e o e-mail guardados. */
-export async function deliverAfterIssue(db: DbClient, clinicId: string, invoiceId: string, deps: DeliveryDeps): Promise<DeliveryLine[]> {
-  const invoice = await loadInvoice(db, clinicId, invoiceId);
-  if (invoice.environment !== "production" || invoice.status !== "issued") return [];
-  const saved = await getSavedDestinations(db, clinicId, invoice.payments.patient_id);
-  return deliverInvoice(
-    db,
-    clinicId,
-    invoiceId,
-    { contact: true, phone: saved.autoSend ? saved.phone : null, email: saved.autoSend ? saved.email : null },
-    deps,
-    { automatic: true },
-  );
-}
-
 /** "Enviada pelo WhatsApp para (84) 9…" para o aviso da tela. */
 export function describeDelivery(lines: DeliveryLine[]): string {
   if (!lines.length) return "";

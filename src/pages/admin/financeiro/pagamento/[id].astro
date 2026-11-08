@@ -42,7 +42,7 @@ import {
   type PaymentMethod,
 } from "../../../../lib/data/payments";
 import { centsToInput } from "../../../../lib/forms";
-import { ACTIVE_INVOICE, CANCEL_REASONS, listPaymentInvoices, type Invoice, type InvoiceStatus } from "../../../../lib/data/nfse";
+import { ACTIVE_INVOICE, listPaymentInvoices, type Invoice, type InvoiceStatus } from "../../../../lib/data/nfse";
 import { getSavedDestinations, listInvoiceDeliveries } from "../../../../lib/data/nfseDelivery";
 import { formatPhoneBR } from "../../../../lib/phone";
 import { formatCentsBRL } from "../../../../lib/money";
@@ -377,7 +377,7 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
           const active = activeInvoice(p.id);
           const issued = list.find((n) => n.status === "issued");
           const canDelete = canEdit && !active;
-          const canCancel = isClinicAdmin && !!issued && (issued.provider !== "asaas" || financeReady.supportsCancellation);
+          const canCancel = isClinicAdmin && !!issued && issued.provider === "asaas" && financeReady.supportsCancellation;
           return (
             <article class="flex flex-col gap-2.5 rounded-[10px] border border-line p-3.5" aria-label={`Pagamento de ${amount}`}>
               <div class="flex items-start justify-between gap-2">
@@ -442,9 +442,9 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                         {e.automatic ? " · automático" : ""}
                       </p>
                     ))}
-                    {(hasFiles(n) || (canEdit && (n.status === "issuing" || n.status === "canceling"))) && (
+                    {(hasFiles(n) || (canEdit && n.provider === "asaas" && (n.status === "issuing" || n.status === "canceling"))) && (
                       <div class="flex flex-wrap gap-2">
-                        {canEdit && (n.status === "issuing" || n.status === "canceling") && (
+                        {canEdit && n.provider === "asaas" && (n.status === "issuing" || n.status === "canceling") && (
                           <form method="POST" action={action}>
                             <input type="hidden" name="acao" value="conferir_nota" />
                             <input type="hidden" name="invoice_id" value={n.id} />
@@ -530,21 +530,11 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                         </div>
                       </form>
                     )}
-                    {isClinicAdmin && n.status === "issued" && (
+                    {isClinicAdmin && n.status === "issued" && n.provider === "asaas" && (
                       <form id={`cancelar-${n.id}`} hidden method="POST" action={action} class="flex flex-col gap-2.5 rounded-lg border border-danger-line bg-white p-3" data-panel>
                         <input type="hidden" name="acao" value="cancelar_nota" />
                         <input type="hidden" name="invoice_id" value={n.id} />
                         <p class="text-[14.5px] font-semibold text-ink">Cancelar a {INVOICE_PILL[n.status].label(n)}</p>
-                        {n.provider !== "asaas" && (
-                          <div class={field}>
-                            <label for={`motivo-${n.id}`} class={fieldLabel}>Motivo</label>
-                            <select id={`motivo-${n.id}`} name="motivo" required class={CONTROL}>
-                              {CANCEL_REASONS.map((r) => (
-                                <option value={r.code}>{r.label}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
                         <div class={field}>
                           <label for={`motivo-texto-${n.id}`} class={fieldLabel}>Explique (15 a 255 caracteres)</label>
                           <input id={`motivo-texto-${n.id}`} name="motivo_texto" required minlength="15" maxlength="255" class={CONTROL} />

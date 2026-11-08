@@ -39,7 +39,7 @@ import { serviceLook } from "../../components/admin/agenda/categoryStyle";
 import { logError } from "../../lib/log";
 import { vocabularyFor } from "../../lib/vocabulary";
 import { certificateStatus } from "../../lib/certificate";
-import { getFiscalCertificate } from "../../lib/data/fiscal";
+import { getFiscalIssuerOverview } from "../../lib/data/fiscalIssuers";
 import { getWhatsappConnection, listWhatsappTemplates } from "../../lib/data/whatsapp/connection";
 import { latestAutomaticEcho } from "../../lib/data/whatsapp/conversations";
 import { GUIDE_AUTOMATIONS_ANCHOR, GUIDE_BEFORE_CONNECT_PATH } from "../../lib/guides";
@@ -62,7 +62,7 @@ const [counts, sendsAlert, toReview, certificate, connection, templates, attenti
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
   getSendsAlert(db, clinic.clinicId),
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
-  certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
+  certificateOn ? getFiscalIssuerOverview(db, clinic.clinicId) : Promise.resolve(null),
   isSupport ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
   isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
   has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
@@ -88,13 +88,18 @@ const templatesAlert =
 // desconexão avisada pela Meta (F8.3).
 const paymentAlert = isSupport && connection?.status === "connected" && !deliveredTest;
 const disconnectedAlert = connection?.status === "disconnected" && connection.disconnectedVia === "meta" ? connection.disconnectedAt : null;
+// N2/N5: o certificado vai direto ao Asaas; a validade fica em cada emissor (clínica e profissionais).
 const certificateAlert = (() => {
   if (!certificate) return null;
-  const status = certificateStatus(certificate.validUntil);
-  if (status.state === "expired") return "O certificado digital A1 venceu: a clínica não emite nota fiscal até enviar o novo.";
-  if (status.state === "expiring")
-    return `O certificado digital A1 vence em ${status.daysLeft} ${status.daysLeft === 1 ? "dia" : "dias"} (${formatInstant(certificate.validUntil, clinic.timezone, "dd/MM/yyyy")}): renove e envie o novo.`;
-  return null;
+  const issuers = [certificate.clinicIssuer, ...certificate.professionals.map((p) => p.issuer)].filter((i) => i?.certificateValidUntil);
+  const lines = issuers.flatMap((i) => {
+    const status = certificateStatus(i!.certificateValidUntil!);
+    if (status.state === "expired") return [`O certificado digital A1 de ${i!.legalName} venceu: as notas desse CNPJ não saem até enviar o novo.`];
+    if (status.state === "expiring")
+      return [`O certificado digital A1 de ${i!.legalName} vence em ${status.daysLeft} ${status.daysLeft === 1 ? "dia" : "dias"} (${formatInstant(i!.certificateValidUntil!, clinic.timezone, "dd/MM/yyyy")}): renove e envie o novo.`];
+    return [];
+  });
+  return lines.length ? lines.join(" ") : null;
 })();
 const sendsAlertLines = isSupport ? describeSendsAlert(sendsAlert) : [];
 

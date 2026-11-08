@@ -1,7 +1,5 @@
 import type { APIRoute } from "astro";
 import { heartbeat } from "../../../lib/cron/route";
-import { checkPendingAsPlatform } from "../../../lib/data/nfse";
-import { listPendingNfse } from "../../../lib/data/platform";
 import { platformEnv } from "../../../lib/env";
 import { logError } from "../../../lib/log";
 import { defaultAsaasNfseDeps, reconcileAsaasInvoices } from "../../../lib/data/nfseAsaas";
@@ -12,25 +10,18 @@ import { runFiscalBilling } from "../../../lib/data/fiscalBilling";
 import { platformFiscalBilling } from "../../../lib/data/platform";
 import { todayIn } from "../../../lib/clinicTime";
 
-// Notas fiscais sem resposta (F11.4, segurança da F11, item 5): a cada 10
-// minutos (N3b; antes, uma vez por dia), confere na Receita as notas "emitindo" ou "cancelando" pedidas há mais
-// de 10 minutos e grava o resultado (emitida, recusada, cancelada). Pela
+// Notas fiscais (a cada 10 minutos): conciliação das notas do Asaas "emitindo"
+// ou "cancelando" (N3b), arquivos e entrega automática (N4), cobrança das
+// notas e suspensão (N4b). O emissor antigo (Sefin) saiu na N5. Pela
 // plataforma, sem login de ninguém; a trilha registra a conferência.
 const route: APIRoute = async ({ request }) => {
   if (request.headers.get("authorization") !== `Bearer ${platformEnv().cronSecret}`) {
     return new Response(JSON.stringify({ error: "não autorizado" }), { status: 401 });
   }
-  const pending = await listPendingNfse(new Date(Date.now() - 10 * 60_000));
+  // O emissor antigo (Sefin) saiu na N5: só o Asaas.
   const results: Record<string, string> = {};
   let errors = 0;
-  for (const invoice of pending) {
-    try {
-      results[invoice.invoiceId] = (await checkPendingAsPlatform(invoice)).status;
-    } catch (error) {
-      errors++;
-      logError("notas-fiscais", error, { clinica: invoice.clinicId, nota: invoice.invoiceId });
-    }
-  }
+  const pending: { clinicId: string }[] = [];
   // Notas pelo Asaas (N3b): pendentes há mais de 3 minutos, conferidas pelo GET.
   let asaas = { checked: 0, failed: 0 };
   let outbox = { files: 0, delivered: 0, failed: 0 };

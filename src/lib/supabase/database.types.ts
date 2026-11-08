@@ -603,46 +603,6 @@ isOneToOne: false
       referencedColumns: ["key"]
     }
                   ]
-                },"clinic_fiscal_certificates": {
-                  Row: {
-                    "clinic_id": string,"password_secret_id": string,"pfx_secret_id": string,"subject_cnpj": string,"subject_name": string,"terms_version": string,"uploaded_at": string,"uploaded_by": string | null,"valid_from": string,"valid_until": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "clinic_id": string,"password_secret_id": string,"pfx_secret_id": string,"subject_cnpj": string,"subject_name": string,"terms_version": string,"uploaded_at"?: string,"uploaded_by"?: string | null,"valid_from": string,"valid_until": string
-                  }
-                  Update: {
-                    "clinic_id"?: string,"password_secret_id"?: string,"pfx_secret_id"?: string,"subject_cnpj"?: string,"subject_name"?: string,"terms_version"?: string,"uploaded_at"?: string,"uploaded_by"?: string | null,"valid_from"?: string,"valid_until"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "clinic_fiscal_certificates_clinic_id_fkey"
-      columns: ["clinic_id"]
-isOneToOne: true
-      referencedRelation: "clinics"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"clinic_fiscal_settings": {
-                  Row: {
-                    "clinic_id": string,"cnpj": string,"created_at": string,"environment": string,"iss_rate": number,"legal_name": string,"municipal_registration": string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"simples_regime": string | null,"simples_total_rate": number | null,"special_regime": string,"updated_at": string,"updated_by": string | null
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "clinic_id": string,"cnpj": string,"created_at"?: string,"environment"?: string,"iss_rate": number,"legal_name": string,"municipal_registration"?: string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"simples_regime"?: string | null,"simples_total_rate"?: number | null,"special_regime"?: string,"updated_at"?: string,"updated_by"?: string | null
-                  }
-                  Update: {
-                    "clinic_id"?: string,"cnpj"?: string,"created_at"?: string,"environment"?: string,"iss_rate"?: number,"legal_name"?: string,"municipal_registration"?: string | null,"municipality_ibge"?: string,"service_code"?: string,"simples_nacional"?: string,"simples_regime"?: string | null,"simples_total_rate"?: number | null,"special_regime"?: string,"updated_at"?: string,"updated_by"?: string | null
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "clinic_fiscal_settings_clinic_id_fkey"
-      columns: ["clinic_id"]
-isOneToOne: true
-      referencedRelation: "clinics"
-      referencedColumns: ["id"]
-    }
-                  ]
                 },"clinic_holidays": {
                   Row: {
                     "clinic_id": string,"created_at": string,"date": string,"description": string,"id": string
@@ -1427,26 +1387,6 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
-                },"nfse_dps_counters": {
-                  Row: {
-                    "clinic_id": string,"environment": string,"last_number": number
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "clinic_id": string,"environment": string,"last_number": number
-                  }
-                  Update: {
-                    "clinic_id"?: string,"environment"?: string,"last_number"?: number
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "nfse_dps_counters_clinic_id_fkey"
-      columns: ["clinic_id"]
-isOneToOne: false
-      referencedRelation: "clinics"
-      referencedColumns: ["id"]
-    }
-                  ]
                 },"nfse_invoices": {
                   Row: {
                     "access_key": string | null,"asaas_invoice_id": string | null,"asaas_status": string | null,"auto_delivery_at": string | null,"auto_delivery_attempts": number,"auto_delivery_status": string | null,"cancel_reason": string | null,"cancel_reason_code": number | null,"cancel_reason_text": string | null,"cancel_requested_by": string | null,"canceled_at": string | null,"checked_at": string | null,"clinic_id": string,"dps_id": string | null,"dps_number": number | null,"environment": string,"error_code": string | null,"error_message": string | null,"id": string,"issued_at": string | null,"issuer_id": string | null,"nfse_number": string | null,"payment_id": string,"pdf_path": string | null,"provider": string,"requested_at": string,"requested_by": string | null,"series": string | null,"status": string,"validation_code": string | null,"xml_path": string | null
@@ -2047,32 +1987,6 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
-                },"service_fiscal_codes": {
-                  Row: {
-                    "clinic_id": string,"service_code": string,"service_id": string,"updated_at": string,"updated_by": string | null
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "clinic_id": string,"service_code": string,"service_id": string,"updated_at"?: string,"updated_by"?: string | null
-                  }
-                  Update: {
-                    "clinic_id"?: string,"service_code"?: string,"service_id"?: string,"updated_at"?: string,"updated_by"?: string | null
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "service_fiscal_codes_clinic_id_fkey"
-      columns: ["clinic_id"]
-isOneToOne: false
-      referencedRelation: "clinics"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "service_fiscal_codes_clinic_id_service_id_fkey"
-      columns: ["clinic_id","service_id"]
-isOneToOne: false
-      referencedRelation: "services"
-      referencedColumns: ["clinic_id","id"]
-    }
-                  ]
                 },"service_locations": {
                   Row: {
                     "clinic_id": string,"location_id": string,"price_cents": number | null,"service_id": string
@@ -2419,12 +2333,6 @@ isOneToOne: false
 "begin_asaas_invoice":
 { Args: { "p_payment_id": string }; Returns: Json
                            },
-"begin_nfse_cancel":
-{ Args: { "p_invoice_id": string,"p_reason_code": number,"p_reason_text": string }; Returns: Json
-                           },
-"begin_nfse_issue":
-{ Args: { "p_payment_id": string }; Returns: Json
-                           },
 "billing_can_suspend_for_non_payment":
 { Args: { "p_clinic_id": string }; Returns: boolean
                            },
@@ -2664,22 +2572,11 @@ isOneToOne: false
 "finish_asaas_invoice":
 { Args: { "p_asaas_invoice_id": string,"p_asaas_status": string,"p_invoice_id": string,"p_message"?: string,"p_number"?: string,"p_outcome": string,"p_validation_code"?: string }; Returns: string
                            },
-"finish_nfse_cancel":
-{ Args: { "p_error_code"?: string,"p_error_message"?: string,"p_invoice_id": string,"p_outcome": string }; Returns: undefined
-                           },
-"finish_nfse_issue":
-{ Args: { "p_access_key"?: string,"p_error_code"?: string,"p_error_message"?: string,"p_invoice_id": string,"p_nfse_number"?: string,"p_outcome": string,"p_xml_path"?: string }; Returns: undefined
-                           },
 "finish_nfse_provider_event":
 { Args: { "p_error": string,"p_id": string }; Returns: undefined
                            },
 "fiscal_issuer_for_appointment":
 { Args: { "p_appointment_id": string }; Returns: Json
-                           },
-"get_fiscal_certificate_secret":
-{ Args: { "p_clinic_id": string }; Returns: {
-              "password": string,"pfx_base64": string
-            }[]
                            },
 "get_fiscal_issuer_api_key":
 { Args: { "p_issuer_id": string }; Returns: string
@@ -2704,11 +2601,6 @@ isOneToOne: false
 "list_pending_asaas_invoices":
 { Args: { "p_before": string }; Returns: {
               "asaas_invoice_id": string,"clinic_id": string,"invoice_id": string,"issuer_id": string,"status": string
-            }[]
-                           },
-"list_pending_nfse_invoices":
-{ Args: { "p_before": string }; Returns: {
-              "access_key": string,"clinic_id": string,"dps_id": string,"environment": string,"invoice_id": string,"status": string
             }[]
                            },
 "load_agenda_import":
@@ -2855,9 +2747,6 @@ isOneToOne: false
 "resolve_whatsapp_clinics_by_waba":
 { Args: { "p_waba_id": string }; Returns: string[]
                            },
-"revoke_fiscal_certificate":
-{ Args: { "p_clinic_id": string }; Returns: undefined
-                           },
 "save_billing_account":
 { Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string,"p_payer_document": string,"p_payer_name": string }; Returns: undefined
                            },
@@ -2914,9 +2803,6 @@ isOneToOne: false
                            },
 "set_conversation_classification":
 { Args: { "p_classification": string,"p_clinic_id": string,"p_contact_phone": string }; Returns: boolean
-                           },
-"set_fiscal_certificate":
-{ Args: { "p_clinic_id": string,"p_password": string,"p_pfx_base64": string,"p_subject_cnpj": string,"p_subject_name": string,"p_terms_version": string,"p_valid_from": string,"p_valid_until": string }; Returns: undefined
                            },
 "set_fiscal_issuer_payer":
 { Args: { "p_issuer_id": string,"p_payer": string }; Returns: undefined
