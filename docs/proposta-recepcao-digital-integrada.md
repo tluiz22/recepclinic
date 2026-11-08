@@ -2,7 +2,7 @@
 
 > **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17). **Etapa 2 (design)
 > autorizada em 08/nov**: 1ª rodada, portal no celular (P1 a P10, 13 telas) no canvas
-> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). Aguardando as escolhas do cliente. Depois: portal em
+> https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (seção 18). P3 mista e ficha decididas; aguardando os ajustes do visual pedidos pelo cliente. Depois: portal em
 > 1280 px, P11 a P13 e o painel da recepção (R1 a R7). Nenhum código mudou.
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
@@ -552,4 +552,5 @@ fixa embaixo com a escolha e o botão; faixa amarela do horário guardado a part
 e hora em destaque. P3 em duas opções: A (cartão completo, com selos e próximo horário) e B (lista compacta, para
 especialidades com muitos médicos). Telas: P1, P2, P3 A/B, P4, P5, P6, P7 (veio do WhatsApp), P7 (celular + código,
 com erro), P8 (com carteirinha), P8b (com "Você quis dizer"), P9, P10. Clínica e médicos fictícios.
-Escolhas do cliente: pendentes.
+Escolhas do cliente (08/nov): **P3 mista** (cartão A até 5 médicos na especialidade, lista B com 6 ou mais);
+**ficha aprovada** como está; visual geral: **ajustar antes** da próxima rodada (ajustes a receber do cliente).
