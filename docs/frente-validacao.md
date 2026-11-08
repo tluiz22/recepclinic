@@ -38,3 +38,11 @@ Não são validação de tela; ficam aqui para não se perderem.
 - **08/nov:** ajuste pedido pelo cliente ao validar o item 1/2: escolha do profissional em Serviços e Horários (sem
   lembrar a escolha; só vem escolhido vindo de outra tela), especialidade em negrito e filtro em Agendas e
   Profissionais. Detalhe e roteiro: seção 11 do [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md).
+- **08/nov, melhorias pedidas pelo cliente (4 itens, um por vez):**
+  1. **Desativar serviço desativa os horários só dele** (decisão: reativar traz de volta só os que saíram junto; o que
+     cruza com outro horário fica desativado e a tela avisa). Migração `20270101120000` (`availability_windows.off_with_service`).
+     Teste `tests/db/horarios-com-o-servico.test.ts`. Validar: serviço com horário próprio › Desativar (o aviso diz
+     quantos horários) › Horários (sumiram) › Reativar (voltam).
+  2. Boas-vindas do bot com o nome de quem já é cadastrado: a fazer.
+  3. Menu do profissional sem exames e Informações gerais sem exames (com vários profissionais): a fazer.
+  4. Perfil, prazo para oferecer horários e idade limite por profissional: a fazer (plano antes, tem migração).

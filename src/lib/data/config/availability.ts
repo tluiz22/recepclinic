@@ -282,6 +282,8 @@ export async function updateAvailabilityWindow(
           start_time: next.startTime,
           end_time: next.endTime,
           capacity: next.capacity,
+          // Trocou de serviço: não volta mais com o antigo.
+          ...(next.serviceId !== current.serviceId ? { off_with_service: false } : {}),
         })
         .eq("clinic_id", clinicId)
         .eq("id", id)
@@ -318,6 +320,61 @@ export async function deactivateServiceWindowsOutside(db: DbClient, clinicId: st
   return unwrap(await query.select("id"), "Horários do serviço").length;
 }
 
+/**
+ * Desativar o serviço (cliente, 08/nov/2026): os horários ativos só dele saem junto, marcados para voltar com ele.
+ * Devolve quantos.
+ */
+export async function deactivateWindowsWithService(db: DbClient, clinicId: string, serviceId: string): Promise<number> {
+  return unwrap(
+    await db
+      .from("availability_windows")
+      .update({ is_active: false, off_with_service: true })
+      .eq("clinic_id", clinicId)
+      .eq("service_id", serviceId)
+      .eq("is_active", true)
+      .select("id"),
+    "Horários do serviço",
+  ).length;
+}
+
+/**
+ * Reativar o serviço: voltam os horários que saíram com ele, um a um, com a mesma conferência de sobreposição de
+ * Horários. O que cruza com outro horário que entrou no lugar fica desativado (sem a marca). Devolve as contagens.
+ */
+export async function reactivateWindowsWithService(
+  db: DbClient,
+  clinicId: string,
+  serviceId: string,
+): Promise<{ reactivated: number; blocked: number }> {
+  const waiting = unwrap(
+    await db.from("availability_windows").select(COLUMNS).eq("clinic_id", clinicId).eq("service_id", serviceId).eq("off_with_service", true),
+    "Horários do serviço",
+  ).map(toWindow);
+  if (!waiting.length) return { reactivated: 0, blocked: 0 };
+  const exams = await examServiceIds(db, clinicId);
+  const counting = new Map<string, AvailabilityWindow[]>();
+  let reactivated = 0;
+  for (const w of waiting) {
+    if (!counting.has(w.agendaId)) counting.set(w.agendaId, await windowsThatCount(db, clinicId, w.agendaId));
+    const others = counting.get(w.agendaId)!;
+    const ok = !findWindowConflict(w, others, exams);
+    unwrap(
+      await db
+        .from("availability_windows")
+        .update(ok ? { is_active: true, off_with_service: false } : { off_with_service: false })
+        .eq("clinic_id", clinicId)
+        .eq("id", w.id)
+        .select("id"),
+      "Horário de atendimento",
+    );
+    if (ok) {
+      others.push({ ...w, isActive: true });
+      reactivated++;
+    }
+  }
+  return { reactivated, blocked: waiting.length - reactivated };
+}
+
 /** Reativar confere a sobreposição de novo (pode ter entrado outro horário no lugar). */
 export async function setAvailabilityWindowActive(db: DbClient, clinicId: string, id: string, isActive: boolean): Promise<void> {
   if (isActive) {
@@ -328,7 +385,13 @@ export async function setAvailabilityWindowActive(db: DbClient, clinicId: string
     if (conflict) throw conflictError(conflict);
   }
   unwrapOne(
-    await db.from("availability_windows").update({ is_active: isActive }).eq("clinic_id", clinicId).eq("id", id).select("id").maybeSingle(),
+    await db
+      .from("availability_windows")
+      .update({ is_active: isActive, off_with_service: false })
+      .eq("clinic_id", clinicId)
+      .eq("id", id)
+      .select("id")
+      .maybeSingle(),
     "Horário de atendimento",
   );
 }

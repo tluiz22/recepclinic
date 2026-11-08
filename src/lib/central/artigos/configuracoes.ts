@@ -126,7 +126,10 @@ export const configuracoesArtigos = [
       { name: "Profissional", text: "Dono do serviço: duração, valor e locais valem só para ele. \"Equipe (exames)\" só no tipo Exame. Não muda depois de criado; para outro profissional, cadastre um serviço novo. O profissional com login cadastra e edita os serviços dele." },
       { name: "Locais", text: "O serviço aparece para marcar na agenda do profissional dele, nos locais marcados aqui." },
     ],
-    notes: ["Serviço sem horário de atendimento numa agenda e num local dele não aparece no bot nem no link de agendar; o selo diz o que falta."],
+    notes: [
+      "Serviço sem horário de atendimento numa agenda e num local dele não aparece no bot nem no link de agendar; o selo diz o que falta.",
+      "Desativar o serviço desativa também os horários cadastrados só para ele. Reativar traz esses horários de volta; o que cruzar com outro horário cadastrado depois fica desativado e a tela avisa.",
+    ],
     contextual: ["/admin/configuracoes/servicos"],
   }),
   article({

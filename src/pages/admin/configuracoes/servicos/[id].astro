@@ -295,7 +295,21 @@ for (const w of serviceWindows) {
         <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
-    {!isNew && <ActiveToggle action={action} isActive={service!.isActive} what="o serviço" />}
+    {
+      !isNew && (
+        <ActiveToggle
+          action={action}
+          isActive={service!.isActive}
+          what="o serviço"
+          message={
+            serviceWindows.length
+              ? `Sai das telas de marcação e ${serviceWindows.length === 1 ? "o horário cadastrado só para ele também é desativado" : `os ${serviceWindows.length} horários cadastrados só para ele também são desativados`}; o histórico fica. Reativar o serviço traz os horários de volta.`
+              : undefined
+          }
+          inactiveMessage="Está desativado: não aparece nas telas de marcação. Reativar traz de volta, com os horários que foram desativados junto com ele."
+        />
+      )
+    }
   </div>
 
   <script>

@@ -223,14 +223,14 @@ isOneToOne: false
                   ]
                 },"availability_windows": {
                   Row: {
-                    "agenda_id": string,"capacity": number | null,"clinic_id": string,"created_at": string,"end_time": string,"id": string,"is_active": boolean,"location_id": string,"service_id": string | null,"start_time": string,"updated_at": string,"weekday": number
+                    "agenda_id": string,"capacity": number | null,"clinic_id": string,"created_at": string,"end_time": string,"id": string,"is_active": boolean,"location_id": string,"off_with_service": boolean,"service_id": string | null,"start_time": string,"updated_at": string,"weekday": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_id": string,"capacity"?: number | null,"clinic_id": string,"created_at"?: string,"end_time": string,"id"?: string,"is_active"?: boolean,"location_id": string,"service_id"?: string | null,"start_time": string,"updated_at"?: string,"weekday": number
+                    "agenda_id": string,"capacity"?: number | null,"clinic_id": string,"created_at"?: string,"end_time": string,"id"?: string,"is_active"?: boolean,"location_id": string,"off_with_service"?: boolean,"service_id"?: string | null,"start_time": string,"updated_at"?: string,"weekday": number
                   }
                   Update: {
-                    "agenda_id"?: string,"capacity"?: number | null,"clinic_id"?: string,"created_at"?: string,"end_time"?: string,"id"?: string,"is_active"?: boolean,"location_id"?: string,"service_id"?: string | null,"start_time"?: string,"updated_at"?: string,"weekday"?: number
+                    "agenda_id"?: string,"capacity"?: number | null,"clinic_id"?: string,"created_at"?: string,"end_time"?: string,"id"?: string,"is_active"?: boolean,"location_id"?: string,"off_with_service"?: boolean,"service_id"?: string | null,"start_time"?: string,"updated_at"?: string,"weekday"?: number
                   }
                   Relationships: [
                     {

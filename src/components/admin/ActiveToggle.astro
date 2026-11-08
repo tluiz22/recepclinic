@@ -11,14 +11,23 @@ interface Props {
   isActive: boolean;
   /** Ex.: "o profissional" — entra no título, no botão e na confirmação. */
   what: string;
+  /** Texto próprio do que acontece ao desativar (no lugar do padrão). */
+  message?: string;
+  /** Texto próprio do cadastro desativado. */
+  inactiveMessage?: string;
 }
-const { action, isActive, what } = Astro.props;
-const message = "Sai das telas de marcação; o histórico fica. Dá para reativar depois.";
+const {
+  action,
+  isActive,
+  what,
+  message = "Sai das telas de marcação; o histórico fica. Dá para reativar depois.",
+  inactiveMessage = "Está desativado: não aparece nas telas de marcação. Reativar traz de volta.",
+} = Astro.props;
 ---
 <section class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white p-4 sm:px-5" aria-labelledby="ativar-titulo">
   <div class="min-w-0">
     <h2 id="ativar-titulo" class="font-display text-base leading-tight font-bold text-ink">{isActive ? `Desativar ${what}` : `Reativar ${what}`}</h2>
-    <p class="mt-1 text-sm text-ink-soft">{isActive ? message : "Está desativado: não aparece nas telas de marcação. Reativar traz de volta."}</p>
+    <p class="mt-1 text-sm text-ink-soft">{isActive ? message : inactiveMessage}</p>
   </div>
   <form method="POST" action={action}>
     <input type="hidden" name="acao" value={isActive ? "desativar" : "reativar"} />
