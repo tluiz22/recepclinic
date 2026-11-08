@@ -137,7 +137,7 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 ### P8. Quem será atendido
 
 - **Objetivo:** escolher o paciente sem presumir o titular.
-- **Exibe:** "Para quem é a consulta?"; pacientes do contato (primeiro nome + inicial, (RD12); "(você)" quando
+- **Exibe:** "Para quem é a consulta?"; pacientes do contato (nome completo, RD12 revista em 08/nov; antes: primeiro nome + inicial); "(você)" quando
   `is_contact_self`); **Outra pessoa** → P8b; se não há cadastro, vai direto a P8b; contador da reserva visível.
 - **Erros:** idade fora do limite do médico → "A Dra. X atende até {n} anos. [Escolher outro médico]"; carteirinha
   exigida e ausente → campo da carteirinha nesta tela.
@@ -147,8 +147,11 @@ P11 Falar com a recepção: de qualquer tela.   P12 Minhas consultas (remarcar/c
 
 - **Exibe:** "A consulta é para: ( ) Mim ( ) Outra pessoa (filho, dependente)"; para mim: nome completo, data de
   nascimento; para outra pessoa: seu nome (se o contato é novo), nome completo e nascimento do paciente.
-- **Validação:** nome com nome e sobrenome; data real, não futura, ≥ 1900; nome parecido com um já cadastrado no mesmo
-  telefone → "Você quis dizer João S.? [Sim, é ele] [Não, é outra pessoa]".
+- **Validação:** nome com nome e sobrenome; data real (dia válido para o mês), não futura, ano com 4 números, até 110
+  anos; abaixo dos campos, a data por extenso com a idade ("14 de março de 2019, 7 anos"). Duplicado (cliente, 08/nov):
+  nome parecido com um paciente do mesmo telefone **e** mesma data → "Já existe um cadastro neste número: João Souza
+  Lima, nascido em 14/03/2019. É ele?"; nome parecido com data diferente → mostra as duas datas, "Sim, é ele (manter
+  14/03/2019)" / "Não, é outra pessoa". A P9 repete a data com a idade.
 - **Regras:** só o indispensável (P§5.3); limite de pacientes novos por telefone; sem CPF, e-mail ou endereço.
 - **Aceite:** dados preservados após erro; teclado de data adequado no celular.
 

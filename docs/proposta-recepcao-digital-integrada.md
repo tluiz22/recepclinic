@@ -532,7 +532,7 @@ Planejamento aprovado pelo cliente em 08/nov; RD1 a RD14 respondidas no mesmo di
 | RD9 | CAPTCHA | **Cloudflare Turnstile, só quando há risco**: entrada direta ao pedir o código ou com sinal de abuso; quem vem do link do WhatsApp não vê |
 | RD10 | Antecedência para cancelar/remarcar pelo portal | **A clínica define, padrão 24 h**; dentro do prazo, só "Falar com a recepção" |
 | RD11 | Por qual número sai a confirmação de quem marcou pelo portal direto | **Número do médico**; sem ele, o número principal da clínica |
-| RD12 | Como mostrar os pacientes de um telefone | **Primeiro nome + inicial do sobrenome** |
+| RD12 | Como mostrar os pacientes de um telefone | **Primeiro nome + inicial do sobrenome**. **Revista pelo cliente em 08/nov (Etapa 2):** nome completo nas telas depois do telefone comprovado (P8 a P10) |
 | RD13 | Foto do profissional no portal | **Sempre que houver foto** no cadastro (sem opção por médico). O cadastro avisa "Esta foto aparece no portal de agendamento"; sem foto, iniciais |
 | RD14 | Recepção restrita por profissional nas conversas; equipes de recepção | **Mesma restrição da agenda** (médicos liberados à pessoa, padrão todos; número geral: todas veem); sem equipes na 1ª versão |
 
@@ -564,3 +564,9 @@ final 4321" para quem não está com aquele celular (volta ao número da convers
 **P7 do WhatsApp retirada (cliente, 08/nov):** quem vem pelo link vai da P6 direto à P8, que mostra no topo
 "Confirmação no WhatsApp final 4321" com "Usar outro número" (abre a tela do código para o número novo). A P7 com
 celular e código fica só para a entrada direta. **P7, "Outro número" e P8 aprovadas (08/nov).**
+**Ajustes de P8b a P10 (cliente, 08/nov):** nome completo do paciente nas telas (revisão da RD12); P8b confere
+duplicado por **nome parecido + data de nascimento** entre os pacientes do número: mesma data → "Já existe um
+cadastro neste número: {nome completo}, nascido em {data}. É ele?"; data diferente → mostra a data cadastrada e a
+digitada, "Sim, é ele (manter {data})" / "Não, é outra pessoa". Data errada: bloqueia data impossível (dia do mês,
+futura, ano com 4 números, mais de 110 anos), mostra a data por extenso com a idade abaixo dos campos e de novo na P9
+(com Alterar). "Seu nome" só aparece quando o número não tem cadastro. Aguardando a conferência do cliente.
