@@ -12,8 +12,8 @@
 >   branch). Depois: trazer a `main` para a branch, juntar na `main` e decidir staging/produção (N6 depende do Asaas,
 >   contador e advogado).
 >
-> Staging = `main` em `c60ae26` (com o bloco multiprofissional e a MS); produção sem o bloco multiprofissional (última
-> publicação no [`producao.md`](producao.md)). Capturas da ajuda: fila vazia.
+> **Staging = produção = `main` (`64ec6b1`, 08/nov)**, com o bloco multiprofissional e a validação de 08/nov (itens 1 a 4,
+> fotos, filtros), validados pelo cliente; 9 migrações na produção (`producao.md`). Capturas da ajuda: fila vazia.
 >
 > **BaaS do Asaas (07/nov):** ajustes pedidos pelo Asaas (cláusula nos termos e selo sem registro) no ar: site `beb9e1c`
 > e app `305efd7` (staging e produção; migração `20261228140000` nos dois). **E-mail de reanálise enviado pelo cliente
