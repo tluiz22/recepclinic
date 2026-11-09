@@ -2144,6 +2144,12 @@ isOneToOne: false
       referencedRelation: "patients"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "slot_holds_return_origin_id_fkey"
+      columns: ["return_origin_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "slot_holds_service_id_fkey"
       columns: ["service_id"]
 isOneToOne: false
