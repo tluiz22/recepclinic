@@ -67,7 +67,7 @@ Em cada etapa: unidade e banco; Playwright em 390 e 1280 px; `security-review` n
 | O quê | Quem | Quando precisa |
 |---|---|---|
 | Endereços `agendar.recepclinic.com.br` (produção) e `agendar-teste.recepclinic.com.br` (staging, I2): CNAME no DNS + domínio na Vercel | Cliente (DNS) e Claude (configuração) | Início da F2a: **feito (08/nov, 4.1)** |
-| Template de autenticação na Meta (código com "Copiar código"), por conta | Claude envia; Meta aprova | Antes da F2b |
+| Template de autenticação na Meta (código com "Copiar código") | Claude envia; Meta aprova | **Revisto (09/nov, seção 14):** só na conta do número do RecepClinic, com a empresa do RecepClinic verificada (cliente pede) |
 | Conta e chaves do Cloudflare Turnstile (staging e produção) | Cliente | Antes da F2b: **feito (08/nov, 4.1)** |
 | Termo, política e menores (LGPD) revisados | Advogado | Antes da produção |
 | Preço do item "Portal" no contrato | Cliente | Antes de vender |
@@ -495,3 +495,26 @@ marcado!", duplo clique, `.ics`, "Trocar o exame", Voltar em cadeia até o iníc
    "Exame {nome} — {Clínica}".
 3. O mesmo exame de novo para o mesmo paciente: "já tem o exame … marcado".
 4. Exame em turma (grupo) não aparece; desligar o item na Matriz some com o botão.
+
+## 14. Código do portal pelo número do RecepClinic (cliente, 09/nov/2026) [Cliente]
+
+Na validação da F2b no staging, "Criar na Meta" recusou só o `rc_codigo_portal_v1`: *"This WhatsApp business account
+does not have permission to create message template"*. Os outros 16 templates (utilidade) foram aprovados. Causa
+provável, não confirmada na documentação oficial: a Meta só libera template de **autenticação** para portfólio com a
+**verificação da empresa** feita (fornecedores como Vonage e MSG91 dizem isso; a página oficial dos templates de
+autenticação não lista requisitos). Na produção, cada clínica conecta o número no portfólio dela: exigir a verificação
+de cada uma travaria o portal das clínicas pequenas.
+
+- **Decisão (cliente, 09/nov):** opção 1. O código sai de **um número do RecepClinic** (empresa do RecepClinic
+  verificada uma vez), para todas as clínicas; o texto do código é fixo da Meta, sem o nome da clínica. Muda a RD2.
+- **Verificação da empresa de cada clínica** continua recomendada, pelo volume: sem ela, a Meta limita a ~250
+  pacientes por dia as mensagens iniciadas pela clínica (lembretes, confirmações). Passo da implantação (09/nov): o
+  Suporte guia o dono a pedir a verificação **na sessão de conexão**; o guia "Antes de conectar" pede os documentos da
+  empresa e o item do checklist do Suporte diz isso (`business_verification`, recomendado).
+- **A aprovação dos templates não vence**, mas pode cair por qualidade (bloqueios e denúncias), por reclassificação
+  da categoria ou por regra nova da Meta; a situação chega pelo webhook e aparece em Configurações › WhatsApp.
+- **Antes de mudar o código:** o cliente pede a verificação da empresa do RecepClinic na Meta e define o número que
+  manda os códigos. Depois, a mudança (planejada à parte): conta de envio do RecepClinic para o código, template
+  `rc_codigo_portal_v1` só nela, a validação da F2 segue.
+- Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
+  enviados primeiro com a resposta da Meta (`templateSummary.ts`).

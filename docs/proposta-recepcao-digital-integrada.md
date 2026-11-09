@@ -531,7 +531,7 @@ Planejamento aprovado pelo cliente em 08/nov; RD1 a RD14 respondidas no mesmo di
 | # | Pergunta | Decisão |
 |---|---|---|
 | RD1 | Endereço do portal público (muda a D7: hoje a clínica só é achada pelo token) | **`agendar.recepclinic.com.br/{apelido}`** (subdomínio por função, como a D7 ajustada); apelido escolhido pelo Suporte. Registrar a revisão na D7 ao implementar |
-| RD2 | Como comprovar o telefone na entrada direta | **Código de 6 dígitos pelo WhatsApp** (template de autenticação), sem SMS |
+| RD2 | Como comprovar o telefone na entrada direta | **Código de 6 dígitos pelo WhatsApp** (template de autenticação), sem SMS. **Revisto (cliente, 09/nov/2026): o código sai de um número do RecepClinic** (empresa verificada uma vez), não do número da clínica: a Meta recusou o template de autenticação numa conta de empresa não verificada (implementação, seção 14) |
 | RD3 | No WhatsApp, "Agendar" vai para o portal ou continua no chat? | **Vai para o portal** com o item Portal ligado; sem ele, como hoje. Remarcar e cancelar seguem no chat |
 | RD4 | Prazo da reserva temporária | **5 min, ajustável pelo Suporte (3 a 10)** por clínica |
 | RD5 | Quais serviços o portal marca | **Só consultas** (passo "tipo de consulta" só se o profissional tiver mais de uma); retorno e exames pelo bot/recepção |

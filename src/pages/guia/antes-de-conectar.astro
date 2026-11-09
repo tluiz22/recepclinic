@@ -24,12 +24,13 @@ const before = [
   "Mensagens automáticas desligadas: saudação, ausência e automações do Meta Business Suite, inclusive as programadas para o horário comercial",
   "Cartão de crédito habilitado para compras internacionais, para a Meta",
   "Endereço do site da clínica (se não tiver, usamos o do RecepClinic)",
+  "Documentos da empresa para a verificação na Meta: cartão CNPJ ou contrato social e um comprovante de endereço ou telefone em nome da empresa",
   "Computador com navegador, o celular do número da clínica e um segundo celular para o teste",
 ];
 const after = [
   "Cartão cadastrado e definido como padrão na conta do WhatsApp da clínica",
   "Mensagem de teste do RecepClinic recebida no celular",
-  "Verificação da empresa iniciada na Meta (recomendado)",
+  "Verificação da empresa pedida na Meta (o suporte ajuda na própria sessão)",
 ];
 const sections = [
   { id: "checklist", label: "Checklist" },
@@ -215,7 +216,10 @@ const sections = [
         várias unidades no mesmo portfólio.
       </li>
     </ul>
-    <p class={GUIDE_P}>Como fazer, depois da conexão:</p>
+    <p class={GUIDE_P}>
+      O pedido é feito <strong>na própria sessão de conexão</strong>, logo depois de conectar o número, com o suporte do RecepClinic orientando. Por isso,
+      deixe os documentos da empresa à mão (veja "No dia da conexão"). O passo a passo, para consulta:
+    </p>
     <ol class={GUIDE_OL}>
       <li>
         Abra <a class={GUIDE_LINK} href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a>, escolha o portfólio da clínica e
@@ -241,6 +245,10 @@ const sections = [
       <li><strong>Celular com o WhatsApp Business</strong> do número da clínica, ao lado do computador, para ler o QR code.</li>
       <li><strong>Login do Facebook</strong> e o celular que recebe o código de confirmação.</li>
       <li><strong>Cartão de crédito</strong> para a Meta.</li>
+      <li>
+        <strong>Documentos da empresa</strong>, em arquivo (PDF ou foto legível): cartão CNPJ ou contrato social, e um comprovante de endereço ou de
+        telefone em nome da empresa (conta de luz, água, internet ou telefone). Com eles, o pedido de verificação da empresa já sai na sessão.
+      </li>
       <li>
         <strong>Endereço do site da clínica.</strong> A Meta pede um site no perfil comercial da empresa, para identificar quem está enviando as mensagens. Se a
         clínica não tiver site, não tem problema: usamos o endereço do RecepClinic.

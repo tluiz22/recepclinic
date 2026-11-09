@@ -197,6 +197,14 @@ Plano original:
   5. Conversa em "Aguardando a clínica" sem o "Devolver ao bot" → usar `#bot` pelo app (a tela não tem o botão nessa
      seção; mudança não decidida).
 
+## 5b. Verificação da empresa na sessão de conexão (cliente, 09/nov/2026)
+
+O Suporte guia o dono da clínica a **pedir a verificação da empresa na Meta na própria sessão de conexão** (sem ela, a
+Meta limita a ~250 pacientes por dia as mensagens iniciadas pela clínica). O guia "Antes de conectar" pede os
+documentos da empresa (cartão CNPJ ou contrato social e comprovante de endereço ou telefone) e diz que o pedido sai na
+sessão; o item `business_verification` do checklist (recomendado) passou a dizer isso. Contexto: seção 14 do
+`implementacao-recepcao-digital.md` (o código do portal sai de um número do RecepClinic).
+
 ## 6. Fora do escopo, a decidir depois
 
 - "Devolver ao bot" também em "Aguardando a clínica" (perguntado em 03/nov, sem decisão).
