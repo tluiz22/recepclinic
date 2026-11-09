@@ -116,6 +116,15 @@ describe("quem aparece", () => {
     }
   });
 
+  it("sem particular e sem convênio (não há como marcar): some", async () => {
+    await adminClient().from("insurance_plans").update({ is_active: false }).eq("id", planId);
+    try {
+      expect((await open()).professionals.map((p) => p.name)).toEqual(["Dra. Agenda"]);
+    } finally {
+      await adminClient().from("insurance_plans").update({ is_active: true }).eq("id", planId);
+    }
+  });
+
   it("a foto do profissional tem link; a da equipe não é lida pela credencial da clínica", async () => {
     const admin = adminClient();
     const path = `${fixture.clinicId}/profissionais/${draId}/foto.png`;

@@ -22,7 +22,8 @@ import { logError } from "../../log";
 //
 // Quem aparece (mesma regra do catálogo do bot, catalog.ts): profissional ativo, marcado para o portal, com um serviço
 // de Consulta individual ativo na agenda dele e horário de atendimento cadastrado num local da clínica onde o serviço é
-// oferecido. Domiciliar, turma, retorno e exames ficam fora desta etapa (retorno e exames: F2d).
+// oferecido, que atende particular ou algum convênio ativo. Domiciliar, turma, retorno e exames ficam fora desta etapa
+// (retorno e exames: F2d). Perfil e idade limite da agenda valem quando o paciente for informado (P8, F2c).
 // Os horários saem das mesmas funções do bot, do Marcar e do link de agendar (agenda/slots.ts): prazo do profissional,
 // feriados, bloqueios, intervalo e atendimentos marcados.
 
@@ -143,6 +144,8 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
       .filter((link) => link.professional_id === professional.id && planById.has(link.insurance_plan_id))
       .map((link) => ({ id: link.insurance_plan_id, name: planById.get(link.insurance_plan_id)!.name, note: link.note?.trim() || null }))
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    // Sem particular e sem convênio ativo não há como marcar (o bot manda à recepção): fica fora do portal.
+    if (!professional.acceptsPrivate && !accepted.length) continue;
     const priced = consultations.map((c) => c.priceCents).filter((p): p is number => p !== null && p > 0);
     const photoPath = photos.find((row) => row.id === professional.id)?.photo_path ?? null;
     result.push({

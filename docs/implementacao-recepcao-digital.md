@@ -230,6 +230,14 @@ Código:
 - **Ficam para depois:** "Marcar retorno", "Marcar exame" e "Minhas consultas" no início (F2c/F2d); o código da sessão
   na mensagem da recepção ("parou em {etapa}", F6); o aviso da carteirinha (não há configuração para isso).
 
+**Revisão de código (08/nov, `/code-review`):** corrigidos o profissional sem particular e sem convênio ativo (aparecia
+e travava na P5; agora fica fora do portal), os links da faixa de dias e do tipo de consulta (saíam com `/portal` no
+endereço público), a rota `[...caminho]` (só a 404; quem leva ao portal é o middleware), a lista de endereços
+reservados repetida no código (fica só no banco) e a clínica que já tivesse um endereço reservado (a migração o tira).
+Anotados, sem mudança agora: o custo do "próximo horário" de cada profissional a cada página (medir no staging com
+muitos profissionais, como no risco da F5a); perfil e idade limite da agenda, que dependem do paciente (P8, F2c); um
+caminho sem página no painel, sem login, agora leva ao login em vez da 404.
+
 Testes: unidade (`portal.test.ts`: endereços, busca, passos, caminho, particular e convênio, textos), banco
 (`portal-escolha.test.ts`: endereço e reservados, quem aparece, foto, horários, conferência do Continuar) e
 Playwright em 390 e 1280 px (jornada, Voltar em cada tela, busca, filtro, horário ocupado, convênio inválido, folha da

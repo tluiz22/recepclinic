@@ -49,12 +49,6 @@ export function portalPublicUrl(appUrl: URL, clinicSlug: string): string {
   return `${appUrl.origin}${PORTAL_PREFIX}/${clinicSlug}`;
 }
 
-/** Endereços que o Suporte não pode dar a uma clínica (o banco confere de novo). */
-export const RESERVED_CLINIC_SLUGS = new Set([
-  "admin", "api", "app", "portal", "agendar", "agendar-teste", "preparo", "orientacoes", "formulario", "guia",
-  "importar", "ajuda", "teste", "www", "suporte", "recepclinic",
-]);
-
 /** Sugestão de apelido pelo nome da clínica, como o dos profissionais: "Clínica Vila Serena" → "clinica-vila-serena". */
 export function suggestPortalSlug(name: string): string {
   return plainText(name).replace(/[^a-z0-9]+/g, "-").slice(0, 60).replace(/^-+|-+$/g, "");

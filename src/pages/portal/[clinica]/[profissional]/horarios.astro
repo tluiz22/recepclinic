@@ -76,7 +76,8 @@ if (page.kind === "open" && professional && consultation && modality) {
 }
 
 const keep = { ...flowParams(flow), mod: modality?.value ?? null, tipo: professional && professional.consultations.length > 1 ? consultation?.serviceId : null };
-const dayHref = (date: string, start: string) => portalHref(Astro.url.pathname, { ...keep, date, start });
+const timesPath = professional ? `${base}/${professional.slug}/horarios` : "";
+const dayHref = (date: string, start: string) => portalHref(timesPath, { ...keep, date, start });
 const back = professional ? (options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : backFromProfessional(base, professional.slug, flow, single)) : base;
 const changeDoctor = changeProfessionalHref(base, flow);
 const changeModality = options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : null;
@@ -124,7 +125,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
                 {professional.consultations.map((c) => (
                   <li>
                     <a
-                      href={portalHref(Astro.url.pathname, { ...keep, tipo: c.serviceId })}
+                      href={portalHref(timesPath, { ...keep, tipo: c.serviceId })}
                       aria-current={c.serviceId === consultation.serviceId ? "true" : undefined}
                       class={`inline-flex min-h-12 flex-col justify-center rounded-xl border-[1.5px] px-4 py-1.5 leading-tight no-underline ${c.serviceId === consultation.serviceId ? "border-clinic-ink bg-clinic-tint font-bold text-clinic-ink" : "border-gray-300 bg-white text-gray-900 hover:border-clinic-ink"}`}
                     >

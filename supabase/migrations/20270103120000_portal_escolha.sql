@@ -120,6 +120,13 @@ begin
 end
 $$;
 
+-- Clínica que já tinha um desses endereços (só o Suporte dá, desde a F1): fica sem, e o Suporte escolhe outro.
+update public.clinics set portal_slug = null
+where portal_slug = any (array[
+  'admin', 'api', 'app', 'portal', 'agendar', 'agendar-teste', 'preparo', 'orientacoes', 'formulario', 'guia',
+  'importar', 'ajuda', 'teste', 'www', 'suporte', 'recepclinic'
+]);
+
 -- ---------------------------------------------------------------------------
 -- 3. Foto do profissional no portal (RD13): a credencial da clínica lê as fotos dos profissionais dela
 --    ("<clínica>/profissionais/<id>/..."). As da equipe ("<clínica>/equipe/...") continuam só para quem entra no painel.
