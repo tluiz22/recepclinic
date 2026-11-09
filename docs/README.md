@@ -7,9 +7,11 @@
 > - **Fora desta entrega:** vários números de WhatsApp (F4, RD11), pendente.
 > - **Etapa 3 (implementação):** plano em [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)
 >   (F1, D4, F2a a F2d, F3, F5a, F5b, F6; decisões I1 a I11). **F1 feita, no staging e validada pelo cliente (08/nov,
->   `aba61a8`, migração `20270102120000`; roteiro 7.1 sem ajustes)**. Produção: não. **D4 (desenho de retorno e
->   exames) aprovada em 08/nov** (seção 8 do plano). Endereços `agendar-teste`/`agendar` e chaves do Turnstile
->   prontos (seção 4.1). Próximo: F2a.
+>   `aba61a8`, migração `20270102120000`)**. Produção: não. **D4 aprovada.** **F2a e F2b feitas só no computador (08/nov)**,
+>   nas branches `recepcao-f2a` e `recepcao-f2b` (a F2b sai da F2a; sem merge; migrações `20270103120000` e
+>   `20270104120000` só no banco local): portal até a reserva do horário, com código pelo WhatsApp e CAPTCHA. **Cliente
+>   (08/nov): sem staging a cada etapa; valida tudo junto depois** (roteiros 9.1 e 10.1 do plano, na branch).
+>   **Próximo: F2c** (quem será atendido, cadastro novo, revisão e marcação), na `recepcao-f2b` ou numa branch dela.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >
