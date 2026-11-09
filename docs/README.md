@@ -18,8 +18,8 @@
 >   Configurações › WhatsApp).
 >   **Validação parada no código (09/nov):** a Meta só cria o template do código em empresa verificada; decisão do
 >   cliente: o código sai de um **número do RecepClinic** (+55 61 9656-4772, template já aprovado). Seção 14 do plano.
->   **Código pelo número do RecepClinic feito na `main` (09/nov, itens 2 e 3 da seção 14; a API já estava na v24.0)**;
->   staging: não. **Próximo:** guia "Pagamento na Meta" (item 4), staging, validação da F2 (passo 2) e a F3.
+>   **Código pelo número do RecepClinic, aviso na tela do código e guia "Pagamento na Meta" na `main` e no staging
+>   (09/nov, seção 14; a API já estava na v24.0)**. **Próximo:** validação da F2 a partir do passo 2 (código) e a F3.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

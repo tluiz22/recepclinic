@@ -543,7 +543,12 @@ de cada uma travaria o portal das clínicas pequenas.
     configurado ou sem resposta da Meta). Só o Suporte vê: a captura `config-whatsapp` (Administrador) não muda.
   - Testes: `codeSender.test.ts` (envio, recusa 131042, situação), `env.test.ts`, templates e `envio-whatsapp` (13
     templates criados, sem o código). 1180 de unidade, 1127 de banco (1 instável da NA4, passa sozinho 3 vezes), check.
-- **Falta:** (4) guia "Pagamento na Meta" das clínicas cita as "Contas de mensagens"; staging; a validação da F2 segue
-  do passo 2 do roteiro (código), confirmando no 1º envio que o cartão do RecepClinic funciona (sem o erro 131042).
+- **Feito (09/nov, depois, com o OK do cliente):**
+  - Tela do código no portal (`PortalPhoneCode.astro`): "A mensagem chega do RecepClinic, o sistema de agendamento da
+    clínica." no pedido do celular e no aviso do código enviado (o paciente sabe de quem procurar a mensagem).
+  - Item 4: guia "Pagamento na Meta" com a seção "Se aparecer 'Contas de mensagens'" (o cartão vai na conta de
+    mensagens) e o ID dela na mensagem para o suporte da Meta.
+- **Falta:** staging (push da `main`, sem migração); a validação da F2 segue do passo 2 do roteiro (código), confirmando
+  no 1º envio que o cartão do RecepClinic funciona (sem o erro 131042); depois a F3.
 - Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
   enviados primeiro com a resposta da Meta (`templateSummary.ts`).
