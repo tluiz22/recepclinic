@@ -1,7 +1,8 @@
 # Roteiro da apresentação: clínica com 18 profissionais
 
 > **Roteiro comercial, revisto em 08/nov/2026** com as decisões da rodada 3 (Etapa 2), da D4 e do plano da Etapa 3, e
-> com a estratégia comercial avaliada pelo cliente (decisões A1 a A3, seção 11). Telas da demonstração: canvas
+> com a estratégia comercial avaliada pelo cliente (decisões A1 a A3, seção 11). Apresentação em 3 partes (09/nov):
+> https://claude.ai/artifact/WjcCnvq9PgpXnh98af46i7 (seção 9). Telas da demonstração: canvas
 > https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (portal P1 a P13, rodada 4 de retorno e exames, painel R1 a R7).
 > Base: [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md) e
 > [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md).
@@ -147,21 +148,29 @@ a direção vendo a recepção; secretárias e pacientes satisfeitos.
 O portal entra no piloto quando a F2 estiver pronta; até lá, o piloto usa o que já está em produção (coluna da
 esquerda da seção 7).
 
-## 9. Sequência recomendada da reunião (30–40 min)
+## 9. Sequência da reunião em 3 partes (30–40 min)
 
-1. (7 min) **Fazer a clínica falar:** perguntas 1 a 7 da seção 10 (reclamações, dificuldades das secretárias,
-   pacientes perdidos) e a pergunta mais importante da seção 2.
-2. (3 min) **Mostrar que entendeu:** o posicionamento da seção 1. "Não vamos substituir o prontuário."
-3. (5 min) **Proposta de valor:** os três problemas e as três respostas (seção 3) e a simulação (seção 2).
-4. (5 min) O que já existe: WhatsApp de testes ao vivo (bot com especialidade → médico, numa clínica de demonstração).
-5. (10 min) **Experiência visual** (telas do canvas): o paciente marcando pelo celular (seção 4) e a secretária no
-   computador, Meu dia → Conversas → Próximos horários livres → Agenda em colunas (seção 5).
-6. (3 min) Segurança e privacidade em linguagem simples: sem CPF, código no WhatsApp, horário reservado, ninguém marca
-   em dobro, dados de crianças protegidos.
-7. (5 min) **Piloto:** tabela da seção 7, o piloto de 90 dias e os valores (seção 8); próximos passos. Não tentar
-   vender contrato longo antes de provar valor.
+Apresentação (slides, com notas do apresentador em cada um): https://claude.ai/artifact/WjcCnvq9PgpXnh98af46i7
+(privada; compartilhar pelo menu Share para outra pessoa abrir). Reorganizada pelo cliente em 09/nov.
 
-Material: celular com o WhatsApp de testes, notebook com o painel, telas do canvas, página de apresentação.
+**Parte 1, entender a recepção da clínica (10 min).** Não mostrar o sistema ainda. As perguntas 1 a 7 da seção 10,
+em dois slides: a procura (1 a 4) e a organização (5 a 7, com a 7 em destaque). Anotar as respostas.
+
+**Parte 2, o RecepClinic e como ele resolve (20 min).**
+1. O que é (WhatsApp, Portal e Painel), com o que já está em uso e o que está em construção no rodapé.
+2. O prontuário fica onde está; a agenda é uma só, a do RecepClinic (seção 1).
+3. Três problemas, três respostas (seção 3).
+4. Jornadas do paciente e da secretária (seções 4 e 5), com as telas do canvas; bot ao vivo no WhatsApp de testes,
+   se houver tempo.
+5. Benefícios para a organização do atendimento (9 quadros, seção 6; segurança nas notas).
+6. Comparativo "provavelmente hoje × com o RecepClinic", em dois slides: atendimento e agenda e gestão.
+7. O ganho: a simulação da seção 2, refeita com os números da Parte 1 quando houver.
+
+**Parte 3, piloto e investimento (10 min).** Investimento (primeiro a tabela, depois os valores de início, seção 8),
+piloto de 90 dias e próximos passos (combinar o escopo do piloto por escrito, enviar a proposta comercial, marcar o
+início com o cadastro dos médicos e a passagem da agenda). Não vender contrato longo antes de provar valor.
+
+Material: celular com o WhatsApp de testes, notebook com o painel, telas do canvas, a apresentação acima.
 
 ## 10. Perguntas para validar as necessidades da clínica
 
