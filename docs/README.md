@@ -6,10 +6,12 @@
 >   recepção R1 a R7), aprovadas; especificação em `especificacao-telas-portal-e-recepcao.md`. Nenhum código mudou.
 > - **Fora desta entrega:** vários números de WhatsApp (F4, RD11), pendente.
 > - **Etapa 3 (implementação):** plano em [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)
->   (F1, D4, F2a a F2d, F3, F5a, F5b, F6; decisões I1 a I11). **F1 feita, no staging e validada pelo cliente (08/nov,
->   `aba61a8`, migração `20270102120000`; roteiro 7.1 sem ajustes)**. Produção: não. **D4 (desenho de retorno e
->   exames) aprovada em 08/nov** (seção 8 do plano). Endereços `agendar-teste`/`agendar` e chaves do Turnstile
->   prontos (seção 4.1). Próximo: F2a.
+>   (seção 4.1: endereços e Turnstile). **F1 no staging, validada (08/nov)**; produção: não. **D4 aprovada.**
+>   **F2a, F2b, F2c e F2d (retorno e exames) só no computador**, em branches empilhadas `recepcao-f2a` → … →
+>   `recepcao-f2d`; migrações só no banco local. Detalhe e roteiros (9.1 a 13.1) no plano da branch `recepcao-f2d`.
+>   **Cliente (08/nov): sem staging a cada etapa; valida tudo junto depois** (conferir a ordem das migrações com a
+>   `main` antes do merge).
+>   **Próximo: F3** (bot com jornada única e links; muda o bot das clínicas em produção), numa branch da `recepcao-f2d`.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

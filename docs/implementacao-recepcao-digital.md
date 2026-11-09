@@ -3,13 +3,10 @@
 > **Estado atual (retomar daqui), 08/nov/2026.** Plano aprovado (decisões I1 a I11, seção 6; regra da Matriz, bot e
 > portal, seção 1.1). **F1 feita, no staging e validada pelo cliente (08/nov)** (`aba61a8`, migração `20270102120000`;
 > roteiro 7.1 sem ajustes). Produção: não. **D4 feita e aprovada tela por tela (08/nov, seção 8)**, rodada 4 no canvas.
-> Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1). **F2a e F2b
-> feitas (08/nov, seções 9 e 10; migrações `20270103120000` e `20270104120000`)**, só no computador (branches
-> `recepcao-f2a` e `recepcao-f2b`, sem merge): o cliente valida tudo junto no staging depois (roteiros 9.1 e 10.1).
-> **F2c feita (08/nov, seção 11; migração `20270105120000`)**, só no computador, branch `recepcao-f2c` (sai da F2b).
-> **F2d, parte 1 (retorno) feita (09/nov, seção 12; migração `20270106120000`)**, só no computador, branch
-> `recepcao-f2d` (sai da F2c). **F2d parte 2 (exames) feita (09/nov, seção 13)**, na mesma branch. Próximo: F3 (bot com
-> jornada única e links).
+> Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1). **F2a, F2b,
+> F2c e F2d (retorno e exames) feitas** (seções 9 a 13; migrações `20270103120000` a `20270106120000`), juntadas na
+> `main` em 09/nov e levadas ao staging; o cliente valida tudo junto pelos roteiros 9.1 a 13.1. Produção: não.
+> Próximo: F3 (bot com jornada única e links).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
