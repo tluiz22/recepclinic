@@ -366,7 +366,12 @@ Telas (390 e 1280 px):
 **Revisões (08/nov):** segurança sem achados altos (telas e .ics presos à sessão; nada pessoal no endereço; paciente
 sempre conferido contra o celular comprovado). Achado e corrigido nos testes: `app.is_clinic_member` dá null (não
 false) para quem é de fora; a função de resolver usa `is not true`. Sem "carteirinha" (o bot não pede; a P8 da
-especificação citava). Origem `portal_place` (Instagram, site…) fica para a F3, com os links.
+especificação citava). Origem `portal_place` (Instagram, site…) fica para a F3, com os links. `/code-review`: corrigidos o
+cadastro novo gravado de novo numa nova tentativa (a reserva passa a ter o paciente), o "Particular" que saía com o
+convênio do cadastro, a confirmação fechada como "não conectado" quando o WhatsApp não carregou (fica pendente para a
+rotina), o "Confirmando…" preso ao endereço (agora pela reserva), o "Para mim" de quem já tem o próprio paciente
+desativado e os papéis da função de resolver. Mantido pela especificação: "Sim, é a mesma (manter a data)" também
+abre a data a conferir (o paciente digitou outra).
 
 Testes: unidade (`portalBooking.test.ts`, `bookingOrigin.test.ts`, passos), banco (`portal-marcacao.test.ts`:
 cadastro para si e para outra pessoa, duplo toque, horário tomado, reserva vencida e de outra sessão, duplicado e data

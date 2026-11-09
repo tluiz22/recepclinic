@@ -74,8 +74,9 @@ begin
     raise exception 'Ação inválida.' using errcode = '22023';
   end if;
   select * into v_check from public.portal_birthdate_checks where id = p_check_id for update;
-  -- `is not true`: para quem é de fora, is_clinic_member dá null (não false).
-  if v_check.id is null or app.is_clinic_member(v_check.clinic_id) is not true then
+  -- Os mesmos papéis que editam o paciente; `is not true` por segurança (null não passa).
+  if v_check.id is null
+     or app.has_clinic_role(v_check.clinic_id, array['admin', 'professional', 'reception']::public.clinic_role[]) is not true then
     raise exception 'Pendência não encontrada.' using errcode = 'P0002';
   end if;
   if v_check.resolved_at is not null then

@@ -25,7 +25,8 @@ if (page.kind === "open" && professional && hold?.state === "active" && !hold.pa
 
 const today = todayIn(timeZone);
 let problem: string | null = null;
-let confirming = Astro.url.searchParams.get("confirmando") === "1";
+// Outra aba ou o outro toque ainda marcando (tomou a reserva há menos de 1 min): a tela se atualiza até terminar.
+let confirming = !!hold?.confirmingAt && Date.now() - hold.confirmingAt.getTime() < 60_000;
 let existing: PortalPatient | null = null;
 
 if (page.kind === "open" && professional && session && hold?.state === "active") {
@@ -44,7 +45,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
       sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null),
     });
     if (outcome.status === "booked") return Astro.redirect(view.href("marcada"));
-    if (outcome.status === "confirming") return Astro.redirect(view.href("revisao", { confirmando: "1" }));
+    if (outcome.status === "confirming") return Astro.redirect(view.href("revisao"));
     if (outcome.status === "expired") return Astro.redirect(view.href("revisao"));
     if (outcome.status === "taken") return Astro.redirect(portalHref(`${view.base}/${professional.slug}/horarios`, { ...flowParams(view.flow), mod: modality?.value ?? null, tipo: Astro.url.searchParams.get("tipo"), date: Astro.url.searchParams.get("date"), erro: "horario" }));
     if (outcome.status === "no_patient") return Astro.redirect(view.href("reserva"));
@@ -52,8 +53,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
     else problem = "Não conseguimos marcar agora. Toque em “Confirmar agendamento” de novo ou fale com a recepção.";
   }
 }
-// Outra aba ainda marcando: a tela se atualiza até a marcação terminar.
-if (hold?.state !== "active" || hold.appointmentId) confirming = false;
+if (hold?.state !== "active" || problem) confirming = false;
 
 const active = !!professional && hold?.state === "active";
 const changeDoctor = page.kind === "open" ? changeProfessionalHref(view.base, view.flow) : null;

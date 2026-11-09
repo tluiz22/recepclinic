@@ -13,7 +13,7 @@ import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import PortalSummary from "../../../../components/portal/PortalSummary.astro";
 import { portalCta, portalError, portalInput, portalLink, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
-import { bookingBlock, findDuplicate, phonePatients, setHoldPatient, type DuplicateMatch, type NewPatientData } from "../../../../lib/data/portal/booking";
+import { bookingBlock, contactHasSelf, findDuplicate, phonePatients, setHoldPatient, type DuplicateMatch, type NewPatientData } from "../../../../lib/data/portal/booking";
 import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
 import { changeProfessionalHref, ofName } from "../../../../lib/portal";
 import { BIRTHDATE_MESSAGES, birthdateText, blockMessage, cleanFullName, NAME_MAX, parseBirthdate, shortDate } from "../../../../lib/portalBooking";
@@ -47,7 +47,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
   const clinicId = portal.clinicId;
   const { contact, patients } = await phonePatients(db, clinicId, hold.phone);
   hasPatients = patients.length > 0;
-  hasSelf = patients.some((p) => p.isContactSelf);
+  hasSelf = contact ? await contactHasSelf(db, clinicId, contact.id) : false;
   contactKnown = contact !== null;
   if (hasSelf && !values.for) values.for = "other";
 

@@ -11,7 +11,7 @@ import { dispatchNotice, enqueueNotice, runNoticeQueue } from "../../src/lib/dat
 import { registerPatient } from "../../src/lib/data/patients";
 import { todayIn } from "../../src/lib/clinicTime";
 import { adminClient, clinicServiceClient, createClinic, createUser, addMember, deleteClinics, deleteUsers, type TestUser } from "./helpers";
-import { asDb, at, MON1, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, MON1, MON2, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // F2c da recepção digital: quem será atendido, a marcação pelo portal (uma vez só), a origem, a data de nascimento a
 // conferir e a fila da confirmação.
@@ -46,9 +46,9 @@ async function verified(phone: string): Promise<PortalSession> {
 }
 
 /** Sessão comprovada com o horário reservado. */
-async function holding(time: string, phone = newPhone()): Promise<{ session: PortalSession; holdId: string; phone: string }> {
+async function holding(time: string, phone = newPhone(), date = MON1): Promise<{ session: PortalSession; holdId: string; phone: string }> {
   const session = await verified(phone);
-  const start = at(MON1, time);
+  const start = at(date, time);
   const hold = await holdSlot(service, fixture.clinicId, session.id, {
     agendaId: dra.agendaId,
     serviceId: dra.consultations[0].serviceId,
@@ -102,7 +102,8 @@ describe("marcar pelo portal", () => {
     const { data: patient } = await db.from("patients").select("full_name, created_via, is_contact_self, contacts ( phone )").eq("id", appointment!.patient_id).single();
     expect(patient).toMatchObject({ full_name: "Paula Nova Silva", created_via: "portal", is_contact_self: true, contacts: { phone } });
     const { data: queue } = await db.from("notice_queue").select("kind, status").eq("appointment_id", appointmentId);
-    expect(queue).toEqual([{ kind: "confirmation", status: "not_connected" }]);
+    // Sem quem envie agora, a linha fica pendente para a rotina.
+    expect(queue).toEqual([{ kind: "confirmation", status: "pending" }]);
 
     // Recarregar a revisão ou a confirmação: o mesmo atendimento, sem marcar de novo.
     expect(await confirm(session, holdId)).toEqual({ status: "booked", appointmentId });
@@ -157,6 +158,28 @@ describe("marcar pelo portal", () => {
     expect((await phonePatients(service, fixture.clinicId, phone)).patients).toHaveLength(1);
   });
 
+  it("particular sai sem o convênio do cadastro; nova tentativa depois de falha não cadastra de novo", async () => {
+    const phone = newPhone();
+    const time = "08:00";
+    const { session, holdId } = await holding(time, phone, MON2);
+    const db = adminClient();
+    const { data: plan } = await db.from("insurance_plans").insert({ clinic_id: fixture.clinicId, name: `Plano F2c ${Date.now()}` }).select("id").single();
+    await setHoldPatient(service, fixture.clinicId, session.id, holdId, { newPatient: { for: "self", name: "Particular Sem Plano", birthdate: yearsAgo(31), contactName: null } });
+    // Primeira tentativa: o horário não existe mais na agenda (falha depois do cadastro).
+    await db.from("slot_holds").update({ starts_at: at(MON1, "03:00").toISOString(), ends_at: at(MON1, "03:30").toISOString() }).eq("id", holdId);
+    expect((await confirm(session, holdId)).status).not.toBe("booked");
+    const after = await loadHold(service, fixture.clinicId, session.id, holdId);
+    expect(after?.patientId).not.toBeNull();
+    expect(after?.newPatient).toBeNull();
+    await db.from("patients").update({ insurance_plan_id: plan!.id }).eq("id", after!.patientId!);
+    await db.from("slot_holds").update({ starts_at: at(MON2, time).toISOString(), ends_at: new Date(at(MON2, time).getTime() + 30 * 60_000).toISOString(), released_at: null, confirming_at: null }).eq("id", holdId);
+    const outcome = await confirm(session, holdId);
+    expect(outcome.status).toBe("booked");
+    const { data: appointment } = await db.from("appointments").select("insurance_plan_id").eq("id", (outcome as { appointmentId: string }).appointmentId).single();
+    expect(appointment?.insurance_plan_id).toBeNull();
+    expect((await phonePatients(service, fixture.clinicId, phone)).patients).toHaveLength(1);
+  });
+
   it("reserva vencida ou de outra sessão não marca", async () => {
     const { session, holdId } = await holding("10:00");
     await setHoldPatient(service, fixture.clinicId, session.id, holdId, { newPatient: { for: "self", name: "Vencida Costa", birthdate: yearsAgo(25), contactName: null } });
@@ -178,11 +201,11 @@ describe("quem será atendido", () => {
     expect(patients.map((p) => p.fullName)).toEqual(["João Souza Lima"]);
 
     const typed = yearsAgo(8);
-    const match = await findDuplicate(service, fixture.clinicId, contact!.id, { for: "other", name: "Joao Souza Lima", birthdate: typed }, patients);
+    const match = await findDuplicate(service, fixture.clinicId, contact!.id, { name: "Joao Souza Lima", birthdate: typed }, patients);
     expect(match).toMatchObject({ id: created.patient.id, sameBirthdate: false });
-    const same = await findDuplicate(service, fixture.clinicId, contact!.id, { for: "other", name: "João Souza Lima", birthdate: yearsAgo(7) }, patients);
+    const same = await findDuplicate(service, fixture.clinicId, contact!.id, { name: "João Souza Lima", birthdate: yearsAgo(7) }, patients);
     expect(same?.sameBirthdate).toBe(true);
-    expect(await findDuplicate(service, fixture.clinicId, contact!.id, { for: "other", name: "Pedro Alves", birthdate: typed }, patients)).toBeNull();
+    expect(await findDuplicate(service, fixture.clinicId, contact!.id, { name: "Pedro Alves", birthdate: typed }, patients)).toBeNull();
 
     // "É a mesma, mas a data certa é…": marca no cadastro existente e a recepção confere a data.
     await setHoldPatient(service, fixture.clinicId, session.id, holdId, { patientId: created.patient.id, informedBirthdate: typed });
@@ -230,6 +253,8 @@ describe("fila da confirmação", () => {
     await enqueueNotice(service, fixture.clinicId, appointmentId, "confirmation");
     const { data: rows } = await adminClient().from("notice_queue").select("id, status").eq("appointment_id", appointmentId);
     expect(rows).toHaveLength(1);
+    // A linha ficou pendente (sem quem envie): o primeiro envio toma, o segundo não.
+    expect(await dispatchNotice(service, fixture.clinicId, appointmentId, "confirmation", null)).toBe(true);
     expect(await dispatchNotice(service, fixture.clinicId, appointmentId, "confirmation", null)).toBe(false);
   });
 

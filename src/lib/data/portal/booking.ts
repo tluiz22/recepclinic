@@ -83,6 +83,11 @@ export async function loadHold(db: DbClient, clinicId: string, sessionId: string
   };
 }
 
+/** O celular já tem o próprio paciente (ativo ou não): "Para mim" não cabe (um só por contato). */
+export async function contactHasSelf(db: DbClient, clinicId: string, contactId: string): Promise<boolean> {
+  return (await listContactPatients(db, clinicId, contactId, { includeInactive: true })).some((p) => p.isContactSelf);
+}
+
 /** O contato do celular comprovado e os pacientes ativos dele (P8). */
 export async function phonePatients(db: DbClient, clinicId: string, phone: string): Promise<{ contact: Contact | null; patients: PortalPatient[] }> {
   const contact = await findContactByPhone(db, clinicId, phone);
@@ -135,12 +140,9 @@ export async function findDuplicate(
   db: DbClient,
   clinicId: string,
   contactId: string,
-  data: Pick<NewPatientData, "for" | "name" | "birthdate">,
+  data: Pick<NewPatientData, "name" | "birthdate">,
   patients: PortalPatient[],
 ): Promise<DuplicateMatch | null> {
-  // "Para mim" e o contato já é o próprio paciente: é ele (um só por contato).
-  const self = data.for === "self" ? patients.find((p) => p.isContactSelf) : undefined;
-  if (self) return { ...self, sameBirthdate: self.birthdate === data.birthdate };
   const ids = unwrap(await db.rpc("similar_patient_ids", { p_clinic_id: clinicId, p_name: data.name, p_contact_id: contactId }), "Pacientes parecidos") ?? [];
   const similar = patients.filter((p) => ids.includes(p.id));
   const match = similar.find((p) => p.birthdate === data.birthdate) ?? similar[0];
@@ -171,15 +173,13 @@ export async function bookingBlock(
     const blocking = findBlockingAppointment(upcoming, { serviceId: "", agendaId: input.professional.agendaId, category: "consultation" });
     if (blocking) return { kind: "already", scheduledAt: blocking.scheduledAt };
   }
-  const contact = await contactForLimits(db, clinicId, input.phone);
-  if (contact) {
-    const full = await findContactByPhone(db, clinicId, input.phone);
-    if (full?.botBlockedAt) return { kind: "blocked_contact" };
-  }
-  if (!contact || contact.exempt) return null;
-  const hit = (input.isNew ? await checkNewPatientLimit(db, clinicId, contact.id, now) : null) ?? (await checkBookingLimits(db, clinicId, contact.id, now));
+  const contact = await findContactByPhone(db, clinicId, input.phone);
+  if (contact?.botBlockedAt) return { kind: "blocked_contact" };
+  const limits = contact ? await contactForLimits(db, clinicId, input.phone) : null;
+  if (!limits || limits.exempt) return null;
+  const hit = (input.isNew ? await checkNewPatientLimit(db, clinicId, limits.id, now) : null) ?? (await checkBookingLimits(db, clinicId, limits.id, now));
   if (!hit) return null;
-  if (input.record) await recordBotLimitEvent(db, clinicId, contact.id, hit, false, now).catch((error) => logError("portal: limite não registrado", error, { clinica: clinicId }));
+  if (input.record) await recordBotLimitEvent(db, clinicId, limits.id, hit, false, now).catch((error) => logError("portal: limite não registrado", error, { clinica: clinicId }));
   return { kind: "limit", hit };
 }
 
@@ -272,6 +272,9 @@ export async function confirmPortalBooking(
         return { status: "blocked", reason: block };
       }
       patientId = await registerNew(db, clinicId, hold.phone, data, today);
+      // Gravado: a reserva passa a ter o paciente (outra tentativa, depois de uma falha, não cadastra de novo).
+      const saved = await db.from("slot_holds").update({ patient_id: patientId, new_patient: null }).eq("clinic_id", clinicId).eq("id", hold.id);
+      if (saved.error) logError("portal: reserva sem o paciente novo", saved.error, { clinica: clinicId, reserva: hold.id });
     }
 
     const block = await bookingBlock(db, clinicId, { professional: input.professional, phone: hold.phone, patient: { id: patientId, birthdate }, isNew: false, timeZone: input.timeZone, record: true }, now);
@@ -307,7 +310,8 @@ export async function confirmPortalBooking(
 
   await afterBooking(db, clinicId, { appointmentId, hold, insurancePlanId: input.insurancePlanId, entry: input.entry }, now);
   await enqueueNotice(db, clinicId, appointmentId, "confirmation", now).catch((error) => logError("portal: confirmação fora da fila", error, { clinica: clinicId }));
-  await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
+  // Sem quem envia agora (falha ao carregar o WhatsApp da clínica): a linha fica pendente e a rotina manda.
+  if (input.sender) await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
   return { status: "booked", appointmentId };
 }
 
@@ -343,7 +347,8 @@ async function afterBooking(
     unwrap(
       await db
         .from("appointments")
-        .update({ portal_entry: input.entry, ...(input.insurancePlanId ? { insurance_plan_id: input.insurancePlanId } : {}) })
+        // Particular: sem convênio no atendimento (o banco copia o do cadastro ao gravar).
+        .update({ portal_entry: input.entry, insurance_plan_id: input.insurancePlanId })
         .eq("clinic_id", clinicId)
         .eq("id", input.appointmentId),
       "Atendimento",
