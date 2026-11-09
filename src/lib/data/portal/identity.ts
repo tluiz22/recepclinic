@@ -1,8 +1,7 @@
 import type { AstroCookies } from "astro";
 import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
-import { getApprovedTemplate } from "../whatsapp/connection";
-import type { ClinicSender } from "../whatsapp/send";
+import type { PortalCodeSender } from "../whatsapp/codeSender";
 import { logError } from "../../log";
 import {
   CODE_MAX_ATTEMPTS,
@@ -112,23 +111,22 @@ export type SendCodeResult =
 
 /**
  * Manda um código novo para o celular (o CAPTCHA já foi conferido por quem chama). Limites: 3 por celular e 10 por IP
- * por hora; reenvio só depois de 60 s. Sem o WhatsApp da clínica ou sem o modelo aprovado: indisponível (a página
- * leva à recepção). `devMode`: no computador local, sem envio de verdade, o código volta para aparecer na tela.
+ * por hora; reenvio só depois de 60 s. O código sai do número do RecepClinic (seção 14 do plano); sem ele configurado ou
+ * com o envio recusado pela Meta: indisponível (a página leva à recepção). `devMode`: no computador local, sem envio de verdade, o código volta para aparecer na tela.
  */
 export async function sendCode(
   db: DbClient,
   clinicId: string,
   session: PortalSession,
   phone: string,
-  { ip, sender, devMode = false, now = new Date() }: { ip: string; sender: ClinicSender | null; devMode?: boolean; now?: Date },
+  { ip, sender, devMode = false, now = new Date() }: { ip: string; sender: PortalCodeSender | null; devMode?: boolean; now?: Date },
 ): Promise<SendCodeResult> {
   const last = await pendingCode(db, clinicId, session.id, now);
   if (last && last.phone === phone && now.getTime() - last.sentAt.getTime() < CODE_RESEND_MS) {
     return { status: "wait", seconds: Math.ceil((last.sentAt.getTime() + CODE_RESEND_MS - now.getTime()) / 1000) };
   }
-  // Sem como mandar (WhatsApp da clínica ou modelo aprovado), nem conta o limite: o paciente não fica bloqueado à toa.
-  const template = await getApprovedTemplate(db, clinicId, "portal_code").catch(() => null);
-  if (!(sender?.authCode && template) && !devMode) return { status: "unavailable" };
+  // Sem como mandar, nem conta o limite: o paciente não fica bloqueado à toa.
+  if (!sender && !devMode) return { status: "unavailable" };
   const blocked = await hitLimits(db, clinicId, [
     [`phone:${phone}`, LIMITS.codePerPhone],
     [`ip:${ip}`, LIMITS.codePerIp],
@@ -137,8 +135,8 @@ export async function sendCode(
 
   const code = newCode();
   let sent = false;
-  if (sender?.authCode && template) {
-    const outcome = await sender.authCode(phone, template, code);
+  if (sender) {
+    const outcome = await sender.send(phone, code);
     sent = outcome.sent;
     if (!outcome.sent) logError("portal: código não enviado", new Error(outcome.reason), { clinica: clinicId });
   }

@@ -37,8 +37,6 @@ export type ClinicSender = {
     buttonPayloads?: string[],
   ): Promise<SendOutcome>;
   text(to: string, body: string): Promise<SendOutcome>;
-  /** Código do portal (F2b): template de autenticação, com o código no corpo e no botão "Copiar código". */
-  authCode?(to: string, template: { name: string; language: string }, code: string): Promise<SendOutcome>;
   /** Lista interativa (até 10 linhas no total). Só na janela de 24h, como o texto. */
   list(to: string, body: string, button: string, sections: ListSection[]): Promise<SendOutcome>;
   /** Botões de resposta (até 3, título com até 20 caracteres). */
@@ -70,7 +68,7 @@ export function interactiveBody(body: string, options: { title: string; descript
   return `${body}\n\n${options.map((o) => (o.description ? `${o.title} (${o.description})` : o.title)).join("\n")}`;
 }
 
-const failure = (error: unknown): SendOutcome => ({
+export const sendFailure = (error: unknown): SendOutcome => ({
   sent: false,
   reason: error instanceof GraphRequestError ? error.message : error instanceof Error ? error.message : String(error),
   failure: classifySendError(error),
@@ -114,7 +112,7 @@ export async function createClinicSender(
       return { sent: true, messageId, body, request: message };
     } catch (error) {
       logError("whatsapp envio", error, { clinica: clinicId });
-      return { ...failure(error), body, request: message };
+      return { ...sendFailure(error), body, request: message };
     }
   };
 
@@ -143,25 +141,6 @@ export async function createClinicSender(
     },
     text(to, body) {
       return post({ to: toWaNumber(to), type: "text", text: { body, preview_url: true } }, body);
-    },
-    authCode(to, template, code) {
-      // O registro guarda o texto sem o código (ele vale só para quem recebeu).
-      const body = fillTemplate(defaultTemplate("portal_code")!.body, ["••••••"]);
-      return post(
-        {
-          to: toWaNumber(to),
-          type: "template",
-          template: {
-            name: template.name,
-            language: { code: template.language },
-            components: [
-              { type: "body", parameters: [{ type: "text", text: code }] },
-              { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: code }] },
-            ],
-          },
-        },
-        body,
-      );
     },
     list(to, body, button, sections) {
       return post(

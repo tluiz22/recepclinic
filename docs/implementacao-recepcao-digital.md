@@ -528,15 +528,22 @@ de cada uma travaria o portal das clínicas pequenas.
     ambientes).
   - **Template `rc_codigo_portal_v1` criado na conta do RecepClinic e APROVADO na hora** (id `1014112705045978`,
     autenticação); vale para staging e produção.
-- **Achado: a versão da API.** O sistema chama a Meta pela **v21.0**; nela, a conta de mensagens criada no modelo novo
-  "não existe" (erro 100, subcódigo 33); da v22.0 em diante, aparece. Clínica nova conectada agora pode ter o mesmo
-  problema (templates e situação não lidos). Nosso código não usa `paid_messaging_account_id` (a Meta tira em
-  31/dez/2026).
-- **Próxima sessão (código, com o OK do cliente):** (1) subir a versão da API da Meta em todas as chamadas do WhatsApp
-  (testes + clínica de teste no staging); (2) o código do portal sai pelo número do RecepClinic (remetente da
-  plataforma, pelas três variáveis), sem depender do WhatsApp da clínica; (3) tirar o `portal_code` dos templates
-  pedidos às clínicas (Criar na Meta) e mostrar a situação do template do RecepClinic ao Suporte; (4) guia
-  "Pagamento na Meta" das clínicas cita as "Contas de mensagens"; (5) testes, `/code-review`, staging; a validação da
-  F2 segue do passo 2 do roteiro (código), confirmando no 1º envio que o cartão funciona (sem o erro 131042).
+- **Achado: a versão da API.** Numa chamada feita à mão pela **v21.0**, a conta de mensagens criada no modelo novo
+  "não existe" (erro 100, subcódigo 33); da v22.0 em diante, aparece. **O sistema já usa a v24.0** desde a CN8
+  (`GRAPH_API_VERSION` em `graph.ts`, conferido em 09/nov): nada a mudar. Nosso código não usa
+  `paid_messaging_account_id` (a Meta tira em 31/dez/2026).
+- **Feito (09/nov, itens 2 e 3, com o OK do cliente):**
+  - O código sai pelo número do RecepClinic: `codeSender.ts` (remetente da plataforma, pelas três variáveis
+    `WHATSAPP_CODE_*`, validadas em `env.ts`: as três ou nenhuma). `sendCode` não lê mais o WhatsApp nem os templates
+    da clínica; sem as variáveis ou com recusa da Meta, "indisponível" (a página leva à recepção).
+  - `rc_codigo_portal_v1` saiu dos templates das clínicas (`PORTAL_CODE_TEMPLATE`, fora do `DEFAULT_TEMPLATES`): o
+    "Criar na Meta" não o pede, a lista do Suporte e a situação da implantação não o contam.
+  - Configurações › WhatsApp, card "Templates (Suporte)", nas clínicas com o Portal: a situação do template na conta do
+    RecepClinic, perguntada à Meta na hora (aprovado, em análise, recusado com o motivo, não criado, número não
+    configurado ou sem resposta da Meta). Só o Suporte vê: a captura `config-whatsapp` (Administrador) não muda.
+  - Testes: `codeSender.test.ts` (envio, recusa 131042, situação), `env.test.ts`, templates e `envio-whatsapp` (13
+    templates criados, sem o código). 1180 de unidade, 1127 de banco (1 instável da NA4, passa sozinho 3 vezes), check.
+- **Falta:** (4) guia "Pagamento na Meta" das clínicas cita as "Contas de mensagens"; staging; a validação da F2 segue
+  do passo 2 do roteiro (código), confirmando no 1º envio que o cartão do RecepClinic funciona (sem o erro 131042).
 - Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
   enviados primeiro com a resposta da Meta (`templateSummary.ts`).

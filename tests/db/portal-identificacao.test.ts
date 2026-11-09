@@ -115,7 +115,7 @@ describe("limites de uso", () => {
 });
 
 describe("código pelo WhatsApp", () => {
-  it("sem WhatsApp da clínica, não manda (fora do computador local)", async () => {
+  it("sem o número do RecepClinic, não manda (fora do computador local)", async () => {
     const session = await ensureSession(service, fixture.clinicId, jar(), { ip: "200.1.3", secure: false });
     expect((await sendCode(service, fixture.clinicId, session, "+5584999990001", { ip: "200.1.3", sender: null })).status).toBe("unavailable");
   });

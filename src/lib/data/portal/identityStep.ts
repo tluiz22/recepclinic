@@ -4,12 +4,11 @@ import { normalizePhone } from "../../phone";
 import { cleanCode, clock, ipPrefix, LIMITS } from "../../portalIdentity";
 import { verifyTurnstile } from "../../turnstile";
 import type { DbClient } from "../clients";
-import { publicBaseUrl } from "../whatsapp/clinicSender";
-import { createClinicSender } from "../whatsapp/send";
+import { createPortalCodeSender } from "../whatsapp/codeSender";
 import { ensureSession, forgetPhone, hitLimits, pendingCode, readSession, sendCode, verifyCode, type PendingCode, type PortalSession, type SendCodeResult } from "./identity";
 
 // Passo "Qual é o seu celular com WhatsApp?" (F2b, P7), usado depois do horário (consulta e exame) e antes da lista do
-// retorno (F2d): CAPTCHA (Turnstile) → código de 6 números pelo WhatsApp da clínica → celular comprovado na sessão.
+// retorno (F2d): CAPTCHA (Turnstile) → código de 6 números pelo WhatsApp (número do RecepClinic, seção 14 do plano) → celular comprovado na sessão.
 // Formulários POST na própria página (o endereço do portal não abre o /api). Limites e bloqueio progressivo no servidor.
 
 export type IdentityProblem = { field: "phone" | "code" | "page"; text: string };
@@ -77,7 +76,7 @@ export async function runIdentityStep(
     if (sent.status === "unavailable") state.unavailable = true;
     return null;
   };
-  const sender = () => createClinicSender(db, clinicId, { baseUrl: publicBaseUrl(Astro.url) }).catch(() => null);
+  const sender = () => createPortalCodeSender();
   const finish = (response: Response | null) => {
     state.response = response;
     return state;
@@ -99,13 +98,13 @@ export async function runIdentityStep(
       } else {
         session = await ensureSession(db, clinicId, Astro.cookies, { ip, secure: Astro.url.protocol === "https:" });
         state.session = session;
-        const next = afterSend(await sendCode(db, clinicId, session, phone, { ip, sender: await sender(), devMode }), "phone");
+        const next = afterSend(await sendCode(db, clinicId, session, phone, { ip, sender: sender(), devMode }), "phone");
         if (next) return finish(next);
       }
     } else if (session && action === "reenviar") {
       const current = await pendingCode(db, clinicId, session.id);
       if (current) {
-        const next = afterSend(await sendCode(db, clinicId, session, current.phone, { ip, sender: await sender(), devMode }), "code");
+        const next = afterSend(await sendCode(db, clinicId, session, current.phone, { ip, sender: sender(), devMode }), "code");
         if (next) return finish(next);
       }
     } else if (session && action === "codigo") {

@@ -6,6 +6,7 @@ import {
   appointmentPlace,
   cleanParam,
   DEFAULT_TEMPLATES,
+  PORTAL_CODE_TEMPLATE,
   defaultTemplate,
   describeTemplateApproval,
   fillTemplate,
@@ -266,9 +267,9 @@ describe("situação dos templates no webhook (F6.2)", () => {
   });
 });
 
-describe("código do portal (F2b)", () => {
+describe("código do portal (F2b; seção 14: número do RecepClinic)", () => {
   it("é um template de autenticação, com o botão de copiar e a validade de 10 minutos", () => {
-    expect(templateCreationPayload(defaultTemplate("portal_code")!)).toEqual({
+    expect(templateCreationPayload(PORTAL_CODE_TEMPLATE)).toEqual({
       name: "rc_codigo_portal_v1",
       language: "pt_BR",
       category: "AUTHENTICATION",
@@ -290,9 +291,9 @@ describe("situação dos templates em uso (F8.2)", () => {
     // A mensagem de teste (IS2, 03/nov/2026) vale para toda clínica.
     expect(keys([])).toEqual(["confirmation", "reschedule", "cancellation", "clinic_cancellation", "reminder", "consultation_guidance", "connection_test"]);
     expect(keys(["exams", "daily_summary", "waitlist", "finance", "central_attendance", "portal"])).toHaveLength(DEFAULT_TEMPLATES.length);
-    // Código do portal (F2b): só com o item "Portal de agendamento".
-    expect(keys(["portal"])).toContain("portal_code");
-    expect(keys([])).not.toContain("portal_code");
+    // Código do portal (seção 14): sai do número do RecepClinic, nunca é pedido à clínica.
+    expect(keys(["portal"])).not.toContain("portal_code");
+    expect(defaultTemplate("portal_code")).toBeNull();
     // "Retomar conversa" (CN4b): só com a Central de atendimento.
     expect(keys(["central_attendance"])).toContain("conversation_resume");
     expect(keys(["finance"])).not.toContain("conversation_resume");

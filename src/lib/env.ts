@@ -55,7 +55,15 @@ export type PlatformEnv = {
    * página) e TURNSTILE_SECRET_KEY (confere no servidor). null = o portal não envia o código pela entrada direta.
    */
   turnstile: TurnstileEnv | null;
+  /**
+   * Número do RecepClinic que manda o código do portal (cliente, 09/nov/2026; plano da recepção digital, seção 14):
+   * WHATSAPP_CODE_PHONE_NUMBER_ID, WHATSAPP_CODE_WABA_ID e WHATSAPP_CODE_TOKEN, da empresa verificada do RecepClinic,
+   * para todas as clínicas. null = o portal não manda o código (a página leva à recepção).
+   */
+  whatsappCode: WhatsappCodeEnv | null;
 };
+
+export type WhatsappCodeEnv = { phoneNumberId: string; wabaId: string; token: string };
 
 export type TurnstileEnv = { siteKey: string; secretKey: string };
 
@@ -218,8 +226,21 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   if (!!turnstileSite !== !!turnstileSecret) problems.push("PUBLIC_TURNSTILE_SITE_KEY e TURNSTILE_SECRET_KEY: defina as duas ou nenhuma");
   const turnstile = turnstileSite && turnstileSecret ? { siteKey: turnstileSite, secretKey: turnstileSecret } : null;
 
+  // Número dos códigos do portal (seção 14): as três juntas ou nenhuma.
+  const codePhone = text(source, "WHATSAPP_CODE_PHONE_NUMBER_ID");
+  const codeWaba = text(source, "WHATSAPP_CODE_WABA_ID");
+  const codeToken = text(source, "WHATSAPP_CODE_TOKEN");
+  let whatsappCode: WhatsappCodeEnv | null = null;
+  if (codePhone || codeWaba || codeToken) {
+    if (!codePhone || !codeWaba || !codeToken) {
+      problems.push("WHATSAPP_CODE_PHONE_NUMBER_ID, WHATSAPP_CODE_WABA_ID e WHATSAPP_CODE_TOKEN: defina as três ou nenhuma");
+    } else if (!/^\d{5,20}$/.test(codePhone) || !/^\d{5,20}$/.test(codeWaba)) {
+      problems.push("WHATSAPP_CODE_PHONE_NUMBER_ID e WHATSAPP_CODE_WABA_ID: só os números dos IDs na Meta");
+    } else whatsappCode = { phoneNumberId: codePhone, wabaId: codeWaba, token: codeToken };
+  }
+
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", webPush, asaas, turnstile };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", webPush, asaas, turnstile, whatsappCode };
 }
 
 let cached: PlatformEnv | undefined;
@@ -252,6 +273,9 @@ export function platformEnv(): PlatformEnv {
     WEB_PUSH_PRIVATE_KEY: import.meta.env.WEB_PUSH_PRIVATE_KEY,
     PUBLIC_TURNSTILE_SITE_KEY: import.meta.env.PUBLIC_TURNSTILE_SITE_KEY,
     TURNSTILE_SECRET_KEY: import.meta.env.TURNSTILE_SECRET_KEY,
+    WHATSAPP_CODE_PHONE_NUMBER_ID: import.meta.env.WHATSAPP_CODE_PHONE_NUMBER_ID,
+    WHATSAPP_CODE_WABA_ID: import.meta.env.WHATSAPP_CODE_WABA_ID,
+    WHATSAPP_CODE_TOKEN: import.meta.env.WHATSAPP_CODE_TOKEN,
   });
   return cached;
 }

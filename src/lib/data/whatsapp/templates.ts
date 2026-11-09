@@ -154,16 +154,21 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: "Olá! Aqui é {{1}}.\nVi que a nossa conversa de {{2}} ficou pendente.\nQuer continuar de onde paramos?",
     examples: ["da Clínica Sorriso", "04/11"],
   },
-  {
-    // Código do portal de agendamento (recepção digital, F2b; RD2): entrada direta, o paciente comprova o celular.
-    // Template de autenticação: a Meta fixa o texto (código, aviso de segurança e validade) e o botão "Copiar código".
-    key: "portal_code",
-    name: "rc_codigo_portal_v1",
-    body: "*{{1}}* é seu código de verificação. Para sua segurança, não o compartilhe.\nEste código expira em 10 minutos.",
-    examples: ["123456"],
-    authentication: { codeExpirationMinutes: 10 },
-  },
 ];
+
+/**
+ * Código do portal de agendamento (recepção digital, F2b; RD2): entrada direta, o paciente comprova o celular.
+ * Template de autenticação: a Meta fixa o texto (código, aviso de segurança e validade) e o botão "Copiar código".
+ * Não é das clínicas (cliente, 09/nov/2026, seção 14 do plano): sai do número do RecepClinic, na conta dele (empresa
+ * verificada), já aprovado; "Criar na Meta" não o pede às clínicas.
+ */
+export const PORTAL_CODE_TEMPLATE: DefaultTemplate = {
+  key: "portal_code",
+  name: "rc_codigo_portal_v1",
+  body: "*{{1}}* é seu código de verificação. Para sua segurança, não o compartilhe.\nEste código expira em 10 minutos.",
+  examples: ["123456"],
+  authentication: { codeExpirationMinutes: 10 },
+};
 
 /** Texto da v2 do preparo (com o link), para quem ainda só tem ela aprovada (C7.4). */
 export const LEGACY_PREPARATION_BODY = `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`;
@@ -182,8 +187,7 @@ export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate
       (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
       (t.key !== "waitlist_offer" || has("waitlist")) &&
       (t.key !== "nfse_document" || has("finance")) &&
-      (t.key !== "conversation_resume" || has("central_attendance")) &&
-      (t.key !== "portal_code" || has("portal")),
+      (t.key !== "conversation_resume" || has("central_attendance")),
   );
 }
 
