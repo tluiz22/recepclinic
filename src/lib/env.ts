@@ -50,7 +50,14 @@ export type PlatformEnv = {
    * cobrança automática não chega ao Asaas (a aba Faturamento avisa).
    */
   asaas: AsaasEnv | null;
+  /**
+   * Cloudflare Turnstile do portal de agendamento (recepção digital, F2b; RD9): PUBLIC_TURNSTILE_SITE_KEY (vai na
+   * página) e TURNSTILE_SECRET_KEY (confere no servidor). null = o portal não envia o código pela entrada direta.
+   */
+  turnstile: TurnstileEnv | null;
 };
+
+export type TurnstileEnv = { siteKey: string; secretKey: string };
 
 export type AsaasEnv = {
   apiKey: string;
@@ -205,8 +212,14 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
     else if (asaas) asaas.webhookToken = asaasWebhookToken;
   }
 
+  // Turnstile do portal (F2b): as duas juntas ou nenhuma.
+  const turnstileSite = text(source, "PUBLIC_TURNSTILE_SITE_KEY");
+  const turnstileSecret = text(source, "TURNSTILE_SECRET_KEY");
+  if (!!turnstileSite !== !!turnstileSecret) problems.push("PUBLIC_TURNSTILE_SITE_KEY e TURNSTILE_SECRET_KEY: defina as duas ou nenhuma");
+  const turnstile = turnstileSite && turnstileSecret ? { siteKey: turnstileSite, secretKey: turnstileSecret } : null;
+
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", webPush, asaas };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", webPush, asaas, turnstile };
 }
 
 let cached: PlatformEnv | undefined;
@@ -237,6 +250,8 @@ export function platformEnv(): PlatformEnv {
     ASAAS_WEBHOOK_TOKEN: import.meta.env.ASAAS_WEBHOOK_TOKEN,
     WEB_PUSH_PUBLIC_KEY: import.meta.env.WEB_PUSH_PUBLIC_KEY,
     WEB_PUSH_PRIVATE_KEY: import.meta.env.WEB_PUSH_PRIVATE_KEY,
+    PUBLIC_TURNSTILE_SITE_KEY: import.meta.env.PUBLIC_TURNSTILE_SITE_KEY,
+    TURNSTILE_SECRET_KEY: import.meta.env.TURNSTILE_SECRET_KEY,
   });
   return cached;
 }

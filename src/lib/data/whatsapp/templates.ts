@@ -21,6 +21,11 @@ export type DefaultTemplate = {
   quickReplies?: string[];
   /** Documento (PDF) no topo da mensagem (F11.5): a Meta pede um PDF de exemplo na criação. */
   documentHeader?: boolean;
+  /**
+   * Template de autenticação (código do portal, F2b): categoria AUTHENTICATION, texto fixo da Meta com o aviso de
+   * segurança, validade no rodapé e o botão "Copiar código". `body` é só como o paciente vê.
+   */
+  authentication?: { codeExpirationMinutes: number };
 };
 
 export const TEMPLATE_LANGUAGE = "pt_BR";
@@ -149,6 +154,15 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: "Olá! Aqui é {{1}}.\nVi que a nossa conversa de {{2}} ficou pendente.\nQuer continuar de onde paramos?",
     examples: ["da Clínica Sorriso", "04/11"],
   },
+  {
+    // Código do portal de agendamento (recepção digital, F2b; RD2): entrada direta, o paciente comprova o celular.
+    // Template de autenticação: a Meta fixa o texto (código, aviso de segurança e validade) e o botão "Copiar código".
+    key: "portal_code",
+    name: "rc_codigo_portal_v1",
+    body: "*{{1}}* é seu código de verificação. Para sua segurança, não o compartilhe.\nEste código expira em 10 minutos.",
+    examples: ["123456"],
+    authentication: { codeExpirationMinutes: 10 },
+  },
 ];
 
 /** Texto da v2 do preparo (com o link), para quem ainda só tem ela aprovada (C7.4). */
@@ -168,7 +182,8 @@ export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate
       (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
       (t.key !== "waitlist_offer" || has("waitlist")) &&
       (t.key !== "nfse_document" || has("finance")) &&
-      (t.key !== "conversation_resume" || has("central_attendance")),
+      (t.key !== "conversation_resume" || has("central_attendance")) &&
+      (t.key !== "portal_code" || has("portal")),
   );
 }
 
@@ -291,6 +306,18 @@ export function appointmentParams(clinic: string, a: AppointmentForMessage): str
  * `headerHandle`: o PDF de exemplo já enviado à Meta (template com documento).
  */
 export function templateCreationPayload(template: DefaultTemplate, headerHandle?: string): Record<string, unknown> {
+  if (template.authentication) {
+    return {
+      name: template.name,
+      language: TEMPLATE_LANGUAGE,
+      category: "AUTHENTICATION",
+      components: [
+        { type: "BODY", add_security_recommendation: true },
+        { type: "FOOTER", code_expiration_minutes: template.authentication.codeExpirationMinutes },
+        { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copiar código" }] },
+      ],
+    };
+  }
   const components: Record<string, unknown>[] = [];
   if (template.documentHeader) components.push({ type: "HEADER", format: "DOCUMENT", example: { header_handle: [headerHandle ?? ""] } });
   // Sem variáveis (ex.: "Retomar conversa"), a Meta não aceita exemplo.

@@ -1627,6 +1627,92 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"portal_blocks": {
+                  Row: {
+                    "action": string,"blocked_until": string,"clinic_id": string,"created_at": string,"id": string,"key": string,"level": number,"released_at": string | null,"released_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"blocked_until": string,"clinic_id": string,"created_at"?: string,"id"?: string,"key": string,"level": number,"released_at"?: string | null,"released_by"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"blocked_until"?: string,"clinic_id"?: string,"created_at"?: string,"id"?: string,"key"?: string,"level"?: number,"released_at"?: string | null,"released_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_blocks_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"portal_codes": {
+                  Row: {
+                    "attempts": number,"clinic_id": string,"code_hash": string,"created_at": string,"expires_at": string,"id": string,"phone": string,"session_id": string,"used_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"clinic_id": string,"code_hash": string,"created_at"?: string,"expires_at": string,"id"?: string,"phone": string,"session_id": string,"used_at"?: string | null
+                  }
+                  Update: {
+                    "attempts"?: number,"clinic_id"?: string,"code_hash"?: string,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone"?: string,"session_id"?: string,"used_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_codes_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "portal_codes_session_id_fkey"
+      columns: ["session_id"]
+isOneToOne: false
+      referencedRelation: "portal_sessions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"portal_rate_hits": {
+                  Row: {
+                    "action": string,"at": string,"clinic_id": string,"id": number,"key": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"at"?: string,"clinic_id": string,"id"?: never,"key": string
+                  }
+                  Update: {
+                    "action"?: string,"at"?: string,"clinic_id"?: string,"id"?: never,"key"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_rate_hits_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"portal_sessions": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"expires_at": string,"id": string,"ip_prefix": string | null,"phone": string | null,"phone_verified_at": string | null,"token_hash": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"expires_at": string,"id"?: string,"ip_prefix"?: string | null,"phone"?: string | null,"phone_verified_at"?: string | null,"token_hash": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"expires_at"?: string,"id"?: string,"ip_prefix"?: string | null,"phone"?: string | null,"phone_verified_at"?: string | null,"token_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_sessions_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"professional_bot_info": {
                   Row: {
                     "clinic_id": string,"insurance_info": string | null,"notes": string | null,"payment_info": string | null,"professional_id": string,"updated_at": string
@@ -1955,6 +2041,50 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "professionals"
       referencedColumns: ["clinic_id","id"]
+    }
+                  ]
+                },"slot_holds": {
+                  Row: {
+                    "agenda_id": string,"clinic_id": string,"created_at": string,"ends_at": string,"expires_at": string,"id": string,"location_id": string,"phone": string,"released_at": string | null,"service_id": string,"session_id": string,"starts_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "agenda_id": string,"clinic_id": string,"created_at"?: string,"ends_at": string,"expires_at": string,"id"?: string,"location_id": string,"phone": string,"released_at"?: string | null,"service_id": string,"session_id": string,"starts_at": string
+                  }
+                  Update: {
+                    "agenda_id"?: string,"clinic_id"?: string,"created_at"?: string,"ends_at"?: string,"expires_at"?: string,"id"?: string,"location_id"?: string,"phone"?: string,"released_at"?: string | null,"service_id"?: string,"session_id"?: string,"starts_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "slot_holds_agenda_id_fkey"
+      columns: ["agenda_id"]
+isOneToOne: false
+      referencedRelation: "agendas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "slot_holds_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "slot_holds_location_id_fkey"
+      columns: ["location_id"]
+isOneToOne: false
+      referencedRelation: "locations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "slot_holds_service_id_fkey"
+      columns: ["service_id"]
+isOneToOne: false
+      referencedRelation: "services"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "slot_holds_session_id_fkey"
+      columns: ["session_id"]
+isOneToOne: false
+      referencedRelation: "portal_sessions"
+      referencedColumns: ["id"]
     }
                   ]
                 },"system_errors": {
@@ -2570,6 +2700,20 @@ isOneToOne: false
                            },
 "nfse_invoice_issued_for_retry":
 { Args: { "p_invoice_id": string }; Returns: boolean
+                           },
+"portal_hold_slot":
+{ Args: { "p_agenda_id": string,"p_clinic_id": string,"p_ends_at": string,"p_location_id": string,"p_max_per_day": number,"p_service_id": string,"p_session_id": string,"p_starts_at": string }; Returns: {
+              "hold_expires_at": string,"hold_id": string,"outcome": string
+            }[]
+                           },
+"portal_rate_hit":
+{ Args: { "p_action": string,"p_clinic_id": string,"p_key": string,"p_limit": number,"p_window_seconds": number }; Returns: string
+                           },
+"portal_release_block":
+{ Args: { "p_block_id": string }; Returns: undefined
+                           },
+"portal_release_hold":
+{ Args: { "p_clinic_id": string,"p_session_id": string }; Returns: undefined
                            },
 "publish_knowledge_base":
 { Args: Record<PropertyKey, never>; Returns: number

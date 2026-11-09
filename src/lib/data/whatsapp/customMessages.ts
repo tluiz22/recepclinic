@@ -43,7 +43,8 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
  * perderia (F11.5). O "Retomar conversa" (CN4b) fica com o texto aprovado pelo cliente: a Meta só o aceita como
  * utilidade se falar do atendimento em andamento.
  */
-export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file", "conversation_resume"];
+// O código do portal (F2b) é um template de autenticação: a Meta fixa o texto.
+export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file", "conversation_resume", "portal_code"];
 
 export const MARKER_LABELS: Record<string, string> = {
   nome: "primeiro nome de quem recebe",

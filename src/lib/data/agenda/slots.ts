@@ -142,12 +142,37 @@ export async function loadBusy(
   to: Date,
   ignoreAppointmentId?: string | null,
   forExam = false,
+  holds?: PortalHolds,
 ): Promise<BusyInterval[]> {
-  const [appointments, blocks] = await Promise.all([
+  const [appointments, blocks, held] = await Promise.all([
     forExam ? [] : loadAppointmentIntervals(db, clinicId, agendaId, from, to, ignoreAppointmentId),
     loadBlocks(db, clinicId, agendaId, from, to),
+    holds ? loadHolds(db, clinicId, agendaId, from, to, holds) : [],
   ]);
-  return [...appointments, ...blocks].filter((interval) => interval.end > from);
+  return [...appointments, ...blocks, ...held].filter((interval) => interval.end > from);
+}
+
+/**
+ * Reservas do portal (F2b): o horário que outro paciente está confirmando não aparece no portal. `exceptSession`: a
+ * sessão de quem pergunta (a própria reserva não ocupa). Bot e Marcar não passam este parâmetro (por ora, a reserva só
+ * vale entre pacientes do portal; a confirmação confere de novo).
+ */
+export type PortalHolds = { exceptSession: string | null };
+
+async function loadHolds(db: DbClient, clinicId: string, agendaId: string, from: Date, to: Date, holds: PortalHolds): Promise<BusyInterval[]> {
+  // A validade da reserva é do relógio de agora (o banco confere igual), não do instante da consulta de horários.
+  let query = db
+    .from("slot_holds")
+    .select("starts_at, ends_at")
+    .eq("clinic_id", clinicId)
+    .eq("agenda_id", agendaId)
+    .is("released_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .lt("starts_at", to.toISOString())
+    .gt("ends_at", from.toISOString());
+  if (holds.exceptSession) query = query.neq("session_id", holds.exceptSession);
+  const rows = unwrap(await query, "Reservas do portal");
+  return rows.map((h) => ({ start: new Date(h.starts_at), end: new Date(h.ends_at) }));
 }
 
 /** Atendimentos ativos da agenda (sem os exames) entre dois instantes. */
@@ -222,7 +247,7 @@ function slotsOn(plan: SchedulingPlan, date: string, busy: BusyInterval[], holid
   });
 }
 
-export type SlotQuery = { serviceId: string; agendaId: string; locationId?: string | null; ignoreAppointmentId?: string | null };
+export type SlotQuery = { serviceId: string; agendaId: string; locationId?: string | null; ignoreAppointmentId?: string | null; holds?: PortalHolds };
 
 /** Horários livres de um dia (serviço individual). */
 export async function getFreeSlots(
@@ -235,7 +260,7 @@ export async function getFreeSlots(
   if (!plan) return [];
   const { start, end } = dayBounds(query.date, plan.timeZone);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId, plan.category === "exam"),
+    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId, plan.category === "exam", query.holds),
     loadClinicHolidays(db, clinicId, query.date, query.date),
   ]);
   return slotsOn(plan, query.date, busy, holidays, now);
@@ -356,7 +381,7 @@ export async function getNextAvailableDates(
   const firstDate = todayIn(plan.timeZone, now);
   const finalDate = searchEnd(firstDate, query);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam"),
+    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam", query.holds),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
   ]);
   const result: DateWithSlots[] = [];

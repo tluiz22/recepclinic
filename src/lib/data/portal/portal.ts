@@ -220,18 +220,22 @@ export async function professionalDates(
   professional: PortalProfessional,
   serviceId: string,
   timeZone: string,
-  { count = 60, now = new Date() }: { count?: number; now?: Date } = {},
+  { count = 60, now = new Date(), sessionId = null }: { count?: number; now?: Date; sessionId?: string | null } = {},
 ): Promise<string[]> {
   const lastDate = lastBookableDate(professional, timeZone, now);
+  const holds = { exceptSession: sessionId };
   const perLocation = await Promise.all(
     professional.locations.map((location) =>
-      getNextAvailableDates(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, count, lastDate }, now),
+      getNextAvailableDates(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, count, lastDate, holds }, now),
     ),
   );
   return [...new Set(perLocation.flat().map((d) => d.date))].sort().slice(0, count);
 }
 
-/** Horários livres de um dia, nos locais da clínica, em ordem (o mesmo horário em dois locais aparece nos dois). */
+/**
+ * Horários livres de um dia, nos locais da clínica, em ordem (o mesmo horário em dois locais aparece nos dois). Sem os
+ * horários reservados por outras sessões do portal (`sessionId`: a de quem pergunta).
+ */
 export async function professionalSlots(
   db: DbClient,
   clinicId: string,
@@ -240,10 +244,14 @@ export async function professionalSlots(
   date: string,
   timeZone: string,
   now: Date = new Date(),
+  sessionId: string | null = null,
 ): Promise<PortalSlot[]> {
   if (date > lastBookableDate(professional, timeZone, now)) return [];
+  const holds = { exceptSession: sessionId };
   const perLocation = await Promise.all(
-    professional.locations.map((location) => getFreeSlots(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, date }, now)),
+    professional.locations.map((location) =>
+      getFreeSlots(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, date, holds }, now),
+    ),
   );
   return perLocation
     .flat()
@@ -311,9 +319,10 @@ export async function isSlotStillFree(
   choice: { serviceId: string; locationId: string; start: Date },
   timeZone: string,
   now: Date = new Date(),
+  sessionId: string | null = null,
 ): Promise<boolean> {
   if (!professional.consultations.some((c) => c.serviceId === choice.serviceId)) return false;
   if (!professional.locations.some((l) => l.id === choice.locationId)) return false;
-  const slots = await professionalSlots(db, clinicId, professional, choice.serviceId, localDateOf(choice.start, timeZone), timeZone, now);
+  const slots = await professionalSlots(db, clinicId, professional, choice.serviceId, localDateOf(choice.start, timeZone), timeZone, now, sessionId);
   return slots.some((slot) => slot.locationId === choice.locationId && slot.start.getTime() === choice.start.getTime());
 }

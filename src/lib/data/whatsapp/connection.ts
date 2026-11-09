@@ -426,6 +426,7 @@ export const TEMPLATE_KEYS = [
   "nfse_document",
   "connection_test",
   "conversation_resume",
+  "portal_code",
 ] as const;
 
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];

@@ -32,7 +32,13 @@ export default defineConfig({
         // redireciona para a fatura ou o Checkout do Asaas; o navegador aplica o form-action também ao redirecionamento.
         "form-action 'self' https://asaas.com https://*.asaas.com",
         "frame-ancestors 'none'",
+        // Portal de agendamento (F2b): o CAPTCHA (Cloudflare Turnstile) abre numa moldura da Cloudflare.
+        "frame-src https://challenges.cloudflare.com",
       ],
+      // O script do Turnstile vem da Cloudflare (portal, F2b); os demais, do próprio domínio, com o hash dos embutidos.
+      scriptDirective: {
+        resources: ["'self'", "https://challenges.cloudflare.com"],
+      },
       styleDirective: {
         resources: ["'self'", { resource: "'unsafe-inline'", kind: "attribute" }],
       },

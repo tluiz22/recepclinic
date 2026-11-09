@@ -35,10 +35,19 @@ describe("variáveis da plataforma", () => {
       nfseSimulation: false,
       webPush: null,
       asaas: null,
+      turnstile: null,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
       "https://app.recepclinic.com.br",
     );
+  });
+
+  it("Turnstile do portal: as duas chaves juntas ou nenhuma", () => {
+    expect(parsePlatformEnv({ ...valid, PUBLIC_TURNSTILE_SITE_KEY: "site", TURNSTILE_SECRET_KEY: "secret" }).turnstile).toEqual({
+      siteKey: "site",
+      secretKey: "secret",
+    });
+    expect(() => parsePlatformEnv({ ...valid, PUBLIC_TURNSTILE_SITE_KEY: "site" })).toThrow(/TURNSTILE/);
   });
 
   it("e-mail é opcional; com SMTP_HOST, porta e remetente são obrigatórios", () => {

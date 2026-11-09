@@ -16,6 +16,8 @@ import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../l
 import { slotChoiceValue } from "../../../../lib/data/agenda/publicBooking";
 import { openPortalPage, professionalOf, singleProfessional } from "../../../../lib/data/portal/page";
 import { isProfessionalDayOpen, professionalDates, professionalSlots } from "../../../../lib/data/portal/portal";
+import { hitLimits, readSession, releaseHold } from "../../../../lib/data/portal/identity";
+import { blockedText, ipPrefix, LIMITS } from "../../../../lib/portalIdentity";
 import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
 import {
   backFromProfessional,
@@ -57,12 +59,32 @@ const dateParam = (name: string) => {
 let strip: DayStrip | null = null;
 let slotOptions: PatientSlot[] = [];
 let unavailableOpen = false;
+let blockedUntil: Date | null = null;
+let sessionId: string | null = null;
 if (page.kind === "open" && professional && consultation && modality) {
-  const dates = await professionalDates(page.db, page.portal.clinicId, professional, consultation.serviceId, timeZone);
+  // Limite de consultas de horários (F2b; proposta 7.2): por IP e, com sessão, por sessão.
+  const session = await readSession(page.db, page.portal.clinicId, Astro.cookies);
+  sessionId = session?.id ?? null;
+  const ip = ipPrefix((() => {
+    try {
+      return Astro.clientAddress;
+    } catch {
+      return Astro.request.headers.get("x-forwarded-for");
+    }
+  })());
+  blockedUntil = await hitLimits(page.db, page.portal.clinicId, [
+    [`ip:${ip}`, LIMITS.slotsPerIp],
+    ...(session ? ([[`session:${session.id}`, LIMITS.slotsPerSession]] as [string, (typeof LIMITS)["slotsPerSession"]][]) : []),
+  ]);
+  // Voltou da reserva: o horário é solto para todos.
+  if (session && params.get("soltar")) await releaseHold(page.db, page.portal.clinicId, session.id);
+}
+if (page.kind === "open" && professional && consultation && modality && !blockedUntil) {
+  const dates = await professionalDates(page.db, page.portal.clinicId, professional, consultation.serviceId, timeZone, { sessionId });
   strip = buildDayStrip(dates, dateParam("date"), dateParam("start"));
   if (strip.unavailable && !strip.selected && dates.length) strip = { ...buildDayStrip(dates, null, null), unavailable: strip.unavailable };
   const [slots, open] = await Promise.all([
-    strip.selected ? professionalSlots(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.selected, timeZone) : [],
+    strip.selected ? professionalSlots(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.selected, timeZone, new Date(), sessionId) : [],
     strip.unavailable ? isProfessionalDayOpen(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.unavailable, timeZone) : false,
   ]);
   unavailableOpen = open;
@@ -138,11 +160,16 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
             </nav>
           )}
           <div id="portal-escolha" class="flex flex-col gap-4" aria-live="polite">
+            {blockedUntil && (
+              <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="alert">
+                Muitas consultas em pouco tempo. Tente de novo {blockedText(blockedUntil)} ou toque em "Recepção", no topo, para falar com a clínica.
+              </p>
+            )}
             {taken && (
               <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">Esse horário acabou de ser ocupado por outra pessoa. Escolha outro.</p>
             )}
             {unavailableNote && <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="status">{unavailableNote}</p>}
-            {strip && strip.selected ? (
+            {blockedUntil ? null : strip && strip.selected ? (
               <>
                 <p class="text-base text-gray-600">Só aparecem os dias com horário livre.</p>
                 <input type="hidden" name="date" value={strip.selected} />

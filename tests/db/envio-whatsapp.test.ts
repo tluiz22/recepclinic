@@ -117,9 +117,12 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["connection_test", "pending", null],
       // CN4b (05/nov/2026): o "Retomar conversa", com a Central de atendimento.
       ["conversation_resume", "pending", null],
+      // F2b (08/nov/2026): o código do portal (template de autenticação), com o Portal de agendamento.
+      ["portal_code", "pending", null],
     ]);
     const created = meta.calls.filter((c) => c.method === "POST");
-    expect(created.map((c) => c.path)).toEqual(Array(13).fill(`/${WABA}/message_templates`));
+    expect(created.map((c) => c.path)).toEqual(Array(14).fill(`/${WABA}/message_templates`));
+    expect(created.find((c) => c.body?.name === "rc_codigo_portal_v1")?.body).toMatchObject({ category: "AUTHENTICATION" });
     expect(created[0].body).toMatchObject({ name: "rc_confirmacao_v1", language: "pt_BR", category: "UTILITY" });
     // Exemplo de cada variável, exigido pela Meta.
     const body = (created[0].body!.components as { type: string; example?: { body_text: string[][] } }[])[0];
@@ -153,6 +156,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       consultation_guidance: ["pending", null],
       connection_test: ["pending", null],
       conversation_resume: ["pending", null],
+      portal_code: ["pending", null],
     });
   });
 
