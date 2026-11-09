@@ -1,0 +1,87 @@
+---
+// P11 Falar com a recepção (F2a): o botão "Recepção" do topo abre uma folha com a mensagem pronta para o WhatsApp da
+// clínica e o número em texto (sem ligação, com o botão do WhatsApp). Sem JavaScript, o botão já é o link do WhatsApp.
+// A mensagem não leva nada de saúde. O código da sessão (a recepção ver em que passo o paciente parou) vem com as
+// métricas do portal (F6).
+import type { PublicClinicBrand } from "../../lib/data/config/brand";
+import { formatPhoneBR } from "../../lib/phone";
+import { HELP_MESSAGE, receptionWhatsappHref } from "../../lib/portal";
+
+interface Props {
+  brand: PublicClinicBrand;
+  receptionHours: string | null;
+  helpFor: string | null;
+}
+
+const { brand, receptionHours, helpFor } = Astro.props;
+const phone = brand.whatsappPhone;
+const href = phone ? receptionWhatsappHref(phone) : "#portal-recepcao";
+const pill =
+  "inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3.5 text-base font-semibold text-clinic-ink no-underline hover:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink";
+const waIcon = "M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.5 8.5 0 1 1 21 11.5z";
+---
+
+<a href={href} class={pill} data-portal-help target={phone ? "_blank" : undefined} rel={phone ? "noopener" : undefined} aria-haspopup="dialog">
+  <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={waIcon} /></svg>
+  <span class="sm:hidden">Recepção</span><span class="hidden sm:inline">Falar com a recepção</span>
+</a>
+
+<dialog
+  id="portal-recepcao"
+  aria-labelledby="portal-recepcao-titulo"
+  class="mx-auto mt-auto mb-0 w-full max-w-[560px] rounded-t-[22px] border-0 bg-white p-0 text-gray-900 shadow-[0_-12px_40px_rgba(17,24,39,.22)] backdrop:bg-gray-900/45 sm:m-auto sm:rounded-[22px]"
+>
+  <div class="flex flex-col gap-4 px-5 pt-3 pb-[max(22px,env(safe-area-inset-bottom))] sm:px-7 sm:pt-6 sm:pb-7">
+    <span aria-hidden="true" class="mx-auto h-1.5 w-11 rounded-full bg-gray-300 sm:hidden"></span>
+    <div class="flex items-start justify-between gap-3">
+      <h2 id="portal-recepcao-titulo" class="font-display text-[26px] leading-tight font-bold">Falar com a recepção</h2>
+      <button type="button" data-portal-help-close aria-label="Fechar" class="-mt-1 -mr-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100">
+        <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </div>
+    {
+      phone ? (
+        <>
+          <p class="text-[17px] text-gray-700">Vamos abrir o WhatsApp da recepção{helpFor ? ` ${helpFor}` : ""} com esta mensagem pronta:</p>
+          <p class="rounded-xl bg-gray-100 px-4 py-3 text-[17px] text-gray-800">{HELP_MESSAGE}</p>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener"
+            class="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-clinic px-5 text-[19px] font-bold text-clinic-text no-underline hover:opacity-90"
+          >
+            <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={waIcon} /></svg>
+            Abrir conversa no WhatsApp
+          </a>
+          <div class="flex flex-col gap-0.5 border-t border-gray-200 pt-3.5">
+            <span class="text-[15px] text-gray-600">WhatsApp da recepção</span>
+            <span class="text-[19px] font-bold tabular-nums">{formatPhoneBR(`+${phone}`)}</span>
+            {receptionHours && <span class="text-base text-gray-700">{receptionHours}</span>}
+          </div>
+        </>
+      ) : (
+        <>
+          <p class="text-[17px] text-gray-700">O WhatsApp da recepção não está disponível por aqui agora. Fale com a clínica pelos canais de sempre.</p>
+          {receptionHours && <p class="text-base text-gray-700">Recepção: {receptionHours}</p>}
+        </>
+      )
+    }
+    <p class="text-[15px] text-gray-600">Suas escolhas continuam nesta página.</p>
+  </div>
+</dialog>
+
+<script>
+  // A folha abre por cima da página (Voltar e as escolhas continuam); Esc e o fundo fecham.
+  const dialog = document.getElementById("portal-recepcao") as HTMLDialogElement | null;
+  document.querySelectorAll<HTMLAnchorElement>("[data-portal-help]").forEach((trigger) => {
+    trigger.addEventListener("click", (event) => {
+      if (!dialog || typeof dialog.showModal !== "function" || event.metaKey || event.ctrlKey) return;
+      event.preventDefault();
+      dialog.showModal();
+    });
+  });
+  dialog?.querySelector("[data-portal-help-close]")?.addEventListener("click", () => dialog.close());
+  dialog?.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+</script>

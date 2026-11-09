@@ -1,0 +1,137 @@
+---
+// P2 Escolha da especialidade (F2a): cartões com "n médicos", busca sem acento pelo nome e pelos termos do cadastro
+// ("coração" → Cardiologia) e "Já sei o nome do médico". Só especialidades com algum médico com horário no prazo.
+// Com um médico só na especialidade, o cartão vai direto a ele. Sem JavaScript, a busca recarrega com ?q=.
+import PortalLayout from "../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../components/portal/PortalSummary.astro";
+import { openPortalPage } from "../../../lib/data/portal/page";
+import { nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
+import { doctorsCount, matchesSpecialty, plainText, portalHref, portalSteps, stepPosition } from "../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+if (page.kind === "not_found") Astro.response.status = 404;
+const portal = page.kind === "open" ? page.portal : null;
+const base = page.kind === "open" ? page.base : "";
+const next = page.kind === "open" ? await nextFreeSlots(page.db, page.portal.clinicId, page.portal.professionals, page.portal.timeZone) : new Map();
+const query = (Astro.url.searchParams.get("q") ?? "").slice(0, 60);
+const cards = portal
+  ? portalSpecialties(portal.professionals)
+      .map((specialty) => ({ specialty, doctors: professionalsOfSpecialty(portal.professionals, specialty.id) }))
+      .filter(({ doctors }) => doctors.some((d) => next.get(d.id)))
+      .map(({ specialty, doctors }) => ({
+        ...specialty,
+        count: doctors.length,
+        search: plainText([specialty.name, ...specialty.terms].join(" | ")),
+        href:
+          doctors.length === 1
+            ? portalHref(`${base}/${doctors[0].slug}/atendimento`, { de: "especialidade", esp: specialty.id })
+            : portalHref(`${base}/medicos`, { esp: specialty.id }),
+        visible: matchesSpecialty(specialty, query),
+      }))
+  : [];
+const step = stepPosition(portalSteps({ specialty: true, professional: true, modality: true }), "specialty");
+const noneVisible = query && !cards.some((c) => c.visible);
+const card =
+  "flex min-h-16 w-full items-center justify-between gap-3 rounded-[14px] border-[1.5px] border-gray-200 bg-white px-4 py-3 text-left text-gray-900 no-underline hover:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink lg:flex-col lg:items-start lg:justify-center lg:gap-0.5";
+---
+
+<PortalLayout
+  title={portal ? "Escolha a especialidade" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={portal?.receptionHours}
+  width="wide"
+>
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {
+    portal && (
+      <div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex flex-col gap-4">
+          <PortalStepBar back={base} step={step} />
+          <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Qual especialidade você procura?</h1>
+          <form method="GET" class="flex flex-col gap-1.5" role="search" data-portal-search>
+            <label for="busca" class="text-base font-semibold text-gray-700">Buscar especialidade ou sintoma</label>
+            <div class="relative">
+              <svg aria-hidden="true" class="pointer-events-none absolute top-4 left-3.5 h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+              <input
+                id="busca"
+                name="q"
+                type="search"
+                value={query}
+                autocomplete="off"
+                placeholder="Ex.: coração, pele, criança"
+                aria-describedby="busca-resultado"
+                class="min-h-[52px] w-full rounded-xl border-[1.5px] border-gray-300 bg-white pr-3.5 pl-11 text-lg text-gray-900 focus:border-clinic-ink focus:outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink"
+              />
+            </div>
+          </form>
+          <p id="busca-resultado" class="text-base text-gray-600" aria-live="polite" data-portal-search-empty hidden={!noneVisible}>
+            Não encontramos "<span data-portal-search-term>{query}</span>". Veja <a href={`${base}/especialidade`} class="font-semibold text-clinic-ink" data-portal-search-clear>todas as especialidades</a> ou fale com a recepção.
+          </p>
+          <ul class="grid gap-2.5 lg:grid-cols-3" aria-label="Especialidades">
+            {cards.map((c) => (
+              <li hidden={!c.visible} data-portal-search-item={c.search}>
+                <a href={c.href} class={card}>
+                  <span class="font-bold">{c.name}</span>
+                  <span class="text-base text-gray-600">{doctorsCount(c.count)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <a
+            href={portalHref(`${base}/medicos`, { esp: "todos" })}
+            class="mt-2 flex min-h-12 items-center justify-center rounded-xl border-[1.5px] border-gray-300 bg-white px-5 text-[17px] font-semibold text-clinic-ink no-underline hover:border-clinic-ink sm:self-start"
+          >
+            Já sei o nome do médico
+          </a>
+        </div>
+        <PortalSummary
+          rows={[
+            { label: "Especialidade", value: null },
+            { label: "Médico", value: null },
+            { label: "Atendimento", value: null },
+            { label: "Dia e horário", value: null },
+          ]}
+        />
+      </div>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // Busca ao digitar, com a mesma regra do servidor (sem acento e sem maiúsculas); o endereço guarda o termo.
+  const form = document.querySelector<HTMLFormElement>("[data-portal-search]");
+  const input = form?.querySelector<HTMLInputElement>("input[name=q]");
+  const empty = document.querySelector<HTMLElement>("[data-portal-search-empty]");
+  const term = document.querySelector<HTMLElement>("[data-portal-search-term]");
+  const plain = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+  const apply = () => {
+    const q = plain(input?.value ?? "");
+    let shown = 0;
+    document.querySelectorAll<HTMLElement>("[data-portal-search-item]").forEach((item) => {
+      const visible = !q || (item.dataset.portalSearchItem ?? "").includes(q);
+      item.hidden = !visible;
+      if (visible) shown++;
+    });
+    if (empty) empty.hidden = !q || shown > 0;
+    if (term) term.textContent = input?.value ?? "";
+    const url = new URL(location.href);
+    if (q) url.searchParams.set("q", input!.value);
+    else url.searchParams.delete("q");
+    history.replaceState(null, "", url);
+  };
+  input?.addEventListener("input", apply);
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    apply();
+  });
+  document.querySelector("[data-portal-search-clear]")?.addEventListener("click", (event) => {
+    if (!input) return;
+    event.preventDefault();
+    input.value = "";
+    apply();
+    input.focus();
+  });
+</script>

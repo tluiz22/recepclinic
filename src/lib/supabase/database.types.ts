@@ -2592,6 +2592,9 @@ isOneToOne: false
 "resolve_onboarding_request_clinic":
 { Args: { "p_token_hash": string }; Returns: string
                            },
+"resolve_portal_clinic":
+{ Args: { "p_slug": string }; Returns: string
+                           },
 "resolve_service_clinic":
 { Args: { "p_service_id": string }; Returns: string
                            },

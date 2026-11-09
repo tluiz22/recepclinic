@@ -34,6 +34,7 @@ import { isFeatureKey } from "../../../../lib/features";
 import { REQUEST_STATUS, ROLE_NAMES } from "../../../../lib/onboardingLabels";
 import { PLAN_LABELS, clinicPlan } from "../../../../lib/plans";
 import { GUIDE_BEFORE_CONNECT_PATH, GUIDE_META_PAYMENT_PATH } from "../../../../lib/guides";
+import { portalPublicUrl, suggestPortalSlug } from "../../../../lib/portal";
 
 const { id } = Astro.params;
 if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
@@ -41,7 +42,7 @@ const db = createUserClient(Astro.request, Astro.cookies);
 const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport, connection, templates, supportPhone] = await Promise.all([
   db
     .from("clinics")
-    .select("id, name, status, created_at, max_professionals, clinic_features ( feature_key ), professionals ( is_active )")
+    .select("id, name, status, created_at, max_professionals, portal_slug, clinic_features ( feature_key ), professionals ( is_active )")
     .eq("id", id)
     .maybeSingle(),
   db.from("clinic_settings").select("timezone").eq("clinic_id", id).maybeSingle(),
@@ -97,6 +98,9 @@ const TABS = [
   { key: "suspensao", label: "Suspensão" },
 ] as const;
 const requestedTab = Astro.url.searchParams.get("tab");
+// Endereço do portal de agendamento (RD1, F2a): só o Suporte dá e troca (o dos profissionais é automático).
+const portalUrl = clinic.portal_slug ? portalPublicUrl(Astro.url, clinic.portal_slug) : null;
+const portalOn = features.includes("portal");
 const tab = TABS.find((t) => t.key === requestedTab)?.key ?? "implantacao";
 ---
 
@@ -349,6 +353,41 @@ const tab = TABS.find((t) => t.key === requestedTab)?.key ?? "implantacao";
           </section>
         )
       }
+      <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-portal">
+        <div class="flex flex-col gap-1">
+          <h2 id="t-portal" class={SECTION_TITLE}>Portal de agendamento</h2>
+          <p class="text-[15px] text-ink-soft">
+            O endereço da clínica no portal (agendar.recepclinic.com.br/endereço). Trocar o endereço quebra os links já divulgados.
+            {portalOn ? " O item está ligado na Matriz." : " O item está desligado na Matriz: o endereço mostra \"Agendamento indisponível\"."}
+          </p>
+          {portalUrl && (
+            <p class="text-[15px]">
+              <a href={portalUrl} target="_blank" rel="noopener" class="font-semibold break-all text-brand">{portalUrl}</a>
+            </p>
+          )}
+        </div>
+        <form method="POST" action={action} class="flex flex-col gap-4">
+          <input type="hidden" name="acao" value="portal_endereco" />
+          <div>
+            <label for="portal-endereco" class={LABEL}>Endereço</label>
+            <input
+              id="portal-endereco"
+              name="endereco"
+              type="text"
+              value={clinic.portal_slug ?? suggestPortalSlug(clinic.name)}
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              minlength="3"
+              maxlength="60"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="portal-endereco-ajuda"
+              class={INPUT}
+            />
+            <p id="portal-endereco-ajuda" class="mt-1 text-sm text-ink-soft">De 3 a 60 letras minúsculas, números e hífen, sem acento. Vazio tira a clínica do portal.</p>
+          </div>
+          <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Salvar endereço</button>
+        </form>
+      </section>
       <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-guia">
         <div class="flex flex-col gap-1">
           <h2 id="t-guia" class={SECTION_TITLE}>Guia para o Administrador</h2>

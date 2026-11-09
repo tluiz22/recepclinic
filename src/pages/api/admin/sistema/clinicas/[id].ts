@@ -84,6 +84,16 @@ export const POST: APIRoute = async (context) => {
             : `Pedido de informações criado, mas o e-mail não saiu (${result.email.reason}). Envie este link ao Administrador (ele não aparece de novo): ${result.link}`;
           return { redirectTo: page, message };
         }
+        case "portal_endereco": {
+          // Endereço do portal (RD1, F2a): o banco confere formato, reservados e repetido.
+          const slug = formText(form, "endereco").trim().toLowerCase();
+          const { error } = await db.rpc("set_clinic_portal_slug", { p_clinic_id: clinic.id, p_slug: slug });
+          if (error) {
+            if (error.code === "22023" || error.code === "23505") throw new DataError("invalid", error.message, { endereco: error.message });
+            throw new DataError("unexpected", "Endereço do portal: não salvo");
+          }
+          return { redirectTo: page, message: slug ? "Endereço do portal salvo." : "Clínica fora do portal (sem endereço)." };
+        }
         case "enviar_guia": {
           // Guia "Antes de conectar ao RecepClinic" (IS1, 03/nov/2026).
           const result = await sendConnectGuide(clinic, formText(form, "email"), onboardingDeps(url));

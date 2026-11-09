@@ -1,0 +1,66 @@
+---
+// Páginas do portal de agendamento (recepção digital, F2a; canvas aprovado em 08/nov/2026): topo branco com o logo
+// (ou as iniciais) e o nome da clínica e o botão "Recepção", que abre a folha "Falar com a recepção" (P11) em todas as
+// telas. Texto base de 18px, títulos em Bricolage Grotesque e a cor da clínica (clinicColorStyle) nos botões e no que
+// foi escolhido. Sem cookie e sem rastreamento.
+// `width`: "reading" para as telas de uma coluna; "wide" para as que têm o resumo ao lado no computador.
+import "@fontsource-variable/bricolage-grotesque/opsz.css";
+import "@fontsource-variable/source-sans-3";
+import "../../styles/global.css";
+import PublicFooter from "../PublicFooter.astro";
+import PortalHelpSheet from "./PortalHelpSheet.astro";
+import { clinicColorStyle } from "../../lib/brandColor";
+import { DEFAULT_BRAND_COLOR, type PublicClinicBrand } from "../../lib/data/config/brand";
+import { initialsOf } from "../../lib/portal";
+
+interface Props {
+  title: string;
+  brand: PublicClinicBrand | null;
+  width?: "reading" | "wide" | "home";
+  /** Horário da recepção, na folha de ajuda. */
+  receptionHours?: string | null;
+  /** "da Dra. Ana Lima": de quem é a recepção, quando o paciente já escolheu o médico. */
+  helpFor?: string | null;
+}
+
+const { title, brand, width = "reading", receptionHours = null, helpFor = null } = Astro.props;
+const color = clinicColorStyle(brand?.brandColor ?? DEFAULT_BRAND_COLOR);
+const container = width === "reading" ? "max-w-[640px]" : "max-w-[1040px]";
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href={brand?.logoUrl ?? "data:,"} />
+    <title>{title} | {brand?.name ?? "RecepClinic"}</title>
+  </head>
+  <body class="flex min-h-screen flex-col bg-gray-50 font-body text-[18px] leading-[1.45] text-gray-900 antialiased" style={color}>
+    {
+      brand && (
+        <header class="border-b border-gray-200 bg-white">
+          <div class={`mx-auto flex w-full items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-0 ${container}`}>
+            <div class="flex min-w-0 items-center gap-2.5 sm:gap-3">
+              {brand.logoUrl ? (
+                <img src={brand.logoUrl} alt="" class="h-10 w-10 shrink-0 rounded-[10px] border border-gray-200 bg-white object-contain p-0.5 sm:h-11 sm:w-11" />
+              ) : (
+                <span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-clinic-tint font-display text-[17px] font-bold text-clinic-ink sm:h-11 sm:w-11 sm:text-lg">
+                  {initialsOf(brand.name)}
+                </span>
+              )}
+              <span class="truncate text-base font-semibold sm:text-lg">{brand.name}</span>
+            </div>
+            <PortalHelpSheet brand={brand} receptionHours={receptionHours} helpFor={helpFor} />
+          </div>
+        </header>
+      )
+    }
+    <slot name="top" />
+    <main class={`mx-auto flex w-full flex-1 flex-col px-4 pt-5 pb-8 sm:px-6 lg:px-0 ${width === "home" ? "lg:pt-16" : "lg:pt-6"} ${container}`}>
+      <slot />
+    </main>
+    <slot name="bottom" />
+    <PublicFooter container={container} />
+  </body>
+</html>

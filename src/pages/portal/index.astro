@@ -1,0 +1,11 @@
+---
+// Endereço do portal sem a clínica (agendar.recepclinic.com.br/): link incompleto.
+import PortalLayout from "../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../components/portal/PortalNotice.astro";
+
+Astro.response.status = 404;
+---
+
+<PortalLayout title="Link não encontrado" brand={null}>
+  <PortalNotice kind="not_found" />
+</PortalLayout>

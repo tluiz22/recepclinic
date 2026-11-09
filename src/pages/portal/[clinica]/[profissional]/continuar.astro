@@ -1,0 +1,77 @@
+---
+// Depois de "Continuar" na P6 (F2a, só no staging): o horário é conferido de novo no servidor (ocupado nesse meio
+// tempo: volta aos horários do mesmo dia, com o aviso). A identificação pelo celular (P7, F2b) e a marcação (P8 a P10,
+// F2c) ainda não existem: esta tela mostra o escolhido e leva à recepção pelo WhatsApp, com o pedido pronto.
+// Nada é gravado e o horário não fica reservado.
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import { capitalize } from "../../../../lib/vocabulary";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
+import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page";
+import { isSlotStillFree } from "../../../../lib/data/portal/portal";
+import { chosenModality, flowParams, modalityOptions, ofName, portalHref, professionalSteps, readFlow, receptionWhatsappHref, stepPosition } from "../../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
+const params = Astro.url.searchParams;
+const flow = readFlow(params);
+const base = page.kind === "open" ? page.base : "";
+const options = professional ? modalityOptions(professional) : [];
+const modality = chosenModality(options, params.get("mod"));
+const choice = parseSlotChoice(params.get("start"));
+const consultation = professional ? (professional.consultations.find((c) => c.serviceId === params.get("tipo")) ?? professional.consultations[0]) : null;
+const timesPath = professional ? `${base}/${professional.slug}/horarios` : "";
+const keep = { ...flowParams(flow), mod: modality?.value ?? null, tipo: params.get("tipo") };
+if (page.kind === "open" && professional && consultation) {
+  const free =
+    !!choice &&
+    !!modality &&
+    choice.agendaId === professional.agendaId &&
+    (await isSlotStillFree(page.db, page.portal.clinicId, professional, { serviceId: consultation.serviceId, locationId: choice.locationId, start: choice.start }, page.portal.timeZone));
+  if (!free) return Astro.redirect(portalHref(timesPath, { ...keep, date: params.get("date"), erro: choice ? "horario" : null }));
+}
+const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
+const when = choice ? capitalize(formatInstant(choice.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "";
+const location = professional?.locations.find((l) => l.id === choice?.locationId) ?? null;
+const back = portalHref(timesPath, { ...keep, date: params.get("date") });
+const step = stepPosition(professionalSteps(flow, options.length > 1), "phone");
+const phone = page.kind === "open" ? page.portal.brand.whatsappPhone : null;
+const request = professional && choice ? `Olá! Escolhi um horário no portal: ${consultation?.name ?? "consulta"} com ${professional.name}, ${when.toLowerCase()} (${modality?.value === "particular" ? "particular" : modality?.label}). Pode marcar para mim?` : "";
+const row = "flex flex-col gap-px border-b border-gray-100 py-2.5 last:border-b-0";
+---
+
+<PortalLayout
+  title={professional ? "Horário escolhido" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? ofName(professional.name) : null}
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={base} />}
+  {
+    professional && choice && (
+      <div class="flex flex-col gap-5">
+        <PortalStepBar back={back} step={step} />
+        <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em]">Horário escolhido</h1>
+        <dl class="flex flex-col rounded-2xl border border-gray-200 bg-white px-4 py-1.5 sm:px-5">
+          <div class={row}><dt class="text-[15px] text-gray-600">Dia e horário</dt><dd class="text-lg font-bold">{when}</dd></div>
+          <div class={row}><dt class="text-[15px] text-gray-600">Com quem</dt><dd>{professional.name}</dd></div>
+          <div class={row}><dt class="text-[15px] text-gray-600">Atendimento</dt><dd>{modality?.label}</dd></div>
+          {location?.address && <div class={row}><dt class="text-[15px] text-gray-600">Onde</dt><dd>{location.address}</dd></div>}
+        </dl>
+        <p class="rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-[17px] text-amber-900" role="status">
+          O horário ainda não está marcado. Nesta versão de teste, a marcação pelo portal não está pronta: envie o pedido à recepção pelo WhatsApp.
+        </p>
+        {phone && (
+          <a href={receptionWhatsappHref(phone, request)} target="_blank" rel="noopener" class="flex min-h-14 items-center justify-center rounded-xl bg-clinic px-5 text-[19px] font-bold text-clinic-text no-underline hover:opacity-90 sm:max-w-[420px]">
+            Pedir este horário no WhatsApp
+          </a>
+        )}
+      </div>
+    )
+  }
+</PortalLayout>

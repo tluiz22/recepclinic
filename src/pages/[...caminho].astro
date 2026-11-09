@@ -1,0 +1,13 @@
+---
+// Caminho sem página (prioridade mais baixa de todas as rotas). No endereço do portal (agendar., agendar-teste.):
+// "/{clínica}/…" não tem rota própria e não passaria pelo middleware, então vem para cá e segue para /portal/{clínica}/….
+// Nos outros endereços, a mesma página 404 de sempre.
+import NotFoundPage from "../components/NotFoundPage.astro";
+import { isPortalHost, portalRewrite } from "../lib/portal";
+
+const target = isPortalHost(Astro.url.hostname) ? portalRewrite(Astro.url.pathname) : null;
+if (target) return Astro.rewrite(`${target}${Astro.url.search}`);
+Astro.response.status = 404;
+---
+
+<NotFoundPage />

@@ -1,0 +1,248 @@
+---
+// P6 Dias e horários (F2a): quem atende e o atendimento no topo (com "Trocar"), o tipo de consulta antes dos dias
+// quando há mais de um (a duração muda os horários), a faixa de dias (só dias com horário livre, no prazo do
+// profissional) e os horários do dia por turno. Tudo do servidor, pelas mesmas funções do bot e do Marcar. Um dia ou
+// uma seta da faixa troca os horários sem recarregar (sem JavaScript, o link abre a página nesse dia). "Continuar"
+// confere de novo se o horário está livre.
+import PatientDayStrip from "../../../../components/public/PatientDayStrip.astro";
+import PatientSlots, { type PatientSlot } from "../../../../components/public/PatientSlots.astro";
+import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { capitalize } from "../../../../lib/vocabulary";
+import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../lib/clinicTime";
+import { slotChoiceValue } from "../../../../lib/data/agenda/publicBooking";
+import { openPortalPage, professionalOf, singleProfessional } from "../../../../lib/data/portal/page";
+import { isProfessionalDayOpen, professionalDates, professionalSlots } from "../../../../lib/data/portal/portal";
+import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
+import {
+  backFromProfessional,
+  changeProfessionalHref,
+  chosenModality,
+  flowParams,
+  formatPrice,
+  modalityOptions,
+  ofName,
+  portalHref,
+  privateLabel,
+  professionalSteps,
+  readFlow,
+  shortName,
+  stepPosition,
+} from "../../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
+const params = Astro.url.searchParams;
+const flow = readFlow(params);
+const base = page.kind === "open" ? page.base : "";
+const options = professional ? modalityOptions(professional) : [];
+const modality = chosenModality(options, params.get("mod"));
+const modalityPath = professional ? `${base}/${professional.slug}/atendimento` : "";
+// Sem escolha válida (o convênio pode ter deixado de ser atendido): de volta à P5, com o aviso.
+if (professional && options.length > 0 && !modality) {
+  return Astro.redirect(portalHref(modalityPath, { ...flowParams(flow), erro: params.get("mod") ? "plano" : null }));
+}
+const single = page.kind === "open" && !!singleProfessional(page.portal);
+const consultation = professional ? (professional.consultations.find((c) => c.serviceId === params.get("tipo")) ?? professional.consultations[0]) : null;
+const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
+const dateParam = (name: string) => {
+  const value = params.get(name);
+  return value && isCalendarDate(value) ? value : null;
+};
+
+let strip: DayStrip | null = null;
+let slotOptions: PatientSlot[] = [];
+let unavailableOpen = false;
+if (page.kind === "open" && professional && consultation && modality) {
+  const dates = await professionalDates(page.db, page.portal.clinicId, professional, consultation.serviceId, timeZone);
+  strip = buildDayStrip(dates, dateParam("date"), dateParam("start"));
+  if (strip.unavailable && !strip.selected && dates.length) strip = { ...buildDayStrip(dates, null, null), unavailable: strip.unavailable };
+  const [slots, open] = await Promise.all([
+    strip.selected ? professionalSlots(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.selected, timeZone) : [],
+    strip.unavailable ? isProfessionalDayOpen(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.unavailable, timeZone) : false,
+  ]);
+  unavailableOpen = open;
+  const locationName = (id: string) => professional.locations.find((l) => l.id === id)?.name ?? "";
+  slotOptions = slots.map((slot) => ({
+    value: slotChoiceValue({ start: slot.start, agendaId: professional.agendaId, locationId: slot.locationId }),
+    label: formatInstant(slot.start, timeZone, "HH:mm"),
+    detail: professional.locations.length > 1 ? locationName(slot.locationId) : "",
+    summary: `${capitalize(formatInstant(slot.start, timeZone, "EEE").slice(0, 3))}, ${formatInstant(slot.start, timeZone, "dd/MM 'às' HH:mm")}`,
+  }));
+}
+
+const keep = { ...flowParams(flow), mod: modality?.value ?? null, tipo: professional && professional.consultations.length > 1 ? consultation?.serviceId : null };
+const dayHref = (date: string, start: string) => portalHref(Astro.url.pathname, { ...keep, date, start });
+const back = professional ? (options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : backFromProfessional(base, professional.slug, flow, single)) : base;
+const changeDoctor = changeProfessionalHref(base, flow);
+const changeModality = options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : null;
+const step = stepPosition(professionalSteps(flow, options.length > 1), "time");
+const taken = params.get("erro") === "horario";
+const unavailableNote = !strip?.unavailable
+  ? null
+  : unavailableOpen
+    ? `${capitalize(formatCalendarDate(strip.unavailable, "EEEE, d 'de' MMMM"))} não tem mais horário livre.${strip.selected > strip.unavailable ? " Mostramos o próximo dia com horário." : ""}`
+    : "Não há atendimento nesse dia. Mostramos o próximo dia com horário.";
+const notice = "flex items-start gap-2.5 rounded-[14px] border px-4 py-3 text-[17px]";
+const specialtyName = professional?.specialties.find((s) => s.id === flow.specialty)?.name ?? null;
+const modalityText = modality ? (modality.value === "particular" ? "Particular" : modality.label) : null;
+---
+
+<PortalLayout
+  title={professional ? `Dia e horário: ${professional.name}` : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? ofName(professional.name) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={base} />}
+  {
+    professional && consultation && (
+      <form method="GET" action={`${base}/${professional.slug}/continuar`} id="portal-horario" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-4">
+          <PortalStepBar back={back} step={step} />
+          <PortalDoctor professional={professional} change={changeDoctor} specialtyId={flow.specialty}>
+            {modality && (
+              <p class="flex items-center justify-between gap-2.5 border-t border-black/10 pt-1 text-base sm:border-gray-100">
+                <span>Atendimento: <b>{modality.label}</b>{modality.detail ? `. ${modality.detail}` : ""}</span>
+                {changeModality && <a href={changeModality} class="inline-flex min-h-11 shrink-0 items-center px-1 font-bold text-clinic-ink underline" aria-label="Trocar o atendimento">Trocar</a>}
+              </p>
+            )}
+          </PortalDoctor>
+          {Object.entries(keep).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
+          <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Escolha o dia e o horário</h1>
+          {professional.consultations.length > 1 && (
+            <nav aria-label="Tipo de consulta" class="flex flex-col gap-2">
+              <p class="text-base font-semibold text-gray-700">Tipo de consulta</p>
+              <ul class="flex flex-wrap gap-2">
+                {professional.consultations.map((c) => (
+                  <li>
+                    <a
+                      href={portalHref(Astro.url.pathname, { ...keep, tipo: c.serviceId })}
+                      aria-current={c.serviceId === consultation.serviceId ? "true" : undefined}
+                      class={`inline-flex min-h-12 flex-col justify-center rounded-xl border-[1.5px] px-4 py-1.5 leading-tight no-underline ${c.serviceId === consultation.serviceId ? "border-clinic-ink bg-clinic-tint font-bold text-clinic-ink" : "border-gray-300 bg-white text-gray-900 hover:border-clinic-ink"}`}
+                    >
+                      <span>{c.name}</span>
+                      <span class="text-[15px] font-normal text-gray-700">{c.durationMinutes} min{modality?.value === "particular" && c.priceCents ? ` · ${formatPrice(c.priceCents)}` : ""}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+          <div id="portal-escolha" class="flex flex-col gap-4" aria-live="polite">
+            {taken && (
+              <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">Esse horário acabou de ser ocupado por outra pessoa. Escolha outro.</p>
+            )}
+            {unavailableNote && <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="status">{unavailableNote}</p>}
+            {strip && strip.selected ? (
+              <>
+                <p class="text-base text-gray-600">Só aparecem os dias com horário livre.</p>
+                <input type="hidden" name="date" value={strip.selected} />
+                <PatientDayStrip strip={strip} title="Dias com horário" href={dayHref} />
+                <p class="mt-1 font-display text-[21px] font-bold lg:text-[22px]">{capitalize(formatCalendarDate(strip.selected, "EEEE, d 'de' MMMM"))}</p>
+                {slotOptions.length ? (
+                  <PatientSlots options={slotOptions} />
+                ) : (
+                  <p class="text-base text-gray-600">Nenhum horário livre nesse dia. Escolha outro dia.</p>
+                )}
+              </>
+            ) : (
+              <div class="flex flex-col gap-3 rounded-[14px] border border-gray-200 bg-white px-4 py-4" role="status">
+                <p>Sem horários nos próximos {professional.horizonDays} dias. Toque em "Recepção", no topo, para falar com a clínica.</p>
+                {changeDoctor && <a href={changeDoctor} class="self-start font-semibold text-clinic-ink">Ver outro médico</a>}
+              </div>
+            )}
+          </div>
+          <div class="mt-2 grid gap-3 lg:grid-cols-2">
+            {professional.orientation && (
+              <div class="flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5">
+                <p class="text-[15px] text-gray-600">Orientações {ofName(shortName(professional.name))}</p>
+                <p class="text-[17px] whitespace-pre-line">{professional.orientation}</p>
+              </div>
+            )}
+            <details class="self-start rounded-[14px] border border-gray-200 bg-white px-4">
+              <summary class="flex min-h-[52px] cursor-pointer items-center font-bold text-clinic-ink">Ver valores e convênios aceitos</summary>
+              <p class="pb-3.5 text-base">
+                {professional.acceptsPrivate ? `${privateLabel(professional)}.` : "Não atende particular."}
+                {professional.plans.length > 0 && ` ${professional.plans.map((p) => p.name).join(", ")}.`}
+              </p>
+            </details>
+          </div>
+          <div class="sticky bottom-0 -mx-4 mt-4 flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 lg:hidden">
+            <p class="min-w-0 text-base leading-tight">
+              <span class="block text-gray-600">Escolhido</span>
+              <b class="block truncate text-lg" data-portal-slot>Escolha um horário</b>
+            </p>
+            <button type="submit" class="min-h-14 shrink-0 rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45" data-portal-continue disabled={!slotOptions.length}>Continuar</button>
+          </div>
+        </div>
+        <PortalSummary
+          rows={[
+            ...(specialtyName ? [{ label: "Especialidade", value: specialtyName }] : []),
+            { label: "Médico", value: professional.name, change: changeDoctor },
+            { label: "Atendimento", value: modalityText, detail: modality?.detail, change: changeModality },
+            { label: "Dia e horário", value: null, live: "slot" },
+          ]}
+        >
+          <button type="submit" class="mt-3 min-h-14 rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45" data-portal-continue disabled={!slotOptions.length}>Continuar</button>
+        </PortalSummary>
+      </form>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // O horário escolhido vai para a barra e o resumo; um dia ou uma seta troca só a parte dos horários (sem
+  // recarregar); "Continuar" sem horário avisa no próprio campo.
+  const area = document.getElementById("portal-escolha");
+  const form = document.getElementById("portal-horario") as HTMLFormElement | null;
+  const EMPTY = "Escolha um horário";
+  const refresh = () => {
+    const chosen = area?.querySelector<HTMLInputElement>('input[name="start"]:checked');
+    document.querySelectorAll<HTMLElement>("[data-portal-slot], [data-portal-live=slot]").forEach((el) => {
+      el.textContent = chosen?.dataset.summary ?? (el.dataset.portalLive ? "a escolher" : EMPTY);
+      el.classList.toggle("italic", !chosen && !!el.dataset.portalLive);
+    });
+    const hasOptions = !!area?.querySelector('input[name="start"]');
+    document.querySelectorAll<HTMLButtonElement>("[data-portal-continue]").forEach((b) => (b.disabled = !hasOptions));
+  };
+  area?.addEventListener("change", refresh);
+  area?.addEventListener("click", async (event) => {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>("a[data-agendar-nav]");
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    area.setAttribute("aria-busy", "true");
+    area.classList.add("opacity-60");
+    try {
+      const response = await fetch(link.href, { headers: { Accept: "text/html" } });
+      if (!response.ok) throw new Error(String(response.status));
+      const next = new DOMParser().parseFromString(await response.text(), "text/html").getElementById("portal-escolha");
+      if (!next) throw new Error("sem os horários");
+      area.replaceChildren(...Array.from(next.childNodes));
+      history.replaceState(null, "", link.href);
+      area.querySelector<HTMLElement>('[aria-current="date"]')?.focus();
+    } catch {
+      window.location.href = link.href;
+      return;
+    } finally {
+      area.removeAttribute("aria-busy");
+      area.classList.remove("opacity-60");
+    }
+    refresh();
+  });
+  form?.addEventListener("submit", (event) => {
+    const first = area?.querySelector<HTMLInputElement>('input[name="start"]');
+    if (first && !area?.querySelector('input[name="start"]:checked')) {
+      event.preventDefault();
+      first.reportValidity();
+    }
+  });
+  refresh();
+</script>

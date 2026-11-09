@@ -1,0 +1,28 @@
+---
+// PP Início do profissional (link dele: Instagram, site, WhatsApp). Sem outros médicos da clínica.
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalProfessionalHome from "../../../../components/portal/PortalProfessionalHome.astro";
+import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page";
+import { nextFreeSlot } from "../../../../lib/data/portal/portal";
+import { ofName } from "../../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
+const next = page.kind === "open" && professional ? await nextFreeSlot(page.db, page.portal.clinicId, professional, page.portal.timeZone) : null;
+const brand = page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null;
+---
+
+<PortalLayout
+  title={professional ? professional.name : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={brand}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? ofName(professional.name) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={page.base} />}
+  {page.kind === "open" && professional && <PortalProfessionalHome portal={page.portal} professional={professional} base={page.base} next={next} />}
+</PortalLayout>

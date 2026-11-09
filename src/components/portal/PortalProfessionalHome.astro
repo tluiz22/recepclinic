@@ -1,0 +1,82 @@
+---
+// Início do profissional (PP, link do profissional; cliente 08/nov): foto, nome, registro, especialidades, próximo
+// horário, "Agendar consulta com {nome}", valores e convênios, local e orientações. Sem outros médicos da clínica.
+// "Minhas consultas" chega com a identificação pelo celular (F2b/F2c).
+import type { PortalClinic, PortalProfessional } from "../../lib/data/portal/portal";
+import { mapsHref, nextSlotLabel, privateLabel, withName } from "../../lib/portal";
+import PortalAvatar from "./PortalAvatar.astro";
+
+interface Props {
+  portal: PortalClinic;
+  professional: PortalProfessional;
+  base: string;
+  next: Date | null;
+}
+
+const { portal, professional, base, next } = Astro.props;
+const start = `${base}/${professional.slug}/atendimento`;
+const box = "flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5";
+const title = "text-[15px] font-semibold text-gray-600";
+---
+
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-14">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-2 pt-2">
+      <PortalAvatar name={professional.name} photoUrl={professional.photoUrl} size="lg" />
+      <h1 class="mt-2 font-display text-[34px] leading-[1.05] font-bold tracking-[-0.02em] sm:text-5xl">{professional.name}</h1>
+      {professional.registry && <p class="text-base text-gray-700">{professional.registry}</p>}
+      {
+        professional.specialties.length > 0 && (
+          <p class="text-lg">
+            <b>{professional.specialties[0].name}</b>
+            {professional.specialties.length > 1 ? `, ${professional.specialties.slice(1).map((s) => s.name).join(", ")}` : ""}
+          </p>
+        )
+      }
+      <p class={`flex items-center gap-1.5 text-[17px] font-semibold ${next ? "text-clinic-ink" : "text-amber-800"}`}>
+        <svg aria-hidden="true" class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+        {next ? `Próximo horário: ${nextSlotLabel(next, portal.timeZone).toLowerCase()}` : `Sem horário nos próximos ${professional.horizonDays} dias`}
+      </p>
+    </div>
+    {
+      next ? (
+        <a href={start} class="flex min-h-[58px] items-center justify-center rounded-xl bg-clinic px-5 text-center text-[19px] font-bold text-clinic-text no-underline hover:opacity-90 sm:max-w-[420px]">
+          Agendar consulta {withName(professional.name)}
+        </a>
+      ) : (
+        <p class="rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-[17px] text-amber-900">
+          Não há horário livre para marcar pela internet agora. Toque em "Recepção", no topo, para falar com a clínica.
+        </p>
+      )
+    }
+  </div>
+  <div class="flex flex-col gap-2.5">
+    <div class={box}>
+      <p class={title}>Valores e convênios</p>
+      <p>{professional.acceptsPrivate ? privateLabel(professional) : "Não atende particular"}</p>
+      {professional.plans.length > 0 && <p class="text-gray-700">{professional.plans.map((p) => p.name).join(", ")}</p>}
+    </div>
+    {
+      professional.locations.some((l) => l.address) && (
+        <div class={box}>
+          <p class={title}>Onde atende</p>
+          {professional.locations.filter((l) => l.address).map((l) => (
+            <p>
+              {professional.locations.length > 1 && <b>{l.name}: </b>}
+              {l.address}.{" "}
+              <a href={mapsHref(l.address!)} target="_blank" rel="noopener" class="font-semibold text-clinic-ink">Ver no mapa</a>
+            </p>
+          ))}
+        </div>
+      )
+    }
+    {
+      professional.orientation && (
+        <div class={box}>
+          <p class={title}>Orientações</p>
+          <p class="whitespace-pre-line">{professional.orientation}</p>
+        </div>
+      )
+    }
+  </div>
+</div>

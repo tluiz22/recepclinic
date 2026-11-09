@@ -87,6 +87,12 @@ export async function resolveClinicByBookingLink(
   );
 }
 
+/** Portal de agendamento (F2a): clínica do apelido do endereço (agendar.recepclinic.com.br/{apelido}). */
+export async function resolveClinicByPortalSlug(slug: string, env: ServiceEnv = platformEnv()): Promise<string | null> {
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || slug.length > 60) return null;
+  return clinicIdOrNull("portal de agendamento", await platformClient(env).rpc("resolve_portal_clinic", { p_slug: slug }));
+}
+
 /** /preparo/[id]: clínica do serviço (exame) cujo preparo é mostrado. */
 export async function resolveClinicByService(
   serviceId: string,

@@ -3,7 +3,8 @@
 > **Estado atual (retomar daqui), 08/nov/2026.** Plano aprovado (decisões I1 a I11, seção 6; regra da Matriz, bot e
 > portal, seção 1.1). **F1 feita, no staging e validada pelo cliente (08/nov)** (`aba61a8`, migração `20270102120000`;
 > roteiro 7.1 sem ajustes). Produção: não. **D4 feita e aprovada tela por tela (08/nov, seção 8)**, rodada 4 no canvas.
-> Próximo: F2a. Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1).
+> Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1). **F2a feita
+> (08/nov, seção 9; migração `20270103120000`)**: validação do cliente pelo roteiro 9.1. Próximo: F2b.
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
@@ -192,3 +193,58 @@ Rodada 4 no canvas (https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb, fileiras 
 - **Preparo:** quadro antes dos dias na tela de horários do exame; também na revisão, na tela final (com o PDF,
   quando há arquivo) e na confirmação.
 - **.ics do exame:** "Exame {nome} — {Clínica}" e o endereço (complementa a I4).
+
+## 9. F2a feita (08/nov/2026, branch `recepcao-f2a`)
+
+Migração `20270103120000_portal_escolha.sql`:
+
+- `resolve_portal_clinic(slug)`: a plataforma acha a clínica pelo endereço (como o link de agendar); o resto da página
+  usa a credencial limitada à clínica.
+- Apelidos reservados: profissional com o nome de um passo do portal (`especialidade`, `medicos`, `recepcao`...)
+  ganha o `-2`; a clínica não pode ter um endereço do sistema (`admin`, `api`, `portal`...; erro `portal_slug_reserved`).
+- Foto do profissional lida pela credencial da clínica (só `<clínica>/profissionais/...`; a da equipe, não).
+
+Código:
+
+- **Endereço:** `agendar.` e `agendar-teste.` servem só o portal (`/{clínica}/…` → páginas `/portal/{clínica}/…`,
+  pelo middleware e pela rota `[...caminho]`, que pega o caminho sem página; nos outros endereços ela mostra a 404 de
+  sempre). O painel e o `/api` não abrem no endereço do portal. No painel e no local, o portal fica em `/portal/{clínica}`.
+- **Telas** (canvas aprovado, cor da clínica, 390 e 1280 px): P1 (início com "Agendar consulta", especialidades,
+  "Ver médicos, convênios e valores", endereço e horário da recepção), P2 (busca pelo nome e pelos termos da
+  especialidade, "Já sei o nome do médico"), P3 (cartões até 5, lista compacta com 6 ou mais, filtro "Atende meu
+  convênio", busca pelo nome, sem horário = cartão sem toque), P5 (particular com valor e convênios com a observação;
+  uma opção só = pulada), P6 (tipo de consulta quando há mais de um, faixa de dias, horários por turno, resumo ao lado
+  no computador e barra fixa no celular), P11 (folha com a mensagem pronta e o número), P13 (link não encontrado; os
+  estados "vencido" e "já usado" ficam prontos para os links da F3) e "Agendamento indisponível" (item desligado ou
+  clínica suspensa). Link do profissional (início dele, sem outros médicos, "Passo n de 4"); clínica de um só
+  profissional abre direto nele.
+- **Regras:** quem aparece segue o catálogo do bot (ativo, "Mostrar no portal", Consulta individual com horário num
+  local da clínica; domiciliar, turma, retorno e exames fora). Horários pelas mesmas funções do bot e do Marcar
+  (`agenda/slots.ts`), no prazo do profissional. As escolhas ficam no endereço (`de`, `esp`, `conv`, `nome`, `mod`,
+  `tipo`, `date`): o Voltar da tela e o do navegador voltam com elas.
+- **Depois do "Continuar":** o horário é conferido de novo (ocupado: volta ao mesmo dia com o aviso). Como a
+  identificação (F2b) e a marcação (F2c) não existem, a tela mostra o escolhido e "Pedir este horário no WhatsApp".
+  Nada é gravado.
+- **Suporte:** Sistema › Clínicas › clínica › "Portal de agendamento": o endereço da clínica (sugestão pelo nome) e o
+  link para abrir.
+- **Ficam para depois:** "Marcar retorno", "Marcar exame" e "Minhas consultas" no início (F2c/F2d); o código da sessão
+  na mensagem da recepção ("parou em {etapa}", F6); o aviso da carteirinha (não há configuração para isso).
+
+Testes: unidade (`portal.test.ts`: endereços, busca, passos, caminho, particular e convênio, textos), banco
+(`portal-escolha.test.ts`: endereço e reservados, quem aparece, foto, horários, conferência do Continuar) e
+Playwright em 390 e 1280 px (jornada, Voltar em cada tela, busca, filtro, horário ocupado, convênio inválido, folha da
+recepção, estados de erro, tela do Suporte com erro e correção).
+
+### 9.1 Roteiro de validação da F2a (staging)
+
+1. Sistema › Clínicas › uma clínica com várias especialidades › "Portal de agendamento": salvar um endereço
+   (ex.: `clinica-teste`). Tentar `admin` ou o endereço de outra clínica: aparece o erro no campo.
+2. Abrir `agendar-teste.recepclinic.com.br/clinica-teste` no celular: início, "Agendar consulta", especialidade
+   (buscar por um sintoma), médico (filtrar por um convênio), "Como será o atendimento?", dia e horário,
+   "Continuar". Conferir o "Voltar" de cada tela (volta com o que foi escolhido) e o botão "Recepção".
+3. No computador, o mesmo caminho: resumo "Seu agendamento" ao lado, com "Trocar".
+4. Link do profissional: `agendar-teste.recepclinic.com.br/clinica-teste/{apelido}` (apelido em Configurações ›
+   Profissionais): sem outros médicos e sem "Trocar".
+5. Sistema › Matriz: desligar o "Portal de agendamento" da clínica: o endereço mostra "Agendamento indisponível".
+   Religar.
+6. `agendar-teste.recepclinic.com.br/admin` e um endereço inexistente: "Link não encontrado" (o painel não abre).

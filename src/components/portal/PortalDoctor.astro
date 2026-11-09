@@ -1,0 +1,51 @@
+---
+// Quem atende, no topo da P5 e da P6 (a P4 saiu da jornada, cliente 08/nov): foto, nome, registro, especialidades
+// (a da busca em destaque), o local com "Ver no mapa" e, com o slot, as escolhas feitas (atendimento).
+import type { PortalProfessional } from "../../lib/data/portal/portal";
+import { mapsHref } from "../../lib/portal";
+import PortalAvatar from "./PortalAvatar.astro";
+
+interface Props {
+  professional: PortalProfessional;
+  /** "Trocar" o médico (sem ele no link do profissional). */
+  change?: string | null;
+  /** Especialidade escolhida na P2 (em destaque). */
+  specialtyId?: string | null;
+}
+
+const { professional, change = null, specialtyId = null } = Astro.props;
+const main = professional.specialties.find((s) => s.id === specialtyId) ?? professional.specialties[0];
+const others = professional.specialties.filter((s) => s !== main);
+const located = professional.locations.filter((l) => l.address);
+const trocar = "inline-flex min-h-11 shrink-0 items-center px-1 text-base font-bold text-clinic-ink underline";
+---
+
+<section class="-mx-4 flex flex-col gap-2.5 bg-clinic-tint px-4 py-3.5 sm:mx-0 sm:rounded-2xl sm:border sm:border-gray-200 sm:bg-white sm:px-5 sm:py-4" aria-label="Quem atende">
+  <div class="flex items-center gap-3 sm:gap-4">
+    <PortalAvatar name={professional.name} photoUrl={professional.photoUrl} size="lg" onTint />
+    <div class="min-w-0 flex-1">
+      <p class="font-display text-[22px] leading-tight font-bold sm:text-2xl">{professional.name}</p>
+      {professional.registry && <p class="text-[15px] text-gray-700">{professional.registry}</p>}
+      {main && (
+        <p class="text-base">
+          <b>{main.name}</b>
+          {others.length ? `, ${others.map((s) => s.name).join(", ")}` : ""}
+        </p>
+      )}
+    </div>
+    {change && <a href={change} class={trocar} aria-label="Trocar o médico">Trocar</a>}
+  </div>
+  {
+    located.map((location) => (
+      <p class="flex items-start gap-2 border-t border-black/10 pt-2.5 text-base sm:border-gray-100">
+        <svg aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 text-clinic-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
+        <span>
+          {professional.locations.length > 1 && <b>{location.name}: </b>}
+          {location.address}.{" "}
+          <a href={mapsHref(location.address!)} target="_blank" rel="noopener" class="font-semibold text-clinic-ink">Ver no mapa</a>
+        </span>
+      </p>
+    ))
+  }
+  <slot />
+</section>

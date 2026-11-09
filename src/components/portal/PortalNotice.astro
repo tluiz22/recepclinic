@@ -1,0 +1,51 @@
+---
+// P13 e "Agendamento indisponível" (F2a): link não encontrado, vencido ou já usado (sem nenhum dado da consulta,
+// cliente 08/nov) e a clínica com o portal desligado ou suspensa (sem falar de cobrança).
+import type { PublicClinicBrand } from "../../lib/data/config/brand";
+import { receptionWhatsappHref } from "../../lib/portal";
+
+interface Props {
+  kind: "not_found" | "expired" | "used" | "unavailable";
+  brand?: PublicClinicBrand | null;
+  /** Início do portal da clínica ("Agendar pelo portal"). */
+  home?: string | null;
+}
+
+const { kind, brand = null, home = null } = Astro.props;
+const TEXT = {
+  not_found: { title: "Link não encontrado", body: "Confira se o endereço está completo ou peça o link à clínica." },
+  expired: { title: "Este link não vale mais", body: "Os links de agendamento valem por pouco tempo, para proteger os seus dados. Peça um novo no WhatsApp ou agende direto pelo portal." },
+  used: { title: "Este link já foi usado", body: "Ele já foi usado para marcar uma consulta. Para ver as consultas do seu número, entre em Minhas consultas." },
+  unavailable: { title: "Agendamento indisponível", body: "O agendamento pela internet está indisponível no momento. Fale com a clínica pelo WhatsApp." },
+}[kind];
+const phone = brand?.whatsappPhone ?? null;
+const waText = kind === "expired" ? "Olá! Preciso de um novo link para agendar." : "Olá! Quero agendar uma consulta.";
+const cta = "flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-clinic px-5 text-[19px] font-bold text-clinic-text no-underline hover:opacity-90";
+const sec = "flex min-h-14 w-full items-center justify-center rounded-xl border-[1.5px] border-clinic-ink bg-white px-5 text-lg font-bold text-clinic-ink no-underline hover:bg-clinic-tint";
+---
+
+<section class="flex flex-1 flex-col gap-8 pt-6 sm:pt-12">
+  <div class="flex flex-col gap-3.5">
+    <span class={`flex h-16 w-16 items-center justify-center rounded-full ${kind === "used" ? "bg-clinic-tint text-clinic-ink" : "bg-amber-100 text-amber-800"}`}>
+      {
+        kind === "used" ? (
+          <svg aria-hidden="true" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        ) : (
+          <svg aria-hidden="true" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5h.01" /></svg>
+        )
+      }
+    </span>
+    <h1 class="font-display text-[32px] leading-[1.1] font-bold tracking-[-0.015em]">{TEXT.title}</h1>
+    <p class="max-w-[52ch] text-lg text-gray-700">{TEXT.body}</p>
+  </div>
+  <div class="mt-auto flex flex-col gap-2.5 sm:mt-0 sm:max-w-[400px]">
+    {phone && kind !== "used" && (
+      <a href={receptionWhatsappHref(phone, waText)} target="_blank" rel="noopener" class={cta}>
+        {kind === "expired" ? "Pedir novo link no WhatsApp" : "Falar com a clínica no WhatsApp"}
+      </a>
+    )}
+    {home && kind !== "unavailable" && (
+      <a href={home} class={kind === "used" ? cta : sec}>{kind === "used" ? "Agendar outra consulta" : "Agendar pelo portal"}</a>
+    )}
+  </div>
+</section>
