@@ -11,7 +11,10 @@
 >   `20270103120000` a `20270106120000` aplicadas no staging; produção: não. **Validação conjunta do cliente** pelos
 >   roteiros 9.1 a 13.1 do plano (começa por preencher o apelido da clínica no Suporte e criar o modelo do código em
 >   Configurações › WhatsApp).
->   **Próximo:** validação do cliente; depois a F3 (bot com jornada única e links; muda o bot em produção).
+>   **Validação parada no código (09/nov):** a Meta só cria o template do código em empresa verificada; decisão do
+>   cliente: o código sai de um **número do RecepClinic** (+55 61 9656-4772, template já aprovado). Seção 14 do plano.
+>   **Próximo:** a mudança no código (seção 14, "Próxima sessão": versão da API da Meta, remetente do RecepClinic);
+>   depois a validação da F2 e a F3.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

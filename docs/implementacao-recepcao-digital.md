@@ -513,8 +513,30 @@ de cada uma travaria o portal das clínicas pequenas.
   empresa e o item do checklist do Suporte diz isso (`business_verification`, recomendado).
 - **A aprovação dos templates não vence**, mas pode cair por qualidade (bloqueios e denúncias), por reclassificação
   da categoria ou por regra nova da Meta; a situação chega pelo webhook e aparece em Configurações › WhatsApp.
-- **Antes de mudar o código:** o cliente pede a verificação da empresa do RecepClinic na Meta e define o número que
-  manda os códigos. Depois, a mudança (planejada à parte): conta de envio do RecepClinic para o código, template
-  `rc_codigo_portal_v1` só nela, a validação da F2 segue.
+- **Feito com o cliente (09/nov):**
+  - A empresa do RecepClinic **já é verificada** (portfólio "RecepClinic", `2975361582847128`). O staging usa o
+    portfólio "Consultório de teste" (`1135158332268067`, não verificado): é o caso típico de clínica, por isso o
+    template foi recusado lá.
+  - **Número dos códigos:** +55 61 9656-4772, só na API (nunca abrir no app do WhatsApp), conectado e com o código
+    verificado; nome de exibição "RecepClinic" em análise. ID do número `1380810041790028`; **conta de mensagens**
+    (modelo novo da Meta, set–out/2026: a "conta do WhatsApp" guarda o número e a "conta de mensagens" guarda os
+    templates e o pagamento; o ID dela é o antigo WABA ID) `1608311683725577`. Cartão do RecepClinic como padrão nela.
+  - Usuário do sistema **recepclinic-codigos** (função Funcionário: o portfólio só aceita 1 administrador), token
+    permanente com `whatsapp_business_messaging` e `whatsapp_business_management`.
+  - Variáveis: `WHATSAPP_CODE_PHONE_NUMBER_ID`, `WHATSAPP_CODE_WABA_ID`, `WHATSAPP_CODE_TOKEN` no `.env.staging` e na
+    Vercel do staging (cliente). **Produção:** as mesmas três no projeto `recepclinic-producao` e no
+    `.env.production` (cliente; o número e a conta servem aos dois ambientes).
+  - **Template `rc_codigo_portal_v1` criado na conta do RecepClinic e APROVADO na hora** (id `1014112705045978`,
+    autenticação); vale para staging e produção.
+- **Achado: a versão da API.** O sistema chama a Meta pela **v21.0**; nela, a conta de mensagens criada no modelo novo
+  "não existe" (erro 100, subcódigo 33); da v22.0 em diante, aparece. Clínica nova conectada agora pode ter o mesmo
+  problema (templates e situação não lidos). Nosso código não usa `paid_messaging_account_id` (a Meta tira em
+  31/dez/2026).
+- **Próxima sessão (código, com o OK do cliente):** (1) subir a versão da API da Meta em todas as chamadas do WhatsApp
+  (testes + clínica de teste no staging); (2) o código do portal sai pelo número do RecepClinic (remetente da
+  plataforma, pelas três variáveis), sem depender do WhatsApp da clínica; (3) tirar o `portal_code` dos templates
+  pedidos às clínicas (Criar na Meta) e mostrar a situação do template do RecepClinic ao Suporte; (4) guia
+  "Pagamento na Meta" das clínicas cita as "Contas de mensagens"; (5) testes, `/code-review`, staging; a validação da
+  F2 segue do passo 2 do roteiro (código), confirmando no 1º envio que o cartão funciona (sem o erro 131042).
 - Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
   enviados primeiro com a resposta da Meta (`templateSummary.ts`).
