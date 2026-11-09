@@ -64,6 +64,8 @@ import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
+import { listOpenBirthdateChecks } from "../../../lib/data/portalBirthdate";
+import { shortDate } from "../../../lib/portalBooking";
 import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
 import { listPatientNotes, NOTE_MAX } from "../../../lib/data/patientNotes";
 import { listPatientReminders, REMINDER_MAX } from "../../../lib/data/patientReminders";
@@ -78,12 +80,15 @@ const id = Astro.params.id!;
 const patient = isUuid(id) ? await getPatient(db, clinic.clinicId, id).catch(() => null) : null;
 if (!patient) return Astro.redirect("/admin/pacientes");
 const insuranceOn = clinic.features.includes("insurance");
-const [contact, history, noShows, plans] = await Promise.all([
+const [contact, history, noShows, plans, birthdateChecks] = await Promise.all([
   getContact(db, clinic.clinicId, patient.contactId),
   listPatientAppointments(db, clinic.clinicId, patient.id),
   listNoShowStats(db, clinic.clinicId, [patient.id]),
   insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
+  listOpenBirthdateChecks(db, clinic.clinicId, [patient.id]),
 ]);
+// Portal (F2c, R4): a data informada diferente da cadastrada, para a recepção conferir com o paciente.
+const birthdateCheck = birthdateChecks.get(patient.id) ?? null;
 const now = new Date();
 const today = todayIn(clinic.timezone);
 const upcoming = history.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).reverse();
@@ -241,6 +246,7 @@ const canBook = patient.isActive && !anonymized;
           {anonymized ? <Pill tone="warning">Anonimizado</Pill> : !patient.isActive && <Pill tone="neutral">Desativado</Pill>}
           {stats && <Pill tone="alert" icon="user-x">Faltou {stats.noShows} de {stats.total}</Pill>}
           {contact.botBlockedAt && <Pill tone="danger" icon="lock">{capitalize(vocabulary.contact)} bloqueado</Pill>}
+          {patient.createdVia === "portal" && <Pill tone="info">Cadastrado pelo portal</Pill>}
         </div>
         {!anonymized && (
           <span class="text-[15px] text-ink-mid">{[formatAge(patient.birthdate, today), insuranceOn ? planLabel : null, sinceText].filter(Boolean).join(" · ")}</span>
@@ -319,6 +325,46 @@ const canBook = patient.isActive && !anonymized;
         )
       }
     </div>
+    {
+      birthdateCheck && !anonymized && (
+        <div class="flex flex-col gap-2.5 rounded-[12px] border border-pend-200 bg-pend-50 px-4 py-3.5 text-pend-800 sm:max-w-[640px]" role="region" aria-label="Data de nascimento a conferir">
+          <p class="flex items-center gap-2 text-[15.5px] font-bold">
+            <Icon name="warning" class="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+            Data de nascimento a conferir
+          </p>
+          <p class="text-[15px] leading-snug text-ink">
+            No cadastro: <b class="tabular-nums">{shortDate(birthdateCheck.registered)}</b>. Informada no portal em{" "}
+            {formatInstant(birthdateCheck.createdAt, clinic.timezone, "dd/MM")}: <b class="tabular-nums">{shortDate(birthdateCheck.informed)}</b>. Confira com o{" "}
+            {vocabulary.patient} ou o {vocabulary.contact}.
+          </p>
+          <form method="POST" action={withReturn(`/api/admin/pacientes/${patient.id}/data-a-conferir`, volta)} class="flex flex-wrap gap-2">
+            <input type="hidden" name="pendencia" value={birthdateCheck.id} />
+            <button
+              type="submit"
+              name="acao"
+              value="corrigir"
+              class={`${buttonClass("primary", "sm")} js-confirm-delete`}
+              data-confirm-title={`Corrigir para ${shortDate(birthdateCheck.informed)}?`}
+              data-confirm-message={`A data de nascimento do cadastro passa de ${shortDate(birthdateCheck.registered)} para ${shortDate(birthdateCheck.informed)}.`}
+              data-confirm-label="Corrigir"
+            >
+              Corrigir para {shortDate(birthdateCheck.informed)}
+            </button>
+            <button
+              type="submit"
+              name="acao"
+              value="manter"
+              class={`${buttonClass("secondary", "sm")} js-confirm-delete`}
+              data-confirm-title={`Manter ${shortDate(birthdateCheck.registered)}?`}
+              data-confirm-message="A data do cadastro fica como está e o aviso some."
+              data-confirm-label="Manter"
+            >
+              Manter {shortDate(birthdateCheck.registered)}
+            </button>
+          </form>
+        </div>
+      )
+    }
     {
       anonymized && (
         <p class={`${notice} border-line bg-canvas text-ink`}>

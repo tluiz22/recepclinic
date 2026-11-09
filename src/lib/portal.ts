@@ -78,11 +78,12 @@ export function matchesName(name: string, query: string): boolean {
 // ---------------------------------------------------------------------------
 // Passos ("Passo 3 de 6", com os pulados descontados)
 
-export type PortalStep = "specialty" | "professional" | "modality" | "time" | "phone" | "patient";
+export type PortalStep = "specialty" | "professional" | "modality" | "time" | "phone" | "patient" | "review";
 
 /**
  * Passos do caminho: pela clínica, especialidade e médico (pulados com uma opção só); pelo link do profissional,
- * nenhum dos dois. Particular ou convênio some com uma opção só. Depois do horário, o celular e quem será atendido.
+ * nenhum dos dois. Particular ou convênio some com uma opção só. Depois do horário, o celular, quem será atendido e a
+ * revisão (F2c).
  */
 export function portalSteps(flags: { specialty: boolean; professional: boolean; modality: boolean }): PortalStep[] {
   return [
@@ -92,6 +93,7 @@ export function portalSteps(flags: { specialty: boolean; professional: boolean; 
     "time",
     "phone",
     "patient",
+    "review",
   ];
 }
 

@@ -6,6 +6,8 @@
 > Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1). **F2a e F2b
 > feitas (08/nov, seções 9 e 10; migrações `20270103120000` e `20270104120000`)**, só no computador (branches
 > `recepcao-f2a` e `recepcao-f2b`, sem merge): o cliente valida tudo junto no staging depois (roteiros 9.1 e 10.1).
+> **F2c feita (08/nov, seção 11; migração `20270105120000`)**, só no computador, branch `recepcao-f2c` (sai da F2b).
+> Próximo: F2d (retorno e exames no portal).
 > Próximo: F2c (quem será atendido, revisão e marcação).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
@@ -322,3 +324,63 @@ hora; falha igual sem a F2b.
 4. Em outro celular ou janela anônima, o mesmo dia: o horário reservado não aparece. Voltar na primeira janela: ele
    volta a aparecer.
 5. Esperar o contador acabar: "O tempo da reserva acabou".
+
+## 11. F2c feita (08/nov/2026, branch `recepcao-f2c`, sobre a F2b)
+
+Migração `20270105120000_portal_marcacao.sql`:
+
+- **Paciente do portal:** `patients.created_via = 'portal'`; conta no limite de pacientes novos do telefone junto com
+  o bot (`countBotNewPatients`). Selo "Cadastrado pelo portal" na ficha.
+- **Reserva com quem será atendido:** `slot_holds.patient_id` (escolhido na P8) ou `new_patient` (dados da P8b, só
+  gravados na marcação), `informed_birthdate`, `confirming_at` (a marcação é tomada uma vez: duplo toque não marca
+  duas vezes) e `appointment_id` (recarregar mostra a mesma confirmação). A credencial da clínica grava só essas
+  colunas.
+- **Data de nascimento a conferir** (`portal_birthdate_checks`; função `resolve_portal_birthdate_check`, equipe da
+  clínica): "Corrigir para {data}" ou "Manter {data}", com confirmação; resolvida, some da ficha e do atendimento.
+- **Fila dos avisos** (`notice_queue`, chave única por atendimento e tipo): a confirmação sai na hora; o que ficou
+  pendente sai pela rotina dos reenvios (minuto a minuto); envio travado há 10 min fica "deixado de lado" (sem mandar
+  de novo). Falha de envio segue o reenvio automático das mensagens. Limpeza diária (`limpar-fila-avisos`, 03:35).
+
+Telas (390 e 1280 px):
+
+- **P8** (`/{profissional}/reserva`): "Para quem é a consulta?" com os pacientes do celular (nome completo, idade,
+  "(você)") e "Outra pessoa"; sem cadastro no celular, vai direto à P8b. Confere idade limite do médico (com
+  "Escolher outro médico" pela clínica), consulta já marcada com ele e os limites do bot (o de consultas futuras diz o
+  número; os outros, "fale com a recepção"; o limite fica registrado para a equipe, como no bot).
+- **P8b** (`/{profissional}/cadastro`): "Mim / Outra pessoa (filho, dependente)" (agenda Pediátrica ou celular que
+  já é o próprio paciente: só outra pessoa); seu nome só com o celular sem cadastro; nome com sobrenome; data com as
+  barras automáticas, por extenso e com a idade abaixo; menor de 18 não é "Mim". Nome parecido com paciente do mesmo
+  celular: "É a mesma pessoa?" (mesma data) ou as três opções (data diferente); "É a mesma, mas a data certa é…" avisa
+  na P9 que a recepção confere.
+- **P9** (`/{profissional}/revisao`): médico e especialidade, atendimento (particular com valor ou o convênio com a
+  observação), dia e hora, local com "Ver no mapa", paciente com a data por extenso, orientações do profissional,
+  "Confirmação no WhatsApp, celular final 4321", "Alterar" em cada linha e o contador. Horário tomado: volta aos
+  horários com o aviso.
+- **P10** (`/{profissional}/marcada`): "Consulta marcada!", o resumo, "Adicionar à agenda do celular" (.ics por
+  `/{profissional}/calendario`, só com a sessão; I4) e "Ver no mapa". "Precisa remarcar ou cancelar?" leva à recepção
+  no WhatsApp até a F3 (Minhas consultas).
+- **Agenda › atendimento aberto (R2):** a origem ("Portal · link do profissional, marcada pelo paciente em 08/11 às
+  10:05", "WhatsApp · bot", "Recepção · {nome}") e o aviso "Data de nascimento a conferir", que abre a ficha.
+- Indicador de passos ganha a Revisão. O envio único (`sendOnce`) passa a valer no portal.
+
+**Revisões (08/nov):** segurança sem achados altos (telas e .ics presos à sessão; nada pessoal no endereço; paciente
+sempre conferido contra o celular comprovado). Achado e corrigido nos testes: `app.is_clinic_member` dá null (não
+false) para quem é de fora; a função de resolver usa `is not true`. Sem "carteirinha" (o bot não pede; a P8 da
+especificação citava). Origem `portal_place` (Instagram, site…) fica para a F3, com os links.
+
+Testes: unidade (`portalBooking.test.ts`, `bookingOrigin.test.ts`, passos), banco (`portal-marcacao.test.ts`:
+cadastro para si e para outra pessoa, duplo toque, horário tomado, reserva vencida e de outra sessão, duplicado e data
+a conferir, idade limite, consulta já marcada, fila e isolamento) e Playwright (jornada em 390 e 1280 px, dados
+mantidos depois de erro, Voltar da P9, duplo clique, .ics sem sessão, recarregar, painel e ficha).
+
+### 11.1 Roteiro de validação da F2c (staging, junto com a F2a e a F2b)
+
+1. Pelo link de um profissional, escolher horário, confirmar o celular (sem cadastro na clínica): "Mim", nome sem
+   sobrenome (erro, o resto fica), data 31/02 (erro), depois certo: revisão com tudo e "Confirmar agendamento".
+2. "Consulta marcada!": chega a confirmação no WhatsApp; "Adicionar à agenda do celular" abre o evento com o médico e
+   o endereço. Recarregar a página mostra a mesma confirmação.
+3. Na Agenda, abrir o atendimento: "Portal · link do profissional, marcada pelo paciente em…".
+4. Mesmo celular, outro dia: a P8 mostra o paciente "(você)"; escolher dá "já tem consulta com…".
+5. "Outra pessoa" com o nome parecido de um paciente do celular e outra data: "É a mesma, mas a data certa é…";
+   marcar; na Agenda, "Data de nascimento a conferir" → ficha → "Corrigir para…" (confirmação) e o aviso some.
+

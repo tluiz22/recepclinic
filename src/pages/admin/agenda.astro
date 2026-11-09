@@ -25,6 +25,9 @@ import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf
 import { canAccessArea, isUuid } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
+import { loadActorLabels } from "../../lib/data/agenda/trail";
+import { listOpenBirthdateChecks } from "../../lib/data/portalBirthdate";
+import { bookingOriginText } from "../../lib/bookingOrigin";
 import { listFreeGaps, loadClinicHolidays } from "../../lib/data/agenda/slots";
 import { listNationalHolidays } from "../../lib/holidays";
 import Notice from "../../components/admin/ui/Notice.astro";
@@ -71,7 +74,7 @@ const waitlistOn = clinic.features.includes("waitlist");
 const consultationsFuture = appointments.filter((a) => a.category === "consultation" && activeFuture.includes(a.id)).map((a) => a.id);
 // Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
 const financeOn = canAccessArea(clinic, "finance");
-const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins, paymentStates, returnReady] = await Promise.all([
+const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins, paymentStates, returnReady, actors, birthdateChecks] = await Promise.all([
   listReminderActions(db, clinic.clinicId, activeFuture, now),
   clinic.features.includes("exams") ? listPreparationResendable(db, clinic.clinicId, examsFuture) : Promise.resolve(new Set<string>()),
   listGuidanceResendable(db, clinic.clinicId, consultationsFuture),
@@ -80,7 +83,14 @@ const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, n
   listOrigins(db, clinic.clinicId, appointments),
   financeOn ? listPaymentStates(db, clinic.clinicId, appointments.map((a) => a.id)) : Promise.resolve(null),
   listReturnReady(db, clinic.clinicId, appointments, clinic.timezone, now),
+  // Origem no atendimento aberto (R2; F2c): quem da equipe marcou e as datas de nascimento a conferir (portal).
+  loadActorLabels(db, clinic.clinicId, appointments.filter((a) => a.bookingChannel === "admin").map((a) => a.createdBy)),
+  listOpenBirthdateChecks(db, clinic.clinicId, appointments.map((a) => a.patientId)),
 ]);
+const actorName = (id: string | null) => {
+  const label = id ? actors.get(id) : undefined;
+  return label ? (label.isSupport ? "Suporte" : label.name.split(" ")[0]) : null;
+};
 
 const vocabulary = vocabularyFor(clinic.clinicProfile);
 // "Todas as agendas" com mais de uma: uma coluna por agenda, lado a lado
@@ -136,7 +146,14 @@ const panelItems = items.filter((item) => item.kind !== "free");
 const tomorrow = addDays(today, 1);
 const dayText = date === today ? "Hoje" : date === tomorrow ? "Amanhã" : capitalize(formatCalendarDate(date, "EEE dd/MM"));
 const title = `${formatCalendarDate(date, "EEEE").replace("-feira", "")}, ${formatCalendarDate(date, date.slice(0, 4) === today.slice(0, 4) ? "d 'de' MMMM" : "d 'de' MMMM 'de' yyyy")}`;
-const panelProps = (a: (typeof appointments)[number]) => ({ ...cardProps(a), returnTo: selHref(a.id), dayText, closeHref: base });
+const panelProps = (a: (typeof appointments)[number]) => ({
+  ...cardProps(a),
+  returnTo: selHref(a.id),
+  dayText,
+  closeHref: base,
+  bookedBy: bookingOriginText(a, clinic.timezone, actorName(a.createdBy)),
+  birthdateToCheck: birthdateChecks.has(a.patientId),
+});
 const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px-3.5 py-2 no-underline first:border-t-0 sm:first:border-t";
 ---
 

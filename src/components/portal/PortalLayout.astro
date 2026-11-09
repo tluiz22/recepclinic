@@ -35,6 +35,7 @@ const container = width === "reading" ? "max-w-[640px]" : "max-w-[1040px]";
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" href={brand?.logoUrl ?? "data:,"} />
     <title>{title} | {brand?.name ?? "RecepClinic"}</title>
+    <slot name="head" />
   </head>
   <body class="flex min-h-screen flex-col bg-gray-50 font-body text-[18px] leading-[1.45] text-gray-900 antialiased" style={color}>
     {
@@ -62,5 +63,7 @@ const container = width === "reading" ? "max-w-[640px]" : "max-w-[1040px]";
     </main>
     <slot name="bottom" />
     <PublicFooter container={container} />
+    {/* Envio único (F2c): o segundo toque não envia de novo e o botão mostra "Confirmando…", "Enviando…". */}
+    <script src="../../scripts/sendOnce.ts"></script>
   </body>
 </html>

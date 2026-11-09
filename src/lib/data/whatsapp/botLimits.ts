@@ -158,7 +158,8 @@ export async function countBotNewPatients(db: DbClient, clinicId: string, contac
     .select("id", { count: "exact", head: true })
     .eq("clinic_id", clinicId)
     .eq("contact_id", contactId)
-    .eq("created_via", "whatsapp")
+    // Cadastros pelo bot e pelo portal (F2c): o mesmo limite por telefone (proposta, seção 6).
+    .in("created_via", ["whatsapp", "portal"])
     .gte("created_at", daysAgo(now, NEW_PATIENTS_WINDOW_DAYS));
   if (result.error) unwrap(result, "Cadastros do contato");
   return result.count ?? 0;

@@ -1,0 +1,169 @@
+---
+// P9 Revisão (F2c; proposta, passo 9): médico, especialidade, atendimento (particular com valor ou o convênio), dia
+// por extenso e hora, local com "Ver no mapa", paciente, orientações e "Confirmação no WhatsApp ·· 4321", com o
+// contador da reserva. "Alterar" em cada linha volta à tela daquele item. "Confirmar agendamento" vale uma vez só
+// (o botão trava e mostra "Confirmando…"; no servidor, a reserva é tomada uma vez). Reserva vencida: "O tempo para
+// confirmar acabou"; horário tomado: volta aos horários do dia com o aviso (cenário 8); limites: o aviso da P9.
+import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
+import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import { portalCta, portalLink, portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { confirmPortalBooking, phonePatients, type PortalPatient } from "../../../../lib/data/portal/booking";
+import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
+import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
+import { changeProfessionalHref, flowParams, formatPrice, mapsHref, ofName, PRIVATE_MODALITY, portalHref } from "../../../../lib/portal";
+import { birthdateText, blockMessage, shortDate } from "../../../../lib/portalBooking";
+import { phoneEnding } from "../../../../lib/portalIdentity";
+import { todayIn } from "../../../../lib/clinicTime";
+
+const view = await openHoldPage(Astro);
+const { page, professional, hold, session, timeZone, modality, when, consultation, location } = view;
+if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
+if (page.kind === "open" && professional && hold?.state === "active" && !hold.patientId && !hold.newPatient) return Astro.redirect(view.href("reserva"));
+
+const today = todayIn(timeZone);
+let problem: string | null = null;
+let confirming = Astro.url.searchParams.get("confirmando") === "1";
+let existing: PortalPatient | null = null;
+
+if (page.kind === "open" && professional && session && hold?.state === "active") {
+  const { db, portal } = page;
+  if (hold.patientId) existing = (await phonePatients(db, portal.clinicId, hold.phone)).patients.find((p) => p.id === hold.patientId) ?? null;
+  if (hold.patientId && !existing) return Astro.redirect(view.href("reserva"));
+
+  if (Astro.request.method === "POST") {
+    const outcome = await confirmPortalBooking(db, portal.clinicId, {
+      sessionId: session.id,
+      holdId: hold.id,
+      professional,
+      timeZone,
+      insurancePlanId: view.planId,
+      entry: view.entry,
+      sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null),
+    });
+    if (outcome.status === "booked") return Astro.redirect(view.href("marcada"));
+    if (outcome.status === "confirming") return Astro.redirect(view.href("revisao", { confirmando: "1" }));
+    if (outcome.status === "expired") return Astro.redirect(view.href("revisao"));
+    if (outcome.status === "taken") return Astro.redirect(portalHref(`${view.base}/${professional.slug}/horarios`, { ...flowParams(view.flow), mod: modality?.value ?? null, tipo: Astro.url.searchParams.get("tipo"), date: Astro.url.searchParams.get("date"), erro: "horario" }));
+    if (outcome.status === "no_patient") return Astro.redirect(view.href("reserva"));
+    if (outcome.status === "blocked") problem = blockMessage(toBlockText(outcome.reason, timeZone), professional.name, existing?.fullName ?? hold.newPatient?.name ?? null);
+    else problem = "Não conseguimos marcar agora. Toque em “Confirmar agendamento” de novo ou fale com a recepção.";
+  }
+}
+// Outra aba ainda marcando: a tela se atualiza até a marcação terminar.
+if (hold?.state !== "active" || hold.appointmentId) confirming = false;
+
+const active = !!professional && hold?.state === "active";
+const changeDoctor = page.kind === "open" ? changeProfessionalHref(view.base, view.flow) : null;
+const changeModality = professional && view.options.length > 1 ? portalHref(`${view.base}/${professional.slug}/atendimento`, { ...flowParams(view.flow), mod: modality?.value }) : null;
+const isPrivate = modality?.value === PRIVATE_MODALITY;
+const plan = professional && !isPrivate ? professional.plans.find((p) => p.id === modality?.value) : null;
+const patientName = existing?.fullName ?? hold?.newPatient?.name ?? "";
+const patientBirth = existing?.birthdate ?? hold?.newPatient?.birthdate ?? null;
+const changePatient = existing ? view.href("reserva") : view.href("cadastro");
+const birthNotice = Astro.url.searchParams.get("aviso") === "data" && hold?.informedBirthdate;
+const row = "flex items-start justify-between gap-3 border-b border-gray-100 py-3 last:border-b-0";
+const dt = "text-[15px] text-gray-600";
+---
+
+<PortalLayout
+  title={active ? "Confira e confirme" : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? ofName(professional.name) : null}
+>
+  {confirming && <meta http-equiv="refresh" content="2" slot="head" />}
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={view.base} />}
+  {professional && !active && <PortalHoldExpired timesHref={view.timesHref()} />}
+  {
+    active && professional && hold && (
+      <div class="flex flex-col gap-[18px]">
+        <PortalStepBar back={changePatient} step={view.step("review")} />
+        <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("revisao")} />
+        <h1 class={portalTitle}>Confira e confirme</h1>
+        {problem && (
+          <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">
+            {problem}
+          </p>
+        )}
+        {birthNotice && hold.informedBirthdate && (
+          <p class={`${portalNotice} border-amber-200 bg-amber-50 text-amber-900`} role="status">
+            A data de nascimento ({shortDate(hold.informedBirthdate)}) será conferida com a recepção no dia da consulta.
+          </p>
+        )}
+        <dl class="flex flex-col rounded-2xl border border-gray-200 bg-white px-4 sm:px-5">
+          <div class={row}>
+            <div class="min-w-0">
+              <dt class={dt}>Médico</dt>
+              <dd class="font-bold">{professional.name}</dd>
+              {professional.specialties[0] && <dd class="text-[16px] text-gray-700">{professional.specialties[0].name}</dd>}
+            </div>
+            {changeDoctor && <a href={changeDoctor} class={portalLink} aria-label="Alterar o médico">Alterar</a>}
+          </div>
+          <div class={row}>
+            <div class="min-w-0">
+              <dt class={dt}>Atendimento</dt>
+              <dd class="font-bold">
+                {isPrivate ? (consultation?.priceCents ? `Particular, ${formatPrice(consultation.priceCents)}` : "Particular") : (plan?.name ?? modality?.label)}
+              </dd>
+              {plan?.note && <dd class="text-[16px] text-gray-700">{plan.note}</dd>}
+            </div>
+            {changeModality && <a href={changeModality} class={portalLink} aria-label="Alterar o atendimento">Alterar</a>}
+          </div>
+          <div class={row}>
+            <div class="min-w-0">
+              <dt class={dt}>Dia e horário</dt>
+              <dd class="text-lg font-bold">{when}</dd>
+            </div>
+            <a href={view.timesHref(true)} class={portalLink} aria-label="Alterar o dia e o horário">Alterar</a>
+          </div>
+          {location && (
+            <div class={row}>
+              <div class="min-w-0">
+                <dt class={dt}>Onde</dt>
+                <dd class="font-bold">{location.name}</dd>
+                {location.address && <dd class="text-[16px] text-gray-700">{location.address}</dd>}
+              </div>
+              {location.address && (
+                <a href={mapsHref(location.address)} target="_blank" rel="noopener" class={`${portalLink} whitespace-nowrap`}>
+                  Ver no mapa
+                </a>
+              )}
+            </div>
+          )}
+          <div class={row}>
+            <div class="min-w-0">
+              <dt class={dt}>Paciente</dt>
+              <dd class="font-bold break-words">{patientName}</dd>
+              {patientBirth && <dd class="text-[16px] text-gray-700">{birthdateText(patientBirth, today)}</dd>}
+            </div>
+            <a href={changePatient} class={portalLink} aria-label="Alterar o paciente">Alterar</a>
+          </div>
+          {professional.orientation && (
+            <div class={row}>
+              <div class="min-w-0">
+                <dt class={dt}>Orientações</dt>
+                <dd class="text-[16px] whitespace-pre-line text-gray-800">{professional.orientation}</dd>
+              </div>
+            </div>
+          )}
+          <div class={row}>
+            <div class="min-w-0">
+              <dt class={dt}>Confirmação no WhatsApp</dt>
+              <dd>Celular {phoneEnding(hold.phone)}</dd>
+            </div>
+          </div>
+        </dl>
+        <form method="POST" action={view.href("revisao")} class="flex flex-col gap-2">
+          <button type="submit" class={portalCta} data-sending-label="Confirmando…" disabled={confirming} aria-busy={confirming ? "true" : undefined}>
+            {confirming ? "Confirmando…" : "Confirmar agendamento"}
+          </button>
+        </form>
+      </div>
+    )
+  }
+</PortalLayout>

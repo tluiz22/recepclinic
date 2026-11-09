@@ -86,15 +86,15 @@ describe("busca", () => {
 
 describe("passos", () => {
   it("conta só os passos que o paciente faz", () => {
-    expect(portalSteps({ specialty: true, professional: true, modality: true })).toHaveLength(6);
+    expect(portalSteps({ specialty: true, professional: true, modality: true })).toHaveLength(7);
     const link = portalSteps({ specialty: false, professional: false, modality: true });
-    expect(stepPosition(link, "modality")).toEqual({ current: 1, total: 4 });
-    expect(stepPosition(portalSteps({ specialty: false, professional: false, modality: false }), "time")).toEqual({ current: 1, total: 3 });
+    expect(stepPosition(link, "modality")).toEqual({ current: 1, total: 5 });
+    expect(stepPosition(portalSteps({ specialty: false, professional: false, modality: false }), "time")).toEqual({ current: 1, total: 4 });
   });
   it("pelo médico, conta a especialidade e a lista se o paciente passou por elas", () => {
-    expect(stepPosition(professionalSteps(readFlow(new URLSearchParams("de=medicos&esp=e1")), true), "time")).toEqual({ current: 4, total: 6 });
-    expect(stepPosition(professionalSteps(readFlow(new URLSearchParams("de=especialidade&esp=e1")), true), "modality")).toEqual({ current: 2, total: 5 });
-    expect(stepPosition(professionalSteps(readFlow(new URLSearchParams("")), false), "time")).toEqual({ current: 1, total: 3 });
+    expect(stepPosition(professionalSteps(readFlow(new URLSearchParams("de=medicos&esp=e1")), true), "time")).toEqual({ current: 4, total: 7 });
+    expect(stepPosition(professionalSteps(readFlow(new URLSearchParams("de=especialidade&esp=e1")), true), "modality")).toEqual({ current: 2, total: 6 });
+    expect(stepPosition(professionalSteps(readFlow(new URLSearchParams("")), false), "time")).toEqual({ current: 1, total: 4 });
   });
 });
 

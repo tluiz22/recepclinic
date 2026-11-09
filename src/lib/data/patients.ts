@@ -58,13 +58,15 @@ export type Patient = {
   isActive: boolean;
   /** Anonimizado a pedido (F9.4): não volta nem muda. */
   anonymizedAt: Date | null;
+  /** Quem cadastrou: a equipe, o bot ou o portal (selo "Cadastrado pelo portal", R4). */
+  createdVia?: string;
 };
 
 export type PatientWithContact = Patient & { contact: Contact };
 
 const CONTACT_COLUMNS = "id, full_name, phone, default_home_address, is_active, anonymized_at, bot_blocked_at";
 const PATIENT_COLUMNS =
-  "id, contact_id, full_name, birthdate, is_contact_self, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at";
+  "id, contact_id, full_name, birthdate, is_contact_self, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at, created_via";
 
 type ContactRow = {
   id: string;
@@ -86,6 +88,7 @@ type PatientRow = {
   insurance_card_valid_until: string | null;
   is_active: boolean;
   anonymized_at: string | null;
+  created_via?: string;
 };
 
 const toContact = (row: ContactRow): Contact => ({
@@ -109,6 +112,7 @@ const toPatient = (row: PatientRow): Patient => ({
     : null,
   isActive: row.is_active,
   anonymizedAt: row.anonymized_at ? new Date(row.anonymized_at) : null,
+  createdVia: row.created_via,
 });
 
 // ---------------------------------------------------------------------------
@@ -445,7 +449,7 @@ export type RegisterPatientInput = {
    */
   similarContact?: { action: "update_phone"; contactId: string } | { action: "new" };
   /** Cadastro pelo bot: conta no limite de cadastros do contato (F9.6a). Padrão: a equipe. */
-  createdVia?: "admin" | "whatsapp";
+  createdVia?: "admin" | "whatsapp" | "portal";
 };
 
 export type RegisterPatientResult =

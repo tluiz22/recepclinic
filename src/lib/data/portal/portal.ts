@@ -3,6 +3,7 @@ import { describeReceptionHours } from "../../receptionHours";
 import type { PortalPlan, PriceInfo } from "../../portal";
 import type { DbClient } from "../clients";
 import { listAgendas } from "../config/agendas";
+import type { ClinicProfile } from "../config/clinic";
 import { getPublicClinicBrand, type PublicClinicBrand } from "../config/brand";
 import { listInsurancePlans } from "../config/insurance";
 import { listLocations } from "../config/locations";
@@ -52,6 +53,10 @@ export type PortalProfessional = PriceInfo & {
   locations: PortalLocation[];
   /** Observações do profissional (as mesmas que o bot responde em Informações gerais). */
   orientation: string | null;
+  /** Perfil da agenda (Pediátrica: a consulta é sempre de outra pessoa, como no bot). */
+  profile: ClinicProfile;
+  /** Idade a partir da qual não marca Consulta (da agenda); null = sem limite. */
+  ageLimitYears: number | null;
 };
 
 export type PortalUnavailable = { status: "unavailable"; brand: PublicClinicBrand };
@@ -164,6 +169,8 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
       horizonDays: agenda.bookingHorizonDays,
       locations: [...used].map((id) => clinicLocations.get(id)!).map((l) => ({ id: l.id, name: l.name, address: l.address })),
       orientation: botInfo.get(professional.id)?.notes?.trim() || null,
+      profile: agenda.profile,
+      ageLimitYears: agenda.consultationAgeLimitYears,
     });
   }
   result.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));

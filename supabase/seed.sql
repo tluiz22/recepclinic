@@ -476,6 +476,11 @@ begin
   insert into public.slot_holds (clinic_id, agenda_id, service_id, location_id, starts_at, ends_at, session_id, phone, expires_at)
     values (c_a, ag_ped, s_consulta, l_office, (monday + 2 + time '09:00') at time zone tz, (monday + 2 + time '09:30') at time zone tz,
             ps_a, '+5584988880001', now() - interval '1 minute');
+  -- F2c: a confirmação do primeiro atendimento já saiu pela fila e uma data de nascimento a conferir (João).
+  insert into public.notice_queue (clinic_id, appointment_id, kind, status, claimed_at, finished_at)
+    values (c_a, ap_first, 'confirmation', 'sent', now(), now());
+  insert into public.portal_birthdate_checks (clinic_id, patient_id, appointment_id, registered_birthdate, informed_birthdate)
+    values (c_a, pt_joao, ap_first, (monday - interval '6 years')::date, (monday - interval '7 years')::date);
 
   -- Leituras do Suporte (F3.2): uma em cada clínica.
   insert into public.platform_access_log (actor_user_id, clinic_id, method, path) values

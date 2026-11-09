@@ -46,6 +46,10 @@ export type AgendaAppointment = {
   canceledAt: Date | null;
   /** Última remarcação (pedido não concluído do lembrete, 03/nov/2026). */
   rescheduledAt: Date | null;
+  /** Quando foi marcado e, pelo portal, por onde o paciente entrou (origem no atendimento aberto, R2; F2c). */
+  createdAt?: Date;
+  portalEntry?: string | null;
+  portalPlace?: string | null;
 };
 
 export type AgendaItem =
@@ -66,7 +70,7 @@ export type AgendaItem =
 
 export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
   patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at, rescheduled_at,
-  origin_appointment_id, agenda_import_id,
+  origin_appointment_id, agenda_import_id, created_at, portal_entry, portal_place,
   agendas ( name ), services ( name, category ), locations ( name, type ),
   patients ( id, full_name, birthdate, is_contact_self, contacts ( full_name, phone ) )`;
 
@@ -89,6 +93,9 @@ export type AgendaRow = {
   rescheduled_at: string | null;
   origin_appointment_id: string | null;
   agenda_import_id: string | null;
+  created_at?: string;
+  portal_entry?: string | null;
+  portal_place?: string | null;
   agendas: { name: string };
   services: { name: string; category: ServiceCategory };
   locations: { name: string; type: string };
@@ -127,6 +134,9 @@ export const toAgendaAppointment = (row: AgendaRow): AgendaAppointment => {
     canceledBy: row.canceled_by,
     canceledAt: row.canceled_at ? new Date(row.canceled_at) : null,
     rescheduledAt: row.rescheduled_at ? new Date(row.rescheduled_at) : null,
+    createdAt: row.created_at ? new Date(row.created_at) : undefined,
+    portalEntry: row.portal_entry ?? null,
+    portalPlace: row.portal_place ?? null,
   };
 };
 

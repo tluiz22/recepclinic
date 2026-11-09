@@ -1357,6 +1357,32 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
+                },"notice_queue": {
+                  Row: {
+                    "appointment_id": string,"claimed_at": string | null,"clinic_id": string,"created_at": string,"finished_at": string | null,"id": string,"kind": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "appointment_id": string,"claimed_at"?: string | null,"clinic_id": string,"created_at"?: string,"finished_at"?: string | null,"id"?: string,"kind": string,"status"?: string
+                  }
+                  Update: {
+                    "appointment_id"?: string,"claimed_at"?: string | null,"clinic_id"?: string,"created_at"?: string,"finished_at"?: string | null,"id"?: string,"kind"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notice_queue_appointment_id_fkey"
+      columns: ["appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notice_queue_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"notification_recipients": {
                   Row: {
                     "clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"label": string,"phone": string,"receives_consultations": boolean,"receives_exams": boolean,"updated_at": string
@@ -1626,6 +1652,38 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"portal_birthdate_checks": {
+                  Row: {
+                    "appointment_id": string | null,"clinic_id": string,"created_at": string,"id": string,"informed_birthdate": string,"patient_id": string,"registered_birthdate": string,"resolution": string | null,"resolved_at": string | null,"resolved_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "appointment_id"?: string | null,"clinic_id": string,"created_at"?: string,"id"?: string,"informed_birthdate": string,"patient_id": string,"registered_birthdate": string,"resolution"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null
+                  }
+                  Update: {
+                    "appointment_id"?: string | null,"clinic_id"?: string,"created_at"?: string,"id"?: string,"informed_birthdate"?: string,"patient_id"?: string,"registered_birthdate"?: string,"resolution"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_birthdate_checks_appointment_id_fkey"
+      columns: ["appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "portal_birthdate_checks_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "portal_birthdate_checks_patient_id_fkey"
+      columns: ["patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"portal_blocks": {
                   Row: {
@@ -2045,14 +2103,14 @@ isOneToOne: false
                   ]
                 },"slot_holds": {
                   Row: {
-                    "agenda_id": string,"clinic_id": string,"created_at": string,"ends_at": string,"expires_at": string,"id": string,"location_id": string,"phone": string,"released_at": string | null,"service_id": string,"session_id": string,"starts_at": string
+                    "agenda_id": string,"appointment_id": string | null,"clinic_id": string,"confirming_at": string | null,"created_at": string,"ends_at": string,"expires_at": string,"id": string,"informed_birthdate": string | null,"location_id": string,"new_patient": Json | null,"patient_id": string | null,"phone": string,"released_at": string | null,"service_id": string,"session_id": string,"starts_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_id": string,"clinic_id": string,"created_at"?: string,"ends_at": string,"expires_at": string,"id"?: string,"location_id": string,"phone": string,"released_at"?: string | null,"service_id": string,"session_id": string,"starts_at": string
+                    "agenda_id": string,"appointment_id"?: string | null,"clinic_id": string,"confirming_at"?: string | null,"created_at"?: string,"ends_at": string,"expires_at": string,"id"?: string,"informed_birthdate"?: string | null,"location_id": string,"new_patient"?: Json | null,"patient_id"?: string | null,"phone": string,"released_at"?: string | null,"service_id": string,"session_id": string,"starts_at": string
                   }
                   Update: {
-                    "agenda_id"?: string,"clinic_id"?: string,"created_at"?: string,"ends_at"?: string,"expires_at"?: string,"id"?: string,"location_id"?: string,"phone"?: string,"released_at"?: string | null,"service_id"?: string,"session_id"?: string,"starts_at"?: string
+                    "agenda_id"?: string,"appointment_id"?: string | null,"clinic_id"?: string,"confirming_at"?: string | null,"created_at"?: string,"ends_at"?: string,"expires_at"?: string,"id"?: string,"informed_birthdate"?: string | null,"location_id"?: string,"new_patient"?: Json | null,"patient_id"?: string | null,"phone"?: string,"released_at"?: string | null,"service_id"?: string,"session_id"?: string,"starts_at"?: string
                   }
                   Relationships: [
                     {
@@ -2060,6 +2118,12 @@ isOneToOne: false
       columns: ["agenda_id"]
 isOneToOne: false
       referencedRelation: "agendas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "slot_holds_appointment_id_fkey"
+      columns: ["appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "slot_holds_clinic_id_fkey"
@@ -2072,6 +2136,12 @@ isOneToOne: false
       columns: ["location_id"]
 isOneToOne: false
       referencedRelation: "locations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "slot_holds_patient_id_fkey"
+      columns: ["patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "slot_holds_service_id_fkey"
@@ -2740,6 +2810,9 @@ isOneToOne: false
                            },
 "resolve_onboarding_request_clinic":
 { Args: { "p_token_hash": string }; Returns: string
+                           },
+"resolve_portal_birthdate_check":
+{ Args: { "p_action": string,"p_check_id": string }; Returns: undefined
                            },
 "resolve_portal_clinic":
 { Args: { "p_slug": string }; Returns: string
