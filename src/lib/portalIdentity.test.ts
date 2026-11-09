@@ -27,6 +27,10 @@ describe("identificação do portal", () => {
     expect(ipPrefix("200.10.20.33, 10.0.0.1")).toBe("200.10.20");
     expect(ipPrefix("::ffff:10.1.2.3")).toBe("10.1.2");
     expect(ipPrefix("2804:14c:5b:abcd::1")).toBe("2804:14c:5b");
+    // "::" comprimido: o /48 certo.
+    expect(ipPrefix("2001:db8::1")).toBe("2001:db8:0");
+    expect(ipPrefix("2001::5")).toBe("2001:0:0");
+    expect(ipPrefix("2001::1")).toBe(ipPrefix("2001::2"));
     expect(ipPrefix(undefined)).toBe("desconhecido");
   });
 

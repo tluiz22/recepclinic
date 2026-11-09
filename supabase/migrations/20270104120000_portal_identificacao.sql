@@ -172,6 +172,8 @@ begin
   where clinic_id = p_clinic_id and key = p_key and created_at > now() - interval '24 hours';
   v_until := now() + case v_level when 1 then interval '15 minutes' when 2 then interval '1 hour' else interval '24 hours' end;
   insert into public.portal_blocks (clinic_id, key, action, level, blocked_until) values (p_clinic_id, p_key, p_action, v_level, v_until);
+  -- Depois do bloqueio a contagem recomeça (senão o primeiro uso depois dos 15 min já passaria do limite).
+  delete from public.portal_rate_hits where clinic_id = p_clinic_id and key = p_key and action = p_action;
   return v_until;
 end
 $$;
@@ -203,7 +205,8 @@ grant execute on function public.portal_release_block(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Reserva do horário (proposta, 7.3 e 7.4). Só para a sessão com o celular comprovado; uma reserva ativa por sessão e
--- por celular (a nova solta as anteriores); no máximo `p_max_per_day` reservas por celular em 24 h. Com a trava da
+-- por celular (a nova, se der certo, solta as anteriores; a mesma de novo devolve a que existe); no máximo
+-- `p_max_per_day` reservas por celular em 24 h. Com a trava da
 -- agenda, confere atendimentos ativos e reservas não vencidas de outras sessões no mesmo período.
 -- outcome: ok, taken (ocupado ou reservado por outra pessoa), limit (reservas demais no dia), session (sessão
 -- vencida ou sem celular comprovado).
@@ -243,8 +246,14 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended('agenda:' || p_agenda_id::text, 0));
 
-  update public.slot_holds set released_at = now()
-  where clinic_id = p_clinic_id and released_at is null and expires_at > now() and (session_id = p_session_id or phone = v_phone);
+  -- O mesmo horário já reservado nesta sessão (recarregou a página, voltou e seguiu): a mesma reserva.
+  select id, expires_at into v_id, v_until from public.slot_holds
+  where clinic_id = p_clinic_id and session_id = p_session_id and agenda_id = p_agenda_id and service_id = p_service_id
+    and location_id = p_location_id and starts_at = p_starts_at and released_at is null and expires_at > now();
+  if v_id is not null then
+    return query select 'ok'::text, v_id, v_until;
+    return;
+  end if;
 
   if (select count(*) from public.slot_holds where clinic_id = p_clinic_id and phone = v_phone and created_at > now() - interval '24 hours') >= p_max_per_day then
     return query select 'limit'::text, null::uuid, null::timestamptz;
@@ -264,6 +273,10 @@ begin
     return;
   end if;
 
+  -- Só agora (o novo horário deu certo) a reserva anterior da sessão ou do celular é solta.
+  update public.slot_holds set released_at = now()
+  where clinic_id = p_clinic_id and released_at is null and expires_at > now() and (session_id = p_session_id or phone = v_phone);
+
   select portal_hold_minutes into v_minutes from public.clinic_settings where clinic_id = p_clinic_id;
   v_until := now() + make_interval(mins => coalesce(v_minutes, 5));
   insert into public.slot_holds (clinic_id, agenda_id, service_id, location_id, starts_at, ends_at, session_id, phone, expires_at)
@@ -275,6 +288,46 @@ $$;
 
 revoke execute on function public.portal_hold_slot(uuid, uuid, uuid, uuid, uuid, timestamptz, timestamptz, integer) from public, anon, authenticated;
 grant execute on function public.portal_hold_slot(uuid, uuid, uuid, uuid, uuid, timestamptz, timestamptz, integer) to clinic_service;
+
+-- Confere o código digitado com a linha travada (duas tentativas ao mesmo tempo não passam do limite).
+-- outcome: ok (celular comprovado na sessão), wrong (com as tentativas que sobram), expired, exhausted.
+create function public.portal_code_attempt(p_clinic_id uuid, p_session_id uuid, p_code_hash text, p_max_attempts integer)
+returns table (outcome text, attempts_left integer, phone text)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_code public.portal_codes%rowtype;
+begin
+  if p_clinic_id is distinct from app.service_clinic_id() then
+    raise exception 'Clínica diferente da credencial.' using errcode = '42501';
+  end if;
+  select * into v_code from public.portal_codes
+  where clinic_id = p_clinic_id and session_id = p_session_id and used_at is null
+  order by created_at desc limit 1
+  for update;
+  if v_code.id is null or v_code.expires_at <= now() then
+    return query select 'expired'::text, 0, null::text;
+    return;
+  end if;
+  if v_code.attempts >= p_max_attempts then
+    return query select 'exhausted'::text, 0, null::text;
+    return;
+  end if;
+  if v_code.code_hash <> p_code_hash then
+    update public.portal_codes set attempts = attempts + 1 where id = v_code.id;
+    return query select case when v_code.attempts + 1 >= p_max_attempts then 'exhausted' else 'wrong' end, p_max_attempts - v_code.attempts - 1, null::text;
+    return;
+  end if;
+  update public.portal_codes set used_at = now() where id = v_code.id;
+  update public.portal_sessions set phone = v_code.phone, phone_verified_at = now() where id = p_session_id and clinic_id = p_clinic_id;
+  return query select 'ok'::text, 0, v_code.phone;
+end
+$$;
+
+revoke execute on function public.portal_code_attempt(uuid, uuid, text, integer) from public, anon, authenticated;
+grant execute on function public.portal_code_attempt(uuid, uuid, text, integer) to clinic_service;
 
 -- O paciente voltou ou trocou de horário: solta a reserva da sessão.
 create function public.portal_release_hold(p_clinic_id uuid, p_session_id uuid)
@@ -299,3 +352,12 @@ alter table public.whatsapp_templates add constraint whatsapp_templates_template
   'daily_summary_consultations', 'daily_summary_exams', 'daily_summary_consultations_today', 'daily_summary_exams_today',
   'nfse_document', 'connection_test', 'conversation_resume', 'portal_code'
 ));
+
+-- ---------------------------------------------------------------------------
+-- Limpeza diária (proposta 7.5: sessões e reservas apagadas em 30 dias; IP só truncado): contagens com mais de 2 dias,
+-- bloqueios vencidos há mais de 30 dias e sessões com mais de 30 dias (os códigos e as reservas delas vão junto).
+select cron.schedule('limpar-portal', '25 3 * * *', $$
+  delete from public.portal_rate_hits where at < now() - interval '2 days';
+  delete from public.portal_blocks where blocked_until < now() - interval '30 days';
+  delete from public.portal_sessions where created_at < now() - interval '30 days';
+$$);

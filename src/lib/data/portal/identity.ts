@@ -126,13 +126,15 @@ export async function sendCode(
   if (last && last.phone === phone && now.getTime() - last.sentAt.getTime() < CODE_RESEND_MS) {
     return { status: "wait", seconds: Math.ceil((last.sentAt.getTime() + CODE_RESEND_MS - now.getTime()) / 1000) };
   }
+  // Sem como mandar (WhatsApp da clínica ou modelo aprovado), nem conta o limite: o paciente não fica bloqueado à toa.
+  const template = await getApprovedTemplate(db, clinicId, "portal_code").catch(() => null);
+  if (!(sender?.authCode && template) && !devMode) return { status: "unavailable" };
   const blocked = await hitLimits(db, clinicId, [
     [`phone:${phone}`, LIMITS.codePerPhone],
     [`ip:${ip}`, LIMITS.codePerIp],
   ]);
   if (blocked) return { status: "blocked", until: blocked };
 
-  const template = await getApprovedTemplate(db, clinicId, "portal_code").catch(() => null);
   const code = newCode();
   let sent = false;
   if (sender?.authCode && template) {
@@ -163,33 +165,19 @@ export async function sendCode(
 
 export type VerifyResult = { status: "ok"; phone: string } | { status: "wrong"; attemptsLeft: number } | { status: "expired" } | { status: "exhausted" };
 
-/** Confere o código digitado; certo, a sessão passa a ter o celular comprovado. */
-export async function verifyCode(db: DbClient, clinicId: string, session: PortalSession, code: string, now: Date = new Date()): Promise<VerifyResult> {
-  const row = unwrap(
-    await db
-      .from("portal_codes")
-      .select("id, phone, code_hash, attempts, expires_at")
-      .eq("clinic_id", clinicId)
-      .eq("session_id", session.id)
-      .is("used_at", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    "Código do portal",
-  );
-  if (!row || new Date(row.expires_at) <= now) return { status: "expired" };
-  if (row.attempts >= CODE_MAX_ATTEMPTS) return { status: "exhausted" };
-  if (row.code_hash !== hashCode(code, session.id)) {
-    const attempts = row.attempts + 1;
-    unwrap(await db.from("portal_codes").update({ attempts }).eq("id", row.id), "Código do portal");
-    return attempts >= CODE_MAX_ATTEMPTS ? { status: "exhausted" } : { status: "wrong", attemptsLeft: CODE_MAX_ATTEMPTS - attempts };
-  }
-  unwrap(await db.from("portal_codes").update({ used_at: now.toISOString() }).eq("id", row.id), "Código do portal");
-  unwrap(
-    await db.from("portal_sessions").update({ phone: row.phone, phone_verified_at: now.toISOString() }).eq("id", session.id),
-    "Sessão do portal",
-  );
-  return { status: "ok", phone: row.phone };
+/** Confere o código digitado (no banco, com a linha travada); certo, a sessão passa a ter o celular comprovado. */
+export async function verifyCode(db: DbClient, clinicId: string, session: PortalSession, code: string): Promise<VerifyResult> {
+  const { data, error } = await db.rpc("portal_code_attempt", {
+    p_clinic_id: clinicId,
+    p_session_id: session.id,
+    p_code_hash: hashCode(code, session.id),
+    p_max_attempts: CODE_MAX_ATTEMPTS,
+  });
+  if (error) throw error;
+  const row = (data as { outcome: string; attempts_left: number; phone: string | null }[])[0];
+  if (row?.outcome === "ok" && row.phone) return { status: "ok", phone: row.phone };
+  if (row?.outcome === "wrong") return { status: "wrong", attemptsLeft: row.attempts_left };
+  return { status: row?.outcome === "exhausted" ? "exhausted" : "expired" };
 }
 
 /** "Trocar número": o celular comprovado e o código pendente deixam de valer nesta sessão. */

@@ -31,6 +31,8 @@ let hold: ActiveHold | null = null;
 if (page.kind === "open" && professional && /^[0-9a-f-]{36}$/.test(holdId)) {
   session = await readSession(page.db, page.portal.clinicId, Astro.cookies);
   if (session) hold = await activeHold(page.db, page.portal.clinicId, session.id, holdId);
+  // A reserva é deste profissional (o endereço pode ter sido trocado à mão).
+  if (hold && hold.agendaId !== professional.agendaId) hold = null;
 }
 const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
 const consultation = professional && hold ? (professional.consultations.find((c) => c.serviceId === hold!.serviceId) ?? null) : null;

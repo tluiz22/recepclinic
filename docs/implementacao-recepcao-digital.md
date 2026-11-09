@@ -3,8 +3,10 @@
 > **Estado atual (retomar daqui), 08/nov/2026.** Plano aprovado (decisões I1 a I11, seção 6; regra da Matriz, bot e
 > portal, seção 1.1). **F1 feita, no staging e validada pelo cliente (08/nov)** (`aba61a8`, migração `20270102120000`;
 > roteiro 7.1 sem ajustes). Produção: não. **D4 feita e aprovada tela por tela (08/nov, seção 8)**, rodada 4 no canvas.
-> Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1). **F2a feita
-> (08/nov, seção 9; migração `20270103120000`)**: validação do cliente pelo roteiro 9.1. Próximo: F2b.
+> Endereços do portal (`agendar-teste`, `agendar`) e chaves do Turnstile: feitos (cliente, 08/nov, 4.1). **F2a e F2b
+> feitas (08/nov, seções 9 e 10; migrações `20270103120000` e `20270104120000`)**, só no computador (branches
+> `recepcao-f2a` e `recepcao-f2b`, sem merge): o cliente valida tudo junto no staging depois (roteiros 9.1 e 10.1).
+> Próximo: F2c (quem será atendido, revisão e marcação).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
@@ -256,3 +258,67 @@ recepção, estados de erro, tela do Suporte com erro e correção).
 5. Sistema › Matriz: desligar o "Portal de agendamento" da clínica: o endereço mostra "Agendamento indisponível".
    Religar.
 6. `agendar-teste.recepclinic.com.br/admin` e um endereço inexistente: "Link não encontrado" (o painel não abre).
+
+## 10. F2b feita (08/nov/2026, branch `recepcao-f2b`, sobre a F2a)
+
+Cliente (08/nov): sem staging a cada etapa; F2a, F2b e as próximas são validadas juntas no staging depois (muda a I3).
+
+Migração `20270104120000_portal_identificacao.sql`:
+
+- **Sessão** (`portal_sessions`): cookie opaco `rc_portal` (2 h, HttpOnly, SameSite=Lax, Secure fora do local); o
+  banco guarda só o hash; IP só truncado (IPv4 /24, IPv6 /48).
+- **Código** (`portal_codes`): 6 números, só o hash (preso à sessão), 10 min, 5 tentativas (conferidas no banco com a
+  linha travada, `portal_code_attempt`), reenvio depois de 60 s, o anterior deixa de valer.
+- **Limites** (`portal_rate_hits`, `portal_blocks`, função `portal_rate_hit`): código 3 por celular e 10 por IP por
+  hora; tentativas de código 30 por IP e 15 por sessão por hora; consultar horários 300 por IP e 60 por sessão em
+  10 min; reservas 30 por IP por hora e 5 por celular em 24 h. Passou do limite: bloqueio 15 min, de novo no dia
+  1 h, outra vez 24 h (nunca permanente); a contagem recomeça depois de cada bloqueio. `portal_release_block`: a
+  Recepção ou o Administrador libera (tela na F6, com o monitor).
+- **Reserva** (`slot_holds`, `portal_hold_slot`): só com o celular comprovado; trava por agenda; confere atendimentos
+  ativos e reservas de outras sessões; o mesmo horário de novo devolve a mesma reserva; a nova, se der certo, solta a
+  anterior; prazo `portal_hold_minutes` da clínica (padrão 5). O portal não mostra horário reservado por outra sessão;
+  bot e Marcar ainda não olham as reservas (a marcação da F2c confere de novo).
+- **Modelo do código**: `portal_code` (`rc_codigo_portal_v1`), template de autenticação da Meta (texto fixo, aviso de
+  segurança, validade 10 min, botão "Copiar código"); em uso com o item Portal; não personalizável. O Suporte cria na
+  conta da clínica como os outros (Configurações › WhatsApp) e a Meta aprova (pendência da seção 4).
+- **Limpeza diária** (`limpar-portal`, 03:25): contagens com mais de 2 dias, bloqueios vencidos há 30 dias e sessões
+  com mais de 30 dias (códigos e reservas vão junto). Tabelas novas com o registro do Suporte e o bloqueio de clínica
+  suspensa, como as demais.
+
+Telas (canvas, 390 e 1280 px):
+
+- **P7** (`/{profissional}/continuar`): "Qual é o seu celular com WhatsApp?" com o CAPTCHA (Turnstile, só na entrada
+  direta, RD9) → "Mandamos um código…" com o campo do código (colar funciona), "Reenviar código em 0:59",
+  "Trocar número" e os erros da especificação (número inválido, código incorreto com as tentativas, venceu, muitas
+  tentativas, bloqueio). Celular já comprovado na sessão: vai direto à reserva. No `npm run dev`, sem WhatsApp de
+  verdade, o código aparece na tela (nunca no build).
+- **Reserva** (`/{profissional}/reserva`): "Reservamos este horário por 4:59" (anunciado no último minuto), o resumo e
+  o celular confirmado; o Voltar solta a reserva; vencida, "O tempo da reserva acabou". Até a F2c, a tela leva o
+  pedido à recepção pelo WhatsApp.
+- **Variáveis:** `PUBLIC_TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY` (as duas ou nenhuma; local com as chaves de
+  teste da Cloudflare, já no `.env.example`). CSP: script e moldura de `challenges.cloudflare.com` (conferir no
+  staging, a CSP só existe no build).
+
+**Revisões (08/nov):** `security-review` sem achados de risco alto ou médio. `/code-review`: corrigidos o bloqueio de
+15 min que virava 1 h (a contagem não recomeçava), as tentativas do código ao mesmo tempo (passavam de 5), a reserva
+que falhava soltando a atual, a página recarregada gastando o limite de reservas do dia, o IPv6 comprimido no
+`/48`, a reserva aberta com outro profissional no endereço, o celular comprovado que pedia o código de novo quando
+a reserva não saía, o limite gasto quando a clínica não tem como mandar o código e a limpeza das tabelas. Anotado:
+"Reenviar código" não pede o CAPTCHA de novo (contido pelos limites de 3 por celular e 10 por IP por hora).
+
+Testes: unidade (`portalIdentity.test.ts`, env, templates), banco (`portal-identificacao.test.ts`: limites e bloqueio
+progressivo, código, tentativas simultâneas, reserva, concorrência, recarregar, Trocar número; isolamento, suspensão e
+envio dos templates atualizados) e Playwright (celular inválido com o valor mantido, CAPTCHA de teste, código
+errado e certo, reserva com contador, outro paciente sem o horário reservado, Voltar soltando, sessão comprovada
+reservando direto). Fora do portal: `nao-atendimento-central.test.ts` (mensagens novas) falha às vezes conforme a
+hora; falha igual sem a F2b.
+
+### 10.1 Roteiro de validação da F2b (staging, junto com a F2a)
+
+1. Configurações › WhatsApp (Suporte): criar o modelo "código do portal" e esperar a aprovação da Meta.
+2. No portal, escolher um horário e "Continuar": digitar um celular fixo (erro), depois o celular do teste; o CAPTCHA
+   passa sozinho; chega o código no WhatsApp com "Copiar código".
+3. Digitar um código errado (avisa as tentativas) e depois o certo: "Reservamos este horário por 4:59".
+4. Em outro celular ou janela anônima, o mesmo dia: o horário reservado não aparece. Voltar na primeira janela: ele
+   volta a aparecer.
+5. Esperar o contador acabar: "O tempo da reserva acabou".

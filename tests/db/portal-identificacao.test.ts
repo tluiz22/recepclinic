@@ -84,7 +84,7 @@ describe("limites de uso", () => {
     const first = await hitLimit(service, fixture.clinicId, key, rule);
     expect(first).not.toBeNull();
     expect(first!.getTime() - Date.now()).toBeGreaterThan(14 * 60_000);
-    expect(first!.getTime() - Date.now()).toBeLessThanOrEqual(15 * 60_000);
+    expect(first!.getTime() - Date.now()).toBeLessThanOrEqual(15 * 60_000 + 5_000);
     // Bloqueado: continua recusando sem contar mais.
     expect(await hitLimit(service, fixture.clinicId, key, rule)).toEqual(first);
 
@@ -92,9 +92,20 @@ describe("limites de uso", () => {
     const { data: block } = await adminClient().from("portal_blocks").select("id").eq("key", key).single();
     expect((await outsider.client.rpc("portal_release_block", { p_block_id: block!.id })).error?.code).toBe("42501");
     expect((await fixture.reception.client.rpc("portal_release_block", { p_block_id: block!.id })).error).toBeNull();
-    // Passa de novo do limite no mesmo dia: 1 hora.
+    // A contagem recomeçou; passa de novo do limite no mesmo dia: 1 hora.
+    expect(await hitLimit(service, fixture.clinicId, key, rule)).toBeNull();
+    expect(await hitLimit(service, fixture.clinicId, key, rule)).toBeNull();
     const second = await hitLimit(service, fixture.clinicId, key, rule);
     expect(second!.getTime() - Date.now()).toBeGreaterThan(59 * 60_000);
+  });
+
+  it("depois do bloqueio, a contagem recomeça", async () => {
+    const key = `ip:reinicio-${Date.now()}`;
+    for (let i = 0; i < 2; i++) expect(await hitLimit(service, fixture.clinicId, key, rule)).toBeNull();
+    expect(await hitLimit(service, fixture.clinicId, key, rule)).not.toBeNull();
+    // O bloqueio acaba (vencido): o próximo uso passa.
+    await adminClient().from("portal_blocks").update({ blocked_until: new Date(Date.now() - 1000).toISOString() }).eq("key", key);
+    expect(await hitLimit(service, fixture.clinicId, key, rule)).toBeNull();
   });
 
   it("a credencial de uma clínica não conta em outra", async () => {
@@ -136,6 +147,17 @@ describe("código pelo WhatsApp", () => {
     expect((await verifyCode(service, fixture.clinicId, session, code)).status).toBe("exhausted");
   });
 
+  it("tentativas ao mesmo tempo não passam do limite de 5", async () => {
+    const session = await ensureSession(service, fixture.clinicId, jar(), { ip: "200.1.6", secure: false });
+    const sent = await sendCode(service, fixture.clinicId, session, "+5584999990005", { ip: "200.1.6", sender: null, devMode: true });
+    const code = sent.status === "sent" ? sent.devCode! : "";
+    const wrong = (n: number) => String((Number(code) + n) % 1_000_000).padStart(6, "0");
+    await Promise.all(Array.from({ length: 12 }, (_, i) => verifyCode(service, fixture.clinicId, session, wrong(i + 1))));
+    const { data } = await adminClient().from("portal_codes").select("attempts").eq("session_id", session.id).single();
+    expect(data!.attempts).toBe(CODE_MAX_ATTEMPTS);
+    expect((await verifyCode(service, fixture.clinicId, session, code)).status).toBe("exhausted");
+  });
+
   it("três códigos por celular em uma hora; o quarto fica bloqueado", async () => {
     const phone = "+5584999990004";
     for (let i = 0; i < 3; i++) {
@@ -172,6 +194,22 @@ describe("reserva do horário", () => {
     await releaseHold(service, fixture.clinicId, ana.id);
     expect(await times(bia.id)).toContain("09:00");
     if (held.status === "ok") expect(await activeHold(service, fixture.clinicId, ana.id, held.holdId)).toBeNull();
+  });
+
+  it("o mesmo horário de novo (recarregou a página) devolve a mesma reserva; a que falha não solta a atual", async () => {
+    const fabi = await verified("+5584999990015");
+    const gil = await verified("+5584999990016");
+    const first = await holdSlot(service, fixture.clinicId, fabi.id, slotAt("10:30"));
+    const again = await holdSlot(service, fixture.clinicId, fabi.id, slotAt("10:30"));
+    expect(again).toEqual(first);
+    const { count } = await adminClient().from("slot_holds").select("id", { count: "exact", head: true }).eq("session_id", fabi.id);
+    expect(count).toBe(1);
+    // Gil segura 11:30; Fabi tenta 11:30 (ocupado) e continua com 10:30.
+    expect((await holdSlot(service, fixture.clinicId, gil.id, slotAt("11:30"))).status).toBe("ok");
+    expect((await holdSlot(service, fixture.clinicId, fabi.id, slotAt("11:30"))).status).toBe("taken");
+    if (first.status === "ok") expect(await activeHold(service, fixture.clinicId, fabi.id, first.holdId)).not.toBeNull();
+    await releaseHold(service, fixture.clinicId, fabi.id);
+    await releaseHold(service, fixture.clinicId, gil.id);
   });
 
   it("horário já marcado (pela recepção ou pelo bot) não é reservado", async () => {

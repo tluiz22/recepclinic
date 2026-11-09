@@ -20,6 +20,9 @@ export const LIMITS = {
   slotsPerIp: { action: "slots", limit: 300, windowSeconds: 600 },
   slotsPerSession: { action: "slots", limit: 60, windowSeconds: 600 },
   holdPerIp: { action: "hold", limit: 30, windowSeconds: 3600 },
+  // Tentativas de código (além das 5 por código): por IP e por sessão.
+  verifyPerIp: { action: "verify", limit: 30, windowSeconds: 3600 },
+  verifyPerSession: { action: "verify", limit: 15, windowSeconds: 3600 },
 } as const;
 /** Reservas por celular em 24 h. */
 export const MAX_HOLDS_PER_DAY = 5;
@@ -56,8 +59,12 @@ export function ipPrefix(ip: string | null | undefined): string {
   const value = (ip ?? "").split(",")[0].trim().replace(/^::ffff:/, "");
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return value.split(".").slice(0, 3).join(".");
   if (value.includes(":")) {
-    const groups = value.split(":");
-    return groups.slice(0, 3).map((g) => g || "0").join(":");
+    // "::" vale quantos grupos de zero faltarem para 8 (2001:db8::1 → 2001:db8:0:…).
+    const [head, tail = ""] = value.split("::");
+    const left = head ? head.split(":") : [];
+    const right = value.includes("::") && tail ? tail.split(":") : [];
+    const groups = value.includes("::") ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right] : left;
+    return groups.slice(0, 3).map((g) => g.replace(/^0+(?=.)/, "") || "0").join(":");
   }
   return "desconhecido";
 }

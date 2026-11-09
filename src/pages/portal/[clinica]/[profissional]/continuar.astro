@@ -138,8 +138,16 @@ if (page.kind === "open" && professional && consultation) {
       if (!code) {
         problem = { field: "code", text: "Digite os 6 números do código." };
       } else {
-        const result = await verifyCode(db, clinicId, session, code);
-        if (result.status === "ok") {
+        const blocked = await hitLimits(db, clinicId, [
+          [`ip:${ip}`, LIMITS.verifyPerIp],
+          [`session:${session.id}`, LIMITS.verifyPerSession],
+        ]);
+        const result = blocked ? null : await verifyCode(db, clinicId, session, code);
+        if (!result) {
+          blockedUntil = blocked;
+        } else if (result.status === "ok") {
+          // O celular já está comprovado nesta sessão (se a reserva não sair agora, a página não pede o código de novo).
+          session = { ...session, phone: result.phone, verified: true };
           const next = await reserve(session.id);
           if (next) return next;
         } else if (result.status === "wrong") {

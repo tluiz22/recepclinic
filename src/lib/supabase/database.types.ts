@@ -2701,6 +2701,11 @@ isOneToOne: false
 "nfse_invoice_issued_for_retry":
 { Args: { "p_invoice_id": string }; Returns: boolean
                            },
+"portal_code_attempt":
+{ Args: { "p_clinic_id": string,"p_code_hash": string,"p_max_attempts": number,"p_session_id": string }; Returns: {
+              "attempts_left": number,"outcome": string,"phone": string
+            }[]
+                           },
 "portal_hold_slot":
 { Args: { "p_agenda_id": string,"p_clinic_id": string,"p_ends_at": string,"p_location_id": string,"p_max_per_day": number,"p_service_id": string,"p_session_id": string,"p_starts_at": string }; Returns: {
               "hold_expires_at": string,"hold_id": string,"outcome": string
