@@ -7,11 +7,11 @@
 > - **Fora desta entrega:** vários números de WhatsApp (F4, RD11), pendente.
 > - **Etapa 3 (implementação):** plano em [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)
 >   (seção 4.1: endereços e Turnstile). **F1 no staging, validada (08/nov)**; produção: não. **D4 aprovada.**
->   **F2a, F2b, F2c e F2d (retorno e exames) só no computador**, em branches empilhadas `recepcao-f2a` → … →
->   `recepcao-f2d`; migrações só no banco local. Detalhe e roteiros (9.1 a 13.1) no plano da branch `recepcao-f2d`.
->   **Cliente (08/nov): sem staging a cada etapa; valida tudo junto depois** (conferir a ordem das migrações com a
->   `main` antes do merge).
->   **Próximo: F3** (bot com jornada única e links; muda o bot das clínicas em produção), numa branch da `recepcao-f2d`.
+>   **F2a a F2d (portal: escolher, código, marcar, retorno e exames) na `main` e no staging (09/nov)**; migrações
+>   `20270103120000` a `20270106120000` aplicadas no staging; produção: não. **Validação conjunta do cliente** pelos
+>   roteiros 9.1 a 13.1 do plano (começa por preencher o apelido da clínica no Suporte e criar o modelo do código em
+>   Configurações › WhatsApp).
+>   **Próximo:** validação do cliente; depois a F3 (bot com jornada única e links; muda o bot em produção).
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >
