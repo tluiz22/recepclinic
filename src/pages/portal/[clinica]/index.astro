@@ -1,12 +1,15 @@
 ---
 // P1 Início do portal da clínica (F2a; canvas, opção A da rodada 4): nome, "Agendar consulta", especialidades em
 // destaque, "Ver médicos, convênios e valores", endereço e horário da recepção. Clínica de um só profissional: o início
-// dele (PP). "Marcar retorno", "Marcar exame" e "Minhas consultas" entram com as etapas deles (F2c e F2d).
+// dele (PP). "Marcar retorno" (F2d) abaixo de "Agendar consulta"; "Marcar exame" e "Minhas consultas" entram com as
+// etapas deles (F2d, exames; F3).
 import PortalLayout from "../../../components/portal/PortalLayout.astro";
+import PortalMoreActions from "../../../components/portal/PortalMoreActions.astro";
 import PortalNotice from "../../../components/portal/PortalNotice.astro";
 import PortalProfessionalHome from "../../../components/portal/PortalProfessionalHome.astro";
 import { openPortalPage, singleProfessional } from "../../../lib/data/portal/page";
 import { nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
+import { portalOffersReturn } from "../../../lib/data/portal/returnVisit";
 import { mapsHref } from "../../../lib/portal";
 
 const page = await openPortalPage(Astro);
@@ -22,6 +25,10 @@ const specialties = portal
 const bookable = portal?.professionals.some((p) => next.get(p.id)) ?? false;
 const startHref = specialties.length > 1 ? `${base}/especialidade` : `${base}/medicos`;
 const located = portal?.locations.filter((l) => l.address) ?? [];
+// "Marcar retorno" só com o serviço de retorno num médico do portal (D4).
+const actions = portal && page.kind === "open" && (await portalOffersReturn(page.db, portal))
+  ? [{ href: `${base}/retorno`, label: "Marcar retorno", detail: "Volta ao médico da última consulta, dentro do prazo", icon: "return" as const }]
+  : [];
 const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
 ---
 
@@ -33,7 +40,7 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
 >
   {page.kind === "not_found" && <PortalNotice kind="not_found" />}
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
-  {portal && single && <PortalProfessionalHome portal={portal} professional={single} base={base} next={next.get(single.id) ?? null} />}
+  {portal && single && <PortalProfessionalHome portal={portal} professional={single} base={base} next={next.get(single.id) ?? null} actions={actions} />}
   {
     portal && !single && (
       <div class="grid gap-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-14">
@@ -51,6 +58,7 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
               Não há horário livre para marcar pela internet agora. Toque em "Recepção", no topo, para falar com a clínica.
             </p>
           )}
+          <PortalMoreActions actions={actions} />
           {specialties.length > 1 && (
             <div class="flex flex-col gap-2.5 pt-3">
               <p class="text-base font-semibold text-gray-600">Especialidades</p>

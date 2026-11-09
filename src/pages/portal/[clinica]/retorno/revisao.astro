@@ -1,0 +1,166 @@
+---
+// Retorno, passo 3 (F2d; D4; canvas RT4): "Confira o retorno": dia e hora em destaque, paciente, médico, a consulta de
+// origem, local com "Ver no mapa", "Alterar" no dia, orientações do médico e "A confirmação chega no WhatsApp final…",
+// com o contador da reserva. Nunca mostra valor. "Marcar retorno" vale uma vez só (como a P9); reserva vencida: "O tempo
+// para confirmar acabou"; horário tomado: volta aos horários com o aviso; sem direito (marcado por outro canal): à lista.
+import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
+import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import { portalCta, portalLink, portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { capitalize } from "../../../../lib/vocabulary";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { loadHold, type PortalHold } from "../../../../lib/data/portal/booking";
+import { toBlockText } from "../../../../lib/data/portal/holdPage";
+import { readSession } from "../../../../lib/data/portal/identity";
+import { openPortalPage } from "../../../../lib/data/portal/page";
+import { confirmPortalReturn, findReturnCard, returnBlock, type ReturnCard } from "../../../../lib/data/portal/returnVisit";
+import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
+import { mapsHref, ofName, portalHref, shortName } from "../../../../lib/portal";
+import { blockMessage } from "../../../../lib/portalBooking";
+import { phoneEnding } from "../../../../lib/portalIdentity";
+import { consultationOn } from "../../../../lib/portalReturn";
+
+const page = await openPortalPage(Astro);
+if (page.kind === "not_found") Astro.response.status = 404;
+const base = page.kind === "open" ? page.base : "";
+const params = Astro.url.searchParams;
+const keep = { consulta: params.get("consulta") ?? "", unica: params.get("unica") === "1" ? "1" : null };
+const holdId = params.get("reserva") ?? "";
+const timesPath = `${base}/retorno/horarios`;
+const here = portalHref(`${base}/retorno/revisao`, { ...keep, date: params.get("date"), reserva: holdId });
+const doneHref = portalHref(`${base}/retorno/marcado`, { reserva: holdId });
+const timesHref = (release: boolean) => portalHref(timesPath, { ...keep, date: params.get("date"), soltar: release ? "1" : null });
+const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
+
+let hold: PortalHold | null = null;
+let card: ReturnCard | null = null;
+let problem: string | null = null;
+if (page.kind === "open") {
+  const { db, portal } = page;
+  const session = await readSession(db, portal.clinicId, Astro.cookies);
+  hold = session ? await loadHold(db, portal.clinicId, session.id, holdId) : null;
+  if (hold && !hold.returnOriginId) hold = null;
+  if (hold?.state === "booked") return Astro.redirect(doneHref);
+  if (session && hold?.state === "active" && Astro.request.method === "POST") {
+    // "Marcar retorno": a marcação confere tudo de novo (o direito, o médico, o serviço e os limites).
+    const outcome = await confirmPortalReturn(db, portal, {
+      sessionId: session.id,
+      holdId: hold.id,
+      sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null),
+    });
+    if (outcome.status === "booked") return Astro.redirect(doneHref);
+    if (outcome.status === "confirming" || outcome.status === "expired") return Astro.redirect(here);
+    if (outcome.status === "taken") return Astro.redirect(portalHref(timesPath, { ...keep, date: params.get("date"), erro: "horario" }));
+    // Sem direito agora (outro canal marcou o retorno, a consulta mudou): a lista explica, com o aviso.
+    if (outcome.status === "no_patient") return Astro.redirect(portalHref(`${base}/retorno`, { aviso: "mudou" }));
+    card = await findReturnCard(db, portal, hold.phone, hold.returnOriginId!);
+    if (!card) return Astro.redirect(portalHref(`${base}/retorno`, { aviso: "mudou" }));
+    if (outcome.status === "blocked") problem = blockMessage(toBlockText(outcome.reason, timeZone), card.professional.name, card.patient.fullName);
+    else problem = "Não conseguimos marcar agora. Toque em “Marcar retorno” de novo ou fale com a recepção.";
+  } else if (session && hold?.state === "active") {
+    card = await findReturnCard(db, portal, hold.phone, hold.returnOriginId!);
+    if (!card || card.patient.id !== hold.patientId || card.service.id !== hold.serviceId) return Astro.redirect(`${base}/retorno`);
+    // Os limites do bot antes de confirmar (sem gravar), como na P9.
+    const block = await returnBlock(db, portal.clinicId, hold.phone);
+    if (block) problem = blockMessage(toBlockText(block, timeZone), card.professional.name, card.patient.fullName);
+  }
+}
+// Outra aba ou o outro toque ainda marcando (tomou a reserva há menos de 1 min): a tela se atualiza até terminar.
+const confirming = !problem && hold?.state === "active" && !!hold.confirmingAt && Date.now() - hold.confirmingAt.getTime() < 60_000;
+const active = !!card && hold?.state === "active";
+const location = card && hold ? (card.professional.locations.find((l) => l.id === hold!.locationId) ?? null) : null;
+// "Terça, 17/11, às 14:00" (canvas RT4: o dia sem "-feira").
+const when = hold ? capitalize(formatInstant(hold.start, timeZone, "EEEE, dd/MM, 'às' HH:mm").replace("-feira", "")) : "";
+const shortWhen = hold ? `${capitalize(formatInstant(hold.start, timeZone, "EEE").slice(0, 3))}, ${formatInstant(hold.start, timeZone, "dd/MM, HH:mm")}` : "";
+const row = "flex items-start justify-between gap-3 border-b border-gray-100 py-3 last:border-b-0";
+const dt = "text-[15px] text-gray-600";
+---
+
+<PortalLayout
+  title={active ? "Confira o retorno" : page.kind === "open" ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={card ? ofName(card.professional.name) : null}
+>
+  {confirming && <meta http-equiv="refresh" content="2" slot="head" />}
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !active && <PortalHoldExpired timesHref={keep.consulta ? timesHref(false) : `${base}/retorno`} />}
+  {
+    active && card && hold && (
+      <div class="flex flex-col gap-[18px]">
+        <PortalStepBar back={timesHref(true)} step={{ current: 3, total: 3 }} />
+        <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={here} />
+        <h1 class={portalTitle}>Confira o retorno</h1>
+        {problem && (
+          <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">
+            {problem}
+          </p>
+        )}
+        <div class="overflow-hidden rounded-2xl border-[1.5px] border-gray-200 bg-white">
+          <p class="flex flex-col gap-0.5 bg-clinic px-4 py-4 text-clinic-text sm:px-5">
+            <span class="text-base opacity-90">Retorno</span>
+            <span class="font-display text-[26px] leading-[1.15] font-bold">{when}</span>
+          </p>
+          <dl class="flex flex-col px-4 sm:px-5">
+            <div class={row}>
+              <div class="min-w-0">
+                <dt class={dt}>Paciente</dt>
+                <dd class="font-bold break-words">{card.patient.fullName}</dd>
+              </div>
+            </div>
+            <div class={row}>
+              <div class="min-w-0">
+                <dt class={dt}>Médico</dt>
+                <dd>
+                  <b>{card.professional.name}</b>
+                  {card.professional.specialties[0] ? `, ${card.professional.specialties[0].name}` : ""}
+                </dd>
+              </div>
+            </div>
+            <div class={row}>
+              <div class="min-w-0">
+                <dt class={dt}>Da consulta de</dt>
+                <dd>{consultationOn(card.originDate).replace("Consulta em ", "")}</dd>
+              </div>
+            </div>
+            {location && (
+              <div class={row}>
+                <div class="min-w-0">
+                  <dt class={dt}>Local</dt>
+                  <dd>{location.address ?? location.name}</dd>
+                </div>
+                {location.address && (
+                  <a href={mapsHref(location.address)} target="_blank" rel="noopener" class={`${portalLink} whitespace-nowrap`}>
+                    Ver no mapa
+                  </a>
+                )}
+              </div>
+            )}
+            <div class={row}>
+              <div class="min-w-0">
+                <dt class={dt}>Dia e horário</dt>
+                <dd>{shortWhen}</dd>
+              </div>
+              <a href={timesHref(true)} class={portalLink} aria-label="Alterar o dia e o horário">Alterar</a>
+            </div>
+          </dl>
+        </div>
+        {card.professional.orientation && (
+          <div class="flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5">
+            <p class="text-[15px] text-gray-600">Orientações {ofName(shortName(card.professional.name))}</p>
+            <p class="text-[17px] whitespace-pre-line">{card.professional.orientation}</p>
+          </div>
+        )}
+        <form method="POST" action={here} class="flex flex-col gap-2.5">
+          <button type="submit" class={portalCta} data-sending-label="Marcando…" disabled={confirming} aria-busy={confirming ? "true" : undefined}>
+            {confirming ? "Marcando…" : "Marcar retorno"}
+          </button>
+          <p class="text-[15px] text-gray-600 sm:text-left">A confirmação chega no WhatsApp {phoneEnding(hold.phone)}.</p>
+        </form>
+      </div>
+    )
+  }
+</PortalLayout>

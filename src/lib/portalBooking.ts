@@ -55,7 +55,8 @@ export function birthdateText(iso: string, today: string): string {
 }
 
 /** "Consulta com Dra. Ana Lima — Clínica Exemplo" (I4: com o médico; sem especialidade nem convênio). */
-export const icsTitle = (professional: string, clinic: string) => `Consulta com ${professional} — ${clinic}`;
+export const icsTitle = (professional: string, clinic: string, kind: "consulta" | "retorno" = "consulta") =>
+  `${kind === "retorno" ? "Retorno" : "Consulta"} com ${professional} — ${clinic}`;
 
 const icsText = (value: string) => value.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/([,;])/g, "\\$1");
 const icsStamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");

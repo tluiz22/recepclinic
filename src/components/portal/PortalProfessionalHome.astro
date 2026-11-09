@@ -5,15 +5,18 @@
 import type { PortalClinic, PortalProfessional } from "../../lib/data/portal/portal";
 import { mapsHref, nextSlotLabel, privateLabel, withName } from "../../lib/portal";
 import PortalAvatar from "./PortalAvatar.astro";
+import PortalMoreActions from "./PortalMoreActions.astro";
 
 interface Props {
   portal: PortalClinic;
   professional: PortalProfessional;
   base: string;
   next: Date | null;
+  /** "Marcar retorno" e "Marcar exame" (D4), quando a clínica tem. */
+  actions?: { href: string; label: string; detail: string; icon: "return" | "exam" }[];
 }
 
-const { portal, professional, base, next } = Astro.props;
+const { portal, professional, base, next, actions = [] } = Astro.props;
 const start = `${base}/${professional.slug}/atendimento`;
 const box = "flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5";
 const title = "text-[15px] font-semibold text-gray-600";
@@ -49,6 +52,7 @@ const title = "text-[15px] font-semibold text-gray-600";
         </p>
       )
     }
+    <PortalMoreActions actions={actions} />
   </div>
   <div class="flex flex-col gap-2.5">
     <div class={box}>

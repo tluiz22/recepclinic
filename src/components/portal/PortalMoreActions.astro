@@ -1,0 +1,46 @@
+---
+// Botões abaixo de "Agendar consulta" no início (D4; canvas RT1a, opção A): "Marcar retorno" (só com o serviço de
+// retorno) e "Marcar exame" (só na clínica com exames), cada um com uma linha de explicação. "Minhas consultas" chega
+// com a F3 (P12).
+interface Action {
+  href: string;
+  label: string;
+  detail: string;
+  icon: "return" | "exam";
+}
+
+interface Props {
+  actions: Action[];
+}
+
+const { actions } = Astro.props;
+const paths = {
+  return: ["M3 12a9 9 0 1 0 3-6.7", "M3 4v5h5"],
+  exam: ["M9 3h6", "M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3", "M7.5 15h9"],
+};
+---
+
+{
+  actions.length > 0 && (
+    <ul class="flex flex-col gap-2.5 sm:max-w-[420px]">
+      {actions.map((action) => (
+        <li>
+          <a
+            href={action.href}
+            class="flex min-h-16 w-full items-center gap-3.5 rounded-xl border-[1.5px] border-gray-300 bg-white px-4 py-2.5 text-left text-gray-900 no-underline hover:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink"
+          >
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-clinic-tint text-clinic-ink" aria-hidden="true">
+              <svg class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                {paths[action.icon].map((d) => <path d={d} />)}
+              </svg>
+            </span>
+            <span class="flex min-w-0 flex-col">
+              <b class="text-lg text-clinic-ink">{action.label}</b>
+              <span class="text-[15px] leading-snug text-gray-700">{action.detail}</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}

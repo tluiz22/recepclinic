@@ -220,6 +220,17 @@ export const lastBookableDate = (professional: Pick<PortalProfessional, "horizon
 
 export type PortalSlot = FreeSlot & { serviceId: string };
 
+/**
+ * Outro recorte dos horários do profissional (retorno, F2d): só os locais onde o serviço é oferecido e o último dia
+ * (o fim do prazo do retorno, sem passar do prazo do profissional).
+ */
+export type SlotScope = { locations?: readonly PortalLocation[]; lastDate?: string | null };
+
+export const scopeLastDate = (professional: Pick<PortalProfessional, "horizonDays">, timeZone: string, now: Date, scope: SlotScope) => {
+  const own = lastBookableDate(professional, timeZone, now);
+  return scope.lastDate && scope.lastDate < own ? scope.lastDate : own;
+};
+
 /** Próximas datas com horário livre do tipo de Consulta, nos locais da clínica (até `count`, no prazo). */
 export async function professionalDates(
   db: DbClient,
@@ -227,12 +238,12 @@ export async function professionalDates(
   professional: PortalProfessional,
   serviceId: string,
   timeZone: string,
-  { count = 60, now = new Date(), sessionId = null }: { count?: number; now?: Date; sessionId?: string | null } = {},
+  { count = 60, now = new Date(), sessionId = null, scope = {} }: { count?: number; now?: Date; sessionId?: string | null; scope?: SlotScope } = {},
 ): Promise<string[]> {
-  const lastDate = lastBookableDate(professional, timeZone, now);
+  const lastDate = scopeLastDate(professional, timeZone, now, scope);
   const holds = { exceptSession: sessionId };
   const perLocation = await Promise.all(
-    professional.locations.map((location) =>
+    (scope.locations ?? professional.locations).map((location) =>
       getNextAvailableDates(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, count, lastDate, holds }, now),
     ),
   );
@@ -252,11 +263,12 @@ export async function professionalSlots(
   timeZone: string,
   now: Date = new Date(),
   sessionId: string | null = null,
+  scope: SlotScope = {},
 ): Promise<PortalSlot[]> {
-  if (date > lastBookableDate(professional, timeZone, now)) return [];
+  if (date > scopeLastDate(professional, timeZone, now, scope)) return [];
   const holds = { exceptSession: sessionId };
   const perLocation = await Promise.all(
-    professional.locations.map((location) =>
+    (scope.locations ?? professional.locations).map((location) =>
       getFreeSlots(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, date, holds }, now),
     ),
   );
@@ -275,10 +287,11 @@ export async function isProfessionalDayOpen(
   date: string,
   timeZone: string,
   now: Date = new Date(),
+  scope: SlotScope = {},
 ): Promise<boolean> {
-  if (date > lastBookableDate(professional, timeZone, now)) return false;
+  if (date > scopeLastDate(professional, timeZone, now, scope)) return false;
   const open = await Promise.all(
-    professional.locations.map((location) => isAgendaOpenOn(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, date }, now)),
+    (scope.locations ?? professional.locations).map((location) => isAgendaOpenOn(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, date }, now)),
   );
   return open.some(Boolean);
 }

@@ -7,7 +7,7 @@ import { professionalOf } from "../../../../lib/data/portal/page";
 import { resolveClinicByPortalSlug } from "../../../../lib/data/platform";
 import { buildIcs, icsTitle } from "../../../../lib/portalBooking";
 
-// P10 "Adicionar à agenda do celular" (F2c; I4): o .ics da consulta marcada nesta sessão ("Consulta com {médico} —
+// P10 "Adicionar à agenda do celular" (F2c; I4): o .ics da consulta (ou do retorno, F2d) marcada nesta sessão ("Consulta com {médico} —
 // {Clínica}" e o endereço; sem especialidade, convênio ou outro dado de saúde). Sem extensão no caminho: o endereço do
 // portal só passa páginas sem extensão (portalRewrite); o nome do arquivo vai no cabeçalho.
 export const GET: APIRoute = async ({ params, url, cookies }) => {
@@ -28,13 +28,13 @@ export const GET: APIRoute = async ({ params, url, cookies }) => {
     uid: booked.appointmentId,
     start: booked.start,
     end: booked.end,
-    title: icsTitle(professional.name, portal.brand.name),
+    title: icsTitle(professional.name, portal.brand.name, hold.returnOriginId ? "retorno" : "consulta"),
     location: location ? [location.name, location.address].filter(Boolean).join(", ") : null,
   });
   return new Response(ics, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="consulta.ics"',
+      "Content-Disposition": `attachment; filename="${hold.returnOriginId ? "retorno" : "consulta"}.ics"`,
       "Cache-Control": "no-store",
     },
   });

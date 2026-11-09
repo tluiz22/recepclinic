@@ -23,6 +23,7 @@ import {
   shortName,
   stepPosition,
   suggestPortalSlug,
+  toName,
   withName,
 } from "./portal";
 
@@ -166,6 +167,9 @@ describe("textos", () => {
     expect(shortName("Ana Lima")).toBe("Ana");
     expect(withName("Dra. Ana Lima")).toBe("com a Dra. Ana");
     expect(withName("Dr. Bruno Tavares")).toBe("com o Dr. Bruno");
+    expect(toName("Dra. Ana Lima")).toBe("à Dra. Ana");
+    expect(toName("Dr. Bruno Tavares")).toBe("ao Dr. Bruno");
+    expect(toName("Marina Alves")).toBe("a Marina");
     expect(withName("Ana Lima")).toBe("com Ana");
     expect(ofName("Dra. Ana Lima")).toBe("da Dra. Ana Lima");
     expect(ofName("Ana Lima")).toBe("de Ana Lima");

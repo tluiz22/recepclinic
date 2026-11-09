@@ -183,12 +183,25 @@ export function shortName(name: string): string {
   return /^(dra?|prof(a)?)\.?$/i.test(words[0] ?? "") && words.length > 1 ? `${words[0]} ${words[1]}` : (words[0] ?? name);
 }
 
+/** O artigo pelo título do nome ("a" para Dra./Profa., "o" para Dr./Prof.; sem título, nenhum). */
+function titleArticle(short: string): "a" | "o" | null {
+  if (/^(dra|profa)\.?\s/i.test(short)) return "a";
+  if (/^(dr|prof)\.?\s/i.test(short)) return "o";
+  return null;
+}
+
 /** "com a Dra. Ana", "com o Dr. Bruno", "com Ana" (sem título, sem artigo). */
 export function withName(name: string): string {
   const short = shortName(name);
-  if (/^dra\.?\s/i.test(short) || /^profa\.?\s/i.test(short)) return `com a ${short}`;
-  if (/^dr\.?\s/i.test(short) || /^prof\.?\s/i.test(short)) return `com o ${short}`;
-  return `com ${short}`;
+  const article = titleArticle(short);
+  return article ? `com ${article} ${short}` : `com ${short}`;
+}
+
+/** "à Dra. Ana", "ao Dr. Bruno", "a Ana" ("Para voltar ao Dr. André…", retorno). */
+export function toName(name: string): string {
+  const short = shortName(name);
+  const article = titleArticle(short);
+  return article === "a" ? `à ${short}` : article === "o" ? `ao ${short}` : `a ${short}`;
 }
 
 export const HELP_MESSAGE = "Olá! Estou no portal e preciso de ajuda para agendar.";

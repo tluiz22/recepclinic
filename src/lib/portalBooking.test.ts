@@ -68,3 +68,10 @@ describe("blockMessage", () => {
     expect(blockMessage({ kind: "limit", reason: "no_shows", current: 5 }, "X", null)).toBe("Para este agendamento, fale com a recepção.");
   });
 });
+
+describe("título do .ics por tipo (F2d)", () => {
+  it("consulta e retorno", () => {
+    expect(icsTitle("Dra. Ana Lima", "Clínica Exemplo")).toBe("Consulta com Dra. Ana Lima — Clínica Exemplo");
+    expect(icsTitle("Dra. Ana Lima", "Clínica Exemplo", "retorno")).toBe("Retorno com Dra. Ana Lima — Clínica Exemplo");
+  });
+});

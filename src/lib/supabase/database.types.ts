@@ -2103,14 +2103,14 @@ isOneToOne: false
                   ]
                 },"slot_holds": {
                   Row: {
-                    "agenda_id": string,"appointment_id": string | null,"clinic_id": string,"confirming_at": string | null,"created_at": string,"ends_at": string,"expires_at": string,"id": string,"informed_birthdate": string | null,"location_id": string,"new_patient": Json | null,"patient_id": string | null,"phone": string,"released_at": string | null,"service_id": string,"session_id": string,"starts_at": string
+                    "agenda_id": string,"appointment_id": string | null,"clinic_id": string,"confirming_at": string | null,"created_at": string,"ends_at": string,"expires_at": string,"id": string,"informed_birthdate": string | null,"location_id": string,"new_patient": Json | null,"patient_id": string | null,"phone": string,"released_at": string | null,"return_origin_id": string | null,"service_id": string,"session_id": string,"starts_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_id": string,"appointment_id"?: string | null,"clinic_id": string,"confirming_at"?: string | null,"created_at"?: string,"ends_at": string,"expires_at": string,"id"?: string,"informed_birthdate"?: string | null,"location_id": string,"new_patient"?: Json | null,"patient_id"?: string | null,"phone": string,"released_at"?: string | null,"service_id": string,"session_id": string,"starts_at": string
+                    "agenda_id": string,"appointment_id"?: string | null,"clinic_id": string,"confirming_at"?: string | null,"created_at"?: string,"ends_at": string,"expires_at": string,"id"?: string,"informed_birthdate"?: string | null,"location_id": string,"new_patient"?: Json | null,"patient_id"?: string | null,"phone": string,"released_at"?: string | null,"return_origin_id"?: string | null,"service_id": string,"session_id": string,"starts_at": string
                   }
                   Update: {
-                    "agenda_id"?: string,"appointment_id"?: string | null,"clinic_id"?: string,"confirming_at"?: string | null,"created_at"?: string,"ends_at"?: string,"expires_at"?: string,"id"?: string,"informed_birthdate"?: string | null,"location_id"?: string,"new_patient"?: Json | null,"patient_id"?: string | null,"phone"?: string,"released_at"?: string | null,"service_id"?: string,"session_id"?: string,"starts_at"?: string
+                    "agenda_id"?: string,"appointment_id"?: string | null,"clinic_id"?: string,"confirming_at"?: string | null,"created_at"?: string,"ends_at"?: string,"expires_at"?: string,"id"?: string,"informed_birthdate"?: string | null,"location_id"?: string,"new_patient"?: Json | null,"patient_id"?: string | null,"phone"?: string,"released_at"?: string | null,"return_origin_id"?: string | null,"service_id"?: string,"session_id"?: string,"starts_at"?: string
                   }
                   Relationships: [
                     {

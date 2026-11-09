@@ -42,12 +42,14 @@ export type PortalHold = {
   informedBirthdate: string | null;
   confirmingAt: Date | null;
   appointmentId: string | null;
+  /** Retorno (F2d): a consulta de origem; null = consulta ou exame. */
+  returnOriginId: string | null;
   /** Ativa (pode seguir), marcada (P10) ou vencida/solta. */
   state: "active" | "booked" | "gone";
 };
 
 const HOLD_COLUMNS =
-  "id, agenda_id, service_id, location_id, starts_at, ends_at, expires_at, phone, patient_id, new_patient, informed_birthdate, confirming_at, appointment_id, released_at";
+  "id, agenda_id, service_id, location_id, starts_at, ends_at, expires_at, phone, patient_id, new_patient, informed_birthdate, confirming_at, appointment_id, released_at, return_origin_id";
 
 function toNewPatient(value: unknown): NewPatientData | null {
   if (!value || typeof value !== "object") return null;
@@ -79,6 +81,7 @@ export async function loadHold(db: DbClient, clinicId: string, sessionId: string
     informedBirthdate: row.informed_birthdate,
     confirmingAt: row.confirming_at ? new Date(row.confirming_at) : null,
     appointmentId: row.appointment_id,
+    returnOriginId: row.return_origin_id,
     state,
   };
 }
@@ -193,7 +196,7 @@ export type ConfirmOutcome =
   | { status: "failed" };
 
 /** Toma a reserva para marcar (uma vez só; quem tomou e caiu libera depois de 1 min). */
-async function claimHold(db: DbClient, clinicId: string, sessionId: string, holdId: string, now: Date): Promise<boolean> {
+export async function claimHold(db: DbClient, clinicId: string, sessionId: string, holdId: string, now: Date): Promise<boolean> {
   const stale = new Date(now.getTime() - 60_000).toISOString();
   const rows = unwrap(
     await db
@@ -212,7 +215,7 @@ async function claimHold(db: DbClient, clinicId: string, sessionId: string, hold
   return rows.length > 0;
 }
 
-async function unclaimHold(db: DbClient, clinicId: string, holdId: string): Promise<void> {
+export async function unclaimHold(db: DbClient, clinicId: string, holdId: string): Promise<void> {
   const { error } = await db.from("slot_holds").update({ confirming_at: null }).eq("clinic_id", clinicId).eq("id", holdId).is("appointment_id", null);
   if (error) logError("portal: reserva não devolvida", error, { clinica: clinicId, reserva: holdId });
 }
@@ -238,7 +241,8 @@ export async function confirmPortalBooking(
   now: Date = new Date(),
 ): Promise<ConfirmOutcome> {
   const hold = await loadHold(db, clinicId, input.sessionId, input.holdId, now);
-  if (!hold || hold.agendaId !== input.professional.agendaId) return { status: "expired" };
+  // A reserva de um retorno só se marca pela revisão do retorno (returnVisit.ts).
+  if (!hold || hold.agendaId !== input.professional.agendaId || hold.returnOriginId) return { status: "expired" };
   if (hold.state === "booked") return { status: "booked", appointmentId: hold.appointmentId! };
   if (hold.state === "gone") return { status: "expired" };
   if (!hold.patientId && !hold.newPatient) return { status: "no_patient" };
@@ -336,11 +340,14 @@ async function registerNew(db: DbClient, clinicId: string, phone: string, data: 
   return result.patient.id;
 }
 
-/** Origem, convênio e data a conferir: melhor esforço (a consulta já está marcada). */
-async function afterBooking(
+/**
+ * Origem, convênio e data a conferir: melhor esforço (a consulta já está marcada). `insurancePlanId` undefined (retorno):
+ * o atendimento fica com o convênio que o banco copiou do cadastro.
+ */
+export async function afterBooking(
   db: DbClient,
   clinicId: string,
-  input: { appointmentId: string; hold: PortalHold; insurancePlanId: string | null; entry: "whatsapp" | "clinic_link" | "professional_link" },
+  input: { appointmentId: string; hold: PortalHold; insurancePlanId?: string | null; entry: "whatsapp" | "clinic_link" | "professional_link" },
   now: Date,
 ): Promise<void> {
   try {
@@ -348,7 +355,7 @@ async function afterBooking(
       await db
         .from("appointments")
         // Particular: sem convênio no atendimento (o banco copia o do cadastro ao gravar).
-        .update({ portal_entry: input.entry, insurance_plan_id: input.insurancePlanId })
+        .update(input.insurancePlanId === undefined ? { portal_entry: input.entry } : { portal_entry: input.entry, insurance_plan_id: input.insurancePlanId })
         .eq("clinic_id", clinicId)
         .eq("id", input.appointmentId),
       "Atendimento",

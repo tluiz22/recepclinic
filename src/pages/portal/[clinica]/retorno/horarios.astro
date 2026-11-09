@@ -1,0 +1,267 @@
+---
+// Retorno, passo 2 (F2d; D4; canvas RT3): "Escolha o dia do retorno", só com os dias até o fim do prazo (e do prazo do
+// médico), nos locais onde o Retorno é oferecido; o quadro "Nenhum horário serve?" só com "Falar com a recepção".
+// "Continuar" reserva o horário (celular já comprovado na lista) com o paciente e a consulta de origem e segue para a
+// revisão. A consulta de origem é conferida de novo (do celular e ainda com direito) a cada abertura.
+import PatientDayStrip from "../../../../components/public/PatientDayStrip.astro";
+import PatientSlots, { type PatientSlot } from "../../../../components/public/PatientSlots.astro";
+import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { capitalize } from "../../../../lib/vocabulary";
+import { formatCalendarDate, formatInstant, isCalendarDate, localDateOf } from "../../../../lib/clinicTime";
+import { parseSlotChoice, slotChoiceValue } from "../../../../lib/data/agenda/publicBooking";
+import { hitLimits, holdSlot, readSession, releaseHold } from "../../../../lib/data/portal/identity";
+import { clientIpOf, holdBlocked } from "../../../../lib/data/portal/identityStep";
+import { openPortalPage } from "../../../../lib/data/portal/page";
+import { isProfessionalDayOpen, professionalDates, professionalSlots } from "../../../../lib/data/portal/portal";
+import { findReturnCard, returnLastShownDate, returnScope, setHoldReturn, type ReturnCard } from "../../../../lib/data/portal/returnVisit";
+import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
+import { ofName, portalHref, receptionWhatsappHref } from "../../../../lib/portal";
+import { blockedText, ipPrefix, LIMITS } from "../../../../lib/portalIdentity";
+import { dayMonth, returnUntil } from "../../../../lib/portalReturn";
+
+const page = await openPortalPage(Astro);
+if (page.kind === "not_found") Astro.response.status = 404;
+const base = page.kind === "open" ? page.base : "";
+const params = Astro.url.searchParams;
+const originId = params.get("consulta") ?? "";
+// Uma só consulta com direito: a lista foi pulada, o Voltar leva ao início.
+const single = params.get("unica") === "1";
+const listHref = `${base}/retorno`;
+const keep = { consulta: originId, unica: single ? "1" : null };
+const timesPath = `${base}/retorno/horarios`;
+const here = portalHref(timesPath, keep);
+const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
+const dateParam = (name: string) => {
+  const value = params.get(name);
+  return value && isCalendarDate(value) ? value : null;
+};
+
+let card: ReturnCard | null = null;
+let strip: DayStrip | null = null;
+let slotOptions: PatientSlot[] = [];
+let unavailableOpen = false;
+let blockedUntil: Date | null = null;
+let problem: string | null = null;
+let lastShown = "";
+if (page.kind === "open") {
+  const { db, portal } = page;
+  const clinicId = portal.clinicId;
+  const session = await readSession(db, clinicId, Astro.cookies);
+  // Sem o celular comprovado (sessão vencida) ou consulta sem direito: de volta à lista, que pede o celular ou explica.
+  if (!session?.verified || !session.phone) return Astro.redirect(listHref);
+  card = await findReturnCard(db, portal, session.phone, originId);
+  if (!card) return Astro.redirect(listHref);
+  const scope = returnScope(card);
+  lastShown = returnLastShownDate(card, timeZone);
+
+  if (Astro.request.method === "POST") {
+    const form = await Astro.request.formData().catch(() => null);
+    const choice = parseSlotChoice(String(form?.get("start") ?? ""));
+    const date = choice ? localDateOf(choice.start, timeZone) : null;
+    const free =
+      !!choice &&
+      choice.agendaId === card.professional.agendaId &&
+      scope.locations.some((l) => l.id === choice.locationId) &&
+      (await professionalSlots(db, clinicId, card.professional, card.service.id, date!, timeZone, new Date(), session.id, scope)).some(
+        (slot) => slot.locationId === choice.locationId && slot.start.getTime() === choice.start.getTime(),
+      );
+    if (!free) return Astro.redirect(portalHref(timesPath, { ...keep, date, erro: "horario" }));
+    const blocked = await holdBlocked(db, clinicId, Astro);
+    if (blocked) {
+      blockedUntil = blocked;
+    } else {
+      const hold = await holdSlot(db, clinicId, session.id, {
+        agendaId: card.professional.agendaId,
+        serviceId: card.service.id,
+        locationId: choice!.locationId,
+        start: choice!.start,
+        end: new Date(choice!.start.getTime() + card.service.durationMinutes * 60_000),
+      });
+      if (hold.status === "ok") {
+        if (await setHoldReturn(db, clinicId, session.id, hold.holdId, card)) {
+          return Astro.redirect(portalHref(`${base}/retorno/revisao`, { ...keep, date, reserva: hold.holdId }));
+        }
+        // A reserva sem a consulta de origem não serve: o horário é solto para todos.
+        await releaseHold(db, clinicId, session.id);
+      }
+      // Sessão vencida ou celular não mais comprovado: a lista pede o celular de novo.
+      if (hold.status === "session") return Astro.redirect(listHref);
+      if (hold.status === "taken") return Astro.redirect(portalHref(timesPath, { ...keep, date, erro: "horario" }));
+      problem = hold.status === "limit" ? "Este celular já reservou muitos horários hoje. Para marcar, fale com a recepção." : "Não conseguimos reservar o horário. Tente de novo.";
+    }
+  }
+
+  // Limite de consultas de horários (F2b): por IP e por sessão.
+  blockedUntil ??= await hitLimits(db, clinicId, [
+    [`ip:${ipPrefix(clientIpOf(Astro))}`, LIMITS.slotsPerIp],
+    [`session:${session.id}`, LIMITS.slotsPerSession],
+  ]);
+  // Voltou da revisão: o horário é solto para todos.
+  if (params.get("soltar")) await releaseHold(db, clinicId, session.id);
+  if (!blockedUntil) {
+    const professional = card.professional;
+    const dates = await professionalDates(db, clinicId, professional, card.service.id, timeZone, { sessionId: session.id, scope });
+    strip = buildDayStrip(dates, dateParam("date"), dateParam("start"));
+    if (strip.unavailable && !strip.selected && dates.length) strip = { ...buildDayStrip(dates, null, null), unavailable: strip.unavailable };
+    const [slots, open] = await Promise.all([
+      strip.selected ? professionalSlots(db, clinicId, professional, card.service.id, strip.selected, timeZone, new Date(), session.id, scope) : [],
+      strip.unavailable ? isProfessionalDayOpen(db, clinicId, professional, card.service.id, strip.unavailable, timeZone, new Date(), scope) : false,
+    ]);
+    unavailableOpen = open;
+    const locationName = (id: string) => scope.locations.find((l) => l.id === id)?.name ?? "";
+    slotOptions = slots.map((slot) => ({
+      value: slotChoiceValue({ start: slot.start, agendaId: professional.agendaId, locationId: slot.locationId }),
+      label: formatInstant(slot.start, timeZone, "HH:mm"),
+      detail: scope.locations.length > 1 ? locationName(slot.locationId) : "",
+      summary: `${capitalize(formatInstant(slot.start, timeZone, "EEE").slice(0, 3))}, ${formatInstant(slot.start, timeZone, "dd/MM 'às' HH:mm")}`,
+    }));
+  }
+}
+
+const back = single ? base || "/" : listHref;
+const dayHref = (date: string, start: string) => portalHref(timesPath, { ...keep, date, start });
+const taken = params.get("erro") === "horario";
+const unavailableNote = !strip?.unavailable
+  ? null
+  : unavailableOpen
+    ? `${capitalize(formatCalendarDate(strip.unavailable, "EEEE, d 'de' MMMM"))} não tem mais horário livre.${strip.selected > strip.unavailable ? " Mostramos o próximo dia com horário." : ""}`
+    : "Não há atendimento nesse dia. Mostramos o próximo dia com horário.";
+const waPhone = page.kind === "open" ? page.portal.brand.whatsappPhone : null;
+const waHref = waPhone ? receptionWhatsappHref(waPhone, "Olá! Quero marcar um retorno e nenhum horário do portal serve.") : null;
+const notice = "flex items-start gap-2.5 rounded-[14px] border px-4 py-3 text-[17px]";
+const trocar = "inline-flex min-h-11 shrink-0 items-center px-1 text-base font-bold text-clinic-ink underline";
+---
+
+<PortalLayout
+  title={card ? "Escolha o dia do retorno" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={card ? ofName(card.professional.name) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {
+    card && (
+      <form method="POST" action={here} id="portal-horario" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-4">
+          <PortalStepBar back={back} step={{ current: 2, total: 3 }} />
+          <p class="-mb-2 text-[15px] text-gray-700">
+            Retorno de <b class="text-gray-900">{card.patient.fullName}</b>
+          </p>
+          <PortalDoctor professional={card.professional}>
+            <p class="flex items-center justify-between gap-2.5 border-t border-black/10 pt-1 text-base sm:border-gray-100">
+              <span>
+                Consulta de {dayMonth(card.originDate)}. <b>{returnUntil(card.lastDate)}.</b>
+              </span>
+              {!single && <a href={listHref} class={trocar} aria-label="Trocar a consulta do retorno">Trocar</a>}
+            </p>
+          </PortalDoctor>
+          <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Escolha o dia do retorno</h1>
+          <div id="portal-escolha" class="flex flex-col gap-4" aria-live="polite">
+            {blockedUntil && (
+              <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="alert">
+                Muitas consultas em pouco tempo. Tente de novo {blockedText(blockedUntil)} ou toque em "Recepção", no topo, para falar com a clínica.
+              </p>
+            )}
+            {problem && <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">{problem}</p>}
+            {taken && <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">Esse horário acabou de ser ocupado por outra pessoa. Escolha outro.</p>}
+            {unavailableNote && <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="status">{unavailableNote}</p>}
+            {blockedUntil ? null : strip && strip.selected ? (
+              <>
+                <p class="text-base text-gray-600">Só aparecem os dias até {dayMonth(lastShown)}, {card.lastDate && lastShown === card.lastDate ? "o fim do prazo" : "o último dia da agenda"}.</p>
+                <input type="hidden" name="date" value={strip.selected} />
+                <PatientDayStrip strip={strip} title="Dias com horário" href={dayHref} />
+                <p class="mt-1 font-display text-[21px] font-bold lg:text-[22px]">{capitalize(formatCalendarDate(strip.selected, "EEEE, d 'de' MMMM"))}</p>
+                {slotOptions.length ? <PatientSlots options={slotOptions} /> : <p class="text-base text-gray-600">Nenhum horário livre nesse dia. Escolha outro dia.</p>}
+              </>
+            ) : (
+              <p class="rounded-[14px] border border-gray-200 bg-white px-4 py-4" role="status">Não há horário livre para o retorno até {dayMonth(lastShown)}.</p>
+            )}
+          </div>
+          <div class="mt-2 flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5 lg:max-w-[560px]">
+            <p class="text-base font-bold">Nenhum horário serve?</p>
+            <p class="text-base text-gray-700">
+              {card.lastDate ? `Depois de ${dayMonth(card.lastDate)} é preciso marcar uma consulta nova. ` : ""}Se quiser, a recepção ajuda a encontrar um horário.
+            </p>
+            {waHref ? (
+              <a href={waHref} target="_blank" rel="noopener" class="flex min-h-11 items-center text-base font-bold text-clinic-ink">Falar com a recepção</a>
+            ) : (
+              <p class="text-base">Toque em "Recepção", no topo, para falar com a clínica.</p>
+            )}
+          </div>
+          <div class="sticky bottom-0 -mx-4 mt-4 flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 lg:hidden">
+            <p class="min-w-0 text-base leading-tight">
+              <span class="block text-gray-600">Escolhido</span>
+              <b class="block truncate text-lg" data-portal-slot>Escolha um horário</b>
+            </p>
+            <button type="submit" class="min-h-14 shrink-0 rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45" data-portal-continue disabled={!slotOptions.length}>Continuar</button>
+          </div>
+        </div>
+        <PortalSummary
+          rows={[
+            { label: "Paciente", value: card.patient.fullName },
+            { label: "Médico", value: card.professional.name },
+            { label: "Retorno da consulta de", value: dayMonth(card.originDate), detail: returnUntil(card.lastDate), change: single ? null : listHref },
+            { label: "Dia e horário", value: null, live: "slot" },
+          ]}
+        >
+          <button type="submit" class="mt-3 min-h-14 rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45" data-portal-continue disabled={!slotOptions.length}>Continuar</button>
+        </PortalSummary>
+      </form>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // Como na P6: o horário escolhido vai para a barra e o resumo; um dia ou uma seta troca só a parte dos horários (sem
+  // recarregar); "Continuar" sem horário avisa no próprio campo.
+  const area = document.getElementById("portal-escolha");
+  const form = document.getElementById("portal-horario") as HTMLFormElement | null;
+  const EMPTY = "Escolha um horário";
+  const refresh = () => {
+    const chosen = area?.querySelector<HTMLInputElement>('input[name="start"]:checked');
+    document.querySelectorAll<HTMLElement>("[data-portal-slot], [data-portal-live=slot]").forEach((el) => {
+      el.textContent = chosen?.dataset.summary ?? (el.dataset.portalLive ? "a escolher" : EMPTY);
+      el.classList.toggle("italic", !chosen && !!el.dataset.portalLive);
+    });
+    const hasOptions = !!area?.querySelector('input[name="start"]');
+    document.querySelectorAll<HTMLButtonElement>("[data-portal-continue]").forEach((b) => (b.disabled = !hasOptions));
+  };
+  area?.addEventListener("change", refresh);
+  area?.addEventListener("click", async (event) => {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>("a[data-agendar-nav]");
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    area.setAttribute("aria-busy", "true");
+    area.classList.add("opacity-60");
+    try {
+      const response = await fetch(link.href, { headers: { Accept: "text/html" } });
+      if (!response.ok) throw new Error(String(response.status));
+      const next = new DOMParser().parseFromString(await response.text(), "text/html").getElementById("portal-escolha");
+      if (!next) throw new Error("sem os horários");
+      area.replaceChildren(...Array.from(next.childNodes));
+      history.replaceState(null, "", link.href);
+      area.querySelector<HTMLElement>('[aria-current="date"]')?.focus();
+    } catch {
+      window.location.href = link.href;
+      return;
+    } finally {
+      area.removeAttribute("aria-busy");
+      area.classList.remove("opacity-60");
+    }
+    refresh();
+  });
+  form?.addEventListener("submit", (event) => {
+    const first = area?.querySelector<HTMLInputElement>('input[name="start"]');
+    if (first && !area?.querySelector('input[name="start"]:checked')) {
+      event.preventDefault();
+      first.reportValidity();
+    }
+  });
+  refresh();
+</script>

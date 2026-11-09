@@ -7,8 +7,8 @@
 > feitas (08/nov, seções 9 e 10; migrações `20270103120000` e `20270104120000`)**, só no computador (branches
 > `recepcao-f2a` e `recepcao-f2b`, sem merge): o cliente valida tudo junto no staging depois (roteiros 9.1 e 10.1).
 > **F2c feita (08/nov, seção 11; migração `20270105120000`)**, só no computador, branch `recepcao-f2c` (sai da F2b).
-> Próximo: F2d (retorno e exames no portal).
-> Próximo: F2c (quem será atendido, revisão e marcação).
+> **F2d, parte 1 (retorno) feita (09/nov, seção 12; migração `20270106120000`)**, só no computador, branch
+> `recepcao-f2d` (sai da F2c). Próximo: F2d, parte 2 (exames no portal), na mesma branch.
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
@@ -389,3 +389,63 @@ mantidos depois de erro, Voltar da P9, duplo clique, .ics sem sessão, recarrega
 5. "Outra pessoa" com o nome parecido de um paciente do celular e outra data: "É a mesma, mas a data certa é…";
    marcar; na Agenda, "Data de nascimento a conferir" → ficha → "Corrigir para…" (confirmação) e o aviso some.
 
+
+## 12. F2d, parte 1: retorno no portal (09/nov/2026, branch `recepcao-f2d`, sobre a F2c)
+
+A F2d foi dividida em duas partes (decisão técnica): **retorno** (esta) e **exames** (próxima, na mesma branch).
+
+Migração `20270106120000_portal_retorno.sql`: a reserva guarda a consulta de origem (`slot_holds.return_origin_id`;
+a credencial da clínica grava só essa coluna a mais).
+
+- **Regras do bot (I8):** `returnVisit.ts` usa as mesmas funções do bot (`findReturnOrigin`,
+  `evaluateReturnEligibility`, `findBlockingAppointment`): a última Consulta de cada paciente do celular em cada
+  agenda de médico do portal com o serviço de Retorno; prazo pelo serviço, sem os dias bloqueados inteiros (I9).
+  Retorno com médico fora do portal fica com a recepção. Limites do bot por telefone, como no `startReturn`.
+- **Telas** (`/{clínica}/retorno/…`, 390 e 1280 px, canvas RT1a, RT2/DRT2, RT3, RT4, RT5):
+  - Início (P1 e início da clínica de um profissional): "Marcar retorno" abaixo de "Agendar consulta", só com o
+    serviço de retorno. O link do profissional (PP) fica sem o botão (a lista mostra médicos da clínica toda).
+  - Sem o celular comprovado: "Qual é o seu celular com WhatsApp?" e o código (a P7 virou peça comum:
+    `identityStep.ts` e `PortalPhoneCode.astro`; a P7 da consulta passou a usá-los, sem mudar o comportamento).
+  - "De qual consulta é o retorno?": um cartão por consulta com direito ("Retorno até…", prazo mais curto primeiro);
+    embaixo, as sem direito com o motivo. Uma só com direito: vai direto aos horários (o Voltar leva ao início).
+  - Nenhuma com direito: o motivo principal na ordem do bot (domiciliar, já marcado, atendimento futuro, prazo). No
+    prazo vencido, RT5 com "Agendar consulta com {médico}" (abre o atendimento dele) e "Falar com a recepção".
+  - Horários: só até o fim do prazo (e do prazo do médico), nos locais do Retorno; "Nenhum horário serve?" só com a
+    recepção. "Continuar" reserva com o paciente e a consulta de origem.
+  - Revisão (sem valor) e "Marcar retorno" (uma vez só; recarregar mostra a mesma confirmação); "Retorno marcado!" com
+    o `.ics` "Retorno com {médico} — {Clínica}".
+- O atendimento sai pelo canal do portal, `portal_entry = clinic_link`, ligado à consulta de origem, com o convênio do
+  cadastro (o retorno nunca fala de valor); a confirmação vai pela fila.
+- Botão do cartão: "Marcar retorno de {primeiro nome}" (o canvas tinha "do João"/"da Maria"; o cadastro não diz o
+  artigo).
+- **Pendência para a F3:** apelidos de profissional iguais a uma rota do portal (`retorno`, `medicos`,
+  `especialidade`, e `exames` na parte 2) esconderiam o profissional; hoje o apelido sai do nome (risco baixo). Na F3,
+  quando o apelido ficar editável, recusar esses nomes.
+
+- **"Trocar número"** na lista e na tela sem direito (achado no Playwright: sem ele, quem entrou com outro celular
+  ficava preso até a sessão vencer).
+
+**`/code-review` (09/nov), corrigidos:** reserva solta quando a consulta de origem não grava nela; sessão vencida ao
+reservar volta ao celular; a marcação confere também o médico e o serviço da reserva; retorno que perde o direito no
+meio (outro canal marcou) solta o horário e a lista avisa ("esse retorno não está mais disponível"); índice na chave
+nova; a revisão confere o direito uma vez só por toque; origens buscadas ao mesmo tempo (clínica grande); o corte do
+último dia numa função só (`scopeLastDate`); artigo do título ("com o", "ao") numa função só; a P7 lê a sessão uma
+vez.
+
+Testes: unidade (`portalReturn.test.ts`, título do `.ics`), banco (`portal-retorno.test.ts`: cartão e horários até o
+fim do prazo, marcação ligada à origem, recarregar, duplo toque, prazo vencido, domiciliar, retorno marcado por outro
+canal no meio, reserva de retorno recusada como consulta, outra sessão) e Playwright no computador local (jornada em
+390 e 1280 px, celular inválido com o valor mantido, código errado, lista pulada com uma só consulta, Voltar de cada
+tela, duplo clique, prazo vencido, "já marcado", P7 da consulta depois da mudança).
+
+### 12.1 Roteiro de validação do retorno (staging, junto com a F2a a F2c)
+
+1. Paciente com Consulta realizada há poucos dias com um médico que tem o serviço de Retorno. No início do portal,
+   "Marcar retorno" → celular e código → (uma consulta só) direto em "Escolha o dia do retorno": só dias até o fim do
+   prazo.
+2. Escolher horário → "Confira o retorno" (sem valor) → "Marcar retorno" → "Retorno marcado!"; chega a confirmação no
+   WhatsApp; na Agenda, o retorno ligado à consulta.
+3. "Marcar retorno" de novo com o mesmo celular: "Não há retorno para marcar" (já marcado).
+4. Celular com duas crianças com consulta recente e uma com prazo vencido: a lista com dois cartões e "1 consulta sem
+   direito a retorno".
+5. Celular só com consulta antiga: "O prazo do retorno acabou" → "Agendar consulta com…" abre o médico.
