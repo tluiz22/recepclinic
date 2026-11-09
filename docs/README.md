@@ -14,8 +14,8 @@
 >   (seção 4.1: endereços e Turnstile). **F1 no staging, validada (08/nov)**; produção: não. **D4 aprovada.**
 >   **F2a a F2d (portal: escolher, código, marcar, retorno e exames) na `main` e no staging (09/nov)**; migrações
 >   `20270103120000` a `20270106120000` aplicadas no staging; produção: não. **Validação conjunta do cliente** pelos
->   roteiros 9.1 a 13.1 do plano (começa por preencher o apelido da clínica no Suporte e criar o modelo do código em
->   Configurações › WhatsApp).
+>   roteiros 9.1 a 13.1 do plano (começa por preencher o apelido da clínica no Suporte; o modelo do código já está
+>   aprovado na conta do RecepClinic).
 >   **Validação parada no código (09/nov):** a Meta só cria o template do código em empresa verificada; decisão do
 >   cliente: o código sai de um **número do RecepClinic** (+55 61 9656-4772, template já aprovado). Seção 14 do plano.
 >   **Código pelo número do RecepClinic, aviso na tela do código e guia "Pagamento na Meta" na `main` e no staging

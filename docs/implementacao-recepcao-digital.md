@@ -315,7 +315,8 @@ hora; falha igual sem a F2b.
 
 ### 10.1 Roteiro de validação da F2b (staging, junto com a F2a)
 
-1. Configurações › WhatsApp (Suporte): criar o modelo "código do portal" e esperar a aprovação da Meta.
+1. Configurações › WhatsApp (Suporte), card "Templates (Suporte)": "Código do portal" **Aprovado** (conta do
+   RecepClinic, seção 14; nada a criar na clínica).
 2. No portal, escolher um horário e "Continuar": digitar um celular fixo (erro), depois o celular do teste; o CAPTCHA
    passa sozinho; chega o código no WhatsApp com "Copiar código".
 3. Digitar um código errado (avisa as tentativas) e depois o certo: "Reservamos este horário por 4:59".
