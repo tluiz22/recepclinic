@@ -523,9 +523,9 @@ de cada uma travaria o portal das clínicas pequenas.
     templates e o pagamento; o ID dela é o antigo WABA ID) `1608311683725577`. Cartão do RecepClinic como padrão nela.
   - Usuário do sistema **recepclinic-codigos** (função Funcionário: o portfólio só aceita 1 administrador), token
     permanente com `whatsapp_business_messaging` e `whatsapp_business_management`.
-  - Variáveis: `WHATSAPP_CODE_PHONE_NUMBER_ID`, `WHATSAPP_CODE_WABA_ID`, `WHATSAPP_CODE_TOKEN` no `.env.staging` e na
-    Vercel do staging (cliente). **Produção:** as mesmas três no projeto `recepclinic-producao` e no
-    `.env.production` (cliente; o número e a conta servem aos dois ambientes).
+  - Variáveis `WHATSAPP_CODE_PHONE_NUMBER_ID`, `WHATSAPP_CODE_WABA_ID`, `WHATSAPP_CODE_TOKEN`: **feitas (cliente,
+    09/nov)** no `.env.staging`, no `.env.production` e na Vercel dos dois projetos (o número e a conta servem aos dois
+    ambientes).
   - **Template `rc_codigo_portal_v1` criado na conta do RecepClinic e APROVADO na hora** (id `1014112705045978`,
     autenticação); vale para staging e produção.
 - **Achado: a versão da API.** O sistema chama a Meta pela **v21.0**; nela, a conta de mensagens criada no modelo novo
