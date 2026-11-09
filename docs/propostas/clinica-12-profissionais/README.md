@@ -1,4 +1,4 @@
-# Proposta oficial: clínica de 12 profissionais (09/nov/2026)
+# Proposta oficial: Biomedical, 12 profissionais (09/nov/2026)
 
 Depois da apresentação ([roteiro](../../roteiro-apresentacao-clinica-18-profissionais.md)): a clínica tem **12
 profissionais** (não 18) e 3 secretárias. Hoje usa o CliqueMassa na recepção e o sistema de prontuário como agenda. A dona
@@ -24,38 +24,38 @@ do WhatsApp pelos lembretes e o tamanho da equipe do RecepClinic.
 - `telas/`: telas do portal (canvas da Etapa 2), geradas com o Playwright.
 - `pdf/`: os anexos. Para gerar de novo depois de editar o HTML, renderizar cada página com o Playwright (`page.pdf`, A4,
   `printBackground`).
-- Campos entre colchetes para o cliente preencher: nome da clínica, da responsável, seus dados, validade e o momento do
-  pagamento do site.
+- Clínica: **Biomedical** (responsável: Aline). Sem prazo de validade na proposta (cliente, 09/nov). Site pago metade na
+  aprovação do escopo e metade na publicação (cliente, 09/nov).
 
 ## Texto do e-mail
 
-**Assunto:** Proposta RecepClinic para a [Nome da clínica]
+**Assunto:** Proposta RecepClinic para a Biomedical
 
-> Olá, [Nome da responsável], tudo bem?
+> Olá, Aline, tudo bem?
 >
-> Obrigado pela conversa. Como combinado, seguem em anexo a proposta do RecepClinic e o material para a senhora
+> Obrigado pela conversa. Como combinado, seguem em anexo a proposta do RecepClinic e o material para você
 > compartilhar com os médicos:
 >
 > 1. **Proposta comercial:** valores, os 3 primeiros meses de implantação e o custo estimado das mensagens do WhatsApp.
 > 2. **Ganhos e funcionalidades:** o que muda para a clínica e para os médicos, com as telas do portal de agendamento.
 > 3. **Escopo do site:** a condição especial do site da clínica, com tudo o que está incluído.
 >
-> Sobre os pontos que a senhora levantou:
+> Sobre os pontos que você levantou:
 >
 > - **Custo da Meta:** refizemos a conta para 12 médicos. Com o portal de agendamento e os avisos enxutos, a estimativa
 >   fica em cerca de **R$ 311 por mês (R$ 26 por médico)**, bem abaixo do que mostramos na reunião. O valor do mês aparece
 >   no próprio RecepClinic, e ajustamos os avisos se ele subir.
 > - **Bloqueio do WhatsApp:** o RecepClinic usa a conexão oficial da Meta, como parceiro técnico aprovado. Os lembretes
 >   são mensagens aprovadas pela Meta e vão só para quem tem consulta marcada, sem disparo para listas.
-> - **Segurança da parceria:** o sistema roda em infraestrutura de grandes empresas, com backup diário, e a senhora
+> - **Segurança da parceria:** o sistema roda em infraestrutura de grandes empresas, com backup diário, e você
 >   fala direto com quem o construiu. Os 3 primeiros meses têm valor especial, e a clínica pode cancelar a qualquer
 >   momento, sem multa.
 >
 > Fico à disposição para tirar dúvidas, inclusive dos médicos, numa conversa rápida.
 >
-> Um abraço,
-> [Seu nome]
-> RecepClinic · [telefone] · [e-mail]
+> Atenciosamente,
+> Thiago Luiz de Sousa
+> RecepClinic · (61) 99864-5490 · contato@recepclinic.com.br
 
 **Anexos:** `1 - Proposta comercial RecepClinic.pdf`, `2 - Ganhos e funcionalidades RecepClinic.pdf`,
 `3 - Escopo do site da clinica.pdf`.

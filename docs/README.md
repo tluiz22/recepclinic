@@ -1,5 +1,10 @@
 # RecepClinic
 
+> **Comercial (09/nov): proposta para a Biomedical** (12 profissionais, 3 secretárias) pronta para envio:
+> [`propostas/clinica-12-profissionais/`](propostas/clinica-12-profissionais/README.md) (3 PDFs, texto do e-mail,
+> decisões P1 a P8). A proposta apresenta como prontos o portal, a agenda em colunas, o bot levando ao portal e as
+> métricas: precisam estar no ar antes da implantação.
+>
 > **Frente ativa (08/nov): recepção digital integrada.** Retomar pelo bloco do
 > [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md).
 > - **Feito:** Etapa 1 (proposta, RD1 a RD14) e Etapa 2 (design: portal P1 a P13, link do profissional, painel da
