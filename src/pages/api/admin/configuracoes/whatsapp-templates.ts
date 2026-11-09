@@ -1,7 +1,8 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
 import { TEMPLATE_KEYS, type TemplateKey } from "../../../../lib/data/whatsapp/connection";
-import { createDefaultTemplates, refreshTemplateStatuses, deleteUnusedTemplate, namesInWaba, resendRejectedTemplate, type TemplateSyncLine } from "../../../../lib/data/whatsapp/templateSync";
+import { createDefaultTemplates, refreshTemplateStatuses, deleteUnusedTemplate, namesInWaba, resendRejectedTemplate } from "../../../../lib/data/whatsapp/templateSync";
+import { supportSummary } from "../../../../lib/data/whatsapp/templateSummary";
 import { setFlash } from "../../../../lib/flash";
 import { formText } from "../../../../lib/forms";
 
@@ -10,10 +11,6 @@ import { formText } from "../../../../lib/forms";
 // da Meta" o template do RecepClinic sem uso. Usa a
 // credencial da clínica porque só ela lê o token. F8.2: o Administrador
 // também usa o "criar" ("Enviar à Meta as que faltam", no cartão Conexão).
-
-const STATUS_TEXT = { pending: "em análise", approved: "aprovado", rejected: "recusado", disabled: "desativado" } as const;
-
-const describe = (line: TemplateSyncLine) => `${line.name}: ${line.problem ?? (line.status ? STATUS_TEXT[line.status] : "?")}`;
 
 export const POST: APIRoute = async ({ request, cookies, locals, redirect }) => {
   const clinic = locals.clinic!;
@@ -60,7 +57,7 @@ export const POST: APIRoute = async ({ request, cookies, locals, redirect }) => 
     return redirect(back, 303);
   }
   const head = create ? "Templates enviados à Meta" : "Situação atualizada";
-  const text = result.lines.length ? `${head}. ${result.lines.map(describe).join(" · ")}.` : "Nenhum template cadastrado ainda: use \"Criar na Meta\".";
+  const text = supportSummary(head, result.lines);
   setFlash(cookies, { tone: problems.length ? "error" : "success", text });
   return redirect(back, 303);
 };
