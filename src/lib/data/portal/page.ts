@@ -3,7 +3,7 @@ import { portalBase } from "../../portal";
 import type { DbClient } from "../clients";
 import { createClinicServiceClient } from "../clinicService";
 import { resolveClinicByPortalSlug } from "../platform";
-import { loadPortal, type PortalClinic, type PortalProfessional } from "./portal";
+import { EXAM_SLUG_PREFIX, examProfessional, loadPortal, type PortalClinic, type PortalProfessional } from "./portal";
 import type { PublicClinicBrand } from "../config/brand";
 
 // Abertura de toda página do portal (F2a): a clínica pelo apelido do endereço, a credencial limitada a ela e o começo
@@ -26,7 +26,12 @@ export async function openPortalPage(Astro: AstroGlobal): Promise<PortalPage> {
 
 /** O profissional do endereço ("/{clínica}/{profissional}/…"), se aparece no portal. */
 export function professionalOf(portal: PortalClinic, slug: string | undefined): PortalProfessional | null {
-  return portal.professionals.find((p) => p.slug === (slug ?? "").toLowerCase()) ?? null;
+  const wanted = (slug ?? "").toLowerCase();
+  const professional = portal.professionals.find((p) => p.slug === wanted);
+  if (professional) return professional;
+  // Exame (F2d): "/{clínica}/exame-1a2b3c4d/…".
+  const exam = wanted.startsWith(EXAM_SLUG_PREFIX) ? portal.exams.find((e) => e.slug === wanted) : null;
+  return exam ? examProfessional(portal, exam) : null;
 }
 
 /** Clínica de um profissional só (como o piloto): o endereço da clínica abre direto no início dele. */

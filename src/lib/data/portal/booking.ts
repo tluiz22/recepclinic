@@ -173,7 +173,12 @@ export async function bookingBlock(
   if (overAgeLimit(input.professional, input.patient.birthdate, today)) return { kind: "age", limit: input.professional.ageLimitYears! };
   if (input.patient.id) {
     const upcoming = (await listUpcomingAppointments(db, clinicId, [input.patient.id], now)).get(input.patient.id) ?? [];
-    const blocking = findBlockingAppointment(upcoming, { serviceId: "", agendaId: input.professional.agendaId, category: "consultation" });
+    // Consulta: outra visita futura com o mesmo médico; exame (F2d): o mesmo exame já marcado (como o bot).
+    const exam = input.professional.exam;
+    const blocking = findBlockingAppointment(
+      upcoming,
+      exam ? { serviceId: exam.serviceId, agendaId: input.professional.agendaId, category: "exam" } : { serviceId: "", agendaId: input.professional.agendaId, category: "consultation" },
+    );
     if (blocking) return { kind: "already", scheduledAt: blocking.scheduledAt };
   }
   const contact = await findContactByPhone(db, clinicId, input.phone);
@@ -242,7 +247,10 @@ export async function confirmPortalBooking(
 ): Promise<ConfirmOutcome> {
   const hold = await loadHold(db, clinicId, input.sessionId, input.holdId, now);
   // A reserva de um retorno só se marca pela revisão do retorno (returnVisit.ts).
-  if (!hold || hold.agendaId !== input.professional.agendaId || hold.returnOriginId) return { status: "expired" };
+  // Exame (F2d): a reserva tem de ser do exame desta tela (todos dividem a agenda da equipe).
+  if (!hold || hold.agendaId !== input.professional.agendaId || hold.returnOriginId || !input.professional.consultations.some((c) => c.serviceId === hold.serviceId)) {
+    return { status: "expired" };
+  }
   if (hold.state === "booked") return { status: "booked", appointmentId: hold.appointmentId! };
   if (hold.state === "gone") return { status: "expired" };
   if (!hold.patientId && !hold.newPatient) return { status: "no_patient" };

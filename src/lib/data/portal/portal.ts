@@ -57,7 +57,34 @@ export type PortalProfessional = PriceInfo & {
   profile: ClinicProfile;
   /** Idade a partir da qual não marca Consulta (da agenda); null = sem limite. */
   ageLimitYears: number | null;
+  /** Exame (F2d): o "profissional" é o exame na agenda da equipe (examProfessional). */
+  exam?: PortalExam;
 };
+
+/**
+ * Exame no portal (F2d; D4): serviço do tipo Exame, individual, na agenda da equipe (só nela, migração
+ * 20270101150000), com horário de atendimento num local da clínica. Particular sempre; convênio com o item Convênios,
+ * todos os planos ativos (como o bot: agenda sem profissional aceita todos).
+ */
+export type PortalExam = {
+  serviceId: string;
+  /** "exame-1a2b3c4d" (o começo do id): o endereço das telas do exame. */
+  slug: string;
+  name: string;
+  durationMinutes: number;
+  priceCents: number | null;
+  /** O valor muda com o local ("a partir de"). */
+  priceVaries: boolean;
+  /** Locais da clínica onde o exame tem horário. */
+  locationIds: string[];
+  /** Preparo, na formatação do WhatsApp; null = sem preparo. */
+  preparation: string | null;
+  /** Tem o arquivo com as orientações (o link público /preparo/…). */
+  hasPreparationFile: boolean;
+};
+
+export const EXAM_SLUG_PREFIX = "exame-";
+export const examSlug = (serviceId: string) => `${EXAM_SLUG_PREFIX}${serviceId.slice(0, 8)}`;
 
 export type PortalUnavailable = { status: "unavailable"; brand: PublicClinicBrand };
 
@@ -73,6 +100,10 @@ export type PortalClinic = {
   locations: PortalLocation[];
   /** Em ordem alfabética (RD7). */
   professionals: PortalProfessional[];
+  /** Exames marcáveis pelo portal (F2d), em ordem alfabética; vazio sem o item "Exames e procedimentos". */
+  exams: PortalExam[];
+  /** A agenda da equipe e o que vale para todo exame (locais, convênios, prazo). */
+  examBase: Omit<PortalProfessional, "id" | "slug" | "name" | "consultations" | "privatePriceCents" | "privatePriceVaries" | "exam"> | null;
 };
 
 /** Profissionais sem especialidade (cadastro pendente) ficam em "Outros profissionais", como no bot. */
@@ -90,7 +121,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
     db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
     listProfessionals(db, clinicId),
     listAgendas(db, clinicId),
-    listServices(db, clinicId, { category: "consultation" }),
+    listServices(db, clinicId),
     listLocations(db, clinicId),
     listInsurancePlans(db, clinicId),
     db
@@ -122,6 +153,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
       )
     : new Map<string, string[]>();
 
+  const consultationServices = services.filter((s) => s.category === "consultation");
   const result: PortalProfessional[] = [];
   for (const professional of professionals) {
     if (!professional.showInPortal) continue;
@@ -129,7 +161,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
     if (!agenda?.isActive) continue;
     const consultations: PortalConsultation[] = [];
     const used = new Set<string>();
-    for (const service of services) {
+    for (const service of consultationServices) {
       if (service.schedulingMode === "group" || !service.agendaIds.includes(agenda.id)) continue;
       const offered = new Set(service.locations.map((l) => l.locationId).filter((id) => clinicLocations.has(id)));
       const here = windows.filter((w) => w.agenda_id === agenda.id && offered.has(w.location_id) && (w.service_id === null || w.service_id === service.id));
@@ -176,7 +208,53 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
   result.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   await signPhotos(db, clinicId, result);
 
-  const usedLocations = new Set(result.flatMap((p) => p.locations.map((l) => l.id)));
+  // Exames (F2d): a agenda da equipe, os exames individuais dela com horário num local da clínica.
+  const exams: PortalExam[] = [];
+  let examBase: PortalClinic["examBase"] = null;
+  const team = agendas.find((a) => a.kind === "resource" && a.isActive);
+  if (team && features.includes("exams")) {
+    const examLocations = new Set<string>();
+    for (const service of services) {
+      if (service.category !== "exam" || service.schedulingMode === "group" || !service.agendaIds.includes(team.id)) continue;
+      const offered = new Set(service.locations.map((l) => l.locationId).filter((id) => clinicLocations.has(id)));
+      const here = windows.filter((w) => w.agenda_id === team.id && offered.has(w.location_id) && (w.service_id === null || w.service_id === service.id));
+      if (!here.length) continue;
+      for (const w of here) examLocations.add(w.location_id);
+      const locationIds = [...new Set(here.map((w) => w.location_id))];
+      const prices = locationIds.map((id) => servicePriceAt(service, id)).filter((p): p is number => p !== null);
+      exams.push({
+        serviceId: service.id,
+        slug: examSlug(service.id),
+        name: service.name,
+        durationMinutes: service.durationMinutes,
+        priceCents: prices.length ? Math.min(...prices) : service.priceCents,
+        priceVaries: new Set(prices).size > 1,
+        locationIds,
+        preparation: service.preparationInstructions?.trim() || null,
+        hasPreparationFile: !!service.preparationFile,
+      });
+    }
+    exams.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    if (exams.length) {
+      examBase = {
+        registry: "",
+        specialties: [],
+        photoUrl: null,
+        acceptsPrivate: true,
+        plans: features.includes("insurance")
+          ? plans.filter((p) => p.isActive).map((p) => ({ id: p.id, name: p.name, note: null })).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+          : [],
+        agendaId: team.id,
+        horizonDays: team.bookingHorizonDays,
+        locations: [...examLocations].map((id) => clinicLocations.get(id)!).map((l) => ({ id: l.id, name: l.name, address: l.address })),
+        orientation: null,
+        profile: team.profile,
+        ageLimitYears: null,
+      };
+    }
+  }
+
+  const usedLocations = new Set([...result.flatMap((p) => p.locations.map((l) => l.id)), ...(examBase?.locations.map((l) => l.id) ?? [])]);
   return {
     status: "open",
     clinicId,
@@ -186,6 +264,30 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
     receptionHours: hours && hours.hours.some(Boolean) ? describeReceptionHours(hours.hours) : null,
     locations: [...clinicLocations.values()].filter((l) => usedLocations.has(l.id)).map((l) => ({ id: l.id, name: l.name, address: l.address })),
     professionals: result,
+    exams,
+    examBase,
+  };
+}
+
+/**
+ * O exame como um "profissional" do portal (F2d): as telas da consulta (P5 a P10) servem ao exame, com o nome, o valor
+ * e a duração dele, a agenda da equipe e todos os convênios. Sem idade limite e sem orientações do profissional (o
+ * preparo é do exame).
+ */
+export function examProfessional(portal: Pick<PortalClinic, "examBase">, exam: PortalExam): PortalProfessional | null {
+  if (!portal.examBase) return null;
+  const price = exam.priceCents && exam.priceCents > 0 ? exam.priceCents : null;
+  return {
+    ...portal.examBase,
+    id: exam.serviceId,
+    slug: exam.slug,
+    name: exam.name,
+    privatePriceCents: price,
+    privatePriceVaries: exam.priceVaries,
+    // Só os locais deste exame (o cartão e os horários não mostram onde ele não é feito).
+    locations: portal.examBase.locations.filter((l) => exam.locationIds.includes(l.id)),
+    consultations: [{ serviceId: exam.serviceId, name: exam.name, durationMinutes: exam.durationMinutes, priceCents: exam.priceCents }],
+    exam,
   };
 }
 

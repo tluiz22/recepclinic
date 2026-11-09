@@ -227,7 +227,7 @@ export const doctorsCount = (n: number) => `${n} ${n === 1 ? "médico" : "médic
  * ou do link do profissional (nenhum dos dois). `esp`: especialidade escolhida ("todos" = a lista inteira, pela
  * busca do nome); `conv`: o filtro "Atende meu convênio" da lista; `nome`: o nome digitado na busca da lista.
  */
-export type PortalFlow = { from: "medicos" | "especialidade" | null; specialty: string | null; plan: string | null; name: string | null };
+export type PortalFlow = { from: "medicos" | "especialidade" | "exames" | null; specialty: string | null; plan: string | null; name: string | null };
 
 const ID = /^[a-z0-9-]{1,64}$/i;
 const idParam = (value: string | null) => (value && ID.test(value) ? value : null);
@@ -235,7 +235,7 @@ const idParam = (value: string | null) => (value && ID.test(value) ? value : nul
 export function readFlow(params: URLSearchParams): PortalFlow {
   const from = params.get("de");
   return {
-    from: from === "medicos" || from === "especialidade" ? from : null,
+    from: from === "medicos" || from === "especialidade" || from === "exames" ? from : null,
     specialty: idParam(params.get("esp")),
     plan: idParam(params.get("conv")),
     name: params.get("nome")?.trim().slice(0, 60) || null,
@@ -255,19 +255,45 @@ export const doctorsHref = (base: string, flow: Pick<PortalFlow, "specialty" | "
 export function backFromProfessional(base: string, professionalSlug: string, flow: PortalFlow, singleProfessional: boolean): string {
   if (flow.from === "medicos") return doctorsHref(base, flow);
   if (flow.from === "especialidade") return `${base}/especialidade`;
+  if (flow.from === "exames") return `${base}/exames`;
   return singleProfessional ? base : `${base}/${professionalSlug}`;
 }
 
-/** "Trocar" o médico: só pela clínica (o link do profissional não mostra outros médicos). */
+/** "Trocar" o médico (ou o exame, F2d): só pela clínica (o link do profissional não mostra outros médicos). */
 export function changeProfessionalHref(base: string, flow: PortalFlow): string | null {
   if (flow.from === "medicos") return doctorsHref(base, flow);
   if (flow.from === "especialidade") return `${base}/especialidade`;
+  if (flow.from === "exames") return `${base}/exames`;
   return null;
 }
 
 /** Passos do caminho pelo médico: especialidade e lista só se o paciente passou por elas. */
 export const professionalSteps = (flow: PortalFlow, modality: boolean) =>
-  portalSteps({ specialty: flow.from !== null && flow.specialty !== null, professional: flow.from === "medicos", modality });
+  portalSteps({ specialty: flow.from !== null && flow.specialty !== null, professional: flow.from === "medicos" || flow.from === "exames", modality });
+
+/** "Médico" ou "Exame" (F2d: o exame passa pelas mesmas telas da consulta). */
+export const whoLabel = (p: { exam?: unknown }) => (p.exam ? "Exame" : "Médico");
+
+/** As palavras da consulta ou do exame nas telas (F2d: o exame passa pelas telas da consulta). */
+export function visitWords(p: { exam?: unknown } | null) {
+  return p?.exam
+    ? { noun: "Exame", the: "o exame", ofThe: "do exame", marked: "Exame marcado", canceled: "Exame cancelado", thisCanceled: "Este exame foi cancelado", a: "um exame", file: "exame" }
+    : { noun: "Consulta", the: "a consulta", ofThe: "da consulta", marked: "Consulta marcada", canceled: "Consulta cancelada", thisCanceled: "Esta consulta foi cancelada", a: "uma consulta", file: "consulta" };
+}
+
+/** "a consulta" ou "o exame" ("Para quem é o exame?"). */
+export const theVisit = (p: { exam?: unknown } | null) => visitWords(p).the;
+
+/** Texto com a formatação do WhatsApp, sem os marcadores: só *negrito* e _itálico_ de palavras inteiras. */
+export function whatsappPlain(text: string): string {
+  return text.replace(/(^|[\s(])([*_])([^*_\n]+?)\2(?=$|[\s.,;:!?)])/g, "$1$3");
+}
+
+/** De quem é a recepção na folha de ajuda: do médico; no exame, da clínica (null). */
+export const helpForOf = (p: { name: string; exam?: unknown }) => (p.exam ? null : ofName(p.name));
+
+/** "consulta" ou "exame", nos avisos do que impede marcar (portalBooking.blockMessage). */
+export const bookingKind = (p: { exam?: unknown }) => (p.exam ? ("exame" as const) : ("consulta" as const));
 
 /** "da Dra. Ana Lima", "do Dr. Bruno", "de Ana Lima" (folha da recepção). */
 export function ofName(name: string): string {

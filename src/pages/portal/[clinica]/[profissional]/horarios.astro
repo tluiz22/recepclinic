@@ -9,6 +9,7 @@ import PatientSlots, { type PatientSlot } from "../../../../components/public/Pa
 import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalPreparation from "../../../../components/portal/PortalPreparation.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import PortalSummary from "../../../../components/portal/PortalSummary.astro";
 import { capitalize } from "../../../../lib/vocabulary";
@@ -19,21 +20,7 @@ import { isProfessionalDayOpen, professionalDates, professionalSlots } from "../
 import { hitLimits, readSession, releaseHold } from "../../../../lib/data/portal/identity";
 import { blockedText, ipPrefix, LIMITS } from "../../../../lib/portalIdentity";
 import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
-import {
-  backFromProfessional,
-  changeProfessionalHref,
-  chosenModality,
-  flowParams,
-  formatPrice,
-  modalityOptions,
-  ofName,
-  portalHref,
-  privateLabel,
-  professionalSteps,
-  readFlow,
-  shortName,
-  stepPosition,
-} from "../../../../lib/portal";
+import { backFromProfessional, changeProfessionalHref, chosenModality, flowParams, formatPrice, helpForOf, modalityOptions, ofName, portalHref, privateLabel, professionalSteps, readFlow, shortName, stepPosition, whoLabel } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
@@ -119,7 +106,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
   title={professional ? `Dia e horário: ${professional.name}` : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
   width="wide"
 >
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
@@ -139,6 +126,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
             )}
           </PortalDoctor>
           {Object.entries(keep).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
+          {professional.exam && <PortalPreparation exam={professional.exam} />}
           <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Escolha o dia e o horário</h1>
           {professional.consultations.length > 1 && (
             <nav aria-label="Tipo de consulta" class="flex flex-col gap-2">
@@ -184,7 +172,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
             ) : (
               <div class="flex flex-col gap-3 rounded-[14px] border border-gray-200 bg-white px-4 py-4" role="status">
                 <p>Sem horários nos próximos {professional.horizonDays} dias. Toque em "Recepção", no topo, para falar com a clínica.</p>
-                {changeDoctor && <a href={changeDoctor} class="self-start font-semibold text-clinic-ink">Ver outro médico</a>}
+                {changeDoctor && <a href={changeDoctor} class="self-start font-semibold text-clinic-ink">{professional.exam ? "Ver outro exame" : "Ver outro médico"}</a>}
               </div>
             )}
           </div>
@@ -214,7 +202,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
         <PortalSummary
           rows={[
             ...(specialtyName ? [{ label: "Especialidade", value: specialtyName }] : []),
-            { label: "Médico", value: professional.name, change: changeDoctor },
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
             { label: "Atendimento", value: modalityText, detail: modality?.detail, change: changeModality },
             { label: "Dia e horário", value: null, live: "slot" },
           ]}

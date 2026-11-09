@@ -55,8 +55,8 @@ export function birthdateText(iso: string, today: string): string {
 }
 
 /** "Consulta com Dra. Ana Lima — Clínica Exemplo" (I4: com o médico; sem especialidade nem convênio). */
-export const icsTitle = (professional: string, clinic: string, kind: "consulta" | "retorno" = "consulta") =>
-  `${kind === "retorno" ? "Retorno" : "Consulta"} com ${professional} — ${clinic}`;
+export const icsTitle = (professional: string, clinic: string, kind: "consulta" | "retorno" | "exame" = "consulta") =>
+  kind === "exame" ? `Exame ${professional} — ${clinic}` : `${kind === "retorno" ? "Retorno" : "Consulta"} com ${professional} — ${clinic}`;
 
 const icsText = (value: string) => value.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/([,;])/g, "\\$1");
 const icsStamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -109,11 +109,13 @@ export type BlockText =
   | { kind: "blocked_contact" };
 
 /** O aviso do que impede marcar (P8 e P9), sem revelar as regras de limite além do número de consultas (P9). */
-export function blockMessage(block: BlockText, professionalName: string, patientName: string | null): string {
+export function blockMessage(block: BlockText, professionalName: string, patientName: string | null, kind: "consulta" | "exame" = "consulta"): string {
   switch (block.kind) {
     case "age":
       return `${professionalName} atende pacientes até ${block.limit - 1} anos.`;
     case "already":
+      // Exame (F2d): o mesmo exame já marcado (como o bot).
+      if (kind === "exame") return `${patientName ?? "Este paciente"} já tem o exame ${professionalName} marcado ${block.when}. Para mudar o dia ou o horário, fale com a recepção.`;
       return `${patientName ?? "Este paciente"} já tem consulta com ${professionalName} ${block.when}. Para mudar o dia ou o horário, fale com a recepção.`;
     case "limit":
       if (block.reason === "future_appointments") return `Este número já tem ${block.current} ${block.current === 1 ? "consulta marcada" : "consultas marcadas"}. Fale com a recepção.`;

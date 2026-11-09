@@ -12,7 +12,7 @@ import PortalSummary from "../../../../components/portal/PortalSummary.astro";
 import { portalCta, portalLink, portalNotice, portalTitle } from "../../../../components/portal/styles";
 import { bookingBlock, phonePatients, setHoldPatient, type PortalPatient } from "../../../../lib/data/portal/booking";
 import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
-import { changeProfessionalHref, ofName } from "../../../../lib/portal";
+import { bookingKind, changeProfessionalHref, helpForOf, theVisit, whoLabel } from "../../../../lib/portal";
 import { blockMessage } from "../../../../lib/portalBooking";
 import { formatAge } from "../../../../lib/age";
 import { todayIn } from "../../../../lib/clinicTime";
@@ -36,11 +36,11 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
     const form = await Astro.request.formData().catch(() => null);
     chosen = String(form?.get("paciente") ?? "");
     const patient = patients.find((p) => p.id === chosen);
-    if (!patient) problem = "Escolha para quem é a consulta.";
+    if (!patient) problem = `Escolha para quem é ${theVisit(professional)}.`;
     else {
       const block = await bookingBlock(db, portal.clinicId, { professional, phone: hold.phone, patient: { id: patient.id, birthdate: patient.birthdate }, isNew: false, timeZone });
       if (block) {
-        problem = blockMessage(toBlockText(block, timeZone), professional.name, patient.fullName);
+        problem = blockMessage(toBlockText(block, timeZone), professional.name, patient.fullName, bookingKind(professional));
         ageProblem = block.kind === "age";
       } else if (await setHoldPatient(db, portal.clinicId, session.id, hold.id, { patientId: patient.id })) {
         return Astro.redirect(view.href("revisao"));
@@ -56,10 +56,10 @@ const card =
 ---
 
 <PortalLayout
-  title={active ? "Para quem é a consulta?" : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  title={active ? `Para quem é ${theVisit(professional)}?` : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
   width="wide"
 >
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
@@ -72,7 +72,7 @@ const card =
         <div class="flex min-w-0 flex-col gap-[18px]">
           <PortalStepBar back={view.timesHref(true)} step={view.step("patient")} />
           <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("reserva")} />
-          <h1 class={portalTitle}>Para quem é a consulta?</h1>
+          <h1 class={portalTitle}>Para quem é {theVisit(professional)}?</h1>
           {problem && (
             <div class={`${portalNotice} flex flex-col gap-1 border-red-200 bg-red-50 text-red-800`} role="alert">
               <p>{problem}</p>
@@ -85,7 +85,7 @@ const card =
           )}
           <form method="POST" action={view.href("reserva")} class="flex max-w-[620px] flex-col gap-3">
             <fieldset class="flex flex-col gap-2.5">
-              <legend class="sr-only">Para quem é a consulta?</legend>
+              <legend class="sr-only">Para quem é {theVisit(professional)}?</legend>
               {patients.map((p) => (
                 <label class={card}>
                   <input type="radio" name="paciente" value={p.id} checked={chosen === p.id} required class="h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
@@ -110,7 +110,7 @@ const card =
         </div>
         <PortalSummary
           rows={[
-            { label: "Médico", value: professional.name, change: changeDoctor },
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
             { label: "Atendimento", value: modality?.label ?? null },
             { label: "Dia e horário", value: when, change: view.timesHref(true) },
             { label: "Paciente", value: null },

@@ -97,7 +97,7 @@ async function holdingReturn(card: ReturnCard, phone: string): Promise<{ session
   return { session, holdId: hold.holdId };
 }
 
-const confirm = (session: PortalSession, holdId: string, card: ReturnCard) => confirmPortalReturn(service, portal, { sessionId: session.id, holdId, sender: null });
+const confirm = (session: PortalSession, holdId: string, _card?: ReturnCard) => confirmPortalReturn(service, portal, { sessionId: session.id, holdId, sender: null });
 
 beforeAll(async () => {
   fixture = await setupAgendaClinic("Clínica do teste do retorno", "849222800");

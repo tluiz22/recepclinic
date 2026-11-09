@@ -7,19 +7,7 @@ import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import PortalSummary from "../../../../components/portal/PortalSummary.astro";
 import { openPortalPage, professionalOf, singleProfessional } from "../../../../lib/data/portal/page";
-import {
-  backFromProfessional,
-  changeProfessionalHref,
-  chosenModality,
-  flowParams,
-  modalityOptions,
-  ofName,
-  portalHref,
-  professionalSteps,
-  readFlow,
-  shortName,
-  stepPosition,
-} from "../../../../lib/portal";
+import { backFromProfessional, changeProfessionalHref, chosenModality, flowParams, helpForOf, modalityOptions, ofName, portalHref, professionalSteps, readFlow, shortName, stepPosition, whoLabel } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
@@ -45,7 +33,7 @@ const specialtyName = professional?.specialties.find((s) => s.id === flow.specia
   title={professional ? `Como será o atendimento? ${professional.name}` : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
   width="wide"
 >
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
@@ -60,14 +48,14 @@ const specialtyName = professional?.specialties.find((s) => s.id === flow.specia
           {Object.entries(flowParams(flow)).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
           {options.length === 0 ? (
             <p class="rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-[17px] text-amber-900" role="status">
-              Não dá para marcar com {shortName(professional.name)} pela internet agora. Toque em "Recepção", no topo, para falar com a clínica.
+              {professional.exam ? `Não dá para marcar ${professional.name} pela internet agora.` : `Não dá para marcar com ${shortName(professional.name)} pela internet agora.`} Toque em "Recepção", no topo, para falar com a clínica.
             </p>
           ) : (
             <fieldset class="flex min-w-0 flex-col gap-2.5 pt-2">
               <legend class="pb-3.5 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Como será o atendimento?</legend>
               {planGone && (
                 <p class="mb-1 rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-[17px] text-red-800" role="alert">
-                  O convênio escolhido não é mais atendido por {shortName(professional.name)}. Escolha outra opção.
+                  {professional.exam ? "O convênio escolhido não é mais aceito." : `O convênio escolhido não é mais atendido por ${shortName(professional.name)}.`} Escolha outra opção.
                 </p>
               )}
               {options.map((option) => (
@@ -100,7 +88,7 @@ const specialtyName = professional?.specialties.find((s) => s.id === flow.specia
         <PortalSummary
           rows={[
             ...(specialtyName ? [{ label: "Especialidade", value: specialtyName }] : []),
-            { label: "Médico", value: professional.name, change },
+            { label: whoLabel(professional), value: professional.name, change },
             { label: "Atendimento", value: selected?.label ?? null, live: "modality" },
             { label: "Dia e horário", value: null },
           ]}

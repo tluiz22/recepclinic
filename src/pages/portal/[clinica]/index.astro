@@ -1,14 +1,13 @@
 ---
 // P1 Início do portal da clínica (F2a; canvas, opção A da rodada 4): nome, "Agendar consulta", especialidades em
 // destaque, "Ver médicos, convênios e valores", endereço e horário da recepção. Clínica de um só profissional: o início
-// dele (PP). "Marcar retorno" (F2d) abaixo de "Agendar consulta"; "Marcar exame" e "Minhas consultas" entram com as
-// etapas deles (F2d, exames; F3).
+// dele (PP). "Marcar retorno" e "Marcar exame" (F2d) abaixo de "Agendar consulta"; "Minhas consultas" entra com a F3.
 import PortalLayout from "../../../components/portal/PortalLayout.astro";
 import PortalMoreActions from "../../../components/portal/PortalMoreActions.astro";
 import PortalNotice from "../../../components/portal/PortalNotice.astro";
 import PortalProfessionalHome from "../../../components/portal/PortalProfessionalHome.astro";
 import { openPortalPage, singleProfessional } from "../../../lib/data/portal/page";
-import { nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
+import { examProfessional, nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
 import { portalOffersReturn } from "../../../lib/data/portal/returnVisit";
 import { mapsHref } from "../../../lib/portal";
 
@@ -23,12 +22,23 @@ const specialties = portal
   ? portalSpecialties(portal.professionals).filter((s) => professionalsOfSpecialty(portal.professionals, s.id).some((p) => next.get(p.id)))
   : [];
 const bookable = portal?.professionals.some((p) => next.get(p.id)) ?? false;
+// Exames com horário livre no prazo (F2d): sem eles, o botão não aparece (nada de telas até "sem horários").
+const examPros = portal ? portal.exams.map((e) => examProfessional(portal, e)).filter((p): p is NonNullable<typeof p> => !!p) : [];
+const examNext = portal && page.kind === "open" && examPros.length ? await nextFreeSlots(page.db, portal.clinicId, examPros, portal.timeZone) : new Map<string, Date | null>();
+const bookableExams = examPros.filter((p) => examNext.get(p.id));
 const startHref = specialties.length > 1 ? `${base}/especialidade` : `${base}/medicos`;
 const located = portal?.locations.filter((l) => l.address) ?? [];
 // "Marcar retorno" só com o serviço de retorno num médico do portal (D4).
-const actions = portal && page.kind === "open" && (await portalOffersReturn(page.db, portal))
-  ? [{ href: `${base}/retorno`, label: "Marcar retorno", detail: "Volta ao médico da última consulta, dentro do prazo", icon: "return" as const }]
-  : [];
+// "Marcar exame" só na clínica com exames marcáveis (item "Exames e procedimentos", F2d).
+const examNames = bookableExams.map((p) => p.name);
+const actions = [
+  ...(portal && page.kind === "open" && (await portalOffersReturn(page.db, portal))
+    ? [{ href: `${base}/retorno`, label: "Marcar retorno", detail: "Volta ao médico da última consulta, dentro do prazo", icon: "return" as const }]
+    : []),
+  ...(examNames.length
+    ? [{ href: `${base}/exames`, label: "Marcar exame", detail: examNames.length > 2 ? `${examNames.slice(0, 2).join(", ")} e outros` : examNames.join(" e "), icon: "exam" as const }]
+    : []),
+];
 const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
 ---
 
@@ -55,7 +65,9 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
             </a>
           ) : (
             <p class="rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-[17px] text-amber-900">
-              Não há horário livre para marcar pela internet agora. Toque em "Recepção", no topo, para falar com a clínica.
+              {actions.length
+                ? "Não há horário livre para marcar consulta pela internet agora."
+                : 'Não há horário livre para marcar pela internet agora. Toque em "Recepção", no topo, para falar com a clínica.'}
             </p>
           )}
           <PortalMoreActions actions={actions} />
@@ -70,9 +82,11 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
               </ul>
             </div>
           )}
-          <a href={`${base}/medicos`} class="flex min-h-11 items-center self-start text-[17px] font-semibold text-clinic-ink">
-            Ver médicos, convênios e valores
-          </a>
+          {portal.professionals.length > 0 && (
+            <a href={`${base}/medicos`} class="flex min-h-11 items-center self-start text-[17px] font-semibold text-clinic-ink">
+              Ver médicos, convênios e valores
+            </a>
+          )}
         </div>
         {(located.length > 0 || portal.receptionHours) && (
           <div class="flex flex-col gap-3.5 self-start rounded-[18px] border border-gray-200 bg-white p-4 lg:gap-[18px] lg:p-6">

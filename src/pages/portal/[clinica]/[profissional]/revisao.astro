@@ -8,12 +8,13 @@ import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalPreparation from "../../../../components/portal/PortalPreparation.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { portalCta, portalLink, portalNotice, portalTitle } from "../../../../components/portal/styles";
 import { confirmPortalBooking, phonePatients, type PortalPatient } from "../../../../lib/data/portal/booking";
 import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
 import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
-import { changeProfessionalHref, flowParams, formatPrice, mapsHref, ofName, PRIVATE_MODALITY, portalHref } from "../../../../lib/portal";
+import { bookingKind, changeProfessionalHref, flowParams, formatPrice, helpForOf, mapsHref, portalHref, PRIVATE_MODALITY, visitWords, whoLabel } from "../../../../lib/portal";
 import { birthdateText, blockMessage, shortDate } from "../../../../lib/portalBooking";
 import { phoneEnding } from "../../../../lib/portalIdentity";
 import { todayIn } from "../../../../lib/clinicTime";
@@ -49,7 +50,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
     if (outcome.status === "expired") return Astro.redirect(view.href("revisao"));
     if (outcome.status === "taken") return Astro.redirect(portalHref(`${view.base}/${professional.slug}/horarios`, { ...flowParams(view.flow), mod: modality?.value ?? null, tipo: Astro.url.searchParams.get("tipo"), date: Astro.url.searchParams.get("date"), erro: "horario" }));
     if (outcome.status === "no_patient") return Astro.redirect(view.href("reserva"));
-    if (outcome.status === "blocked") problem = blockMessage(toBlockText(outcome.reason, timeZone), professional.name, existing?.fullName ?? hold.newPatient?.name ?? null);
+    if (outcome.status === "blocked") problem = blockMessage(toBlockText(outcome.reason, timeZone), professional.name, existing?.fullName ?? hold.newPatient?.name ?? null, bookingKind(professional));
     else problem = "Não conseguimos marcar agora. Toque em “Confirmar agendamento” de novo ou fale com a recepção.";
   }
 }
@@ -72,7 +73,7 @@ const dt = "text-[15px] text-gray-600";
   title={active ? "Confira e confirme" : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
 >
   {confirming && <meta http-equiv="refresh" content="2" slot="head" />}
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
@@ -92,17 +93,17 @@ const dt = "text-[15px] text-gray-600";
         )}
         {birthNotice && hold.informedBirthdate && (
           <p class={`${portalNotice} border-amber-200 bg-amber-50 text-amber-900`} role="status">
-            A data de nascimento ({shortDate(hold.informedBirthdate)}) será conferida com a recepção no dia da consulta.
+            A data de nascimento ({shortDate(hold.informedBirthdate)}) será conferida com a recepção no dia {visitWords(professional).ofThe}.
           </p>
         )}
         <dl class="flex flex-col rounded-2xl border border-gray-200 bg-white px-4 sm:px-5">
           <div class={row}>
             <div class="min-w-0">
-              <dt class={dt}>Médico</dt>
+              <dt class={dt}>{whoLabel(professional)}</dt>
               <dd class="font-bold">{professional.name}</dd>
               {professional.specialties[0] && <dd class="text-[16px] text-gray-700">{professional.specialties[0].name}</dd>}
             </div>
-            {changeDoctor && <a href={changeDoctor} class={portalLink} aria-label="Alterar o médico">Alterar</a>}
+            {changeDoctor && <a href={changeDoctor} class={portalLink} aria-label={professional.exam ? "Alterar o exame" : "Alterar o médico"}>Alterar</a>}
           </div>
           <div class={row}>
             <div class="min-w-0">
@@ -158,6 +159,7 @@ const dt = "text-[15px] text-gray-600";
             </div>
           </div>
         </dl>
+        {professional.exam && <PortalPreparation exam={professional.exam} />}
         <form method="POST" action={view.href("revisao")} class="flex flex-col gap-2">
           <button type="submit" class={portalCta} data-sending-label="Confirmando…" disabled={confirming} aria-busy={confirming ? "true" : undefined}>
             {confirming ? "Confirmando…" : "Confirmar agendamento"}

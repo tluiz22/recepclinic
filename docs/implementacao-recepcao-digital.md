@@ -8,7 +8,8 @@
 > `recepcao-f2a` e `recepcao-f2b`, sem merge): o cliente valida tudo junto no staging depois (roteiros 9.1 e 10.1).
 > **F2c feita (08/nov, seção 11; migração `20270105120000`)**, só no computador, branch `recepcao-f2c` (sai da F2b).
 > **F2d, parte 1 (retorno) feita (09/nov, seção 12; migração `20270106120000`)**, só no computador, branch
-> `recepcao-f2d` (sai da F2c). Próximo: F2d, parte 2 (exames no portal), na mesma branch.
+> `recepcao-f2d` (sai da F2c). **F2d parte 2 (exames) feita (09/nov, seção 13)**, na mesma branch. Próximo: F3 (bot com
+> jornada única e links).
 
 Marcas: **[Código]** conferido no repositório; **[Cliente]** decisão do cliente; **[Pendência]** depende de terceiro
 (Meta, Cloudflare, advogado, DNS); **[Hipótese]** a conferir no início da etapa.
@@ -449,3 +450,51 @@ tela, duplo clique, prazo vencido, "já marcado", P7 da consulta depois da mudan
 4. Celular com duas crianças com consulta recente e uma com prazo vencido: a lista com dois cartões e "1 consulta sem
    direito a retorno".
 5. Celular só com consulta antiga: "O prazo do retorno acabou" → "Agendar consulta com…" abre o médico.
+
+## 13. F2d, parte 2: exames no portal (09/nov/2026, branch `recepcao-f2d`)
+
+Sem migração. O exame passa pelas telas da consulta (P5 a P10 e o `.ics`) como um "profissional" do portal
+(`examProfessional`, endereço `/{clínica}/exame-1a2b3c4d/…`, o começo do id do serviço): agenda da equipe, só o exame
+escolhido, valor e duração dele, sem idade limite, sem orientações do profissional.
+
+- **Quais exames:** serviço do tipo Exame, individual (a turma fica fora), na agenda da equipe, com horário num local
+  da clínica, e só com o item "Exames e procedimentos" da Matriz. **Convênio:** todos os planos ativos, com o item
+  Convênios (como o bot: agenda sem profissional aceita todos); particular sempre.
+- **Telas** (390 e 1280 px, canvas EX1 a EX3):
+  - Início: "Marcar exame" abaixo de "Marcar retorno", com os dois primeiros exames na linha de explicação.
+  - EX1 "Qual exame você vai fazer?": cartão com valor (particular ou convênio), duração e a etiqueta "Tem preparo" /
+    "Sem preparo"; busca a partir de 8 exames; "Falar com a recepção" no fim.
+  - Particular ou convênio (P5), dias e horários (P6) com o quadro "Preparo do exame" antes dos dias, celular e
+    código (P7), "Para quem é o exame?" (P8/P8b), revisão (P9) com o preparo e "Exame marcado!" (P10) com "Antes do
+    exame" e "A confirmação e o preparo chegam no WhatsApp". O link do arquivo (PDF) do preparo usa a página pública
+    `/preparo/…` (no endereço do sistema).
+  - Textos: "Exame" no lugar de "Médico", "o exame" no lugar de "a consulta", "Trocar o exame", "Ver outro exame"; a
+    folha da recepção sem "do médico".
+  - `.ics`: "Exame {nome} — {Clínica}" (D4 e I4).
+- **Regra do bot:** o mesmo exame já marcado para o paciente impede outro ("já tem o exame … marcado"); os limites do
+  telefone valem igual. O preparo sai pelo WhatsApp depois da confirmação (já era assim, `preparation.ts`).
+- Fica para depois (sem dado cadastrado): a etiqueta do preparo com o resumo ("Jejum de 8 horas", canvas) e
+  "Traga o pedido médico" no convênio.
+
+**`/code-review` (09/nov), corrigidos:** a reserva de um exame valia na tela de outro exame (todos dividem a agenda da
+equipe), o que deixava marcar de novo o mesmo exame: a reserva agora só vale na tela do exame dela (P8 a P10 e a
+marcação); cada exame mostra só os locais dele; valor que muda com o local sai "a partir de"; o início e a lista
+mostram só exames com horário livre no prazo (sem telas até "sem horários"); sem horário de consulta mas com retorno
+ou exame, o aviso fala só da consulta, e "Ver médicos" some sem médicos; o endereço do exame mantém os parâmetros; o
+preparo tira `*` e `_` só de palavras inteiras (endereços e nomes de arquivo ficam como estão); as palavras "consulta" ×
+"exame" numa função só (`visitWords`).
+
+Testes: unidade (título do `.ics` do exame), banco (`portal-exames.test.ts`: só o exame individual da equipe, com o
+preparo, resolvido pelo endereço; sem o item da Matriz, nenhum; marcação pelo convênio para cadastro novo; o mesmo
+exame não se marca de novo; sem idade limite; a reserva de um exame recusada na tela de outro) e Playwright no computador local (jornada em 390 e 1280 px até "Exame
+marcado!", duplo clique, `.ics`, "Trocar o exame", Voltar em cadeia até o início, aviso do exame já marcado).
+
+### 13.1 Roteiro de validação dos exames (staging, junto com a F2a a F2d)
+
+1. Clínica com o item "Exames e procedimentos" e exames na agenda da equipe: no início, "Marcar exame" → lista com
+   valor, duração e preparo.
+2. Exame com preparo → convênio → o quadro do preparo antes dos dias → horário → celular e código → paciente →
+   revisão com o preparo → "Exame marcado!"; chegam a confirmação e o preparo no WhatsApp; o evento do celular diz
+   "Exame {nome} — {Clínica}".
+3. O mesmo exame de novo para o mesmo paciente: "já tem o exame … marcado".
+4. Exame em turma (grupo) não aparece; desligar o item na Matriz some com o botão.

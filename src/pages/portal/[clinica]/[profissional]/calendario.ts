@@ -28,13 +28,13 @@ export const GET: APIRoute = async ({ params, url, cookies }) => {
     uid: booked.appointmentId,
     start: booked.start,
     end: booked.end,
-    title: icsTitle(professional.name, portal.brand.name, hold.returnOriginId ? "retorno" : "consulta"),
+    title: icsTitle(professional.name, portal.brand.name, professional.exam ? "exame" : hold.returnOriginId ? "retorno" : "consulta"),
     location: location ? [location.name, location.address].filter(Boolean).join(", ") : null,
   });
   return new Response(ics, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${hold.returnOriginId ? "retorno" : "consulta"}.ics"`,
+      "Content-Disposition": `attachment; filename="${professional.exam ? "exame" : hold.returnOriginId ? "retorno" : "consulta"}.ics"`,
       "Cache-Control": "no-store",
     },
   });

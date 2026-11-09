@@ -20,12 +20,21 @@ const located = professional.locations.filter((l) => l.address);
 const trocar = "inline-flex min-h-11 shrink-0 items-center px-1 text-base font-bold text-clinic-ink underline";
 ---
 
-<section class="-mx-4 flex flex-col gap-2.5 bg-clinic-tint px-4 py-3.5 sm:mx-0 sm:rounded-2xl sm:border sm:border-gray-200 sm:bg-white sm:px-5 sm:py-4" aria-label="Quem atende">
+<section class="-mx-4 flex flex-col gap-2.5 bg-clinic-tint px-4 py-3.5 sm:mx-0 sm:rounded-2xl sm:border sm:border-gray-200 sm:bg-white sm:px-5 sm:py-4" aria-label={professional.exam ? "Exame" : "Quem atende"}>
   <div class="flex items-center gap-3 sm:gap-4">
-    <PortalAvatar name={professional.name} photoUrl={professional.photoUrl} size="lg" onTint />
+    {
+      professional.exam ? (
+        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-clinic-ink sm:bg-clinic-tint" aria-hidden="true">
+          <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6" /><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3" /><path d="M7.5 15h9" /></svg>
+        </span>
+      ) : (
+        <PortalAvatar name={professional.name} photoUrl={professional.photoUrl} size="lg" onTint />
+      )
+    }
     <div class="min-w-0 flex-1">
       <p class="font-display text-[22px] leading-tight font-bold sm:text-2xl">{professional.name}</p>
       {professional.registry && <p class="text-[15px] text-gray-700">{professional.registry}</p>}
+      {professional.exam && <p class="text-base text-gray-700">Cerca de {professional.exam.durationMinutes} min</p>}
       {main && (
         <p class="text-base">
           <b>{main.name}</b>
@@ -33,7 +42,7 @@ const trocar = "inline-flex min-h-11 shrink-0 items-center px-1 text-base font-b
         </p>
       )}
     </div>
-    {change && <a href={change} class={trocar} aria-label="Trocar o médico">Trocar</a>}
+    {change && <a href={change} class={trocar} aria-label={professional.exam ? "Trocar o exame" : "Trocar o médico"}>Trocar</a>}
   </div>
   {
     located.map((location) => (

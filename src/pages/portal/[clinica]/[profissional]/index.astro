@@ -5,11 +5,17 @@ import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalProfessionalHome from "../../../../components/portal/PortalProfessionalHome.astro";
 import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page";
 import { nextFreeSlot } from "../../../../lib/data/portal/portal";
-import { ofName } from "../../../../lib/portal";
+import { helpForOf } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
 if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
+// Exame (F2d): não tem página de início; o endereço abre o particular ou convênio dele.
+if (professional?.exam) {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  if (!params.has("de")) params.set("de", "exames");
+  return Astro.redirect(`${page.kind === "open" ? page.base : ""}/${professional.slug}/atendimento?${params}`);
+}
 const next = page.kind === "open" && professional ? await nextFreeSlot(page.db, page.portal.clinicId, professional, page.portal.timeZone) : null;
 const brand = page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null;
 ---
@@ -18,7 +24,7 @@ const brand = page.kind === "open" ? page.portal.brand : page.kind === "unavaila
   title={professional ? professional.name : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={brand}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
   width="wide"
 >
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}

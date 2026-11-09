@@ -24,6 +24,8 @@ import {
   stepPosition,
   suggestPortalSlug,
   toName,
+  visitWords,
+  whatsappPlain,
   withName,
 } from "./portal";
 
@@ -173,5 +175,17 @@ describe("textos", () => {
     expect(withName("Ana Lima")).toBe("com Ana");
     expect(ofName("Dra. Ana Lima")).toBe("da Dra. Ana Lima");
     expect(ofName("Ana Lima")).toBe("de Ana Lima");
+  });
+});
+
+describe("exame nas telas da consulta (F2d)", () => {
+  it("palavras", () => {
+    expect(visitWords({ exam: {} }).the).toBe("o exame");
+    expect(visitWords(null).marked).toBe("Consulta marcada");
+  });
+
+  it("preparo sem os marcadores do WhatsApp, só em palavras inteiras", () => {
+    expect(whatsappPlain("Jejum de *8 horas*. Use _roupa leve_.")).toBe("Jejum de 8 horas. Use roupa leve.");
+    expect(whatsappPlain("Veja site.com/preparo_jejum_8h e o arquivo exame_sangue_v2")).toBe("Veja site.com/preparo_jejum_8h e o arquivo exame_sangue_v2");
   });
 });

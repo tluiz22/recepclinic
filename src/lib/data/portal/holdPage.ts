@@ -56,7 +56,8 @@ export async function openHoldPage(Astro: AstroGlobal): Promise<HoldPage> {
     session = await readSession(page.db, page.portal.clinicId, Astro.cookies);
     if (session) hold = await loadHold(page.db, page.portal.clinicId, session.id, holdId);
     // A de outro profissional ou a de um retorno (F2d, telas próprias) não vale aqui.
-    if (hold && (hold.agendaId !== professional.agendaId || hold.returnOriginId)) hold = null;
+    // Exame (F2d): todos os exames dividem a agenda da equipe; a reserva vale só na tela do exame dela.
+    if (hold && (hold.agendaId !== professional.agendaId || hold.returnOriginId || !professional.consultations.some((c) => c.serviceId === hold!.serviceId))) hold = null;
   }
   const consultation = professional && hold ? (professional.consultations.find((c) => c.serviceId === hold.serviceId) ?? null) : null;
   const location = professional && hold ? (professional.locations.find((l) => l.id === hold.locationId) ?? null) : null;

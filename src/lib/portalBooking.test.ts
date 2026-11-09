@@ -73,5 +73,6 @@ describe("título do .ics por tipo (F2d)", () => {
   it("consulta e retorno", () => {
     expect(icsTitle("Dra. Ana Lima", "Clínica Exemplo")).toBe("Consulta com Dra. Ana Lima — Clínica Exemplo");
     expect(icsTitle("Dra. Ana Lima", "Clínica Exemplo", "retorno")).toBe("Retorno com Dra. Ana Lima — Clínica Exemplo");
+    expect(icsTitle("Espirometria", "Clínica Exemplo", "exame")).toBe("Exame Espirometria — Clínica Exemplo");
   });
 });

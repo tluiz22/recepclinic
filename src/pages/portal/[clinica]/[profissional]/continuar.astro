@@ -16,7 +16,7 @@ import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page
 import { isSlotStillFree } from "../../../../lib/data/portal/portal";
 import { holdSlot, readSession } from "../../../../lib/data/portal/identity";
 import { holdBlocked, runIdentityStep, type IdentityState } from "../../../../lib/data/portal/identityStep";
-import { changeProfessionalHref, chosenModality, flowParams, modalityOptions, ofName, portalHref, professionalSteps, readFlow, stepPosition } from "../../../../lib/portal";
+import { changeProfessionalHref, chosenModality, flowParams, helpForOf, modalityOptions, portalHref, professionalSteps, readFlow, stepPosition, whoLabel } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
@@ -97,7 +97,7 @@ const changeModality = options.length > 1 && professional ? portalHref(`${base}/
   title={professional ? (identity?.pending ? "Digite o código" : "Seu celular com WhatsApp") : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
   width="wide"
 >
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
@@ -122,7 +122,7 @@ const changeModality = options.length > 1 && professional ? portalHref(`${base}/
         </div>
         <PortalSummary
           rows={[
-            { label: "Médico", value: professional.name, change: changeDoctor },
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
             { label: "Atendimento", value: modality?.label ?? null, change: changeModality },
             { label: "Dia e horário", value: when, change: back },
           ]}

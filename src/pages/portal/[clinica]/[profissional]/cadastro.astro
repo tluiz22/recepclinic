@@ -15,7 +15,8 @@ import PortalSummary from "../../../../components/portal/PortalSummary.astro";
 import { portalCta, portalError, portalInput, portalLink, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
 import { bookingBlock, contactHasSelf, findDuplicate, phonePatients, setHoldPatient, type DuplicateMatch, type NewPatientData } from "../../../../lib/data/portal/booking";
 import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
-import { changeProfessionalHref, ofName } from "../../../../lib/portal";
+import { bookingKind, changeProfessionalHref, helpForOf, theVisit, visitWords, whoLabel } from "../../../../lib/portal";
+import { capitalize } from "../../../../lib/vocabulary";
 import { BIRTHDATE_MESSAGES, birthdateText, blockMessage, cleanFullName, NAME_MAX, parseBirthdate, shortDate } from "../../../../lib/portalBooking";
 import { isAdult } from "../../../../lib/age";
 import { todayIn } from "../../../../lib/clinicTime";
@@ -65,7 +66,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
     const name = cleanFullName(values.name);
     const birth = parseBirthdate(values.birthdate, today);
     const contactName = values.for === "other" && !contactKnown ? cleanFullName(values.contactName) : null;
-    if (!values.for) errors.for = "Escolha para quem é a consulta.";
+    if (!values.for) errors.for = `Escolha para quem é ${theVisit(professional)}.`;
     if (!name) errors.name = "Escreva o nome e o sobrenome.";
     if (!birth.ok) errors.birthdate = BIRTHDATE_MESSAGES[birth.problem];
     else if (values.for === "self" && !isAdult(birth.date, today)) errors.birthdate = "Para menores de 18 anos, escolha “Outra pessoa” e informe o responsável.";
@@ -80,7 +81,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
         // É o cadastro existente: vale a data cadastrada; a digitada, se diferente, vai para a recepção conferir.
         const block = await bookingBlock(db, clinicId, { professional, phone: hold.phone, patient: { id: match.id, birthdate: match.birthdate }, isNew: false, timeZone });
         if (block) {
-          pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, match.fullName);
+          pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, match.fullName, bookingKind(professional));
           ageProblem = block.kind === "age";
         } else if (await setHoldPatient(db, clinicId, session.id, hold.id, { patientId: match.id, informedBirthdate: match.sameBirthdate ? null : birth.date })) {
           return Astro.redirect(view.href("revisao", { aviso: answer === "corrigir" ? "data" : null }));
@@ -90,7 +91,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
       } else {
         const block = await bookingBlock(db, clinicId, { professional, phone: hold.phone, patient: { id: null, birthdate: birth.date }, isNew: true, timeZone });
         if (block) {
-          pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, name);
+          pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, name, bookingKind(professional));
           ageProblem = block.kind === "age";
         } else if (await setHoldPatient(db, clinicId, session.id, hold.id, { newPatient: data })) {
           return Astro.redirect(view.href("revisao"));
@@ -116,7 +117,7 @@ const label = "text-base font-semibold text-gray-700";
   title={active ? (duplicate ? "Já existe um cadastro" : "Dados do paciente") : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
   width="wide"
 >
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
@@ -164,15 +165,15 @@ const label = "text-base font-semibold text-gray-700";
                   Não, é outra pessoa
                 </button>
               )}
-              {!duplicate.sameBirthdate && <p class="text-[15px] text-gray-600">A data do cadastro só muda com a recepção, no dia da consulta.</p>}
+              {!duplicate.sameBirthdate && <p class="text-[15px] text-gray-600">A data do cadastro só muda com a recepção, no dia {visitWords(professional).ofThe}.</p>}
             </form>
           ) : (
             <form method="POST" action={view.href("cadastro")} class="group flex max-w-[620px] flex-col gap-4" novalidate data-portal-new-patient>
               <input type="hidden" name="acao" value="cadastro" />
-              <h1 class={portalTitle}>{pediatric ? "Dados do paciente" : "A consulta é para:"}</h1>
+              <h1 class={portalTitle}>{pediatric ? "Dados do paciente" : `${capitalize(theVisit(professional))} é para:`}</h1>
               {!pediatric && !hasSelf && (
                 <fieldset class="flex flex-col gap-2.5" aria-describedby={errors.for ? "para-erro" : undefined}>
-                  <legend class="sr-only">A consulta é para</legend>
+                  <legend class="sr-only">{capitalize(theVisit(professional))} é para</legend>
                   <label class={choice}>
                     <input type="radio" name="para" value="self" checked={values.for === "self"} class="h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
                     Mim
@@ -246,13 +247,13 @@ const label = "text-base font-semibold text-gray-700";
               <button type="submit" class={`${portalCta} mt-1`} data-sending-label="Conferindo…">
                 Continuar
               </button>
-              <p class="text-[15px] text-gray-600">Pedimos só o necessário para a consulta. Os outros dados, a recepção completa no dia.</p>
+              <p class="text-[15px] text-gray-600">Pedimos só o necessário para {theVisit(professional)}. Os outros dados, a recepção completa no dia.</p>
             </form>
           )}
         </div>
         <PortalSummary
           rows={[
-            { label: "Médico", value: professional.name, change: changeDoctor },
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
             { label: "Atendimento", value: modality?.label ?? null },
             { label: "Dia e horário", value: when, change: view.timesHref(true) },
             { label: "Paciente", value: null },

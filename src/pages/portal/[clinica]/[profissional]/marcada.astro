@@ -4,12 +4,13 @@
 // a mesma confirmação (a reserva guarda o atendimento); nada é marcado de novo.
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalPreparation from "../../../../components/portal/PortalPreparation.astro";
 import { portalCta, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
 import { bookedSummary, type BookedSummary } from "../../../../lib/data/portal/booking";
 import { openHoldPage } from "../../../../lib/data/portal/holdPage";
 import { capitalize } from "../../../../lib/vocabulary";
 import { formatInstant } from "../../../../lib/clinicTime";
-import { mapsHref, ofName, portalHref, receptionWhatsappHref } from "../../../../lib/portal";
+import { helpForOf, mapsHref, portalHref, receptionWhatsappHref, visitWords, whoLabel } from "../../../../lib/portal";
 import { phoneEnding } from "../../../../lib/portalIdentity";
 
 const view = await openHoldPage(Astro);
@@ -25,14 +26,16 @@ const when = booked ? capitalize(formatInstant(booked.start, timeZone, "EEEE, d 
 const canceled = booked?.status === "canceled";
 const phone = page.kind === "open" ? page.portal.brand.whatsappPhone : null;
 const calendar = professional && hold ? portalHref(`${view.base}/${professional.slug}/calendario`, { reserva: hold.id }) : "";
+// Exame (F2d): "Exame marcado!" e o preparo.
+const words = visitWords(professional);
 const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0";
 ---
 
 <PortalLayout
-  title={booked ? (canceled ? "Consulta cancelada" : "Consulta marcada") : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  title={booked ? (canceled ? words.canceled : words.marked) : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
   brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
   receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
-  helpFor={professional ? ofName(professional.name) : null}
+  helpFor={professional ? helpForOf(professional) : null}
 >
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
   {page.kind === "not_found" && <PortalNotice kind="not_found" />}
@@ -42,7 +45,7 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
       <div class="flex flex-col gap-5">
         {canceled ? (
           <>
-            <h1 class={portalTitle}>Esta consulta foi cancelada</h1>
+            <h1 class={portalTitle}>{words.thisCanceled}</h1>
             <p class="text-lg text-gray-700">Para marcar de novo, escolha outro horário.</p>
             <a href={view.timesHref()} class={portalCta}>Ver horários</a>
           </>
@@ -52,15 +55,17 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
               <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-clinic text-clinic-text" aria-hidden="true">
                 <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
               </span>
-              <h1 class={`${portalTitle} outline-none`} tabindex="-1" data-portal-done>Consulta marcada!</h1>
+              <h1 class={`${portalTitle} outline-none`} tabindex="-1" data-portal-done>{words.marked}!</h1>
             </div>
             <p class={`${portalNotice} border-emerald-200 bg-emerald-50 text-emerald-900`} role="status">
-              Enviamos a confirmação no WhatsApp do celular {phoneEnding(hold.phone)}.
+              {professional.exam?.preparation || professional.exam?.hasPreparationFile
+                ? `A confirmação e o preparo chegam no WhatsApp do celular ${phoneEnding(hold.phone)}.`
+                : `Enviamos a confirmação no WhatsApp do celular ${phoneEnding(hold.phone)}.`}
             </p>
             <dl class="flex flex-col rounded-2xl border border-gray-200 bg-white px-4 sm:px-5">
               <div class={row}><dt class="text-[15px] text-gray-600">Dia e horário</dt><dd class="text-lg font-bold">{when}</dd></div>
               <div class={row}><dt class="text-[15px] text-gray-600">Paciente</dt><dd class="font-bold break-words">{booked.patientName}</dd></div>
-              <div class={row}><dt class="text-[15px] text-gray-600">Médico</dt><dd>{professional.name}</dd></div>
+              <div class={row}><dt class="text-[15px] text-gray-600">{whoLabel(professional)}</dt><dd>{professional.name}</dd></div>
               {modality && <div class={row}><dt class="text-[15px] text-gray-600">Atendimento</dt><dd>{modality.label}</dd></div>}
               {location && (
                 <div class={row}>
@@ -69,8 +74,9 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
                 </div>
               )}
             </dl>
+            {professional.exam && <PortalPreparation exam={professional.exam} title="Antes do exame" fileLabel="Baixar orientações completas (PDF)" />}
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-              <a href={calendar} download="consulta.ics" class={portalCta}>Adicionar à agenda do celular</a>
+              <a href={calendar} download={`${words.file}.ics`} class={portalCta}>Adicionar à agenda do celular</a>
               {location?.address && (
                 <a href={mapsHref(location.address)} target="_blank" rel="noopener" class={portalSecondary}>
                   Ver no mapa
@@ -80,7 +86,7 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
             <p class="text-[17px] text-gray-700">
               Precisa remarcar ou cancelar?{" "}
               {phone ? (
-                <a href={receptionWhatsappHref(phone, "Olá! Marquei uma consulta pelo portal e preciso de ajuda.")} target="_blank" rel="noopener" class="font-bold text-clinic-ink underline">
+                <a href={receptionWhatsappHref(phone, `Olá! Marquei ${words.a} pelo portal e preciso de ajuda.`)} target="_blank" rel="noopener" class="font-bold text-clinic-ink underline">
                   Fale com a recepção no WhatsApp
                 </a>
               ) : (
