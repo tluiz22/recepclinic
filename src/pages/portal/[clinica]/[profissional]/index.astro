@@ -31,5 +31,5 @@ const brand = page.kind === "open" ? page.portal.brand : page.kind === "unavaila
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
   {page.kind === "not_found" && <PortalNotice kind="not_found" />}
   {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={page.base} />}
-  {page.kind === "open" && professional && <PortalProfessionalHome portal={page.portal} professional={professional} base={page.base} next={next} actions={[MY_APPOINTMENTS(page.base)]} origem={readPlace(Astro.url.searchParams)} />}
+  {page.kind === "open" && professional && <PortalProfessionalHome portal={page.portal} professional={professional} base={page.base} next={next} actions={[MY_APPOINTMENTS(`${page.base}/${professional.slug}`)]} origem={readPlace(Astro.url.searchParams)} />}
 </PortalLayout>

@@ -1,5 +1,5 @@
 import type { AstroGlobal } from "astro";
-import { portalBase } from "../../portal";
+import { PORTAL_PREFIX, portalBase } from "../../portal";
 import type { DbClient } from "../clients";
 import { createClinicServiceClient } from "../clinicService";
 import { resolveClinicByPortalSlug } from "../platform";
@@ -36,3 +36,27 @@ export function professionalOf(portal: PortalClinic, slug: string | undefined): 
 
 /** Clínica de um profissional só (como o piloto): o endereço da clínica abre direto no início dele. */
 export const singleProfessional = (portal: PortalClinic) => (portal.professionals.length === 1 ? portal.professionals[0] : null);
+
+/**
+ * Minhas consultas pelo link do profissional (validação da F3, cliente 10/nov): "/{clínica}/{profissional}/minhas-consultas/…"
+ * abre as mesmas telas de "/{clínica}/minhas-consultas/…", com o profissional no parâmetro `profissional` (o endereço
+ * no navegador não muda). Nele: só as consultas dele, o cartão dele no alto, e Voltar, Remarcar, Cancelar e "Agendar
+ * consulta" dentro do endereço dele. Pelo link da clínica: todas, separadas por profissional.
+ */
+export const MINE_PROFESSIONAL_PARAM = "profissional";
+
+export type MineScope = { professional: PortalProfessional | null; listHref: string; home: string };
+
+export function mineScope(Astro: AstroGlobal, page: Extract<PortalPage, { kind: "open" }>): MineScope {
+  const found = professionalOf(page.portal, Astro.url.searchParams.get(MINE_PROFESSIONAL_PARAM) ?? undefined);
+  const professional = found && !found.exam ? found : null;
+  const home = professional ? `${page.base}/${professional.slug}` : page.base;
+  return { professional, listHref: `${home}/minhas-consultas`, home };
+}
+
+/** Endereço interno da tela de Minhas consultas da clínica, para a página do profissional reescrever (`sub`: "", "/remarcar"…). */
+export function mineRewriteTarget(Astro: AstroGlobal, sub: "" | "/remarcar" | "/confirmar" | "/cancelar"): string {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  params.set(MINE_PROFESSIONAL_PARAM, (Astro.params.profissional ?? "").toLowerCase());
+  return `${PORTAL_PREFIX}/${(Astro.params.clinica ?? "").toLowerCase()}/minhas-consultas${sub}?${params}`;
+}

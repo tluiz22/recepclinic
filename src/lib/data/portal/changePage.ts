@@ -3,7 +3,7 @@ import { portalHref } from "../../portal";
 import { readSession, type PortalSession } from "./identity";
 import { sessionLinkFor, type PortalLink } from "./links";
 import { findMyAppointment, leadHoursOf, outsideLead, type MyAppointment } from "./myAppointments";
-import { openPortalPage, type PortalPage } from "./page";
+import { mineScope, openPortalPage, type PortalPage } from "./page";
 
 // Abertura das telas de remarcar e cancelar (F3c): a clínica, a sessão com o celular comprovado (senão, Minhas
 // consultas pede o celular), o atendimento do endereço (`a`) se é deste celular, e o que o link do bot libera (sem a
@@ -33,7 +33,9 @@ export async function openChangePage(Astro: AstroGlobal, action: "remarcar" | "c
     return { kind: "page", page };
   }
   const { db, portal, base } = page;
-  const listHref = `${base}/minhas-consultas`;
+  // Pelo link do profissional, a lista e as telas ficam no endereço dele (mineScope).
+  const scope = mineScope(Astro, page);
+  const listHref = scope.listHref;
   const id = Astro.url.searchParams.get("a") ?? "";
   const session = await readSession(db, portal.clinicId, Astro.cookies);
   if (!session?.verified || !session.phone) return { kind: "redirect", response: Astro.redirect(listHref) };
@@ -41,7 +43,7 @@ export async function openChangePage(Astro: AstroGlobal, action: "remarcar" | "c
   // Cancelar o cancelado pela clínica não existe: o link de remarcação só remarca.
   const rebook = allowed.rebook && action === "remarcar";
   const item = await findMyAppointment(db, portal.clinicId, session.phone, id, { canceledByClinic: rebook });
-  if (!item || (action === "remarcar" && !item.canReschedule)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "mudou" })) };
+  if (!item || (action === "remarcar" && !item.canReschedule) || (scope.professional && item.agendaId !== scope.professional.agendaId)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "mudou" })) };
   // O link do bot dispensa a antecedência só para remarcar (F3-4); cancelar pelo portal segue a regra (RD10).
   const leadHours = allowed.noLead && action === "remarcar" ? null : await leadHoursOf(db, portal.clinicId);
   if (!rebook && leadHours !== null && !outsideLead(item.start, leadHours)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "prazo" })) };

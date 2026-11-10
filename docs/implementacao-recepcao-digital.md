@@ -699,6 +699,16 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   · libera sozinho às …" → "Liberar agora" → confirmar → "Portal liberado para …" e a faixa some → o portal manda o
   código de novo. Limite do dia: marcar 5 consultas pelo portal com o mesmo celular → a faixa mostra "Marcou 5
   consultas em 24 h" → liberar → a 6ª marca.
+- **10/nov, item 9 (achado do cliente): Minhas consultas pelo link do profissional.** Abria a lista da clínica
+  (`/{clínica}/minhas-consultas`) e o Voltar ia ao início da clínica. **Decisão do cliente:** pelo link do profissional,
+  só as consultas dele; pelo link da clínica, todas, separadas por profissional (exames juntos). Feito: endereço
+  `/{clínica}/{profissional}/minhas-consultas` (e `/remarcar`, `/confirmar`, `/cancelar`), que reescreve para as telas
+  da clínica com o parâmetro `profissional` (`mineScope` e `mineRewriteTarget` em `lib/data/portal/page.ts`); o cartão
+  do profissional (foto ou iniciais, nome, registro, especialidade) no alto; Voltar, Remarcar, Cancelar e "Agendar
+  consulta" no endereço dele. Sem migração. Teste `src/lib/data/portal/mineScope.test.ts`.
+  **Roteiro (staging):** link do profissional › Minhas consultas → o endereço com o profissional, o cartão dele e só as
+  consultas dele → Remarcar/Cancelar ficam no endereço dele → Voltar leva ao início do profissional. Pelo link da
+  clínica: as consultas em grupos com o nome e a especialidade de cada profissional.
 - **Pergunta do cliente (10/nov), item 1: "Usar outro número".** Hoje o cadastro não muda: o portal identifica pelo
   celular comprovado; com um número sem cadastro, nasce um contato e uma ficha nova (a antiga segue com o número
   antigo). Para criança com pai e mãe marcando cada um pelo seu número, isso divide a ficha (histórico, lembretes,
