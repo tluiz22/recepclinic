@@ -1,0 +1,32 @@
+---
+// Cabeçalho de cada profissional em Minhas consultas (cliente, 10/nov): foto ou iniciais, nome e especialidade, com a
+// linha embaixo. O mesmo pelo link da clínica (um por grupo) e pelo link do profissional (só o dele). Exames: o
+// frasco no lugar da foto.
+import type { PortalProfessional } from "../../lib/data/portal/portal";
+import PortalAvatar from "./PortalAvatar.astro";
+
+interface Props {
+  title: string;
+  who: Pick<PortalProfessional, "name" | "photoUrl" | "specialties"> | null;
+  /** "h2" na lista; "div" acima do título da tela do celular. */
+  as?: "h2" | "div";
+}
+
+const { title, who, as: Tag = "h2" } = Astro.props;
+---
+
+<Tag class="flex items-center gap-3 border-b border-gray-200 pb-2.5">
+  {
+    who ? (
+      <PortalAvatar name={who.name} photoUrl={who.photoUrl} size="sm" />
+    ) : (
+      <span aria-hidden="true" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clinic-tint text-clinic-ink">
+        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6" /><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3" /><path d="M7.5 15h9" /></svg>
+      </span>
+    )
+  }
+  <span class="flex min-w-0 flex-col">
+    <span class="font-display text-xl leading-tight font-bold">{title}</span>
+    {who?.specialties[0] && <span class="text-[15px] font-normal text-gray-600">{who.specialties[0].name}</span>}
+  </span>
+</Tag>

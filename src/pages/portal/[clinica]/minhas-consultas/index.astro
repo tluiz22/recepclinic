@@ -5,9 +5,8 @@
 // só "Falar com a recepção". Turma e domiciliar: Remarcar com a recepção. Vazio: "Nenhuma consulta marcada neste
 // número" e "Agendar consulta". Pelo link do profissional (cliente, 10/nov): só as dele, com o cartão dele no alto e tudo no
 // endereço dele; pelo link da clínica: todas, separadas por profissional.
-import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
+import PortalMineGroup from "../../../../components/portal/PortalMineGroup.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
-import PortalAvatar from "../../../../components/portal/PortalAvatar.astro";
 import PortalChangePhone from "../../../../components/portal/PortalChangePhone.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalPhoneCode from "../../../../components/portal/PortalPhoneCode.astro";
@@ -84,7 +83,8 @@ for (const item of items ?? []) {
   }
   group.items.push(item);
 }
-const grouped = !professional && groups.length > 0;
+// Pelo link do profissional, o mesmo cabeçalho (só o dele), também na lista vazia e na tela do celular.
+const grouped = groups.length > 0;
 const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 text-[17px] font-bold no-underline sm:flex-none sm:min-w-[150px]";
 ---
 
@@ -100,7 +100,7 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
     page.kind === "open" && identity && !items && (
       <div class="flex max-w-[680px] flex-col gap-[18px]">
         <PortalStepBar back={home} />
-        {professional && <PortalDoctor professional={professional} />}
+        {professional && <PortalMineGroup title={professional.name} who={professional} as="div" />}
         <h1 class={portalTitle}>Qual é o seu celular com WhatsApp?</h1>
         <p class="text-[17px] text-gray-700">Mostramos as consultas marcadas neste celular.</p>
         <PortalPhoneCode state={identity} action={here} />
@@ -111,7 +111,6 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
     items && phone && (
       <div class="flex flex-col gap-[18px]" data-portal-mine>
         <PortalStepBar back={home} />
-        {professional && <PortalDoctor professional={professional} />}
         <div class="flex flex-col gap-1.5">
           <h1 class={portalTitle}>Minhas consultas</h1>
           <p class="text-base text-gray-600 lg:text-[17px]">
@@ -124,29 +123,18 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
           </p>
         )}
         {items.length === 0 ? (
-          <div class="flex max-w-[620px] flex-col gap-4 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-5 lg:px-[18px]">
-            <p class="text-lg">{professional ? `Nenhuma consulta com ${professional.name} marcada neste número.` : "Nenhuma consulta marcada neste número."}</p>
-            <a href={home} class={portalCta}>Agendar consulta</a>
-          </div>
+          <section class="flex flex-col gap-3" aria-label={professional?.name}>
+            {professional && <PortalMineGroup title={professional.name} who={professional} />}
+            <div class="flex max-w-[620px] flex-col gap-4 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-5 lg:px-[18px]">
+              <p class="text-lg">{professional ? `Nenhuma consulta com ${professional.name} marcada neste número.` : "Nenhuma consulta marcada neste número."}</p>
+              <a href={home} class={portalCta}>Agendar consulta</a>
+            </div>
+          </section>
         ) : (
           <div class="flex flex-col gap-6">
           {groups.map((group) => (
           <section class="flex flex-col gap-3" aria-label={grouped ? group.title : undefined}>
-            {grouped && (
-              <h2 class="flex items-center gap-3 border-b border-gray-200 pb-2.5">
-                {group.who ? (
-                  <PortalAvatar name={group.who.name} photoUrl={group.who.photoUrl} size="sm" />
-                ) : (
-                  <span aria-hidden="true" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clinic-tint text-clinic-ink">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6" /><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3" /><path d="M7.5 15h9" /></svg>
-                  </span>
-                )}
-                <span class="flex min-w-0 flex-col">
-                  <span class="font-display text-xl leading-tight font-bold">{group.title}</span>
-                  {group.who?.specialties[0] && <span class="text-[15px] font-normal text-gray-600">{group.who.specialties[0].name}</span>}
-                </span>
-              </h2>
-            )}
+            {grouped && <PortalMineGroup title={group.title} who={group.who} />}
           <ul class="grid gap-3.5 lg:grid-cols-2 lg:gap-[18px]">
             {group.items.map((item) => {
               const free = outsideLead(item.start, leadHours, now);

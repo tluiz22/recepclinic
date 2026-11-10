@@ -704,7 +704,9 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   só as consultas dele; pelo link da clínica, todas, separadas por profissional (exames juntos). Feito: endereço
   `/{clínica}/{profissional}/minhas-consultas` (e `/remarcar`, `/confirmar`, `/cancelar`), que reescreve para as telas
   da clínica com o parâmetro `profissional` (`mineScope` e `mineRewriteTarget` em `lib/data/portal/page.ts`); o cartão
-  do profissional (foto ou iniciais, nome, registro, especialidade) no alto; Voltar, Remarcar, Cancelar e "Agendar
+  do profissional no alto (revisto pelo cliente, 10/nov: o mesmo cabeçalho dos grupos do link da clínica, foto ou
+  iniciais, nome e especialidade com a linha embaixo, também na lista vazia e na tela do celular; componente
+  `PortalMineGroup`); Voltar, Remarcar, Cancelar e "Agendar
   consulta" no endereço dele. Sem migração. Teste `src/lib/data/portal/mineScope.test.ts`.
   **Roteiro (staging):** link do profissional › Minhas consultas → o endereço com o profissional, o cartão dele e só as
   consultas dele → Remarcar/Cancelar ficam no endereço dele → Voltar leva ao início do profissional. Pelo link da
