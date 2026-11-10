@@ -1,0 +1,285 @@
+---
+// Agenda em colunas (F5a; R3, R3c e R2, cliente, 08/nov/2026): a grade do dia por horário, uma coluna por agenda, a
+// partir de 640px (no celular, uma agenda por vez: AgendaPhoneList). Nomes e horas ficam fixos e a rolagem é só dentro
+// da grade. Até 7 colunas: na largura toda. Mais que isso: barra de rolagem em destaque no topo ("Profissionais 1 a 7
+// de 18", setas e trilho) e "Mais {n}" na borda direita. Com um atendimento aberto, a agenda dele vai para a primeira
+// coluna, destacada (o script abaixo; o painel ao lado fica com o espaço).
+import Icon from "../Icon.astro";
+import { PX_PER_MINUTE, type GridColumn } from "../../../lib/agendaGrid";
+import type { Situation } from "./situationStyle";
+
+export type GridItem =
+  | { kind: "appointment"; key: string; top: number; height: number; lane: number; lanes: number; time: string; title: string; detail: string; situation: Situation; label: string; href: string }
+  | { kind: "group"; key: string; top: number; height: number; lane: number; lanes: number; time: string; title: string; detail: string; href: string }
+  | { kind: "block"; key: string; top: number; height: number; lane: number; lanes: number; time: string; title: string; detail: string; href: string }
+  | { kind: "hold"; key: string; top: number; height: number; lane: number; lanes: number; time: string; until: string }
+  | { kind: "free"; key: string; top: number; height: number; lane: number; lanes: number; time: string; endTime: string; detail: string; href: string };
+
+interface Props {
+  columns: (GridColumn & { countText: string; items: GridItem[] })[];
+  /** Linhas de 30 min ("08:00"…) e a altura total, em minutos. */
+  lines: string[];
+  minutes: number;
+  /** Posição da linha "agora" (minutos desde o topo), só hoje. */
+  nowAt: number | null;
+  /** Total de agendas da pessoa: a partir de 8, a barra de rolagem e "Profissionais 1 a 7 de 18". */
+  many: boolean;
+  /** Atendimento aberto e a coluna dele (vai para a primeira). */
+  selectedKey: string;
+  selectedColumnId: string | null;
+}
+
+const { columns, lines, minutes, nowAt, many, selectedKey, selectedColumnId } = Astro.props;
+const px = (m: number) => `${m * PX_PER_MINUTE}px`;
+const height = minutes * PX_PER_MINUTE;
+// A coluna do atendimento aberto primeiro (sem JavaScript também).
+const ordered = selectedColumnId ? [...columns.filter((c) => c.id === selectedColumnId), ...columns.filter((c) => c.id !== selectedColumnId)] : columns;
+const groupStart = (i: number) => i === 0 || ordered[i - 1].group !== ordered[i].group;
+
+const TONE: Record<Situation, string> = {
+  pending: "border-pend-200 bg-pend-50 text-pend-800",
+  confirmed: "border-conf-200 bg-conf-50 text-conf-800",
+  attended: "border-att-200 bg-att-50 text-att-800",
+  no_show: "border-ns-200 bg-ns-50 text-ns-800",
+  canceled: "border-can-200 bg-can-50 text-can-800",
+  block: "border-blk-200 bg-blk-50 text-blk-800",
+};
+const place = (item: GridItem) =>
+  `top:${px(item.top)};height:${Math.max(item.height * PX_PER_MINUTE - 4, 26)}px;left:calc(${(item.lane / item.lanes) * 100}% + 3px);width:calc(${100 / item.lanes}% - 6px)`;
+const hatched = "background-image:repeating-linear-gradient(135deg,var(--color-blk-100) 0 6px,var(--color-blk-50) 6px 12px)";
+---
+
+<section aria-label="Agenda do dia em colunas" data-agenda-grid data-many={many || undefined} class="min-w-0 flex-1 overflow-hidden rounded-xl border border-line bg-white max-sm:hidden">
+  <div data-grid-bar hidden={!many} class="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-line bg-[#f7f9f8] px-3 py-2">
+    <button type="button" data-grid-prev aria-label="Profissionais anteriores" disabled class="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-line-strong bg-white text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-45">
+      <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
+    </button>
+    <div data-grid-track aria-hidden="true" class="relative h-3.5 w-[min(400px,40%)] min-w-[140px] cursor-pointer rounded-full bg-blk-200">
+      <div data-grid-thumb class="absolute top-0 left-0 h-3.5 w-1/3 cursor-grab touch-none rounded-full bg-brand active:cursor-grabbing"></div>
+    </div>
+    <button type="button" data-grid-next aria-label="Próximos profissionais" class="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-transparent bg-brand text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:border-line-strong disabled:bg-white disabled:text-ink disabled:opacity-45">
+      <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+    </button>
+    <p class="text-[14px] text-ink" aria-live="polite">
+      <b data-grid-range>Profissionais 1 a {Math.min(7, columns.length)} de {columns.length}.</b>
+      <span class="text-ink-soft max-lg:hidden">Use as setas ou role para o lado (Shift + roda do mouse).</span>
+    </p>
+  </div>
+
+  <div class="relative">
+    <div data-grid-scroll tabindex="0" aria-label="Grade de horários; role para ver outros profissionais" class="relative overflow-auto overscroll-contain focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand max-lg:max-h-[75dvh]">
+      <div class="flex min-w-full" data-grid-row>
+        <div class="sticky left-0 z-20 w-14 shrink-0 border-r border-line bg-white" aria-hidden="true">
+          <div class="sticky top-0 z-10 h-[82px] border-b border-line bg-white"></div>
+          <div class="relative" style={`height:${height}px`}>
+            {lines.map((line, i) => <span class="absolute left-1.5 text-[13px] text-ink-soft tabular-nums" style={`top:${i * 30 * PX_PER_MINUTE + 3}px`}>{line}</span>)}
+            {nowAt !== null && <span class="absolute right-0 h-2.5 w-2.5 translate-x-1/2 -translate-y-1/2 rounded-full bg-can-500" style={`top:${px(nowAt)}`}></span>}
+          </div>
+        </div>
+        {
+          ordered.map((column, i) => {
+            const focused = column.id === selectedColumnId;
+            return (
+              <div
+                data-grid-col={column.id}
+                data-order={columns.indexOf(column)}
+                data-group={column.group}
+                data-focused={focused || undefined}
+                role="group"
+                aria-label={`${column.name}, ${column.countText}`}
+                class="flex min-w-[132px] flex-[1_0_132px] flex-col border-l border-[#e7eeeb] data-[group-start]:border-l-2 data-[group-start]:border-l-line-strong"
+                data-group-start={groupStart(i) || undefined}
+              >
+                <div class="sticky top-0 z-10 bg-white">
+                  <div class="h-6 truncate bg-canvas-deep px-2 py-[3px] text-[12.5px] font-bold text-ink-soft" data-group-label>
+                    {groupStart(i) ? column.group : ""}
+                  </div>
+                  <div class="h-[58px] border-b border-line px-2 py-1.5 [[data-focused]_&]:bg-brand-soft">
+                    <p class="truncate text-[14.5px] font-bold text-ink" title={column.name}>{column.name}</p>
+                    <p class="text-[12.5px] text-ink-soft">{column.countText}</p>
+                  </div>
+                </div>
+                <div
+                  class="relative @container [[data-focused]_&]:bg-conf-50/40"
+                  style={`height:${height}px;background-image:repeating-linear-gradient(to bottom,transparent 0 ${30 * PX_PER_MINUTE - 1}px,#e7eeeb ${30 * PX_PER_MINUTE - 1}px ${30 * PX_PER_MINUTE}px)`}
+                >
+                  {nowAt !== null && <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 z-[5] h-0.5 bg-can-500/70" style={`top:${px(nowAt)}`}></div>}
+                  {column.items.map((item) => {
+                    if (item.kind === "free") {
+                      return (
+                        <a
+                          href={item.href}
+                          aria-label={`Livre das ${item.time} às ${item.endTime}${item.detail ? `, ${item.detail}` : ""}, ${column.name}: marcar`}
+                          class="group absolute flex items-start gap-1 overflow-hidden rounded-lg border border-dashed border-transparent px-2 py-1 text-[12.5px] font-semibold text-brand-ink/0 no-underline [@media(hover:none)]:text-brand-ink/80 hover:border-conf-200 hover:bg-conf-50 hover:text-brand-ink focus-visible:border-brand focus-visible:bg-conf-50 focus-visible:text-brand-ink focus-visible:outline-none"
+                          style={place(item)}
+                        >
+                          <span class="tabular-nums">{item.time}</span> <span class="truncate">+ Marcar{item.detail ? ` · ${item.detail}` : ""}</span>
+                        </a>
+                      );
+                    }
+                    if (item.kind === "hold") {
+                      return (
+                        <div
+                          class="absolute overflow-hidden rounded-lg border-2 border-dashed border-att-500 bg-att-50 px-2 py-1 text-[12.5px] leading-tight text-att-800"
+                          style={place(item)}
+                          title={`Em reserva até ${item.until}: alguém está escolhendo este horário no portal`}
+                        >
+                          <b>Em reserva</b> <span class="block truncate">até {item.until} · portal</span>
+                        </div>
+                      );
+                    }
+                    const selected = item.key === selectedKey;
+                    const tone = item.kind === "appointment" ? TONE[item.situation] : item.kind === "block" ? "border-blk-200 text-blk-800" : "border-[#e9c9b1] bg-[#f6e6da] text-[#7a3d12]";
+                    const aria =
+                      item.kind === "appointment"
+                        ? `${item.time}, ${item.title}, ${item.detail}, ${item.label}`
+                        : item.kind === "block"
+                          ? `${item.time}, ${item.title}, ${item.detail}`
+                          : `${item.time}, ${item.title}, ${item.detail}`;
+                    return (
+                      <a
+                        href={item.href}
+                        data-select={item.key}
+                        data-col={column.id}
+                        data-selected={selected || undefined}
+                        aria-current={selected ? "true" : undefined}
+                        aria-label={aria}
+                        class={`absolute z-[6] flex flex-col overflow-hidden rounded-lg border px-2 py-1 text-[12.5px] leading-tight no-underline hover:shadow-[0_2px_8px_rgba(18,48,42,.18)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand data-[selected]:z-[7] data-[selected]:border-brand data-[selected]:shadow-[0_0_0_2px_var(--color-brand)] ${tone}`}
+                        style={`${place(item)}${item.kind === "block" ? `;${hatched}` : ""}`}
+                      >
+                        <span class="flex items-baseline justify-between gap-1.5">
+                          <b class={`truncate text-[13.5px] ${item.kind === "appointment" && item.situation === "canceled" ? "line-through" : ""}`}>{item.title}</b>
+                          {item.kind === "appointment" && <span class="hidden shrink-0 text-[12px] font-bold @min-[220px]:inline">{item.label}</span>}
+                        </span>
+                        <span class="truncate">{item.detail}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
+        }
+      </div>
+    </div>
+    <div data-grid-more-wrap hidden={!many} aria-hidden="true" class="pointer-events-none absolute top-[82px] right-0 bottom-0 w-[72px] bg-gradient-to-r from-white/0 to-white to-80%"></div>
+    <button
+      type="button"
+      data-grid-more
+      hidden={!many}
+      class="absolute top-1/2 right-3 z-30 inline-flex h-11 items-center gap-1 rounded-full bg-brand px-4 text-[15px] font-bold text-white shadow-[0_4px_14px_rgba(18,48,42,.25)] hover:bg-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+    >
+      <span data-grid-more-text>Mais {Math.max(0, columns.length - 7)}</span>
+      <Icon name="chevron-right" class="h-4 w-4" strokeWidth={2.4} />
+    </button>
+  </div>
+</section>
+
+<script>
+  // Rolagem para o lado com a barra em destaque (R3): setas e "Mais" andam uma tela de colunas; o trilho mostra onde
+  // está e pode ser arrastado; o texto diz quais profissionais estão à vista. Aparece sempre que as colunas não cabem
+  // (também com o painel do atendimento aberto ocupando espaço).
+  const grid = document.querySelector<HTMLElement>("[data-agenda-grid]");
+  const scroller = grid?.querySelector<HTMLElement>("[data-grid-scroll]");
+  if (grid && scroller) {
+    const row = scroller.querySelector<HTMLElement>("[data-grid-row]")!;
+    const bar = grid.querySelector<HTMLElement>("[data-grid-bar]")!;
+    const prev = grid.querySelector<HTMLButtonElement>("[data-grid-prev]")!;
+    const next = grid.querySelector<HTMLButtonElement>("[data-grid-next]")!;
+    const track = grid.querySelector<HTMLElement>("[data-grid-track]")!;
+    const thumb = grid.querySelector<HTMLElement>("[data-grid-thumb]")!;
+    const rangeText = grid.querySelector<HTMLElement>("[data-grid-range]")!;
+    const more = grid.querySelector<HTMLButtonElement>("[data-grid-more]")!;
+    const moreText = grid.querySelector<HTMLElement>("[data-grid-more-text]")!;
+    const moreWrap = grid.querySelector<HTMLElement>("[data-grid-more-wrap]")!;
+    const smooth = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    const cols = () => [...row.querySelectorAll<HTMLElement>("[data-grid-col]")];
+    const axis = () => (row.firstElementChild as HTMLElement).offsetWidth;
+    const colWidth = () => cols()[0]?.offsetWidth ?? 132;
+    const visible = () => Math.max(1, Math.floor((scroller.clientWidth - axis()) / colWidth()));
+
+    // Computador: a grade ocupa o resto da tela (a rolagem fica só dentro dela).
+    const fit = () => {
+      if (!window.matchMedia("(min-width: 1024px)").matches) return void (scroller.style.maxHeight = "");
+      const top = scroller.getBoundingClientRect().top + window.scrollY;
+      scroller.style.maxHeight = `max(360px, calc(100dvh - ${Math.round(top) + 50}px))`;
+    };
+    const update = (resize = true) => {
+      const total = cols().length;
+      const overflow = scroller.scrollWidth - scroller.clientWidth > 2;
+      bar.hidden = !overflow;
+      const first = Math.min(total - 1, Math.round(scroller.scrollLeft / colWidth()));
+      const last = Math.min(total, first + visible());
+      rangeText.textContent = `Profissionais ${first + 1} a ${last} de ${total}.`;
+      const ratio = scroller.clientWidth / scroller.scrollWidth;
+      const max = scroller.scrollWidth - scroller.clientWidth;
+      thumb.style.width = `${Math.max(12, ratio * 100)}%`;
+      thumb.style.left = `${max > 0 ? (scroller.scrollLeft / max) * (100 - Math.max(12, ratio * 100)) : 0}%`;
+      prev.disabled = scroller.scrollLeft <= 1;
+      next.disabled = scroller.scrollLeft >= max - 1;
+      const rest = total - last;
+      more.hidden = moreWrap.hidden = !overflow || rest <= 0;
+      moreText.textContent = `Mais ${rest}`;
+      more.setAttribute("aria-label", `Ver mais ${rest} ${rest === 1 ? "profissional" : "profissionais"}`);
+      if (resize) fit();
+    };
+    const page = (dir: number) => scroller.scrollBy({ left: dir * visible() * colWidth(), behavior: smooth });
+    prev.addEventListener("click", () => page(-1));
+    next.addEventListener("click", () => page(1));
+    more.addEventListener("click", () => page(1));
+    scroller.addEventListener("scroll", () => update(false), { passive: true });
+    new ResizeObserver(() => update()).observe(scroller);
+    window.addEventListener("resize", () => update());
+    track.addEventListener("pointerdown", (event) => {
+      if (event.target === thumb) return;
+      const r = track.getBoundingClientRect();
+      scroller.scrollTo({ left: ((event.clientX - r.left) / r.width) * scroller.scrollWidth - scroller.clientWidth / 2, behavior: smooth });
+    });
+    thumb.addEventListener("pointerdown", (event) => {
+      thumb.setPointerCapture(event.pointerId);
+      const startX = event.clientX;
+      const startLeft = scroller.scrollLeft;
+      const move = (e: PointerEvent) => (scroller.scrollLeft = startLeft + ((e.clientX - startX) / track.clientWidth) * scroller.scrollWidth);
+      const stop = () => {
+        thumb.removeEventListener("pointermove", move);
+        thumb.removeEventListener("pointerup", stop);
+      };
+      thumb.addEventListener("pointermove", move);
+      thumb.addEventListener("pointerup", stop);
+    });
+
+    // Atendimento aberto (R2): a coluna dele vira a primeira, destacada; fechar devolve a ordem.
+    const regroup = () => {
+      let previous: string | null = null;
+      for (const col of cols()) {
+        const start = col.dataset.group !== previous;
+        col.toggleAttribute("data-group-start", start);
+        const label = col.querySelector<HTMLElement>("[data-group-label]");
+        if (label) label.textContent = start ? (col.dataset.group ?? "") : "";
+        previous = col.dataset.group ?? null;
+      }
+    };
+    const focusColumn = (id: string | null) => {
+      const list = cols().sort((a, b) => Number(a.dataset.order) - Number(b.dataset.order));
+      const chosen = id ? list.find((c) => c.dataset.gridCol === id) : undefined;
+      for (const col of chosen ? [chosen, ...list.filter((c) => c !== chosen)] : list) row.append(col);
+      list.forEach((col) => col.toggleAttribute("data-focused", col === chosen));
+      regroup();
+      if (chosen) scroller.scrollTo({ left: 0 });
+      update();
+    };
+    document.addEventListener("agenda:select", (event) => {
+      const key = (event as CustomEvent<string>).detail;
+      const item = key ? row.querySelector<HTMLElement>(`[data-select="${CSS.escape(key)}"]`) : null;
+      focusColumn(item?.dataset.col ?? null);
+    });
+
+    // Primeira vista: hoje, a hora de agora (com uma hora antes); outro dia, o primeiro atendimento.
+    const now = grid.querySelector<HTMLElement>("[data-select][data-selected]") ?? null;
+    const nowLine = row.querySelector<HTMLElement>(".bg-can-500\\/70");
+    const firstItem = [...row.querySelectorAll<HTMLElement>("[data-select]")].sort((a, b) => a.offsetTop - b.offsetTop)[0];
+    const target = now ?? nowLine ?? firstItem;
+    if (target) scroller.scrollTop = Math.max(0, target.offsetTop - 120);
+    update();
+  }
+</script>

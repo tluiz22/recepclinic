@@ -46,6 +46,7 @@ import {
   isAgendaOpenOn,
   pastLimit,
   PAST_LIMIT_DAYS,
+  TEAM_HOLDS,
 } from "../../../lib/data/agenda/slots";
 import {
   findBlockingAppointment,
@@ -286,8 +287,8 @@ if (patient && service && searchAgendas.length) {
   } else {
     const dates = (
       agendaChoice === ANY
-        ? await getNextAvailableDatesAnyAgenda(db, clinic.clinicId, { serviceId: service.id, count: ALL_DATES, ...ignore })
-        : await getNextAvailableDates(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, count: ALL_DATES, ...ignore })
+        ? await getNextAvailableDatesAnyAgenda(db, clinic.clinicId, { serviceId: service.id, count: ALL_DATES, ...ignore, holds: TEAM_HOLDS })
+        : await getNextAvailableDates(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, count: ALL_DATES, ...ignore, holds: TEAM_HOLDS })
     ).map((d) => d.date);
     const wanted = state.date && state.date >= today ? state.date : null;
     strip = buildDayStrip(dates, wanted, state.de || null);
@@ -295,8 +296,8 @@ if (patient && service && searchAgendas.length) {
     if (date) {
       const slots =
         agendaChoice === ANY
-          ? await getFreeSlotsAnyAgenda(db, clinic.clinicId, { serviceId: service.id, date, ...ignore })
-          : (await getFreeSlots(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, date, ...ignore })).map((s) => ({ ...s, agendaId: agendaChoice }));
+          ? await getFreeSlotsAnyAgenda(db, clinic.clinicId, { serviceId: service.id, date, ...ignore, holds: TEAM_HOLDS })
+          : (await getFreeSlots(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, date, ...ignore, holds: TEAM_HOLDS })).map((s) => ({ ...s, agendaId: agendaChoice }));
       slotOptions = slots.map((s) => ({
         value: slotValue(s),
         label: s.time,
@@ -331,7 +332,7 @@ if (showOther && otherQuery) {
   else if (!locationId) otherError = "Escolha o local.";
   else {
     const start = toInstant(otherQuery.date, otherQuery.time, clinic.timezone);
-    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service!.id, agendaId, locationId, start, pastFrom, ...ignore });
+    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service!.id, agendaId, locationId, start, pastFrom, ...ignore, respectHolds: true });
     const blocking = start.getTime() > Date.now() ? blockedBy.get(agendaId) : undefined;
     if (!check.ok) otherError = check.reason;
     else if (blocking) otherError = `${patient!.fullName} já tem atendimento marcado: ${describeUpcoming(blocking)}. Numa data futura, remarque esse atendimento; numa data passada, pode lançar.`;

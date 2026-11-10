@@ -23,7 +23,7 @@ const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
 const monday = weekStart(date);
 const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
-const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
+const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url);
 const range = { fromDate: days[0], toDate: days[6], timeZone: clinic.timezone, agendaIds: scope.agendaIds };
 const [appointments, blocks, serviceRefs] = await Promise.all([
   listAgendaAppointments(db, clinic.clinicId, range),

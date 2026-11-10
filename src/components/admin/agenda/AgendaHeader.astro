@@ -50,6 +50,9 @@ const searchReturn = view === "busca" ? returnTo : here;
 const searching = view === "busca";
 // Sem mais de uma agenda e fora da busca, não sobra nada na barra de filtros.
 const hasFilters = agendas.length > 1 || searching;
+// Agenda › Dia em colunas (F5a): a tela traz os próprios filtros (Agenda ou Especialidade/Profissional, Situação e
+// "Próximos horários livres") no slot "filters".
+const ownFilters = Astro.slots.has("filters");
 ---
 
 <div class="flex flex-wrap items-center gap-x-2 gap-y-3">
@@ -80,8 +83,9 @@ const hasFilters = agendas.length > 1 || searching;
   </div>
 </div>
 
+{ownFilters && <div class="mt-3 flex flex-wrap items-center gap-2"><slot name="filters" /></div>}
 {
-  hasFilters && (
+  !ownFilters && hasFilters && (
     <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
       {agendas.length > 1 && (
         <form method="GET" action={current.href}>

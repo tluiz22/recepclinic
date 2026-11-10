@@ -2,7 +2,7 @@ import { addDays, localDateOf, localTimeOf, todayIn, weekdayOf } from "../../cli
 import type { Enums, Json } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
-import { checkFreeTime, getFreeSlots, loadSchedulingPlan, pastLimit } from "./slots";
+import { checkFreeTime, getFreeSlots, loadSchedulingPlan, pastLimit, TEAM_HOLDS } from "./slots";
 import { BLOCKED_DAYS_SLACK, loadWholeBlockedDays } from "./blockedDays";
 import { logError } from "../../log";
 
@@ -424,11 +424,12 @@ async function resolveIndividualSlot(
   input: AnyTimeInput,
   now: Date,
 ): Promise<string> {
-  const slots = await getFreeSlots(db, clinicId, query, now);
+  // Equipe (F5a, R3): o horário em reserva do portal não entra (nem pela lista nem pelo "Outro horário").
+  const slots = await getFreeSlots(db, clinicId, input.anyTime ? { ...query, holds: TEAM_HOLDS } : query, now);
   const slot = slots.find((s) => s.start.getTime() === query.start.getTime());
   if (slot) return slot.locationId;
   if (!input.anyTime || !query.locationId) throw new DataError("conflict", "Atendimento: horário não está mais livre", { start: "Horário não está mais livre" });
-  const check = await checkFreeTime(db, clinicId, { ...query, locationId: query.locationId, pastFrom: input.pastFrom }, now);
+  const check = await checkFreeTime(db, clinicId, { ...query, locationId: query.locationId, pastFrom: input.pastFrom, respectHolds: true }, now);
   if (!check.ok) throw new DataError("conflict", `Atendimento: ${check.reason}`, { start: check.reason });
   if (check.warnings.length && !input.acceptedWarnings) {
     throw new DataError("invalid", "Atendimento: confirme os avisos do horário", { start: check.warnings.join(" ") });

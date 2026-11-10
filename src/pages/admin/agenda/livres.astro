@@ -1,0 +1,199 @@
+---
+// Agenda › Próximos horários livres (F5a; R3b, cliente, 08/nov/2026): para responder o paciente na hora, os 2
+// primeiros dias com vaga de cada profissional que atende o que ele pediu. Filtros: Especialidade, Atendimento (no
+// consultório ou em casa; não existe atendimento online no sistema) e "A partir de"; sem convênio (cada profissional
+// mostra os convênios que atende). Horário em reserva do portal aparece apagado e não marca. Tocar num horário abre a
+// Marcar preenchida (profissional, dia e hora); "Ver mais dias" abre a agenda dele no dia seguinte.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import { CONTROL, buttonClass } from "../../../components/admin/ui/styles";
+import { addDays, formatCalendarDate, isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { loadAgendaScope } from "../../../lib/data/agenda/scope";
+import { listPortalHolds, loadSpecialtiesByProfessional } from "../../../lib/data/agenda/grid";
+import { listFreeGapsRange } from "../../../lib/data/agenda/slots";
+import { listInsuranceLinks, listInsurancePlans } from "../../../lib/data/config/insurance";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { buildColumns, specialtyOptions, filterColumns } from "../../../lib/agendaGrid";
+import { nextFreeDays } from "../../../lib/nextFree";
+import { receivedReturn, withReturn, currentPath } from "../../../lib/returnPath";
+import { capitalize } from "../../../lib/vocabulary";
+import { logError } from "../../../lib/log";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const now = new Date();
+const today = todayIn(clinic.timezone, now);
+const params = Astro.url.searchParams;
+const fromParam = params.get("date");
+const from = fromParam && isCalendarDate(fromParam) && fromParam >= today ? fromParam : today;
+const volta = receivedReturn(Astro.url);
+const back = volta ?? `/admin/agenda?date=${from}`;
+const here = currentPath(Astro.url);
+const PLACES = { consultorio: "clinic", casa: "home_visit" } as const;
+const placeParam = params.get("onde");
+const placeKey = placeParam === "consultorio" || placeParam === "casa" ? placeParam : null;
+/** Quantos dias à frente procura (o prazo de marcação vai até 60). */
+const SEARCH_DAYS = 30;
+
+const [scope, specialtiesOf, professionals, plans, links] = await Promise.all([
+  loadAgendaScope(db, clinic.clinicId, new URL("/admin/agenda", Astro.url)),
+  loadSpecialtiesByProfessional(db, clinic.clinicId).catch(() => new Map<string, string[]>()),
+  listProfessionals(db, clinic.clinicId).catch(() => []),
+  listInsurancePlans(db, clinic.clinicId).catch(() => []),
+  listInsuranceLinks(db, clinic.clinicId).catch(() => []),
+]);
+const allColumns = buildColumns(scope.agendas.filter((a) => a.isActive), specialtiesOf);
+const filtered = filterColumns(allColumns, { specialty: params.get("esp"), agendaId: null });
+const specialty = filtered.filter.specialty;
+const ids = filtered.columns.map((c) => c.id);
+const range = { fromDate: from, toDate: addDays(from, SEARCH_DAYS - 1), agendaIds: ids, timeZone: clinic.timezone };
+let failed = false;
+const [gaps, holds] = await Promise.all([
+  listFreeGapsRange(db, clinic.clinicId, range, now).catch((error: unknown) => {
+    logError("livres: horários não carregaram", error, { clinica: clinic.clinicId });
+    failed = true;
+    return [];
+  }),
+  listPortalHolds(db, clinic.clinicId, range, now).catch(() => []),
+]);
+const hasHome = gaps.some((g) => g.places.includes("home_visit"));
+const place = placeKey && hasHome ? PLACES[placeKey] : null;
+const results = nextFreeDays(ids, gaps, holds, { place });
+
+// O que cada profissional atende: convênios e particular (a agenda da Equipe não mostra).
+const planName = new Map(plans.map((p) => [p.id, p.name]));
+const professionalOf = new Map(professionals.map((p) => [p.id, p]));
+const agendaById = new Map(scope.agendas.map((a) => [a.id, a]));
+const coverage = (agendaId: string) => {
+  const agenda = agendaById.get(agendaId);
+  const pro = agenda?.professionalId ? professionalOf.get(agenda.professionalId) : undefined;
+  if (!pro) return null;
+  const names = links.filter((l) => l.professionalId === pro.id).map((l) => planName.get(l.planId)).filter((n): n is string => !!n).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const all = pro.acceptsPrivate ? [...names, "particular"] : names;
+  if (all.length === 0) return null;
+  const text = all.length === 1 ? all[0] : `${all.slice(0, -1).join(", ")} e ${all[all.length - 1]}`;
+  return capitalize(text);
+};
+const placesOf = (agendaId: string) => {
+  const kinds = new Set(gaps.filter((g) => g.agendaId === agendaId && !g.group).flatMap((g) => g.places));
+  return kinds.has("clinic") && kinds.has("home_visit") ? "No consultório e em casa" : kinds.has("home_visit") ? "Em casa" : "No consultório";
+};
+
+const cards = filtered.columns
+  .map((column) => ({ column, result: results.find((r) => r.agendaId === column.id)! }))
+  .sort((a, b) => (a.result.first?.getTime() ?? Infinity) - (b.result.first?.getTime() ?? Infinity) || a.column.name.localeCompare(b.column.name, "pt-BR"));
+const withSlots = cards.filter((c) => c.result.days.length > 0);
+const without = cards.filter((c) => c.result.days.length === 0);
+// "Mais cedo" só quando um profissional sozinho tem o primeiro horário.
+const firstTime = withSlots[0]?.result.first?.getTime() ?? null;
+const earliest = firstTime !== null && withSlots.filter((c) => c.result.first?.getTime() === firstTime).length === 1 ? firstTime : null;
+const dayLabel = (date: string) => (date === today ? "Hoje" : date === addDays(today, 1) ? "Amanhã" : capitalize(formatCalendarDate(date, "EEE dd/MM")));
+const marcar = (agendaId: string, date: string, time: string) => withReturn(`/admin/agenda/marcar?date=${date}&agenda_id=${agendaId}&hora=${time}`, here);
+const subtitle = specialty
+  ? `${filtered.columns.length} ${filtered.columns.length === 1 ? "agenda" : "agendas"} de ${specialty}.`
+  : `${filtered.columns.length} ${filtered.columns.length === 1 ? "agenda" : "agendas"}.`;
+---
+
+<AdminLayout title="Agenda · Próximos horários livres">
+  <a href={back} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+    Voltar para a Agenda
+  </a>
+  <h1 class="mt-2 font-display text-[26px] leading-tight font-bold text-ink sm:text-[30px]">Próximos horários livres</h1>
+  <p class="mt-1 max-w-[62ch] text-[15.5px] text-ink-soft">Para responder o paciente na hora: os primeiros horários de cada profissional que atende o que ele pediu.</p>
+
+  <form method="GET" action="/admin/agenda/livres" class="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-line bg-white px-4 py-3.5">
+    {volta && <input type="hidden" name="volta" value={volta} />}
+    <label class="flex min-w-[200px] flex-col gap-1 max-sm:w-full">
+      <span class="text-[13.5px] font-semibold text-ink-soft">Especialidade</span>
+      <select name="esp" class={`${CONTROL} ${specialty ? "border-brand bg-conf-50" : ""}`} data-autosubmit>
+        <option value="" selected={!specialty}>Todas</option>
+        {specialtyOptions(allColumns).map((name) => <option value={name} selected={name === specialty}>{name}</option>)}
+      </select>
+    </label>
+    {
+      hasHome && (
+        <label class="flex min-w-[190px] flex-col gap-1 max-sm:w-full">
+          <span class="text-[13.5px] font-semibold text-ink-soft">Atendimento</span>
+          <select name="onde" class={CONTROL} data-autosubmit>
+            <option value="" selected={!placeKey}>No consultório ou em casa</option>
+            <option value="consultorio" selected={placeKey === "consultorio"}>No consultório</option>
+            <option value="casa" selected={placeKey === "casa"}>Em casa</option>
+          </select>
+        </label>
+      )
+    }
+    <label class="flex min-w-[170px] flex-col gap-1 max-sm:w-full">
+      <span class="text-[13.5px] font-semibold text-ink-soft">A partir de</span>
+      <input type="date" name="date" value={from} min={today} class={CONTROL} data-autosubmit />
+    </label>
+    <noscript><button type="submit" class={buttonClass("secondary")}>Ver</button></noscript>
+    <p class="text-[14.5px] text-ink-soft sm:ml-auto" aria-live="polite">{subtitle}</p>
+  </form>
+
+  {failed && <p role="alert" class="mt-4 rounded-xl border border-danger-line bg-can-50 px-4 py-3 text-[15px] text-can-800">Não conseguimos carregar os horários. <a href={here} class="font-semibold text-can-800">Tentar de novo</a></p>}
+
+  <ul class="mt-4 flex flex-col gap-3" aria-label="Profissionais com horário livre">
+    {
+      withSlots.map(({ column, result }) => {
+        const covers = coverage(column.id);
+        const next = addDays(result.days[result.days.length - 1].date, 1);
+        return (
+          <li class="flex flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-[18px]">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h2 class="text-[17px] font-bold text-ink">{column.name}</h2>
+                <p class="text-[14px] text-ink-soft">
+                  {column.group !== "Outros" && column.group !== "Exames" ? `${column.group} · ` : ""}
+                  {placesOf(column.id)}
+                  {covers ? ` · ${covers}` : ""}
+                </p>
+              </div>
+              {earliest !== null && result.first?.getTime() === earliest && (
+                <span class="shrink-0 rounded-full bg-conf-100 px-2.5 py-0.5 text-[13px] font-semibold text-conf-800">Mais cedo</span>
+              )}
+            </div>
+            {result.days.map((day) => (
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="w-full text-[15px] font-semibold text-ink sm:w-28 sm:shrink-0">{dayLabel(day.date)}</span>
+                {day.slots.map((slot) =>
+                  slot.held ? (
+                    <span class="inline-flex h-11 items-center rounded-lg border border-dashed border-line-strong bg-blk-50 px-3 text-[14.5px] text-ink-soft tabular-nums sm:h-10" title="Em reserva: alguém está escolhendo este horário no portal">
+                      {slot.time} em reserva
+                    </span>
+                  ) : (
+                    <a href={marcar(column.id, day.date, slot.time)} aria-label={`Marcar ${dayLabel(day.date)} às ${slot.time} com ${column.name}`} class={`${buttonClass("secondary")} tabular-nums`}>
+                      {slot.time}
+                    </a>
+                  ),
+                )}
+              </div>
+            ))}
+            <a href={`/admin/agenda?date=${next}&agenda=${column.id}&ver=${column.id}`} class="self-start text-[14.5px] font-semibold text-brand no-underline hover:underline">
+              Ver mais dias
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+  {
+    !failed && withSlots.length === 0 && (
+      <div class="mt-4 rounded-xl border border-line bg-white px-4 py-5">
+        <p class="text-[15.5px] font-semibold text-ink">Nenhum horário livre nos próximos {SEARCH_DAYS} dias.</p>
+        <p class="mt-1 text-[15px] text-ink-soft">Escolha outra especialidade, outra data em "A partir de" ou marque fora do horário pelo "Outro horário" da Marcar consulta.</p>
+      </div>
+    )
+  }
+  {
+    without.length > 0 && withSlots.length > 0 && (
+      <p class="mt-4 text-[14.5px] text-ink-soft">
+        Sem horário livre nos próximos {SEARCH_DAYS} dias: {without.map((c) => c.column.name).join(", ")}.
+      </p>
+    )
+  }
+  <p class="mt-4 max-w-[70ch] text-[14px] text-ink-soft">
+    Toque num horário para abrir a Marcar consulta já preenchida. Horário em reserva é de alguém que está escolhendo no portal: não pode ser marcado até a reserva acabar.
+  </p>
+</AdminLayout>

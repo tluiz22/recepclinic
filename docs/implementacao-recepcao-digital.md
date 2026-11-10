@@ -837,3 +837,29 @@ coluna `slot_holds.home_visit_address` e função `portal_hold_group_slot` no ba
    Com a turma cheia (marcados e reservas), o dia some.
 7. **Agenda de Exames:** enquanto alguém confirma a turma (reserva aberta), outro exame no mesmo horário continua
    aparecendo no portal.
+
+## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
+
+Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),
+R2 (atendimento aberto), R3b (Próximos horários livres) e M4 (celular), rodada 3 do canvas; especificação R3.
+
+**Partes** (testes a cada parte; Playwright em 390 e 1280 px):
+
+| Parte | O que entrega |
+|---|---|
+| **F5a-1 Grade** | Agenda › Dia em grade por horário: uma coluna por agenda, linhas de 30 min, nomes e horas fixos, rolagem só dentro da grade. Até 7 agendas: colunas na largura toda e o filtro "Agenda". A partir de 8: Especialidade **ou** Profissional (com busca), colunas agrupadas por especialidade, barra de rolagem no topo ("Profissionais 1 a 7 de 18", setas, trilho) e "Mais {n}" na borda. Filtro Situação. Cor pela situação, com legenda; reserva do portal tracejada "Em reserva até 10:42"; bloqueio hachurado; turma; "Livre" leva à Marcar. Sem lembrar filtro (sai o cookie da agenda escolhida) |
+| **F5a-2 Atendimento aberto** | Painel à direita (o de hoje, com "Fechar"); a agenda do atendimento vai para a primeira coluna, destacada; o resto que couber continua visível |
+| **F5a-3 Próximos horários livres** | Tela própria: Especialidade, Atendimento e "A partir de"; os 2 primeiros dias com vaga de cada profissional, com os convênios que atende, "Mais cedo" e "Ver mais dias"; horário em reserva apagado; tocar abre a Marcar preenchida. A Marcar passa a recusar horário em reserva do portal |
+| **F5a-4 Celular** | Uma agenda por vez (setas, deslizar, lista com busca), "Próximos horários livres" em destaque |
+
+**Conferido no código antes de começar:**
+- **Não existe atendimento online** no banco (local: `clinic` ou `home_visit`). O filtro "Atendimento (presencial/online)"
+  da R3b vira **"No consultório / Em casa"** (as palavras do portal, D5) e só aparece na clínica que tem local em casa.
+- **Especialidade da coluna:** a primeira do profissional (`professional_specialties.position`); a agenda da Equipe
+  fica no grupo "Exames"; profissional sem especialidade, em "Outros". O filtro Especialidade acha o profissional por
+  qualquer uma das dele.
+- **Reserva do portal:** a equipe já lê `slot_holds` (política `slot_holds_member`); sem migração.
+- **Marcar e reserva:** hoje a Marcar ignora a reserva do portal (`loadHolds` só no portal). A R3 pede a recusa: os
+  horários e a conferência da Marcar passam a contar a reserva (no código, sem migração).
+- **Desempenho:** os horários livres do dia liam a ocupação agenda por agenda, em sequência; com 18 agendas, passa a ler
+  em paralelo e por período (uma leitura por agenda para os dias da R3b).

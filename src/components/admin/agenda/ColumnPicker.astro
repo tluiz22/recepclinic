@@ -1,0 +1,135 @@
+---
+// Filtro da Agenda em colunas (F5a; R3, cliente, 08/nov/2026): "Especialidade: todas" ou "Profissional: todos",
+// um de cada vez, com busca. Abre com o `popover` do navegador (fica por cima da grade); cada opção é um link para a
+// mesma Agenda com o filtro no endereço (voltar mantém), então funciona sem JavaScript; a busca só esconde opções.
+import Icon from "../Icon.astro";
+import { CONTROL } from "../ui/styles";
+
+interface Props {
+  /** Único na página. */
+  id: string;
+  /** "Especialidade" ou "Profissional". */
+  label: string;
+  /** Texto do "todos" ("todas" para especialidade). */
+  allText: string;
+  allHref: string;
+  /** Opções, em grupos (o profissional, por especialidade); grupo sem nome = lista simples. */
+  groups: { name: string | null; options: { label: string; hint?: string; href: string; current: boolean }[] }[];
+  /** Escolhido agora (null = todos). */
+  currentText: string | null;
+  searchPlaceholder: string;
+  /** false: sem o botão (outro botão abre a lista, como o nome da agenda no celular). */
+  trigger?: boolean;
+  /** false: sem a opção "Todos" (no celular, uma agenda por vez). */
+  showAll?: boolean;
+}
+
+const { id, label, allText, allHref, groups, currentText, searchPlaceholder, trigger = true, showAll = true } = Astro.props;
+const active = currentText !== null;
+---
+
+{trigger && (<button
+  type="button"
+  popovertarget={id}
+  class={`inline-flex h-11 max-w-full items-center gap-2 rounded-lg border px-3 text-[15px] whitespace-nowrap text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:h-10 ${active ? "border-brand bg-conf-50" : "border-line-strong bg-white hover:bg-canvas"}`}
+>
+  {label}: <b class="truncate font-bold">{currentText ?? allText}</b>
+  <Icon name="chevron-down" class="h-4 w-4 shrink-0" strokeWidth={2.2} />
+</button>)}
+<div
+  id={id}
+  popover
+  data-column-picker
+  aria-label={`Filtrar por ${label.toLowerCase()}`}
+  class="m-0 max-h-[min(70vh,520px)] w-[min(92vw,340px)] flex-col overflow-hidden rounded-xl border border-line bg-white text-ink shadow-[0_10px_30px_rgba(18,48,42,.16)] [&:popover-open]:flex"
+>
+  <div class="border-b border-line p-2.5">
+    <label for={`${id}-busca`} class="sr-only">Buscar {label.toLowerCase()}</label>
+    <div class="relative">
+      <Icon name="magnifying-glass" class="pointer-events-none absolute top-1/2 left-3 h-[17px] w-[17px] -translate-y-1/2 text-ink-soft" strokeWidth={2.2} />
+      <input id={`${id}-busca`} type="search" autocomplete="off" placeholder={searchPlaceholder} data-picker-search class={`${CONTROL} w-full pl-9`} />
+    </div>
+  </div>
+  <div class="overflow-y-auto p-1.5" data-picker-list>
+    {showAll && (<a
+      href={allHref}
+      aria-current={!active ? "true" : undefined}
+      class="flex min-h-11 items-center rounded-lg px-2.5 text-[15px] font-semibold no-underline hover:bg-canvas aria-[current]:bg-brand-soft aria-[current]:text-brand-ink sm:min-h-9"
+    >
+      {label === "Especialidade" ? "Todas as especialidades" : "Todos os profissionais"}
+    </a>)}
+    {
+      groups.map((group) => (
+        <div data-picker-group>
+          {group.name && <p class="px-2.5 pt-2.5 pb-1 text-[13px] font-semibold text-ink-soft">{group.name}</p>}
+          {group.options.map((option) => (
+            <a
+              href={option.href}
+              data-picker-option={`${option.label} ${option.hint ?? ""} ${group.name ?? ""}`.toLowerCase()}
+              aria-current={option.current ? "true" : undefined}
+              class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-2.5 text-[15px] text-ink no-underline hover:bg-canvas aria-[current]:bg-brand-soft aria-[current]:font-semibold aria-[current]:text-brand-ink sm:min-h-9"
+            >
+              <span class="truncate">{option.label}</span>
+              {option.hint && <span class="shrink-0 text-[13px] text-ink-soft">{option.hint}</span>}
+            </a>
+          ))}
+        </div>
+      ))
+    }
+    <p data-picker-empty hidden class="px-2.5 py-3 text-[15px] text-ink-soft">Nada encontrado com esse nome.</p>
+  </div>
+</div>
+
+<script>
+  // Busca sem acento nem maiúscula; abre junto ao botão com o foco na busca.
+  const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  document.querySelectorAll<HTMLElement>("[data-column-picker]").forEach((picker) => {
+    const search = picker.querySelector<HTMLInputElement>("[data-picker-search]");
+    const empty = picker.querySelector<HTMLElement>("[data-picker-empty]");
+    picker.addEventListener("toggle", (event) => {
+      if ((event as ToggleEvent).newState !== "open") return;
+      const trigger = document.querySelector<HTMLElement>(`[popovertarget="${picker.id}"]`);
+      if (trigger) {
+        const r = trigger.getBoundingClientRect();
+        picker.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - picker.offsetWidth - 8))}px`;
+        const h = picker.offsetHeight;
+        const below = r.bottom + 4 + h <= window.innerHeight - 8;
+        const above = r.top - 4 - h >= 8;
+        picker.style.top = `${below ? r.bottom + 4 : above ? r.top - 4 - h : Math.max(8, window.innerHeight - h - 8)}px`;
+      }
+      search?.focus();
+    });
+    search?.addEventListener("input", () => {
+      const q = fold(search.value.trim());
+      let shown = 0;
+      picker.querySelectorAll<HTMLElement>("[data-picker-group]").forEach((group) => {
+        let any = false;
+        group.querySelectorAll<HTMLElement>("[data-picker-option]").forEach((option) => {
+          const on = !q || fold(option.dataset.pickerOption ?? "").includes(q);
+          option.hidden = !on;
+          if (on) any = true;
+        });
+        group.hidden = !any;
+        if (any) shown += 1;
+      });
+      if (empty) empty.hidden = shown > 0;
+    });
+    // Setas entre as opções à vista (a busca fica em cima).
+    picker.querySelector("[data-picker-list]")?.addEventListener("keydown", (event) => {
+      const key = (event as KeyboardEvent).key;
+      if (key !== "ArrowDown" && key !== "ArrowUp") return;
+      event.preventDefault();
+      const links = [...picker.querySelectorAll<HTMLElement>("[data-picker-list] a[href]")].filter((el) => el.offsetParent !== null);
+      const at = links.indexOf(document.activeElement as HTMLElement);
+      if (key === "ArrowUp" && at <= 0) return void search?.focus();
+      links[Math.min(links.length - 1, at + (key === "ArrowDown" ? 1 : -1))]?.focus();
+    });
+    search?.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowDown") return;
+      event.preventDefault();
+      const visible = (sel: string) => [...picker.querySelectorAll<HTMLElement>(sel)].find((el) => el.offsetParent !== null);
+      // Com busca, o primeiro resultado; sem busca, a primeira opção da lista ("Todas").
+      (search.value.trim() ? visible("[data-picker-option]") : visible("[data-picker-list] a[href]"))?.focus();
+    });
+  });
+</script>

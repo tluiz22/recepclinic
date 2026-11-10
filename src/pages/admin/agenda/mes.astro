@@ -19,7 +19,7 @@ const dateParam = Astro.url.searchParams.get("date");
 const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
 const grid = monthGrid(date);
 
-const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
+const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url);
 const range = { fromDate: grid.days[0], toDate: grid.days.at(-1)!, timeZone: clinic.timezone, agendaIds: scope.agendaIds };
 const [appointments, blocks, clinicHolidays] = await Promise.all([
   listAgendaAppointments(db, clinic.clinicId, range),

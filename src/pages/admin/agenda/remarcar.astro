@@ -25,7 +25,7 @@ import { formatCalendarDate, formatInstant, isCalendarDate, todayIn, toInstant }
 import { pickOne, readOtherTime } from "../../../lib/otherTime";
 import { buildDayStrip } from "../../../lib/dayStrip";
 import { createUserClient } from "../../../lib/data/clients";
-import { checkFreeTime, getFreeSlots, getGroupSessions, getNextAvailableDates, isAgendaOpenOn } from "../../../lib/data/agenda/slots";
+import { checkFreeTime, getFreeSlots, getGroupSessions, getNextAvailableDates, isAgendaOpenOn, TEAM_HOLDS } from "../../../lib/data/agenda/slots";
 import { getAgendaAppointment } from "../../../lib/data/agenda/view";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listServices } from "../../../lib/data/config/services";
@@ -75,13 +75,13 @@ if (isGroup) {
     });
 } else {
   // Todos os dias livres da janela de busca (a faixa mostra 7 por vez).
-  const dates = (await getNextAvailableDates(db, clinic.clinicId, { ...query, ignoreAppointmentId: appointment.id, count: 1000 })).map((d) => d.date);
+  const dates = (await getNextAvailableDates(db, clinic.clinicId, { ...query, ignoreAppointmentId: appointment.id, count: 1000, holds: TEAM_HOLDS })).map((d) => d.date);
   const wanted = params.get("date");
   const de = params.get("de");
   strip = buildDayStrip(dates, wanted && isCalendarDate(wanted) && wanted >= today ? wanted : null, de && isCalendarDate(de) ? de : null);
   const date = strip.selected;
   if (date) {
-    options = (await getFreeSlots(db, clinic.clinicId, { ...query, date, ignoreAppointmentId: appointment.id }))
+    options = (await getFreeSlots(db, clinic.clinicId, { ...query, date, ignoreAppointmentId: appointment.id, holds: TEAM_HOLDS }))
       .filter((s) => s.start.getTime() !== appointment.scheduledAt.getTime())
       .map((s) => ({
         value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
@@ -107,7 +107,7 @@ if (!isGroup && otherQuery) {
   if (!locationId) otherError = "Escolha o local.";
   else if (start.getTime() === appointment.scheduledAt.getTime()) otherError = "Esse já é o horário do atendimento.";
   else {
-    const check = await checkFreeTime(db, clinic.clinicId, { ...query, locationId, start, ignoreAppointmentId: appointment.id }, now);
+    const check = await checkFreeTime(db, clinic.clinicId, { ...query, locationId, start, ignoreAppointmentId: appointment.id, respectHolds: true }, now);
     if (!check.ok) otherError = check.reason;
     else {
       otherWarnings = check.warnings;

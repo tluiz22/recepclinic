@@ -365,7 +365,7 @@ export function monthGrid(date: string): { first: string; last: string; days: st
 
 export type AgendaScope = {
   /** Agendas que a pessoa vê (desativadas inclusive, para não sumir atendimento). */
-  agendas: { id: string; name: string; isActive: boolean }[];
+  agendas: { id: string; name: string; isActive: boolean; kind: "professional" | "resource"; professionalId: string | null }[];
   /** As do seletor (ativas). */
   selectable: { id: string; name: string }[];
   /** null = todas. */

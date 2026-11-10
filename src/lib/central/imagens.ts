@@ -7,8 +7,8 @@ const shot = (file: string, alt: string, caption: string): ArticleImage => ({ fi
 
 export const IMAGENS: Record<string, ArticleImage[]> = {
   "inicio-do-painel": [shot("inicio", "Tela Meu dia com a linha do dia e a lista Precisa de você.", "Meu dia: o que precisa de você agora, numa lista só.")],
-  "agenda-visualizar": [shot("agenda-dia", "Agenda na visão Dia, com os botões Marcar e Bloquear destacados.", "Agenda › Dia: Bloquear, Mais e Marcar consulta ficam no alto; cada agenda tem as suas linhas curtas.")],
-  "situacoes-e-acoes-do-cartao": [shot("agenda-dia", "Linhas de atendimento na Agenda, com a legenda das situações.", "Toque na linha para abrir o cartão com as ações: Confirmar presença, Remarcar, Mais e Cancelar.")],
+  "agenda-visualizar": [shot("agenda-dia", "Agenda na visão Dia, com os botões Marcar e Bloquear destacados.", "Agenda › Dia: Bloquear, Mais e Marcar consulta ficam no alto; cada agenda é uma coluna, com as horas na lateral.")],
+  "situacoes-e-acoes-do-cartao": [shot("agenda-dia", "Atendimentos na grade da Agenda, com a legenda das situações.", "Toque no atendimento para abrir o cartão com as ações: Confirmar presença, Remarcar, Mais e Cancelar.")],
   "marcar-atendimento": [shot("marcar", "Tela Marcar, com o passo 1, Paciente, destacado e o resumo à direita.", "O Marcar começa pelo paciente: busque por nome, telefone ou nascimento, ou use \"Cadastrar paciente novo\".")],
   "bloquear-agenda": [shot("bloquear", "Tela Bloquear agenda, com a opção Dia todo destacada.", "Agenda › Bloquear: escolha as agendas, o período e o motivo.")],
   "gerenciar-bloqueios": [shot("bloqueios", "Lista de bloqueios da Agenda.", "Agenda › Bloqueios: edite ou remova os bloqueios que ainda não terminaram.")],
