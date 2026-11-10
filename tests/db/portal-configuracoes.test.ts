@@ -36,7 +36,7 @@ describe("Configurações › Portal (F3d)", () => {
   it("o Administrador muda a antecedência (0 a 168 h) e tira e põe o profissional no portal", async () => {
     const admin = asDb(f.admin);
     let settings = await loadPortalSettings(admin, f.clinicId);
-    expect(settings.leadHours).toBe(24);
+    expect(settings.leadHours).toBe(0);
     expect(settings.slug).toMatch(/^cfg-/);
     expect(settings.professionals.map((p) => p.name)).toEqual(["Dr. Segundo", "Dra. Agenda"]);
     await setPortalLeadHours(admin, f.clinicId, 48);

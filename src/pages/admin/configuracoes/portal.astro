@@ -2,7 +2,7 @@
 // Configurações › Portal (F3d; especificação R7, canvas da rodada 3): o link da clínica com "Copiar link para…", QR code
 // e "Abrir o portal" (mudar o endereço: Suporte); o link de cada profissional (busca e especialidade, para clínicas
 // com 10+ profissionais) com "Copiar link para…", QR e "Mostrar no portal" / "Tirar do portal"; a antecedência para
-// remarcar e cancelar pelo portal (RD10, padrão 24 h). Só o Administrador, com o item "Portal" da Matriz.
+// remarcar e cancelar pelo portal (RD10; padrão 0 h, sem prazo, desde 10/nov/2026). Só o Administrador, com o item "Portal" da Matriz.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
@@ -146,7 +146,7 @@ const linkText = "min-w-0 break-all text-[15px] font-semibold text-brand-ink";
         </label>
         <button type="submit" class={buttonClass("primary", "md")}>Salvar</button>
       </form>
-      <p id="lead-hint" class={HINT}>De {LEAD_HOURS_MIN} a {LEAD_HOURS_MAX} horas. Padrão: 24.</p>
+      <p id="lead-hint" class={HINT}>De {LEAD_HOURS_MIN} a {LEAD_HOURS_MAX} horas. Padrão: 0 (sem prazo).</p>
     </Card>
   </div>
 

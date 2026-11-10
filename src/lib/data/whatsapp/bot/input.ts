@@ -111,12 +111,26 @@ export function parseBirthdate(text: string, today: string): string | null {
   return iso >= "1900-01-01" && iso <= today ? iso : null;
 }
 
-/** "10032020" (8 dígitos, sem barras) → "10/03/2020" se for uma data válida; senão null. */
-export function slashlessBirthdate(text: string, today: string): string | null {
-  const match = text.trim().match(/^(\d{2})(\d{2})(\d{4})$/);
-  if (!match) return null;
-  const typed = `${match[1]}/${match[2]}/${match[3]}`;
-  return parseBirthdate(typed, today) ? typed : null;
+/**
+ * Data abreviada, que o bot confirma com "Você quis dizer…?": "10032020" (sem barras) → "10/03/2020"; ano com 2
+ * números (cliente, 10/nov/2026), "25/11/84" ou "251184" → "25/11/1984". Século: 20xx se a data não for futura, senão
+ * 19xx ("10/03/20" → 2020). Data que não existe → null.
+ */
+export function shortBirthdate(text: string, today: string): string | null {
+  const trimmed = text.trim();
+  const full = trimmed.match(/^(\d{2})(\d{2})(\d{4})$/);
+  if (full) {
+    const typed = `${full[1]}/${full[2]}/${full[3]}`;
+    return parseBirthdate(typed, today) ? typed : null;
+  }
+  const short = trimmed.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2})$/) ?? trimmed.match(/^(\d{2})(\d{2})(\d{2})$/);
+  if (!short) return null;
+  const [day, month] = [short[1].padStart(2, "0"), short[2].padStart(2, "0")];
+  for (const century of ["20", "19"]) {
+    const typed = `${day}/${month}/${century}${short[3]}`;
+    if (parseBirthdate(typed, today)) return typed;
+  }
+  return null;
 }
 
 /** "2020-03-10" → "10/03/2020". */

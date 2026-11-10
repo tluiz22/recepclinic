@@ -93,7 +93,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot("Boas-vindas e \"Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?\""),
             patient("Sim, quero", "\"Não, outro assunto\": vai para o menu principal, com a apresentação."),
-            bot("Pede a data de nascimento do paciente, por segurança", "Nada do atendimento aparece antes disso. Data digitada sem as barras (10032020): pergunta \"Você quis dizer 10/03/2020?\" com Sim · Não; vale em todo pedido de data."),
+            bot("Pede a data de nascimento do paciente, por segurança", "Nada do atendimento aparece antes disso. Data digitada sem as barras (10032020) ou com o ano em 2 números (25/11/84, 251184; 20xx se não for futura, senão 19xx): pergunta \"Você quis dizer 10/03/2020?\" com Sim · Não; vale em todo pedido de data."),
             check("A data confere com um paciente com atendimento?", "Não: \"Não encontramos agendamentos para essa data de nascimento.\" com Tentar outra data · Voltar ao menu."),
             bot("Mostra o atendimento (dia e hora) e pergunta o que fazer: Confirmar presença · Remarcar · Cancelar · Encaixe ou antecipar · Falar com a recepção"),
           ],
@@ -231,7 +231,7 @@ export const JOURNEY: JourneySection[] = [
   {
     id: "remarcar-cancelar",
     title: "4. Remarcar ou cancelar",
-    intro: "Pelo menu (Consultas ou Exames), pela entrada da conversa ou pelos botões do lembrete. No portal, Minhas consultas também remarca e cancela (com o prazo de antecedência da clínica, padrão 24 h).",
+    intro: "Pelo menu (Consultas ou Exames), pela entrada da conversa ou pelos botões do lembrete. No portal, Minhas consultas também remarca e cancela (com o prazo de antecedência da clínica, se houver; padrão sem prazo).",
     flow: [
       check("Há atendimento futuro neste número?", "Não: avisa e volta ao menu."),
       bot("Pede a data de nascimento e mostra o atendimento", "Pelo lembrete, vai direto ao atendimento do lembrete."),

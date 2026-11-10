@@ -655,7 +655,8 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
 6. **Minhas consultas:** no início do portal, "Minhas consultas" → celular e código → a lista. Consulta a mais de 24 h:
    Remarcar (dias do mesmo profissional) → "Confirme a remarcação" (marcado para × novo horário) → "Pronto, remarcado"
    e o aviso no WhatsApp. Cancelar → "Tem certeza?" → "Não, manter" volta; "Sim, cancelar" cancela e avisa.
-   Consulta a menos de 24 h: só "Falar com a recepção".
+   Sem prazo desde 10/nov (padrão 0 h): remarca e cancela mesmo a menos de 24 h; com antecedência posta em
+   Configurações › Portal, dentro dela só "Falar com a recepção".
 7. **Remarcar pelo WhatsApp:** Consultas › Remarcar (ou o botão do lembrete): chega o link do portal com os dias do
    mesmo profissional; remarca mesmo a menos de 24 h.
 8. **Cancelamento pela clínica:** Agenda › Bloquear um período com consulta e cancelar: o aviso traz o link do portal
@@ -676,6 +677,13 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   contam só as reservas que viraram consulta marcada** (migração `20270107130000_portal_limite_marcadas`). Tela: com o
   celular já comprovado, o aviso aparece com o celular e "Trocar número", sem pedir o celular nem o código de novo; o
   texto fala do botão da recepção no topo (no computador ele se chama "Falar com a recepção").
+- **10/nov, achados do cliente (4, na `main`):**
+  1. **Sem prazo para remarcar e cancelar pelo portal** (RD10 revista): padrão 0 h e todas as clínicas em 0 h (migração
+     `20270109120000_portal_sem_prazo`); quem quiser põe um prazo em Configurações › Portal.
+  2. **Confirme a remarcação** no celular: "Confirmar remarcação" numa barra fixa no rodapé (sempre à vista).
+  3. **Ficha do paciente**, cartão Dados: o nome aparece (o "Editar" dali muda o nome).
+  4. **Bot**: data com o ano em 2 números (25/11/84, 251184) vira 25/11/1984 com o "Você quis dizer…?" (20xx se não
+     for futura, senão 19xx).
 - **Pedido do cliente (10/nov): desbloqueio pela recepção na ficha do paciente.** Hoje o painel não mostra nem libera
   um celular bloqueado no portal (limite do dia ou bloqueio por tentativas; a função `portal_release_block` já existe
   no banco, sem tela). Decidido o lugar: **ficha do paciente**. **Pendente (cliente, 10/nov):** desenhar as opções e implementar junto com as

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asksForReception, extractSelection, formatBirthdate, isBack, isBackToMenu, parseBirthdate, pick, slashlessBirthdate, yesNo } from "./input";
+import { asksForReception, extractSelection, formatBirthdate, isBack, isBackToMenu, parseBirthdate, pick, shortBirthdate, yesNo } from "./input";
 import { ageLimit, askBirthdate, confirmPatient, numberedList, otherPatientLabel, row, wordsFor } from "./texts";
 
 const typed = (text: string) => ({ id: null, text });
@@ -104,11 +104,22 @@ describe("textos pelo perfil (F6.3)", () => {
 
 describe("data sem barras", () => {
   it("8 dígitos de uma data válida viram dd/mm/aaaa; o resto não", () => {
-    expect(slashlessBirthdate("10032020", "2026-10-07")).toBe("10/03/2020");
-    expect(slashlessBirthdate(" 10032020 ", "2026-10-07")).toBe("10/03/2020");
-    expect(slashlessBirthdate("31022020", "2026-10-07")).toBeNull();
-    expect(slashlessBirthdate("10032030", "2026-10-07")).toBeNull();
-    expect(slashlessBirthdate("1032020", "2026-10-07")).toBeNull();
-    expect(slashlessBirthdate("10/03/2020", "2026-10-07")).toBeNull();
+    expect(shortBirthdate("10032020", "2026-10-07")).toBe("10/03/2020");
+    expect(shortBirthdate(" 10032020 ", "2026-10-07")).toBe("10/03/2020");
+    expect(shortBirthdate("31022020", "2026-10-07")).toBeNull();
+    expect(shortBirthdate("10032030", "2026-10-07")).toBeNull();
+    expect(shortBirthdate("1032020", "2026-10-07")).toBeNull();
+    expect(shortBirthdate("10/03/2020", "2026-10-07")).toBeNull();
+  });
+
+  it("ano com 2 números (cliente, 10/nov): 20xx se não for futura, senão 19xx", () => {
+    expect(shortBirthdate("25/11/84", "2026-10-07")).toBe("25/11/1984");
+    expect(shortBirthdate("251184", "2026-10-07")).toBe("25/11/1984");
+    expect(shortBirthdate("5-1-84", "2026-10-07")).toBe("05/01/1984");
+    expect(shortBirthdate("10/03/20", "2026-10-07")).toBe("10/03/2020");
+    expect(shortBirthdate("07/10/26", "2026-10-07")).toBe("07/10/2026");
+    expect(shortBirthdate("08/10/26", "2026-10-07")).toBe("08/10/1926");
+    expect(shortBirthdate("31/02/84", "2026-10-07")).toBeNull();
+    expect(shortBirthdate("10/03/2", "2026-10-07")).toBeNull();
   });
 });

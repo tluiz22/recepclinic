@@ -13,7 +13,7 @@ import { phonePatients, saveContactHomeAddress } from "./booking";
 // Minhas consultas (F3c; especificação P12; RD10, I7, F3-3 e F3-4): com o celular comprovado (código ou link do bot),
 // as próximas consultas dos pacientes do celular, cada uma com Remarcar (mesmo profissional, serviço e tipo de local;
 // dias e horários do mesmo jeito do portal) e Cancelar ("Tem certeza? A vaga será liberada."). Regras:
-//   - antecedência da clínica (`portal_cancel_lead_hours`, padrão 24 h) só para quem entra direto em Minhas consultas;
+//   - antecedência da clínica (`portal_cancel_lead_hours`; padrão 0 h, sem prazo, desde 10/nov/2026) só para quem entra direto em Minhas consultas;
 //     o link do bot (Remarcar do menu e do lembrete) remarca a qualquer hora (F3-4); dentro do prazo, só "Falar com a
 //     recepção";
 //   - turma e domiciliar: só Cancelar (Remarcar com a recepção até a F3e);
@@ -102,7 +102,7 @@ export const whenOf = (start: Date, timeZone: string) => capitalize(formatInstan
 /** Antecedência da clínica para cancelar e remarcar pelo portal (RD10), em horas. */
 export async function leadHoursOf(db: DbClient, clinicId: string): Promise<number> {
   const row = unwrap(await db.from("clinic_settings").select("portal_cancel_lead_hours").eq("clinic_id", clinicId).maybeSingle(), "Configuração da clínica");
-  return row?.portal_cancel_lead_hours ?? 24;
+  return row?.portal_cancel_lead_hours ?? 0;
 }
 
 /** Fora do prazo da RD10 (pode remarcar e cancelar pelo portal). */
