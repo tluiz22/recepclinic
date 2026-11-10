@@ -552,5 +552,10 @@ de cada uma travaria o portal das clínicas pequenas.
     mensagens) e o ID dela na mensagem para o suporte da Meta.
 - **Falta:** staging (push da `main`, sem migração); a validação da F2 segue do passo 2 do roteiro (código), confirmando
   no 1º envio que o cartão do RecepClinic funciona (sem o erro 131042); depois a F3.
+- **Validação (09/nov): o código não chegou** ao celular pessoal do cliente, mas a Meta aceitou o envio (o código ficou
+  gravado). A conta do número dos códigos não tinha o app inscrito, então o aviso de entrega não chegava. Feito: o
+  webhook manda a falha de entrega desse número para Sistema › Erros ("código do portal não entregue", com o motivo da
+  Meta; `cc45117`) e o app foi inscrito na conta `1608311683725577` com o desvio para o webhook do **staging**.
+  **Atenção na produção:** inscrever de novo **sem** o desvio (senão os avisos vão para o staging).
 - Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
   enviados primeiro com a resposta da Meta (`templateSummary.ts`).
