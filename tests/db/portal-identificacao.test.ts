@@ -223,11 +223,26 @@ describe("reserva do horário", () => {
     expect((await holdSlot(service, fixture.clinicId, cris.id, slotAt("10:00"))).status).toBe("taken");
   });
 
-  it("cinco reservas por celular em 24 h", async () => {
+  it("cinco consultas marcadas por celular em 24 h; reserva solta não conta", async () => {
     const dani = await verified("+5584999990013");
-    for (const time of ["08:30", "09:30", "10:30", "11:00", "11:30"]) {
+    const times = ["08:30", "09:30", "10:30", "11:00", "11:30"];
+    for (const time of times) {
       expect((await holdSlot(service, fixture.clinicId, dani.id, slotAt(time))).status).toBe("ok");
     }
+    // Cinco reservas soltas (nenhuma virou consulta): a sexta passa.
+    expect((await holdSlot(service, fixture.clinicId, dani.id, slotAt("08:30"))).status).toBe("ok");
+    await releaseHold(service, fixture.clinicId, dani.id);
+
+    // As cinco viram consulta marcada: a próxima reserva bate no limite.
+    const booked = await bookAppointment(
+      asDb(fixture.admin),
+      fixture.clinicId,
+      { patientId: fixture.ids.p2, serviceId: dra.consultations[0].serviceId, agendaId: dra.agendaId, locationId: dra.locations[0].id, start: at(MON1, "11:30"), channel: "admin", actorId: fixture.admin.id },
+      NOW,
+    );
+    const { data: holds } = await adminClient().from("slot_holds").select("id").eq("clinic_id", fixture.clinicId).eq("phone", "+5584999990013").order("created_at").limit(5);
+    expect(holds).toHaveLength(5);
+    await adminClient().from("slot_holds").update({ appointment_id: booked.appointment.id }).in("id", holds!.map((h) => h.id));
     expect((await holdSlot(service, fixture.clinicId, dani.id, slotAt("08:30"))).status).toBe("limit");
   });
 
