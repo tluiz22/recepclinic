@@ -121,9 +121,9 @@ describe("particular e convênios do profissional", () => {
 });
 
 describe("prazos do portal e canal", () => {
-  it("reserva de 3 a 10 minutos (padrão 5) e antecedência padrão de 24 h", async () => {
+  it("reserva de 3 a 10 minutos (padrão 5) e antecedência padrão de 0 h (sem prazo, cliente, 10/nov)", async () => {
     const { data } = await adminClient().from("clinic_settings").select("portal_hold_minutes, portal_cancel_lead_hours").eq("clinic_id", fixture.clinicId).single();
-    expect(data).toEqual({ portal_hold_minutes: 5, portal_cancel_lead_hours: 24 });
+    expect(data).toEqual({ portal_hold_minutes: 5, portal_cancel_lead_hours: 0 });
     const { error } = await adminClient().from("clinic_settings").update({ portal_hold_minutes: 11 }).eq("clinic_id", fixture.clinicId);
     expect(error?.code).toBe("23514");
   });

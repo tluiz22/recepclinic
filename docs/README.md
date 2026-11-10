@@ -32,7 +32,9 @@
 > **Implementação:** branch curta da `main` (a `recepcao-d5` e o worktree `../recepclinic-impl` foram removidos). Banco
 > local único para as duas: migração só avisando antes.
 > **Validação da F3 (10/nov):** item 1 em andamento; ajuste `c9cb2b5` (limite do portal conta só consultas marcadas;
-> migração `20270107130000` no staging). Próximo: cliente segue o roteiro 15.3.1 a partir do item 1 pelo bot.
+> migração `20270107130000` no staging). 4 achados corrigidos em `a6b1263` (portal sem prazo, padrão 0 h, migração
+> `20270109120000` no staging; botão fixo na confirmação da remarcação; nome no cartão Dados; data com ano de 2 números
+> no bot), registro na 15.3.2. Próximo: cliente valida os 4 no staging e segue o roteiro 15.3.1.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

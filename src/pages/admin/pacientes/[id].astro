@@ -822,6 +822,8 @@ const canBook = patient.isActive && !anonymized;
         !anonymized && (
           <EditCard id="dados" title="Dados" summary={`Nasc. ${formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}`}>
             {/* Cartões curtos, como na ficha A do protótipo: um resumo de uma linha; "Editar" abre o formulário completo. */}
+            {/* Nome no cartão (cliente, 10/nov): deixa claro que o "Editar" daqui muda o nome. */}
+            <p class="text-[14.5px] leading-snug font-semibold text-ink">{patient.fullName}</p>
             <p class="text-[14.5px] leading-snug text-ink-mid">Nascimento {formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}{finance ? " · CPF no Financeiro" : ""}</p>
             {/* Conferência antes de salvar (C19): o diálogo mostra o que muda, com a idade. */}
             <form slot="edit" method="POST" action={action} class="flex flex-col gap-4" data-confirm-data data-today={today}>

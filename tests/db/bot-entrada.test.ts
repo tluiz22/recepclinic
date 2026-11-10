@@ -230,6 +230,17 @@ describe("um atendimento", () => {
     await say(P2, "menu");
   });
 
+  it("5c. ano com 2 números (cliente, 10/nov): \"01/01/20\" confirma *01/01/2020* e Sim segue", async () => {
+    await fresh(P2);
+    await say(P2, "oi");
+    await say(P2, { id: "entry_yes" });
+    let reply = await say(P2, "01/01/20");
+    expect(reply).toEqual([expect.objectContaining({ kind: "buttons", body: "Você quis dizer a data *01/01/2020*?" })]);
+    reply = await say(P2, { id: "yes" });
+    expect(reply[0].body).toContain("está marcada para");
+    await say(P2, "menu");
+  });
+
   it("6. data errada: não revela nada; sem bloqueio, \"Tentar outra data\" pede de novo e \"Voltar ao menu\" leva ao menu", async () => {
     await fresh(P2);
     await say(P2, "oi");

@@ -66,8 +66,8 @@ describe("Minhas consultas (F3c)", () => {
     expect(await findMyAppointment(service, f.clinicId, PHONE, "nao-e-id", { now: NOW })).toBeNull();
   });
 
-  it("antecedência da clínica (padrão 24 h): dentro dela não cancela pelo portal; fora, cancela pelo canal do portal", async () => {
-    expect(await leadHoursOf(service, f.clinicId)).toBe(24);
+  it("antecedência da clínica (padrão 0 h, sem prazo; com 24 h): dentro dela não cancela pelo portal; fora, cancela pelo canal do portal", async () => {
+    expect(await leadHoursOf(service, f.clinicId)).toBe(0);
     const appointment = await book(f.ids.p1, MON1, "09:00");
     const item = (await findMyAppointment(service, f.clinicId, PHONE, appointment.id, { now: NOW }))!;
     const close = new Date(at(MON1, "09:00").getTime() - 2 * 3_600_000);

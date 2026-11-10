@@ -539,7 +539,7 @@ Planejamento aprovado pelo cliente em 08/nov; RD1 a RD14 respondidas no mesmo di
 | RD7 | Ordem dos médicos na lista | **Ordem alfabética** (sem ordenar por horário mais próximo) |
 | RD8 | Data de nascimento no cadastro novo | **Obrigatória** (idade limite e perfil dependem dela) |
 | RD9 | CAPTCHA | **Cloudflare Turnstile, só quando há risco**: entrada direta ao pedir o código ou com sinal de abuso; quem vem do link do WhatsApp não vê |
-| RD10 | Antecedência para cancelar/remarcar pelo portal | **A clínica define, padrão 24 h**; dentro do prazo, só "Falar com a recepção" |
+| RD10 | Antecedência para cancelar/remarcar pelo portal | **A clínica define, padrão 0 h (sem prazo; revisto pelo cliente em 10/nov/2026, era 24 h)**; com prazo, dentro dele só "Falar com a recepção" |
 | RD11 | Por qual número sai a confirmação de quem marcou pelo portal direto | **Número do médico**; sem ele, o número principal da clínica **Sem efeito nesta entrega (um número só; vários números pendentes, 08/nov).** |
 | RD12 | Como mostrar os pacientes de um telefone | **Primeiro nome + inicial do sobrenome**. **Revista pelo cliente em 08/nov (Etapa 2):** nome completo nas telas depois do telefone comprovado (P8 a P10) |
 | RD13 | Foto do profissional no portal | **Sempre que houver foto** no cadastro (sem opção por médico). O cadastro avisa "Esta foto aparece no portal de agendamento"; sem foto, iniciais |

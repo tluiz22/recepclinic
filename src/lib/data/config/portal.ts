@@ -47,7 +47,7 @@ export async function loadPortalSettings(db: DbClient, clinicId: string): Promis
   }
   return {
     slug: clinic?.portal_slug ?? null,
-    leadHours: settings?.portal_cancel_lead_hours ?? 24,
+    leadHours: settings?.portal_cancel_lead_hours ?? 0,
     professionals: professionals
       .filter((p) => p.portal_slug)
       .map((p) => ({ id: p.id, name: p.display_name, slug: p.portal_slug!, showInPortal: p.show_in_portal, specialties: byProfessional.get(p.id) ?? [] }))
