@@ -23,7 +23,11 @@
 >   "Adicionar à agenda" no iPhone (`802d700`). Produção: não.
 >   **F3a a F3d (bot leva ao portal, Minhas consultas, Configurações › Portal) na `main` e no staging (10/nov, `207cf87`;
 >   migração `20270107120000`)**; decisões F3-1 a F3-4 na seção 15.1. **Próximo: validação do cliente** pelo roteiro
->   15.3.1 (clínica `clinica-teste`). Depois: D5 + F3e (domiciliar e turma, desenho antes) e as capturas na fila.
+>   15.3.1 (clínica `clinica-teste`). Depois: D5 → F3e → F3f (limpeza do chat; seção 15.4) e as capturas na fila.
+>
+> **Duas sessões (cliente, 10/nov):** **Validação** (pasta do repositório, `main`): roteiro 15.3.1 da F3 e o que falta
+> em [`frente-validacao.md`](frente-validacao.md); ajustes direto na `main`. **Implementação** (worktree
+> `../recepclinic-impl`, branch curta da `main`): D5 → F3e → F3f (seção 15.4). Antes de juntar a branch, trazer a `main`.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

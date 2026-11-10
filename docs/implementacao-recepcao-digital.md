@@ -663,3 +663,25 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
 10. **Origem:** marcar pelo link copiado para o Instagram (`?de=instagram`): na Agenda, "Portal · link da clínica"
     (Métricas da origem chegam na F6).
 11. **Informações › Convênios** no bot, com um profissional só convênio: "… Não atende particular."
+
+### 15.4 Próximas partes da F3 (plano, 10/nov/2026)
+
+Ordem proposta ao cliente: validação da F3 (15.3.1) → **D5** (desenho de domiciliar e turma no portal, aprovação tela a
+tela) → **F3e** (código; junto, a decisão do exame em agenda de profissional) → **F3f** (limpeza) → produção.
+
+**F3f, limpeza do caminho antigo** (branch curta própria, sem migração):
+
+- **Condições:** F3e validada; exame em agenda de profissional decidido; toda clínica com bot com o endereço do portal
+  (staging e produção); portal na produção por ~2 semanas como reserva.
+- **Sai:** a marcação no chat (`bot/booking.ts`: serviço, profissional/"Primeiro horário", local, endereço, convênio,
+  para quem, paciente, idade, link `/agendar`; a lista do retorno no chat), o Remarcar com `/agendar` e a confirmação do
+  endereço do domiciliar (`manage.ts`), a página `/agendar/{link}` e `api/agendar` (depois de vencerem os últimos links,
+  máx. 2 dias), o link de remarcação antigo do bloqueio, o pedido não concluído dos links antigos, `{paciente}` da
+  mensagem "Link para marcar", os ramos "Não: marcação no chat" da Jornada do bot.
+- **Fica:** Cancelar pelo WhatsApp (I7), encaixe de quem tem consulta, Informações gerais, Perguntas frequentes, Falar
+  com a recepção, oferta de vaga, confirmação de presença, a escolha de especialidade/profissional no começo; a tabela
+  `booking_links` só leitura (histórico das Métricas; sai depois, em migração própria).
+- **Decisões a pedir (uma por vez):** F3-5 bot sem portal (desligado, sem endereço, fora do ar) → recepção?;
+  F3-6 fim do "Primeiro horário disponível"?; F3-7 profissional "Fora do portal" → recepção?
+- **Testes:** os de banco do bot que percorrem o chat passam a testar o link ou saem; Playwright WhatsApp → portal em
+  390/1280; artigos da Central que falam da marcação no chat revistos; capturas na fila.
