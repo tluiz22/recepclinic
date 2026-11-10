@@ -65,11 +65,15 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
               <div class={row}><dt class="text-[15px] text-gray-600">Dia e horário</dt><dd class="text-lg font-bold">{when}</dd></div>
               <div class={row}><dt class="text-[15px] text-gray-600">Paciente</dt><dd class="font-bold break-words">{booked.patientName}</dd></div>
               <div class={row}><dt class="text-[15px] text-gray-600">{whoLabel(professional)}</dt><dd>{professional.name}</dd></div>
-              {modality && <div class={row}><dt class="text-[15px] text-gray-600">Atendimento</dt><dd>{modality.label}</dd></div>}
+              {modality && <div class={row}><dt class="text-[15px] text-gray-600">Atendimento</dt><dd>{view.modalityText}</dd></div>}
               {location && (
                 <div class={row}>
                   <dt class="text-[15px] text-gray-600">Onde</dt>
-                  <dd>{location.name}{location.address && <span class="block text-[16px] text-gray-700">{location.address}</span>}</dd>
+                  {location.type === "home_visit" ? (
+                    <dd>Em casa<span class="block text-[16px] break-words text-gray-700">{booked.homeVisitAddress}</span></dd>
+                  ) : (
+                    <dd>{location.name}{location.address && <span class="block text-[16px] text-gray-700">{location.address}</span>}</dd>
+                  )}
                 </div>
               )}
             </dl>

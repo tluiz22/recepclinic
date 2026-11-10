@@ -29,7 +29,8 @@ export const GET: APIRoute = async ({ params, url, request }) => {
     start: booked.start,
     end: booked.end,
     title: icsTitle(professional.name, portal.brand.name, professional.exam ? "exame" : hold.returnOriginId ? "retorno" : "consulta"),
-    location: location ? [location.name, location.address].filter(Boolean).join(", ") : null,
+    // Em casa (F3e-1): o endereço do atendimento.
+    location: location?.type === "home_visit" ? booked.homeVisitAddress : location ? [location.name, location.address].filter(Boolean).join(", ") : null,
   });
   return new Response(ics, {
     headers: {

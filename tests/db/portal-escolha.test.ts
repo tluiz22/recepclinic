@@ -98,10 +98,11 @@ describe("quem aparece", () => {
     const portal = await open();
     expect(portal.professionals.map((p) => p.name)).toEqual(["Dr. Segundo", "Dra. Agenda"]);
     const [dr2, dra] = portal.professionals;
-    expect(dra).toMatchObject({ acceptsPrivate: true, privatePriceCents: 30000, privatePriceVaries: false, plans: [] });
+    // Em casa custa mais (R$ 450): "a partir de R$ 300" (F3e-1).
+    expect(dra).toMatchObject({ acceptsPrivate: true, privatePriceCents: 30000, privatePriceVaries: true, plans: [] });
     expect(dra.consultations.map((c) => c.name)).toEqual(["Consulta"]);
-    // Domiciliar fica fora do portal.
-    expect(dra.locations.map((l) => l.name)).toEqual(["Consultório"]);
+    // Domiciliar entra nos locais do profissional (F3e-1), depois do consultório; o início da clínica só tem o consultório.
+    expect(dra.locations.map((l) => l.name)).toEqual(["Consultório", "Domiciliar"]);
     expect(dr2).toMatchObject({ acceptsPrivate: false, plans: [{ id: planId, name: "Unimed", note: "Precisa de autorização." }] });
     expect(portal.locations.map((l) => l.address)).toEqual(["Rua A, 1"]);
     expect(portalSpecialties(portal.professionals).map((s) => s.name)).toEqual(["Outros profissionais"]);
@@ -146,12 +147,16 @@ describe("quem aparece", () => {
 });
 
 describe("horários", () => {
-  it("as mesmas regras do bot: só o consultório, a cada 30 min, no prazo", async () => {
+  it("as mesmas regras do bot: no consultório, a cada 30 min, no prazo", async () => {
     const dra = (await open()).professionals.find((p) => p.id === draId)!;
     const consulta = dra.consultations[0].serviceId;
     const dates = await professionalDates(service, fixture.clinicId, dra, consulta, TZ, { count: 2, now: NOW });
     expect(dates).toEqual([MON1, MON2]);
-    const slots = await professionalSlots(service, fixture.clinicId, dra, consulta, MON1, TZ, NOW);
+    // "No consultório" (F3e-1): só os horários de lá; em casa, os da tarde.
+    const office = { locations: dra.locations.filter((l) => l.type === "clinic") };
+    const slots = await professionalSlots(service, fixture.clinicId, dra, consulta, MON1, TZ, NOW, null, office);
+    const home = await professionalSlots(service, fixture.clinicId, dra, consulta, MON1, TZ, NOW, null, { locations: dra.locations.filter((l) => l.type === "home_visit") });
+    expect(home.map((s) => s.time)).toEqual(["14:00", "14:30"]);
     expect(slots.map((s) => s.time)).toEqual(["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30"]);
     expect(await nextFreeSlot(service, fixture.clinicId, dra, TZ, NOW)).toEqual(at(MON1, "08:00"));
     // Depois do prazo do profissional (60 dias), nada.

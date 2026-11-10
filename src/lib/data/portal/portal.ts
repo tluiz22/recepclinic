@@ -6,7 +6,7 @@ import { listAgendas } from "../config/agendas";
 import type { ClinicProfile } from "../config/clinic";
 import { getPublicClinicBrand, type PublicClinicBrand } from "../config/brand";
 import { listInsurancePlans } from "../config/insurance";
-import { listLocations } from "../config/locations";
+import { listLocations, type LocationType } from "../config/locations";
 import { listProfessionalBotInfo } from "../config/professionalBotInfo";
 import { professionalRegistry, listProfessionals } from "../config/professionals";
 import { PHOTO_BUCKET } from "../config/profilePhotos";
@@ -23,15 +23,23 @@ import { logError } from "../../log";
 //
 // Quem aparece (mesma regra do catálogo do bot, catalog.ts): profissional ativo, marcado para o portal, com um serviço
 // de Consulta individual ativo na agenda dele e horário de atendimento cadastrado num local da clínica onde o serviço é
-// oferecido, que atende particular ou algum convênio ativo. Domiciliar, turma, retorno e exames ficam fora desta etapa
-// (retorno e exames: F2d). Perfil e idade limite da agenda valem quando o paciente for informado (P8, F2c).
+// oferecido, que atende particular ou algum convênio ativo. Domiciliar (F3e-1, D5): o local "em casa" entra nos locais
+// do profissional, com o valor de lá. Turma fica fora desta etapa (retorno e exames: F2d). Perfil e idade limite da agenda valem quando o paciente for informado (P8, F2c).
 // Os horários saem das mesmas funções do bot, do Marcar e do link de agendar (agenda/slots.ts): prazo do profissional,
 // feriados, bloqueios, intervalo e atendimentos marcados.
 
-export type PortalLocation = { id: string; name: string; address: string | null };
+/** Local de atendimento; "home_visit" = em casa (o endereço vem do paciente, F3e-1). */
+export type PortalLocation = { id: string; name: string; address: string | null; type: LocationType };
 
 /** Um tipo de Consulta do profissional (cópia do serviço dele, MS). */
-export type PortalConsultation = { serviceId: string; name: string; durationMinutes: number; priceCents: number | null };
+export type PortalConsultation = {
+  serviceId: string;
+  name: string;
+  durationMinutes: number;
+  priceCents: number | null;
+  /** O menor valor no consultório e em casa (F3e-1: a escolha "No consultório R$ 350 / Em casa R$ 550"). */
+  prices: Partial<Record<LocationType, number | null>>;
+};
 
 export type PortalSpecialty = { id: string; name: string; terms: string[] };
 
@@ -49,7 +57,7 @@ export type PortalProfessional = PriceInfo & {
   agendaId: string;
   /** Prazo para oferecer horários, em dias (do profissional). */
   horizonDays: number;
-  /** Locais da clínica onde ele atende Consulta. */
+  /** Locais onde ele atende Consulta: os da clínica e, se atende em casa, o domiciliar (F3e-1). */
   locations: PortalLocation[];
   /** Observações do profissional (as mesmas que o bot responde em Informações gerais). */
   orientation: string | null;
@@ -144,6 +152,9 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
   ]);
 
   const clinicLocations = new Map(locations.filter((l) => l.type === "clinic").map((l) => [l.id, l]));
+  // Consulta: também o domiciliar (F3e-1); exames seguem só nos locais da clínica.
+  const consultationLocations = new Map(locations.map((l) => [l.id, l]));
+  const toPortalLocation = (l: { id: string; name: string; address: string | null; type: LocationType }): PortalLocation => ({ id: l.id, name: l.name, address: l.address, type: l.type });
   const planById = new Map(plans.map((p) => [p.id, p]));
   const agendaByProfessional = new Map(agendas.filter((a) => a.professionalId).map((a) => [a.professionalId!, a]));
   const specialtyIds = [...new Set(professionals.flatMap((p) => p.specialties.map((s) => s.id)))];
@@ -163,16 +174,25 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
     const used = new Set<string>();
     for (const service of consultationServices) {
       if (service.schedulingMode === "group" || !service.agendaIds.includes(agenda.id)) continue;
-      const offered = new Set(service.locations.map((l) => l.locationId).filter((id) => clinicLocations.has(id)));
+      const offered = new Set(service.locations.map((l) => l.locationId).filter((id) => consultationLocations.has(id)));
       const here = windows.filter((w) => w.agenda_id === agenda.id && offered.has(w.location_id) && (w.service_id === null || w.service_id === service.id));
       if (!here.length) continue;
-      const prices = [...new Set(here.map((w) => w.location_id))].map((id) => servicePriceAt(service, id)).filter((p): p is number => p !== null);
-      for (const w of here) used.add(w.location_id);
+      const ids = [...new Set(here.map((w) => w.location_id))];
+      const minAt = (filter: (id: string) => boolean) => {
+        const values = ids.filter(filter).map((id) => servicePriceAt(service, id)).filter((p): p is number => p !== null);
+        return values.length ? Math.min(...values) : null;
+      };
+      const byType: PortalConsultation["prices"] = {};
+      for (const type of ["clinic", "home_visit"] as const) {
+        if (ids.some((id) => consultationLocations.get(id)!.type === type)) byType[type] = minAt((id) => consultationLocations.get(id)!.type === type) ?? service.priceCents;
+      }
+      for (const id of ids) used.add(id);
       consultations.push({
         serviceId: service.id,
         name: service.name,
         durationMinutes: service.durationMinutes,
-        priceCents: prices.length ? Math.min(...prices) : service.priceCents,
+        priceCents: minAt(() => true) ?? service.priceCents,
+        prices: byType,
       });
     }
     if (!consultations.length) continue;
@@ -183,7 +203,8 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     // Sem particular e sem convênio ativo não há como marcar (o bot manda à recepção): fica fora do portal.
     if (!professional.acceptsPrivate && !accepted.length) continue;
-    const priced = consultations.map((c) => c.priceCents).filter((p): p is number => p !== null && p > 0);
+    // Os valores de cada lugar contam (em casa pode custar outro valor: "a partir de", F3e-1).
+    const priced = consultations.flatMap((c) => [c.priceCents, ...Object.values(c.prices)]).filter((p): p is number => typeof p === "number" && p > 0);
     const photoPath = photos.find((row) => row.id === professional.id)?.photo_path ?? null;
     result.push({
       id: professional.id,
@@ -199,7 +220,10 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
       consultations: consultations.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
       agendaId: agenda.id,
       horizonDays: agenda.bookingHorizonDays,
-      locations: [...used].map((id) => clinicLocations.get(id)!).map((l) => ({ id: l.id, name: l.name, address: l.address })),
+      // Consultório antes do domiciliar (como o bot).
+      locations: [...used]
+        .map((id) => toPortalLocation(consultationLocations.get(id)!))
+        .sort((a, b) => Number(a.type === "home_visit") - Number(b.type === "home_visit") || a.name.localeCompare(b.name, "pt-BR")),
       orientation: botInfo.get(professional.id)?.notes?.trim() || null,
       profile: agenda.profile,
       ageLimitYears: agenda.consultationAgeLimitYears,
@@ -246,7 +270,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
           : [],
         agendaId: team.id,
         horizonDays: team.bookingHorizonDays,
-        locations: [...examLocations].map((id) => clinicLocations.get(id)!).map((l) => ({ id: l.id, name: l.name, address: l.address })),
+        locations: [...examLocations].map((id) => toPortalLocation(clinicLocations.get(id)!)),
         orientation: null,
         profile: team.profile,
         ageLimitYears: null,
@@ -262,7 +286,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
     timeZone: settings.timezone,
     brand,
     receptionHours: hours && hours.hours.some(Boolean) ? describeReceptionHours(hours.hours) : null,
-    locations: [...clinicLocations.values()].filter((l) => usedLocations.has(l.id)).map((l) => ({ id: l.id, name: l.name, address: l.address })),
+    locations: [...clinicLocations.values()].filter((l) => usedLocations.has(l.id)).map(toPortalLocation),
     professionals: result,
     exams,
     examBase,
@@ -286,7 +310,7 @@ export function examProfessional(portal: Pick<PortalClinic, "examBase">, exam: P
     privatePriceVaries: exam.priceVaries,
     // Só os locais deste exame (o cartão e os horários não mostram onde ele não é feito).
     locations: portal.examBase.locations.filter((l) => exam.locationIds.includes(l.id)),
-    consultations: [{ serviceId: exam.serviceId, name: exam.name, durationMinutes: exam.durationMinutes, priceCents: exam.priceCents }],
+    consultations: [{ serviceId: exam.serviceId, name: exam.name, durationMinutes: exam.durationMinutes, priceCents: exam.priceCents, prices: { clinic: exam.priceCents } }],
     exam,
   };
 }
@@ -315,6 +339,15 @@ export function professionalsOfSpecialty(professionals: readonly PortalProfessio
 
 // ---------------------------------------------------------------------------
 // Horários
+
+/** Onde ele atende Consulta (F3e-1): consultório, em casa ou os dois (consultório primeiro). */
+export function placesOf(professional: Pick<PortalProfessional, "locations">): ("clinic" | "home_visit")[] {
+  return (["clinic", "home_visit"] as const).filter((type) => professional.locations.some((l) => l.type === type));
+}
+
+/** Os locais do lugar escolhido (F3e-1: "No consultório" × "Em casa"); sem escolha, todos. */
+export const locationsAt = (professional: Pick<PortalProfessional, "locations">, type: LocationType | null) =>
+  type ? professional.locations.filter((l) => l.type === type) : professional.locations;
 
 /** Último dia que o profissional oferece (o prazo dele; hoje conta como o 1º). */
 export const lastBookableDate = (professional: Pick<PortalProfessional, "horizonDays">, timeZone: string, now: Date = new Date()) =>

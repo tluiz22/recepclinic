@@ -1,11 +1,13 @@
 ---
 // Remarcar, passo 2 (F3c): "Confirme a remarcação" com o horário de hoje e o novo, e "Confirmar remarcação" (uma vez
 // só: o botão trava no envio e o banco confere o horário). Depois: Minhas consultas com "Pronto, remarcado" e o aviso
-// da remarcação pelo WhatsApp. Ocupado no meio: volta aos horários do mesmo dia, com o aviso.
+// da remarcação pelo WhatsApp. Ocupado no meio: volta aos horários do mesmo dia, com o aviso. Em casa (F3e-1, DM4):
+// "O endereço continua o mesmo?" ("Sim, é esse" marcado; "Não, mudou" abre os campos aqui mesmo).
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
-import { portalCta, portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { portalCta, portalError, portalInput, portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { HOME_ADDRESS_MAX, joinHomeAddress, type HomeAddressField, type HomeAddressFields } from "../../../../lib/portalBooking";
 import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
 import { openChangePage } from "../../../../lib/data/portal/changePage";
 import { afterLinkBooking } from "../../../../lib/data/portal/links";
@@ -24,6 +26,10 @@ let oldWhen = "";
 let what = "";
 let locationName = "";
 let locationAddress: string | null = null;
+// Em casa (F3e-1): o endereço mantido ou o novo.
+let addressChoice: "mesmo" | "mudou" = "mesmo";
+let fields: HomeAddressFields = { street: "", complement: "", district: "", reference: "" };
+let errors: Partial<Record<HomeAddressField, string>> = {};
 if (view.kind === "open") {
   const { page, item, session } = view;
   const { db, portal } = page;
@@ -33,7 +39,20 @@ if (view.kind === "open") {
   if (!slot || !(await isRescheduleSlotFree(db, portal.clinicId, item, scope, slot, portal.timeZone))) {
     return Astro.redirect(timesHref(slot ? "horario" : null));
   }
-  if (Astro.request.method === "POST") {
+  const form = Astro.request.method === "POST" ? await Astro.request.formData().catch(() => null) : null;
+  let newAddress: string | null = null;
+  if (form && item.locationType === "home_visit") {
+    const value = (name: string) => String(form.get(name) ?? "");
+    // Sem endereço gravado (atendimento antigo), "mesmo" não serve.
+    addressChoice = value("endereco") === "mesmo" && item.homeVisitAddress ? "mesmo" : "mudou";
+    if (addressChoice === "mudou") {
+      const joined = joinHomeAddress({ street: value("rua"), complement: value("complemento"), district: value("bairro"), reference: value("referencia") });
+      fields = joined.fields;
+      if (joined.ok) newAddress = joined.text;
+      else errors = joined.errors;
+    }
+  }
+  if (form && !Object.keys(errors).length) {
     const outcome = await rescheduleMine(db, portal.clinicId, {
       item,
       slot,
@@ -41,6 +60,8 @@ if (view.kind === "open") {
       rebook: view.rebook,
       leadHours: view.leadHours,
       sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null),
+      homeVisitAddress: newAddress,
+      phone: session.phone,
     });
     if (outcome.status === "done") {
       // Pelo link do bot (Remarcar do menu ou do lembrete): o link fica usado e o funil fecha.
@@ -52,7 +73,8 @@ if (view.kind === "open") {
     if (outcome.status === "lead") return Astro.redirect(portalHref(view.listHref, { aviso: "prazo" }));
     if (outcome.status === "gone") return Astro.redirect(portalHref(view.listHref, { aviso: "mudou" }));
     problem = "Não conseguimos remarcar agora. Toque em “Confirmar remarcação” de novo ou fale com a recepção.";
-  }
+  } else if (form) problem = "Confira o endereço: faltou alguma informação.";
+  if (item.locationType === "home_visit" && !item.homeVisitAddress) addressChoice = "mudou";
   const tz = portal.timeZone;
   newWhen = whenOf(slot.start, tz);
   oldWhen = whenOf(item.start, tz);
@@ -61,6 +83,15 @@ if (view.kind === "open") {
   locationName = location?.name ?? item.locationName;
   locationAddress = slot.locationId === item.locationId ? item.locationAddress : null;
 }
+const atHome = view.kind === "open" && view.item.locationType === "home_visit";
+const inputs: { name: string; field: HomeAddressField; label: string; optional: boolean; autocomplete?: string }[] = [
+  { name: "rua", field: "street", label: "Rua e número", optional: false, autocomplete: "address-line1" },
+  { name: "complemento", field: "complement", label: "Complemento", optional: true, autocomplete: "address-line2" },
+  { name: "bairro", field: "district", label: "Bairro", optional: false },
+  { name: "referencia", field: "reference", label: "Ponto de referência", optional: true },
+];
+const choiceCard =
+  "flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-2.5 text-lg has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink";
 const page = view.page;
 const back = view.kind === "open" ? portalHref(`${view.listHref}/remarcar`, { a: view.item.id, date: params.get("date") }) : "";
 const here = view.kind === "open" ? portalHref(`${view.listHref}/confirmar`, { a: view.item.id, date: params.get("date"), start: params.get("start") }) : "";
@@ -101,7 +132,7 @@ const row = "flex flex-col gap-0.5 border-t border-gray-100 py-3 first:border-t-
             <b class="text-lg">{newWhen}</b>
             <a href={back} class="inline-flex min-h-11 items-center self-start px-0 text-base font-bold text-clinic-ink underline">Trocar o horário</a>
           </p>
-          <p class={row}>
+          {!atHome && (<p class={row}>
             <span class="text-[15px] text-gray-600">Local</span>
             <span class="text-lg">
               {locationName}
@@ -112,10 +143,53 @@ const row = "flex flex-col gap-0.5 border-t border-gray-100 py-3 first:border-t-
                 </>
               )}
             </span>
-          </p>
+          </p>)}
+          {atHome && (
+            <p class={row}>
+              <span class="text-[15px] text-gray-600">Onde</span>
+              <span class="text-lg">Em casa</span>
+            </p>
+          )}
         </div>
-        <p class="text-[17px] text-gray-700">A confirmação chega no WhatsApp.</p>
-        <form method="POST" action={here}>
+        <form method="POST" action={here} class="group flex flex-col gap-[18px]" novalidate>
+          {atHome && (
+            <fieldset class="flex flex-col gap-2.5">
+              <legend class="mb-1.5 font-display text-2xl leading-tight font-bold">O endereço continua o mesmo?</legend>
+              {view.item.homeVisitAddress && <p class="mb-1 text-[17px] break-words">{view.item.homeVisitAddress}</p>}
+              {view.item.homeVisitAddress && (
+                <label class={choiceCard}>
+                  <input type="radio" name="endereco" value="mesmo" checked={addressChoice === "mesmo"} class="h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                  <b>Sim, é esse</b>
+                </label>
+              )}
+              <label class={choiceCard}>
+                <input type="radio" name="endereco" value="mudou" id="endereco-mudou" checked={addressChoice === "mudou"} class="h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                <b>{view.item.homeVisitAddress ? "Não, mudou" : "Informar o endereço"}</b>
+              </label>
+              <div class="mt-1 hidden flex-col gap-4 group-has-[#endereco-mudou:checked]:flex" data-endereco-campos>
+                {inputs.map((i) => (
+                  <div class="flex flex-col gap-1.5">
+                    <label for={`endereco-${i.name}`} class="text-base font-semibold text-gray-700">
+                      {i.label}
+                      {i.optional && <span class="font-normal text-gray-600"> (se tiver)</span>}
+                    </label>
+                    <input
+                      id={`endereco-${i.name}`}
+                      name={i.name}
+                      value={fields[i.field]}
+                      maxlength={HOME_ADDRESS_MAX[i.field]}
+                      autocomplete={i.autocomplete}
+                      class={portalInput}
+                      aria-invalid={errors[i.field] ? "true" : undefined}
+                      aria-describedby={errors[i.field] ? `endereco-${i.name}-erro` : undefined}
+                    />
+                    {errors[i.field] && <p id={`endereco-${i.name}-erro`} class={portalError} aria-live="polite">{errors[i.field]}</p>}
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+          )}
+          <p class="text-[17px] text-gray-700">A confirmação chega no WhatsApp.</p>
           <button type="submit" class={portalCta} data-sending-label="Remarcando…">
             Confirmar {view.rebook ? "novo horário" : "remarcação"}
           </button>

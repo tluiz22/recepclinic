@@ -256,7 +256,7 @@ const label = "text-base font-semibold text-gray-700";
         <PortalSummary
           rows={[
             { label: whoLabel(professional), value: professional.name, change: changeDoctor },
-            { label: "Atendimento", value: modality?.label ?? null },
+            { label: "Atendimento", value: view.modalityText },
             { label: "Dia e horário", value: when, change: view.timesHref(true) },
             { label: "Paciente", value: null },
           ]}

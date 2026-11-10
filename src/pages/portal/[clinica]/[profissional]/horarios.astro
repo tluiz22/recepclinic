@@ -18,17 +18,25 @@ import { capitalize } from "../../../../lib/vocabulary";
 import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../lib/clinicTime";
 import { slotChoiceValue } from "../../../../lib/data/agenda/publicBooking";
 import { openPortalPage, professionalOf, singleProfessional } from "../../../../lib/data/portal/page";
-import { isProfessionalDayOpen, professionalDates, professionalSlots } from "../../../../lib/data/portal/portal";
+import { isProfessionalDayOpen, locationsAt, placesOf, professionalDates, professionalSlots } from "../../../../lib/data/portal/portal";
 import { hitLimits, readSession, releaseHold } from "../../../../lib/data/portal/identity";
 import { blockedText, ipPrefix, LIMITS } from "../../../../lib/portalIdentity";
 import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
-import { backFromProfessional, changeProfessionalHref, chosenModality, flowParams, formatPrice, helpForOf, modalityOptions, ofName, portalHref, privateLabel, professionalSteps, readFlow, shortName, stepPosition, whoLabel } from "../../../../lib/portal";
+import { backFromProfessional, changeProfessionalHref, chosenModality, flowParams, formatPrice, helpForOf, modalityLabelAt, modalityOptions, ofName, portalHref, privateLabel, professionalSteps, readFlow, shortName, stepPosition, WHERE_PARAM, whoLabel, type PortalWhere } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
 if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
 const params = Astro.url.searchParams;
-const flow = readFlow(params);
+const asked = readFlow(params);
+// Onde (F3e-1, D5 DM1c): quem atende no consultório e em casa escolhe aqui, em cima dos dias (consultório primeiro);
+// quem atende num lugar só não escolhe.
+const places = professional ? placesOf(professional) : [];
+const where: PortalWhere | null = places.length > 1 ? (asked.where ?? "clinic") : null;
+const flow = { ...asked, where };
+const whereType = where === "home" ? "home_visit" : where === "clinic" ? "clinic" : null;
+const atHome = whereType === "home_visit" || (places.length === 1 && places[0] === "home_visit");
+const scope = professional ? { locations: locationsAt(professional, whereType) } : {};
 const base = page.kind === "open" ? page.base : "";
 const options = professional ? modalityOptions(professional) : [];
 const modality = chosenModality(options, params.get("mod"));
@@ -73,19 +81,20 @@ if (page.kind === "open" && professional && consultation && modality) {
   if (session && params.get("soltar")) await releaseHold(page.db, page.portal.clinicId, session.id);
 }
 if (page.kind === "open" && professional && consultation && modality && !blockedUntil) {
-  const dates = await professionalDates(page.db, page.portal.clinicId, professional, consultation.serviceId, timeZone, { sessionId });
+  const dates = await professionalDates(page.db, page.portal.clinicId, professional, consultation.serviceId, timeZone, { sessionId, scope });
   strip = buildDayStrip(dates, dateParam("date"), dateParam("start"));
   if (strip.unavailable && !strip.selected && dates.length) strip = { ...buildDayStrip(dates, null, null), unavailable: strip.unavailable };
   const [slots, open] = await Promise.all([
-    strip.selected ? professionalSlots(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.selected, timeZone, new Date(), sessionId) : [],
-    strip.unavailable ? isProfessionalDayOpen(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.unavailable, timeZone) : false,
+    strip.selected ? professionalSlots(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.selected, timeZone, new Date(), sessionId, scope) : [],
+    strip.unavailable ? isProfessionalDayOpen(page.db, page.portal.clinicId, professional, consultation.serviceId, strip.unavailable, timeZone, new Date(), scope) : false,
   ]);
   unavailableOpen = open;
-  const locationName = (id: string) => professional.locations.find((l) => l.id === id)?.name ?? "";
+  const shown = scope.locations ?? professional.locations;
+  const locationName = (id: string) => shown.find((l) => l.id === id)?.name ?? "";
   slotOptions = slots.map((slot) => ({
     value: slotChoiceValue({ start: slot.start, agendaId: professional.agendaId, locationId: slot.locationId }),
     label: formatInstant(slot.start, timeZone, "HH:mm"),
-    detail: professional.locations.length > 1 ? locationName(slot.locationId) : "",
+    detail: shown.length > 1 ? locationName(slot.locationId) : "",
     summary: `${capitalize(formatInstant(slot.start, timeZone, "EEE").slice(0, 3))}, ${formatInstant(slot.start, timeZone, "dd/MM 'às' HH:mm")}`,
   }));
 }
@@ -96,7 +105,14 @@ const dayHref = (date: string, start: string) => portalHref(timesPath, { ...keep
 const back = professional ? (options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : backFromProfessional(base, professional.slug, flow, single)) : base;
 const changeDoctor = changeProfessionalHref(base, flow);
 const changeModality = options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : null;
-const step = stepPosition(professionalSteps(flow, options.length > 1, viaBotLink), "time");
+const step = stepPosition(professionalSteps(flow, options.length > 1, viaBotLink, atHome), "time");
+// "No consultório R$ 350" / "Em casa R$ 550": o valor só no particular (no convênio, nenhum).
+const placeLabel: Record<PortalWhere, string> = { clinic: "No consultório", home: "Em casa" };
+const placePrice = (type: "clinic" | "home_visit") => {
+  const cents = modality?.value === "particular" ? consultation?.prices[type] : null;
+  return cents ? formatPrice(cents) : null;
+};
+const placeHref = (value: PortalWhere) => portalHref(timesPath, { ...keep, onde: WHERE_PARAM[value], date: null, start: null });
 const taken = params.get("erro") === "horario";
 const unavailableNote = !strip?.unavailable
   ? null
@@ -123,16 +139,38 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
       <form method="GET" action={`${base}/${professional.slug}/continuar`} id="portal-horario" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div class="flex min-w-0 flex-col gap-4">
           <PortalStepBar back={back} step={step} />
-          <PortalDoctor professional={professional} change={changeDoctor} specialtyId={flow.specialty}>
+          <PortalDoctor professional={professional} change={changeDoctor} specialtyId={flow.specialty} atHome={atHome}>
             {modality && (
               <p class="flex items-center justify-between gap-2.5 border-t border-black/10 pt-1 text-base sm:border-gray-100">
-                <span>Atendimento: <b>{modality.label}</b>{modality.detail ? `. ${modality.detail}` : ""}</span>
+                <span>Atendimento: <b>{where && modality.value === "particular" ? "Particular" : modalityLabelAt(modality, whereType || atHome ? consultation.prices[atHome ? "home_visit" : "clinic"] : null)}</b>{modality.detail ? `. ${modality.detail}` : ""}</span>
                 {changeModality && <a href={changeModality} class="inline-flex min-h-11 shrink-0 items-center px-1 font-bold text-clinic-ink underline" aria-label="Trocar o atendimento">Trocar</a>}
               </p>
             )}
           </PortalDoctor>
           {Object.entries(keep).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
           {professional.exam && <PortalPreparation exam={professional.exam} />}
+          {where && (
+            <nav aria-labelledby="portal-onde" class="mt-2 flex flex-col gap-3">
+              <h2 id="portal-onde" class="font-display text-2xl leading-tight font-bold lg:text-[26px]">Onde será o atendimento?</h2>
+              <ul class="flex gap-1 rounded-[14px] bg-gray-100 p-1">
+                {(["clinic", "home"] as const).map((value) => (
+                  <li class="flex-1">
+                    <a
+                      href={placeHref(value)}
+                      aria-current={value === where ? "true" : undefined}
+                      data-portal-onde
+                      class={`flex min-h-14 flex-col items-center justify-center rounded-[11px] px-2 text-center text-[17px] leading-tight font-semibold no-underline ${value === where ? "bg-white text-clinic-ink shadow-[0_0_0_1.5px_var(--color-clinic-ink)_inset]" : "text-gray-700 hover:bg-white/60"}`}
+                    >
+                      <span>{placeLabel[value]}</span>
+                      {placePrice(value === "home" ? "home_visit" : "clinic") && <span class="text-[15px] font-normal">{placePrice(value === "home" ? "home_visit" : "clinic")}</span>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              {where === "home" && <p class="text-base text-gray-700">{shortName(professional.name)} vai até o endereço que você informar. O endereço é pedido depois de escolher o paciente.</p>}
+            </nav>
+          )}
+          {!where && atHome && <p class="mt-2 rounded-[14px] border border-gray-200 bg-white px-4 py-3 text-base">Atendimento em casa: {shortName(professional.name)} vai até o endereço que você informar, pedido depois de escolher o paciente.</p>}
           <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Escolha o dia e o horário</h1>
           {waitlist && <PortalWaitlistNotice />}
           {professional.consultations.length > 1 && (
@@ -211,6 +249,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
             ...(specialtyName ? [{ label: "Especialidade", value: specialtyName }] : []),
             { label: whoLabel(professional), value: professional.name, change: changeDoctor },
             { label: "Atendimento", value: modalityText, detail: modality?.detail, change: changeModality },
+            ...(atHome ? [{ label: "Onde", value: "Em casa" }] : []),
             { label: "Dia e horário", value: null, live: "slot" },
           ]}
         >

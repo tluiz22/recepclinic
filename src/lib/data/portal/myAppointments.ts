@@ -8,7 +8,7 @@ import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
 import { sendAppointmentNotice } from "../whatsapp/notices";
 import type { ClinicSender } from "../whatsapp/send";
-import { phonePatients } from "./booking";
+import { phonePatients, saveContactHomeAddress } from "./booking";
 
 // Minhas consultas (F3c; especificação P12; RD10, I7, F3-3 e F3-4): com o celular comprovado (código ou link do bot),
 // as próximas consultas dos pacientes do celular, cada uma com Remarcar (mesmo profissional, serviço e tipo de local;
@@ -41,12 +41,14 @@ export type MyAppointment = {
   status: string;
   isGroup: boolean;
   originAppointmentId: string | null;
-  /** Remarcar pelo portal (individual no consultório). */
+  /** Remarcar pelo portal (individual, no consultório ou em casa, F3e-1). */
   canReschedule: boolean;
+  /** Em casa (F3e-1): o endereço gravado no atendimento. */
+  homeVisitAddress: string | null;
 };
 
 const COLUMNS =
-  "id, patient_id, scheduled_at, duration_minutes, status, agenda_id, service_id, location_id, origin_appointment_id, patients ( full_name ), services ( name, category, scheduling_mode ), agendas ( professionals ( display_name ) ), locations ( name, type, address )";
+  "id, patient_id, scheduled_at, duration_minutes, status, agenda_id, service_id, location_id, origin_appointment_id, home_visit_address, patients ( full_name ), services ( name, category, scheduling_mode ), agendas ( professionals ( display_name ) ), locations ( name, type, address )";
 
 type Row = {
   id: string;
@@ -58,6 +60,7 @@ type Row = {
   service_id: string;
   location_id: string;
   origin_appointment_id: string | null;
+  home_visit_address: string | null;
   patients: { full_name: string };
   services: { name: string; category: MyAppointment["category"]; scheduling_mode: string };
   agendas: { professionals: { display_name: string } | null } | null;
@@ -84,7 +87,8 @@ const toItem = (row: Row): MyAppointment => {
     status: row.status,
     isGroup,
     originAppointmentId: row.origin_appointment_id,
-    canReschedule: !isGroup && row.locations.type === "clinic",
+    canReschedule: !isGroup,
+    homeVisitAddress: row.home_visit_address,
   };
 };
 
@@ -246,10 +250,23 @@ export type ChangeOutcome = { status: "done"; appointmentId: string } | { status
 export async function rescheduleMine(
   db: DbClient,
   clinicId: string,
-  input: { item: MyAppointment; slot: RescheduleSlot; scope: RescheduleScope; rebook: boolean; leadHours: number | null; sender: ClinicSender | null },
+  input: {
+    item: MyAppointment;
+    slot: RescheduleSlot;
+    scope: RescheduleScope;
+    rebook: boolean;
+    leadHours: number | null;
+    sender: ClinicSender | null;
+    /** Em casa (F3e-1, DM4): o endereço confirmado ou o novo; sem ele, fica o do atendimento. */
+    homeVisitAddress?: string | null;
+    /** O celular comprovado (o endereço novo vira o padrão do contato). */
+    phone?: string;
+  },
   now: Date = new Date(),
 ): Promise<ChangeOutcome> {
   const { item, slot } = input;
+  const atHome = item.locationType === "home_visit";
+  const address = atHome ? input.homeVisitAddress?.trim() || item.homeVisitAddress : null;
   if (!input.scope.locations.some((l) => l.id === slot.locationId)) return { status: "taken" };
   if (!input.rebook && input.leadHours !== null && !outsideLead(item.start, input.leadHours, now)) return { status: "lead" };
   let appointmentId: string;
@@ -264,6 +281,7 @@ export async function rescheduleMine(
           agendaId: item.agendaId,
           start: slot.start,
           locationId: slot.locationId,
+          homeVisitAddress: address,
           originAppointmentId: item.originAppointmentId,
           channel: "portal",
           actorId: null,
@@ -273,6 +291,10 @@ export async function rescheduleMine(
       appointmentId = appointment.id;
     } else {
       appointmentId = (await rescheduleAppointment(db, clinicId, item.id, { start: slot.start, locationId: slot.locationId, channel: "portal", actorId: null }, now)).id;
+      if (atHome && address && address !== item.homeVisitAddress) {
+        const saved = await db.from("appointments").update({ home_visit_address: address }).eq("clinic_id", clinicId).eq("id", appointmentId);
+        if (saved.error) logError("portal: endereço da remarcação não gravado", saved.error, { clinica: clinicId, atendimento: appointmentId });
+      }
     }
   } catch (error) {
     if (error instanceof DataError && error.code === "conflict") return { status: "taken" };
@@ -281,6 +303,7 @@ export async function rescheduleMine(
     logError("portal: não remarcou", error, { clinica: clinicId, atendimento: item.id });
     return { status: "failed" };
   }
+  if (atHome && address && input.phone && address !== item.homeVisitAddress) await saveContactHomeAddress(db, clinicId, input.phone, address);
   await sendAppointmentNotice(db, clinicId, appointmentId, input.rebook ? "confirmation" : "reschedule", input.sender, now);
   return { status: "done", appointmentId };
 }

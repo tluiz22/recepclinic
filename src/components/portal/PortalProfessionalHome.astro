@@ -64,12 +64,13 @@ const title = "text-[15px] font-semibold text-gray-600";
       {professional.plans.length > 0 && <p class="text-gray-700">{professional.plans.map((p) => p.name).join(", ")}</p>}
     </div>
     {
-      professional.locations.some((l) => l.address) && (
+      professional.locations.some((l) => l.address || l.type === "home_visit") && (
         <div class={box}>
           <p class={title}>Onde atende</p>
+          {professional.locations.some((l) => l.type === "home_visit") && <p>{professional.locations.some((l) => l.type === "clinic") ? "No consultório e em casa (atendimento domiciliar)." : "Em casa (atendimento domiciliar)."}</p>}
           {professional.locations.filter((l) => l.address).map((l) => (
             <p>
-              {professional.locations.length > 1 && <b>{l.name}: </b>}
+              {professional.locations.filter((x) => x.type === "clinic").length > 1 && <b>{l.name}: </b>}
               {l.address}.{" "}
               <a href={mapsHref(l.address!)} target="_blank" rel="noopener" class="font-semibold text-clinic-ink">Ver no mapa</a>
             </p>

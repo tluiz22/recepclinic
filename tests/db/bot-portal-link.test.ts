@@ -200,6 +200,35 @@ describe("bot leva ao portal (F3b)", () => {
     expect(data!.appointment_id).toBe(appointment.id);
   });
 
+  it("Remarcar em casa (F3e-1): também o link do portal, sem perguntar o endereço no chat", async () => {
+    const phone = "+5584991239001"; // contato do Paciente Um (fixture)
+    await adminClient().from("appointments").update({ status: "canceled", canceled_at: new Date().toISOString() }).eq("patient_id", f.ids.p1).in("status", ["scheduled", "confirmed"]);
+    const { appointment } = await bookAppointment(
+      asDb(f.reception),
+      f.clinicId,
+      {
+        patientId: f.ids.p1,
+        serviceId: f.ids.consulta2,
+        agendaId: f.ids.agendaDra2,
+        start: at(MON1, "08:00"),
+        locationId: f.ids.home,
+        homeVisitAddress: "Rua dos Ipês, 45, Lagoa Nova",
+        channel: "admin",
+        actorId: null,
+        anyTime: true,
+        acceptedWarnings: true,
+      },
+    );
+    let reply = await consultations(phone, "Remarcar");
+    if (reply.at(-1)!.body.includes("data de nascimento")) reply = await say(phone, "01/01/2020");
+    if (reply.at(-1)!.options.length && !reply.at(-1)!.body.includes("toque no link")) reply = await say(phone, { id: reply.at(-1)!.options[0].id });
+    const text = reply.map((m) => m.body).join("\n");
+    expect(text).not.toMatch(/endereço/);
+    expect(text).toMatch(/toque no link abaixo/);
+    const { data } = await adminClient().from("portal_links").select("appointment_id").eq("clinic_id", f.clinicId).eq("phone", phone).eq("purpose", "reschedule").order("created_at", { ascending: false }).limit(1).single();
+    expect(data!.appointment_id).toBe(appointment.id);
+  });
+
   it("link vencido sem marcar: \"Não concluímos a sua marcação\" uma vez, e \"Novo link\" manda outro", async () => {
     const phone = "+5584991239005";
     await bookWithSegundo(phone);

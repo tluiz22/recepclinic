@@ -26,6 +26,10 @@ const { page, professional, hold, session, timeZone, modality, when, consultatio
 const waitlist = page.kind === "open" ? await sessionJoinsWaitlist(page.db, page.portal.clinicId, session) : false;
 if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
 if (page.kind === "open" && professional && hold?.state === "active" && !hold.patientId && !hold.newPatient) return Astro.redirect(view.href("reserva"));
+// Em casa (F3e-1, DM2b): o endereço vem depois do paciente; sem ele, a tela do endereço (o aviso da data segue junto).
+if (page.kind === "open" && professional && hold?.state === "active" && view.atHome && !hold.homeVisitAddress) {
+  return Astro.redirect(view.href("endereco", { aviso: Astro.url.searchParams.get("aviso") }));
+}
 
 const today = todayIn(timeZone);
 let problem: string | null = null;
@@ -54,6 +58,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
     if (outcome.status === "expired") return Astro.redirect(view.href("revisao"));
     if (outcome.status === "taken") return Astro.redirect(portalHref(`${view.base}/${professional.slug}/horarios`, { ...flowParams(view.flow), mod: modality?.value ?? null, tipo: Astro.url.searchParams.get("tipo"), date: Astro.url.searchParams.get("date"), erro: "horario" }));
     if (outcome.status === "no_patient") return Astro.redirect(view.href("reserva"));
+    if (outcome.status === "no_address") return Astro.redirect(view.href("endereco"));
     if (outcome.status === "blocked") problem = blockMessage(toBlockText(outcome.reason, timeZone), professional.name, existing?.fullName ?? hold.newPatient?.name ?? null, bookingKind(professional));
     else problem = "Não conseguimos marcar agora. Toque em “Confirmar agendamento” de novo ou fale com a recepção.";
   }
@@ -68,6 +73,9 @@ const plan = professional && !isPrivate ? professional.plans.find((p) => p.id ==
 const patientName = existing?.fullName ?? hold?.newPatient?.name ?? "";
 const patientBirth = existing?.birthdate ?? hold?.newPatient?.birthdate ?? null;
 const changePatient = existing ? view.href("reserva") : view.href("cadastro");
+const changeAddress = view.href("endereco");
+// O valor do lugar do atendimento (F3e-1: em casa pode custar outro valor).
+const priceCents = (location ? consultation?.prices[location.type] : null) ?? consultation?.priceCents ?? null;
 const birthNotice = Astro.url.searchParams.get("aviso") === "data" && hold?.informedBirthdate;
 const row = "flex items-start justify-between gap-3 border-b border-gray-100 py-3 last:border-b-0";
 const dt = "text-[15px] text-gray-600";
@@ -87,7 +95,7 @@ const dt = "text-[15px] text-gray-600";
   {
     active && professional && hold && (
       <div class="flex flex-col gap-[18px]">
-        <PortalStepBar back={changePatient} step={view.step("review")} />
+        <PortalStepBar back={view.atHome ? changeAddress : changePatient} step={view.step("review")} />
         <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("revisao")} />
         <h1 class={portalTitle}>Confira e confirme</h1>
         {waitlist && <PortalWaitlistNotice />}
@@ -114,7 +122,8 @@ const dt = "text-[15px] text-gray-600";
             <div class="min-w-0">
               <dt class={dt}>Atendimento</dt>
               <dd class="font-bold">
-                {isPrivate ? (consultation?.priceCents ? `Particular, ${formatPrice(consultation.priceCents)}` : "Particular") : (plan?.name ?? modality?.label)}
+                {isPrivate ? (priceCents ? `Particular, ${formatPrice(priceCents)}` : "Particular") : (plan?.name ?? modality?.label)}
+                {view.atHome && ", em casa"}
               </dd>
               {plan?.note && <dd class="text-[16px] text-gray-700">{plan.note}</dd>}
             </div>
@@ -127,7 +136,16 @@ const dt = "text-[15px] text-gray-600";
             </div>
             <a href={view.timesHref(true)} class={portalLink} aria-label="Alterar o dia e o horário">Alterar</a>
           </div>
-          {location && (
+          {view.atHome && (
+            <div class={`${row} -mx-4 bg-clinic-tint px-4 sm:-mx-5 sm:px-5`}>
+              <div class="min-w-0">
+                <dt class={dt}>Endereço do atendimento</dt>
+                <dd class="break-words">{hold.homeVisitAddress}</dd>
+              </div>
+              <a href={changeAddress} class={portalLink} aria-label="Alterar o endereço do atendimento">Alterar</a>
+            </div>
+          )}
+          {location && !view.atHome && (
             <div class={row}>
               <div class="min-w-0">
                 <dt class={dt}>Onde</dt>

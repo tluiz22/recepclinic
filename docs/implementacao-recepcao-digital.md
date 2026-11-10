@@ -714,3 +714,38 @@ e "Rodada 5 (D5): exame em turma"), revisada tela por tela e aprovada. Sem códi
 **F3e em partes** (branch `recepcao-d5`, testes a cada parte): **F3e-1** domiciliar (onde, endereço, revisão,
 remarcar) → **F3e-2** turma → **F3e-3** exame do profissional → bot (`portalLink.ts` deixa de mandar ao chat o que o
 portal passa a cobrir) e Jornada do bot → revisões, staging.
+
+#### 15.5.1 F3e-1 feita: atendimento em casa no portal (10/nov/2026, branch `recepcao-d5`)
+
+Migração `20270108120000_portal_domiciliar` (`slot_holds.home_visit_address`, até 500 caracteres), aplicada no banco
+local com o OK do cliente; staging e produção: não.
+
+- **Dados:** o domiciliar entra nos locais do profissional (consultório primeiro), com o valor de cada lugar
+  (`PortalConsultation.prices`); o valor de casa conta no "a partir de" do cartão. Exames seguem só no consultório; o
+  retorno, só no consultório (domiciliar não dá direito a retorno). Início do profissional: "No consultório e em casa".
+- **P6 (DM1c):** "Onde será o atendimento?" com "No consultório R$ 300 / Em casa R$ 450" em cima dos dias
+  (`?onde=casa|consultorio`, consultório por padrão); os dias e horários são só os do lugar escolhido. Em casa, sem o
+  endereço do consultório no topo; passo "Endereço" a mais na contagem.
+- **Endereço (DM2b, tela nova `/{clínica}/{profissional}/endereco`):** depois do paciente (a revisão manda para lá se
+  falta o endereço); "Mesmo endereço da última visita" (padrão do contato), "O endereço informado agora" (voltando pelo
+  Alterar) ou "Outro endereço" com rua e número, complemento, bairro e ponto de referência (`joinHomeAddress`, um texto
+  só). Erro: os campos ficam como foram digitados.
+- **Revisão, P10 e `.ics`:** "Endereço do atendimento" com Alterar; "Particular, R$ 450, em casa" (o valor do lugar,
+  também na barra e nos resumos); P10 "Em casa" com o endereço; o `.ics` leva o endereço. A marcação grava o endereço
+  no atendimento e no padrão do contato; sem endereço, não marca (`no_address`).
+- **Remarcar em casa (DM4):** Minhas consultas remarca o domiciliar; a confirmação pergunta "O endereço continua o
+  mesmo?" ("Não, mudou" abre os campos; o novo vai para o atendimento e o contato). Também pelo link do bot e pelo link
+  depois do cancelamento pela clínica.
+- **Bot:** Marcar consulta com profissional que atende em casa e Remarcar em casa mandam o link do portal (só a turma
+  segue no chat). Jornada do bot atualizada (`JOURNEY_UPDATED` 10/11/2026).
+- **Testes:** 1188 de unidade; banco: `portal-domiciliar.test.ts` (locais e valores, sem endereço não marca, endereço no
+  atendimento e no contato, reserva de outra sessão, remarcar com endereço novo), `portal-escolha` revisto e o Remarcar
+  em casa em `bot-portal-link`; bateria de banco inteira passou (1152) antes da migração da sessão de validação
+  (`20270107130000_portal_limite_marcadas`, ainda sem commit na `main`) mudar o limite de reservas no banco local:
+  `portal-identificacao` › "cinco reservas" falha por isso, não pela F3e-1.
+- **Playwright (porta 4322, clínica temporária apagada no fim):** 390 e 1280 px; Em casa → 14:00 → celular e código →
+  paciente → endereço (erro sem a rua preserva complemento, bairro e referência) → revisão → Voltar em cadeia →
+  duplo clique em Confirmar (um atendimento só) → P10; Minhas consultas → Remarcar → "Não, mudou" (erro preserva os
+  campos) → "Pronto, remarcado". Console sem erros. Achado e corrigido: o atendimento em casa mostrava "Particular, a
+  partir de R$ 300" no lugar de "Particular, R$ 450, em casa".
+- **Capturas da Central:** nenhuma tela com captura mudou.

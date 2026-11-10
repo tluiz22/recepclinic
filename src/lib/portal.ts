@@ -100,14 +100,14 @@ export function matchesName(name: string, query: string): boolean {
 // ---------------------------------------------------------------------------
 // Passos ("Passo 3 de 6", com os pulados descontados)
 
-export type PortalStep = "specialty" | "professional" | "modality" | "time" | "phone" | "patient" | "review";
+export type PortalStep = "specialty" | "professional" | "modality" | "time" | "phone" | "patient" | "address" | "review";
 
 /**
  * Passos do caminho: pela clínica, especialidade e médico (pulados com uma opção só); pelo link do profissional,
  * nenhum dos dois. Particular ou convênio some com uma opção só. Depois do horário, o celular, quem será atendido e a
  * revisão (F2c).
  */
-export function portalSteps(flags: { specialty: boolean; professional: boolean; modality: boolean; phone?: boolean }): PortalStep[] {
+export function portalSteps(flags: { specialty: boolean; professional: boolean; modality: boolean; phone?: boolean; address?: boolean }): PortalStep[] {
   return [
     ...(flags.specialty ? (["specialty"] as const) : []),
     ...(flags.professional ? (["professional"] as const) : []),
@@ -116,6 +116,8 @@ export function portalSteps(flags: { specialty: boolean; professional: boolean; 
     // Pelo link do bot (F3a), o celular já vem comprovado da conversa: sem o passo.
     ...(flags.phone === false ? [] : (["phone"] as const)),
     "patient",
+    // Atendimento em casa (F3e-1, D5): o endereço depois do paciente.
+    ...(flags.address ? (["address"] as const) : []),
     "review",
   ];
 }
@@ -152,6 +154,16 @@ export function modalityOptions(professional: PriceInfo & { plans: readonly Port
     ...(professional.acceptsPrivate ? [{ value: PRIVATE_MODALITY, label: privateLabel(professional), detail: null }] : []),
     ...professional.plans.map((plan) => ({ value: plan.id, label: plan.name, detail: plan.note })),
   ];
+}
+
+/**
+ * O atendimento escolhido no lugar do atendimento (F3e-1): no particular, o valor de lá ("Particular, R$ 450, em
+ * casa") no lugar do "a partir de"; convênio como está.
+ */
+export function modalityLabelAt(option: ModalityOption | null, priceCents: number | null | undefined, atHome = false): string | null {
+  if (!option) return null;
+  const label = option.value === PRIVATE_MODALITY && priceCents ? `Particular, ${formatPrice(priceCents)}` : option.label;
+  return atHome ? `${label}, em casa` : label;
 }
 
 /** A escolha do endereço, se ainda vale para o profissional (o convênio pode ter deixado de ser atendido). */
@@ -271,7 +283,18 @@ export function readPlace(params: URLSearchParams): PortalPlaceParam | null {
   return value && Object.hasOwn(PORTAL_PLACES, value) ? (value as PortalPlaceParam) : null;
 }
 
-export type PortalFlow = { from: "medicos" | "especialidade" | "exames" | null; specialty: string | null; plan: string | null; name: string | null; place: PortalPlaceParam | null };
+/** Onde é o atendimento (F3e-1, D5): em casa (domiciliar) ou no consultório; null = o profissional atende num só. */
+export type PortalWhere = "home" | "clinic";
+export const WHERE_PARAM: Record<PortalWhere, string> = { home: "casa", clinic: "consultorio" };
+
+export type PortalFlow = {
+  from: "medicos" | "especialidade" | "exames" | null;
+  specialty: string | null;
+  plan: string | null;
+  name: string | null;
+  place: PortalPlaceParam | null;
+  where: PortalWhere | null;
+};
 
 const ID = /^[a-z0-9-]{1,64}$/i;
 const idParam = (value: string | null) => (value && ID.test(value) ? value : null);
@@ -284,10 +307,18 @@ export function readFlow(params: URLSearchParams): PortalFlow {
     plan: idParam(params.get("conv")),
     name: params.get("nome")?.trim().slice(0, 60) || null,
     place: readPlace(params),
+    where: params.get("onde") === WHERE_PARAM.home ? "home" : params.get("onde") === WHERE_PARAM.clinic ? "clinic" : null,
   };
 }
 
-export const flowParams = (flow: PortalFlow) => ({ de: flow.from, esp: flow.specialty, conv: flow.plan, nome: flow.name, origem: flow.place });
+export const flowParams = (flow: PortalFlow) => ({
+  de: flow.from,
+  esp: flow.specialty,
+  conv: flow.plan,
+  nome: flow.name,
+  origem: flow.place,
+  onde: flow.where ? WHERE_PARAM[flow.where] : null,
+});
 
 /** A lista de médicos com a especialidade, o filtro e o nome de antes. */
 export const doctorsHref = (base: string, flow: Pick<PortalFlow, "specialty" | "plan" | "name"> & { place?: PortalPlaceParam | null }) =>
@@ -314,8 +345,14 @@ export function changeProfessionalHref(base: string, flow: PortalFlow): string |
 }
 
 /** Passos do caminho pelo médico: especialidade e lista só se o paciente passou por elas. */
-export const professionalSteps = (flow: PortalFlow, modality: boolean, viaBotLink = false) =>
-  portalSteps({ specialty: flow.from !== null && flow.specialty !== null, professional: flow.from === "medicos" || flow.from === "exames", modality, phone: !viaBotLink });
+export const professionalSteps = (flow: PortalFlow, modality: boolean, viaBotLink = false, home = false) =>
+  portalSteps({
+    specialty: flow.from !== null && flow.specialty !== null,
+    professional: flow.from === "medicos" || flow.from === "exames",
+    modality,
+    phone: !viaBotLink,
+    address: home,
+  });
 
 /** "Médico" ou "Exame" (F2d: o exame passa pelas mesmas telas da consulta). */
 export const whoLabel = (p: { exam?: unknown }) => (p.exam ? "Exame" : "Médico");

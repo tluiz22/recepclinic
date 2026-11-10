@@ -308,8 +308,9 @@ export const PORTAL_REBOOKING_TTL_MS = 2 * 24 * 60 * 60_000;
 
 /**
  * Link de remarcação do portal para um atendimento cancelado pela clínica (F3-3): o mesmo paciente, serviço e agenda,
- * no consultório; retorno sem o limite do prazo. null = o portal não cobre (sem endereço ou Portal desligado,
- * domiciliar, turma, paciente sem celular): quem chamou faz o link de hoje.
+ * no consultório ou em casa (F3e-1: o portal pergunta se o endereço continua o mesmo); retorno sem o limite do prazo.
+ * null = o portal não cobre (sem endereço ou Portal desligado, turma, paciente sem celular): quem chamou faz o link
+ * de hoje.
  */
 export async function createPortalRebookingLink(
   db: DbClient,
@@ -325,7 +326,7 @@ export async function createPortalRebookingLink(
     db.from("patients").select("contact_id, contacts ( phone )").eq("clinic_id", clinicId).eq("id", appointment.patientId).maybeSingle().then((r) => unwrap(r, "Paciente")),
   ]);
   const phone = (patient as unknown as { contacts: { phone: string } | null } | null)?.contacts?.phone ?? null;
-  if (!clinic?.portal_slug || !portalOn || location?.type !== "clinic" || service?.scheduling_mode === "group" || !phone) return null;
+  if (!clinic?.portal_slug || !portalOn || (location?.type !== "clinic" && location?.type !== "home_visit") || service?.scheduling_mode === "group" || !phone) return null;
   return createPortalLink(
     db,
     clinicId,

@@ -46,12 +46,14 @@ export type PortalHold = {
   appointmentId: string | null;
   /** Retorno (F2d): a consulta de origem; null = consulta ou exame. */
   returnOriginId: string | null;
+  /** Atendimento em casa (F3e-1): o endereço informado depois do paciente; null = ainda não informado. */
+  homeVisitAddress: string | null;
   /** Ativa (pode seguir), marcada (P10) ou vencida/solta. */
   state: "active" | "booked" | "gone";
 };
 
 const HOLD_COLUMNS =
-  "id, agenda_id, service_id, location_id, starts_at, ends_at, expires_at, phone, patient_id, new_patient, informed_birthdate, confirming_at, appointment_id, released_at, return_origin_id";
+  "id, agenda_id, service_id, location_id, starts_at, ends_at, expires_at, phone, patient_id, new_patient, informed_birthdate, confirming_at, appointment_id, released_at, return_origin_id, home_visit_address";
 
 function toNewPatient(value: unknown): NewPatientData | null {
   if (!value || typeof value !== "object") return null;
@@ -96,6 +98,7 @@ async function readHold(db: DbClient, clinicId: string, sessionId: string | null
     confirmingAt: row.confirming_at ? new Date(row.confirming_at) : null,
     appointmentId: row.appointment_id,
     returnOriginId: row.return_origin_id,
+    homeVisitAddress: row.home_visit_address,
     state,
   };
 }
@@ -148,6 +151,33 @@ export async function setHoldPatient(
     "Reserva do horário",
   );
   return rows.length > 0;
+}
+
+/** Grava o endereço do atendimento em casa na reserva ativa (F3e-1, DM2b). */
+export async function setHoldAddress(db: DbClient, clinicId: string, sessionId: string, holdId: string, address: string, now: Date = new Date()): Promise<boolean> {
+  const rows = unwrap(
+    await db
+      .from("slot_holds")
+      .update({ home_visit_address: address })
+      .eq("clinic_id", clinicId)
+      .eq("session_id", sessionId)
+      .eq("id", holdId)
+      .is("released_at", null)
+      .is("appointment_id", null)
+      .gt("expires_at", now.toISOString())
+      .select("id"),
+    "Reserva do horário",
+  );
+  return rows.length > 0;
+}
+
+/**
+ * O endereço da última visita em casa (o padrão do contato, como o bot: "A última visita domiciliar foi feita neste
+ * endereço"); só depois do celular comprovado.
+ */
+export async function lastHomeAddress(db: DbClient, clinicId: string, phone: string): Promise<string | null> {
+  const contact = await findContactByPhone(db, clinicId, phone);
+  return contact && contact.isActive && !contact.anonymizedAt ? contact.defaultHomeAddress : null;
 }
 
 /** Paciente do mesmo celular com o nome parecido (P8b: "Já existe um cadastro neste número…"). */
@@ -211,6 +241,8 @@ export type ConfirmOutcome =
   | { status: "expired" }
   | { status: "taken" }
   | { status: "no_patient" }
+  /** Em casa sem o endereço (F3e-1): volta à tela do endereço. */
+  | { status: "no_address" }
   | { status: "blocked"; reason: BlockReason }
   | { status: "failed" };
 
@@ -270,6 +302,8 @@ export async function confirmPortalBooking(
   if (hold.state === "booked") return { status: "booked", appointmentId: hold.appointmentId! };
   if (hold.state === "gone") return { status: "expired" };
   if (!hold.patientId && !hold.newPatient) return { status: "no_patient" };
+  const atHome = input.professional.locations.find((l) => l.id === hold.locationId)?.type === "home_visit";
+  if (atHome && !hold.homeVisitAddress) return { status: "no_address" };
   if (!(await claimHold(db, clinicId, input.sessionId, input.holdId, now))) {
     const again = await loadHold(db, clinicId, input.sessionId, input.holdId, now);
     if (again?.state === "booked") return { status: "booked", appointmentId: again.appointmentId! };
@@ -314,7 +348,16 @@ export async function confirmPortalBooking(
     const { appointment } = await bookAppointment(
       db,
       clinicId,
-      { patientId, serviceId: hold.serviceId, agendaId: hold.agendaId, start: hold.start, locationId: hold.locationId, channel: "portal", actorId: null },
+      {
+        patientId,
+        serviceId: hold.serviceId,
+        agendaId: hold.agendaId,
+        start: hold.start,
+        locationId: hold.locationId,
+        homeVisitAddress: atHome ? hold.homeVisitAddress : null,
+        channel: "portal",
+        actorId: null,
+      },
       now,
     );
     appointmentId = appointment.id;
@@ -337,10 +380,22 @@ export async function confirmPortalBooking(
   if (done.error) logError("portal: reserva sem o atendimento", done.error, { clinica: clinicId, reserva: hold.id });
 
   await afterBooking(db, clinicId, { appointmentId, hold, insurancePlanId: input.insurancePlanId, entry: input.entry, place: input.place ?? null }, now);
+  if (atHome && hold.homeVisitAddress) await saveContactHomeAddress(db, clinicId, hold.phone, hold.homeVisitAddress);
   await enqueueNotice(db, clinicId, appointmentId, "confirmation", now).catch((error) => logError("portal: confirmação fora da fila", error, { clinica: clinicId }));
   // Sem quem envia agora (falha ao carregar o WhatsApp da clínica): a linha fica pendente e a rotina manda.
   if (input.sender) await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
   return { status: "booked", appointmentId };
+}
+
+/** O endereço da visita em casa vira o padrão do contato (a próxima marcação oferece "o mesmo endereço", como o bot). */
+export async function saveContactHomeAddress(db: DbClient, clinicId: string, phone: string, address: string): Promise<void> {
+  try {
+    const contact = await findContactByPhone(db, clinicId, phone);
+    if (!contact || contact.defaultHomeAddress === address) return;
+    unwrap(await db.from("contacts").update({ default_home_address: address }).eq("clinic_id", clinicId).eq("id", contact.id), "Contato");
+  } catch (error) {
+    logError("portal: endereço do contato não gravado", error, { clinica: clinicId });
+  }
 }
 
 /** Cadastro novo pelo portal (conta no limite de pacientes novos do telefone, como o bot). */
@@ -434,18 +489,27 @@ async function holdLinkId(db: DbClient, clinicId: string, holdId: string): Promi
 }
 
 /** Resumo do atendimento marcado (P10 e .ics), só pela reserva desta sessão. */
-export type BookedSummary = { appointmentId: string; start: Date; end: Date; patientName: string; status: string; locationId: string };
+export type BookedSummary = {
+  appointmentId: string;
+  start: Date;
+  end: Date;
+  patientName: string;
+  status: string;
+  locationId: string;
+  /** Em casa (F3e-1): o endereço do atendimento. */
+  homeVisitAddress: string | null;
+};
 
 export async function bookedSummary(db: DbClient, clinicId: string, appointmentId: string): Promise<BookedSummary | null> {
   const row = unwrap(
     await db
       .from("appointments")
-      .select("id, scheduled_at, duration_minutes, status, location_id, patients ( full_name )")
+      .select("id, scheduled_at, duration_minutes, status, location_id, home_visit_address, patients ( full_name )")
       .eq("clinic_id", clinicId)
       .eq("id", appointmentId)
       .maybeSingle(),
     "Atendimento",
-  ) as { id: string; scheduled_at: string; duration_minutes: number; status: string; location_id: string; patients: { full_name: string } } | null;
+  ) as { id: string; scheduled_at: string; duration_minutes: number; status: string; location_id: string; home_visit_address: string | null; patients: { full_name: string } } | null;
   if (!row) return null;
   const start = new Date(row.scheduled_at);
   return {
@@ -455,5 +519,6 @@ export async function bookedSummary(db: DbClient, clinicId: string, appointmentI
     patientName: row.patients.full_name,
     status: row.status,
     locationId: row.location_id,
+    homeVisitAddress: row.home_visit_address,
   };
 }

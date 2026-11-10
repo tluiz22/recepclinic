@@ -125,7 +125,15 @@ describe("passos", () => {
 
 describe("caminho", () => {
   it("lê só valores válidos do endereço", () => {
-    expect(readFlow(new URLSearchParams("de=x&esp=<script>&conv=abc-1"))).toEqual({ from: null, specialty: null, plan: "abc-1", name: null, place: null });
+    expect(readFlow(new URLSearchParams("de=x&esp=<script>&conv=abc-1&onde=lua"))).toEqual({ from: null, specialty: null, plan: "abc-1", name: null, place: null, where: null });
+  });
+  it("onde (F3e-1): em casa ou no consultório, e volta no endereço", () => {
+    expect(readFlow(new URLSearchParams("onde=casa")).where).toBe("home");
+    expect(readFlow(new URLSearchParams("onde=consultorio")).where).toBe("clinic");
+    expect(flowParams(readFlow(new URLSearchParams("onde=casa"))).onde).toBe("casa");
+  });
+  it("o endereço do atendimento em casa é um passo depois do paciente", () => {
+    expect(portalSteps({ specialty: false, professional: false, modality: true, address: true })).toEqual(["modality", "time", "phone", "patient", "address", "review"]);
   });
   it("Voltar e Trocar levam à tela de onde o paciente veio", () => {
     const fromList = readFlow(new URLSearchParams("de=medicos&esp=e1&conv=p1"));

@@ -108,7 +108,7 @@ export const JOURNEY: JourneySection[] = [
     flow: [
       check(
         "O portal marca este atendimento?",
-        "Sim quando a clínica tem o endereço do portal e o Portal ligado, o profissional aparece no portal e o atendimento é individual no consultório (F3b, 09/nov/2026). Domiciliar e em turma, por enquanto, seguem no chat (entram no portal depois).",
+        "Sim quando a clínica tem o endereço do portal e o Portal ligado, o profissional aparece no portal e o atendimento é individual, no consultório ou em casa (F3b, 09/nov/2026; domiciliar desde a F3e-1, 10/nov/2026). Em turma, por enquanto, segue no chat (entra no portal depois).",
       ),
       branch(
         [
@@ -120,7 +120,7 @@ export const JOURNEY: JourneySection[] = [
             ),
             page(
               "Portal: particular ou convênio, dia e horário, para quem é, revisão e \"Confirmar agendamento\"",
-              "Sem pedir o código: o celular da conversa já vem confirmado (\"Usar outro número\" pede o código). Um link marca uma vez; outro link do mesmo número desfaz o anterior.",
+              "Sem pedir o código: o celular da conversa já vem confirmado (\"Usar outro número\" pede o código). Um link marca uma vez; outro link do mesmo número desfaz o anterior. Profissional que atende no consultório e em casa: \"No consultório / Em casa\" em cima dos dias; em casa, o endereço depois do paciente (\"Mesmo endereço da última visita\" ou outro).",
             ),
             auto("Confirmação da marcação, com dia, hora e local"),
             auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
@@ -239,7 +239,7 @@ export const JOURNEY: JourneySection[] = [
         [
           "Remarcar",
           [
-            bot("Retorno: confere o prazo. Domiciliar e turma: confirma o endereço e segue no link de hoje (entram no portal depois)"),
+            bot("Retorno: confere o prazo. Turma: segue no link de hoje (entra no portal depois)", "Em casa: o portal pergunta se o endereço continua o mesmo (F3e-1, 10/nov/2026)."),
             bot(
               "\"Para escolher o novo dia e horário para a consulta de *[paciente]*, toque no link abaixo…\"",
               "Link do portal (F3c, 10/nov/2026), sem o prazo de antecedência: o Remarcar do WhatsApp remarca a qualquer hora. Venceu sem remarcar: item 10.",
@@ -307,7 +307,7 @@ export const JOURNEY: JourneySection[] = [
       ),
       auto(
         "Se a clínica bloquear o dia: aviso de cancelamento com o link para remarcar",
-        "O link abre o portal (F3c) com os dias e horários do mesmo profissional, por 2 dias; retorno sem o limite do prazo. Domiciliar e turma: o link de hoje.",
+        "O link abre o portal (F3c) com os dias e horários do mesmo profissional, por 2 dias; retorno sem o limite do prazo. Em casa, o portal pergunta se o endereço continua o mesmo (F3e-1). Turma: o link de hoje.",
       ),
     ],
   },

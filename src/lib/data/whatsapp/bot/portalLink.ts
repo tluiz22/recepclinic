@@ -14,12 +14,12 @@ import * as t from "./texts";
 //
 // O bot segue com a marcação no chat (como antes) só onde o portal ainda não marca, para nenhuma clínica perder o
 // que tem hoje: clínica sem o endereço do portal (o Suporte define) ou com o Portal desligado; profissional fora do
-// portal ("Mostrar no portal" desmarcado); atendimento domiciliar ou em turma (entram no portal na F3e, F3-1); exame
-// que o portal não mostra (de agenda de profissional).
+// portal ("Mostrar no portal" desmarcado); atendimento em turma (entra no portal na F3e-2, F3-1); exame que o portal
+// não mostra (de agenda de profissional, F3e-3). O domiciliar já marca pelo portal (F3e-1, D5).
 
 type Route = { purpose: PortalLinkPurpose; what: string; professionalId: string | null; serviceId: string | null };
 
-const portalCovers = (service: BotService) => !service.isGroup && service.agendas.every((a) => !a.locationTypes.includes("home_visit"));
+const portalCovers = (service: BotService) => !service.isGroup;
 
 /**
  * O endereço do portal, se ele está aberto para a clínica (endereço definido pelo Suporte, item Portal ligado,
@@ -96,15 +96,16 @@ export async function offerPortalLink(b: Bot, category: "consultation" | "exam" 
 }
 
 /**
- * Remarcar (F3c; I7): o link do portal com os dias e horários do mesmo profissional, sem a antecedência (F3-4). Turma
- * e domiciliar seguem no chat (F3e). false = o portal não cobre: quem chamou segue com o link de hoje.
+ * Remarcar (F3c; I7): o link do portal com os dias e horários do mesmo profissional, sem a antecedência (F3-4). Em
+ * casa (F3e-1): o portal pergunta se o endereço continua o mesmo (DM4). Turma segue no chat (F3e-2). false = o portal
+ * não cobre: quem chamou segue com o link de hoje.
  */
 export async function offerPortalReschedule(
   b: Bot,
   appointment: { id: string; serviceId: string; locationType: string; category: string; serviceName: string; patientName: string },
 ): Promise<boolean> {
   try {
-    if (appointment.locationType !== "clinic" || !(await openPortalSlug(b))) return false;
+    if ((appointment.locationType !== "clinic" && appointment.locationType !== "home_visit") || !(await openPortalSlug(b))) return false;
     const service = unwrap(await b.db.from("services").select("scheduling_mode").eq("clinic_id", b.clinicId).eq("id", appointment.serviceId).maybeSingle(), "Serviço");
     if (!service || service.scheduling_mode === "group") return false;
   } catch (error) {

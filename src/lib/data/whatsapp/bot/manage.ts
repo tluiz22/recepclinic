@@ -502,7 +502,7 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
       return showMenu(b);
     }
   }
-  // Uma jornada só (F3c; I7): os dias e horários no portal; domiciliar e turma seguem aqui (portalLink.ts).
+  // Uma jornada só (F3c; I7): os dias e horários no portal (em casa também, F3e-1); turma segue aqui (portalLink.ts).
   if (await offerPortalReschedule(b, appointment)) return;
   // Domiciliar: sempre reconfirma o endereço (piloto, Fase 16).
   if (appointment.locationType === "home_visit" && homeAddress === undefined) {

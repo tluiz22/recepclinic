@@ -1,7 +1,7 @@
 import type { AstroGlobal } from "astro";
 import { capitalize } from "../../vocabulary";
 import { formatInstant } from "../../clinicTime";
-import { chosenModality, flowParams, modalityOptions, PRIVATE_MODALITY, portalHref, professionalSteps, readFlow, stepPosition, type ModalityOption, type PortalFlow, type PortalStep } from "../../portal";
+import { chosenModality, flowParams, modalityLabelAt, modalityOptions, PRIVATE_MODALITY, portalHref, professionalSteps, readFlow, stepPosition, type ModalityOption, type PortalFlow, type PortalStep } from "../../portal";
 import type { BlockText } from "../../portalBooking";
 import { slotChoiceValue } from "../agenda/publicBooking";
 import { loadHold, type BlockReason, type PortalHold } from "./booking";
@@ -12,7 +12,7 @@ import type { PortalConsultation, PortalLocation, PortalProfessional } from "./p
 // Telas depois da reserva (F2c: P8, P8b, P9, P10): a clínica, o profissional do endereço, o caminho de antes (no
 // endereço, para o Voltar) e a reserva desta sessão. A reserva de outro profissional (endereço trocado à mão) não vale.
 
-export type HoldScreen = "reserva" | "cadastro" | "revisao" | "marcada";
+export type HoldScreen = "reserva" | "cadastro" | "endereco" | "revisao" | "marcada";
 
 export type HoldPage = {
   page: PortalPage;
@@ -26,6 +26,10 @@ export type HoldPage = {
   hold: PortalHold | null;
   consultation: PortalConsultation | null;
   location: PortalLocation | null;
+  /** Atendimento em casa (F3e-1): a tela do endereço entra depois do paciente. */
+  atHome: boolean;
+  /** "Particular, R$ 450, em casa" (o valor do lugar do atendimento, F3e-1) ou o convênio. */
+  modalityText: string | null;
   /** "Quinta, 12 de novembro às 09:00". */
   when: string;
   /** Endereço de outra tela da reserva, com o caminho de antes. */
@@ -80,10 +84,12 @@ export async function openHoldPage(Astro: AstroGlobal): Promise<HoldPage> {
     hold,
     consultation,
     location,
+    atHome: location?.type === "home_visit",
+    modalityText: modalityLabelAt(modality, location && consultation ? consultation.prices[location.type] : null, location?.type === "home_visit"),
     when: hold ? capitalize(formatInstant(hold.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "",
     href: (screen, extra = {}) => portalHref(`${base}/${slug}/${screen}`, { ...keep, reserva: hold?.id ?? holdId, ...extra }),
     timesHref: (release = false) => portalHref(`${base}/${slug}/horarios`, { ...keep, soltar: release ? "1" : null }),
-    step: (s) => stepPosition(professionalSteps(flow, options.length > 1, !!session?.linkId), s),
+    step: (s) => stepPosition(professionalSteps(flow, options.length > 1, !!session?.linkId, location?.type === "home_visit"), s),
     planId,
     viaBotLink: !!session?.linkId,
     phoneHref: portalHref(`${base}/${slug}/continuar`, { ...keep, start: hold ? slotChoiceValue(hold) : null }),

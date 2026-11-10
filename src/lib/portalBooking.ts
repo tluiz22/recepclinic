@@ -124,3 +124,44 @@ export function blockMessage(block: BlockText, professionalName: string, patient
       return "Para este agendamento, fale com a recepção.";
   }
 }
+
+// ---------------------------------------------------------------------------
+// Endereço do atendimento em casa (F3e-1; D5, DM2b): campos separados, guardados num texto só (como o bot).
+
+export type HomeAddressFields = { street: string; complement: string; district: string; reference: string };
+export type HomeAddressField = keyof HomeAddressFields;
+
+export const HOME_ADDRESS_MAX: Record<HomeAddressField, number> = { street: 150, complement: 80, district: 80, reference: 150 };
+/** O texto inteiro cabe na coluna (até 500 caracteres, migração 20270108120000). */
+export const HOME_ADDRESS_TEXT_MAX = 500;
+
+export const HOME_ADDRESS_MESSAGES: Record<"street" | "district" | "too_long", string> = {
+  street: "Escreva a rua e o número (ou \"sem número\").",
+  district: "Escreva o bairro.",
+  too_long: "Ficou comprido demais. Encurte o complemento ou o ponto de referência.",
+};
+
+const clean = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim();
+
+/**
+ * Os campos do endereço → "Rua dos Ipês, 45, Apto 302, Lagoa Nova. Ponto de referência: em frente à padaria". Rua e
+ * bairro obrigatórios; complemento e ponto de referência opcionais. Os erros vêm por campo (o formulário mantém o resto).
+ */
+export function joinHomeAddress(
+  raw: Partial<Record<HomeAddressField, string | null>>,
+): { ok: true; text: string; fields: HomeAddressFields } | { ok: false; fields: HomeAddressFields; errors: Partial<Record<HomeAddressField, string>> } {
+  const fields: HomeAddressFields = {
+    street: clean(raw.street).slice(0, HOME_ADDRESS_MAX.street),
+    complement: clean(raw.complement).slice(0, HOME_ADDRESS_MAX.complement),
+    district: clean(raw.district).slice(0, HOME_ADDRESS_MAX.district),
+    reference: clean(raw.reference).slice(0, HOME_ADDRESS_MAX.reference),
+  };
+  const errors: Partial<Record<HomeAddressField, string>> = {};
+  if (fields.street.length < 3) errors.street = HOME_ADDRESS_MESSAGES.street;
+  if (fields.district.length < 2) errors.district = HOME_ADDRESS_MESSAGES.district;
+  if (Object.keys(errors).length) return { ok: false, fields, errors };
+  const main = [fields.street, fields.complement, fields.district].filter(Boolean).join(", ");
+  const text = fields.reference ? `${main}. Ponto de referência: ${fields.reference}` : main;
+  if (text.length > HOME_ADDRESS_TEXT_MAX) return { ok: false, fields, errors: { reference: HOME_ADDRESS_MESSAGES.too_long } };
+  return { ok: true, text, fields };
+}

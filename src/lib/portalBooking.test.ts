@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { birthdateText, blockMessage, buildIcs, cleanFullName, icsTitle, parseBirthdate, shortDate } from "./portalBooking";
+import { birthdateText, blockMessage, buildIcs, cleanFullName, HOME_ADDRESS_MAX, HOME_ADDRESS_MESSAGES, HOME_ADDRESS_TEXT_MAX, icsTitle, joinHomeAddress, parseBirthdate, shortDate } from "./portalBooking";
 
 const today = "2026-11-08";
 
@@ -74,5 +74,31 @@ describe("título do .ics por tipo (F2d)", () => {
     expect(icsTitle("Dra. Ana Lima", "Clínica Exemplo")).toBe("Consulta com Dra. Ana Lima — Clínica Exemplo");
     expect(icsTitle("Dra. Ana Lima", "Clínica Exemplo", "retorno")).toBe("Retorno com Dra. Ana Lima — Clínica Exemplo");
     expect(icsTitle("Espirometria", "Clínica Exemplo", "exame")).toBe("Exame Espirometria — Clínica Exemplo");
+  });
+});
+
+describe("joinHomeAddress (F3e-1, endereço do atendimento em casa)", () => {
+  it("junta os campos num texto só, sem os vazios", () => {
+    expect(joinHomeAddress({ street: " Rua dos Ipês,  45 ", complement: "Apto 302", district: "Lagoa Nova", reference: "em frente à padaria" })).toMatchObject({
+      ok: true,
+      text: "Rua dos Ipês, 45, Apto 302, Lagoa Nova. Ponto de referência: em frente à padaria",
+    });
+    expect(joinHomeAddress({ street: "Rua A, 10", district: "Centro" })).toMatchObject({ ok: true, text: "Rua A, 10, Centro" });
+  });
+
+  it("pede rua e bairro, mantendo o que foi digitado", () => {
+    const result = joinHomeAddress({ street: "", complement: "Casa 2", district: " " });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toEqual({ street: HOME_ADDRESS_MESSAGES.street, district: HOME_ADDRESS_MESSAGES.district });
+    expect(result.fields.complement).toBe("Casa 2");
+  });
+
+  it("corta cada campo no tamanho dele e o texto cabe na coluna", () => {
+    const result = joinHomeAddress({ street: "R".repeat(400), complement: "C".repeat(400), district: "B".repeat(400), reference: "P".repeat(400) });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.text.length).toBeLessThanOrEqual(HOME_ADDRESS_TEXT_MAX);
+    expect(result.fields.street).toHaveLength(HOME_ADDRESS_MAX.street);
   });
 });

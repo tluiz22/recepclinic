@@ -132,8 +132,10 @@ export async function findReturnCard(db: DbClient, portal: PortalClinic, phone: 
 /** Locais do retorno: os do médico onde o serviço de Retorno é oferecido (todos os do médico, se o serviço não diz). */
 export function returnScope(card: ReturnCard): SlotScope & { locations: PortalLocation[] } {
   const offered = new Set(card.service.locationIds);
-  const here = card.professional.locations.filter((l) => offered.has(l.id));
-  return { locations: here.length ? here : card.professional.locations, lastDate: card.lastDate };
+  // Só no consultório: o domiciliar não dá direito a retorno (regra do bot), e o médico pode atender em casa (F3e-1).
+  const clinic = card.professional.locations.filter((l) => l.type === "clinic");
+  const here = clinic.filter((l) => offered.has(l.id));
+  return { locations: here.length ? here : clinic, lastDate: card.lastDate };
 }
 
 /** O último dia mostrado: o fim do prazo do retorno, sem passar do prazo do médico (o mesmo corte dos horários). */
