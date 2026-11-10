@@ -20,7 +20,10 @@
 >   cliente: o código sai de um **número do RecepClinic** (+55 61 9656-4772, template já aprovado). Seção 14 do plano.
 >   **Código pelo número do RecepClinic, aviso na tela do código e guia "Pagamento na Meta" na `main` e no staging
 >   (09/nov, seção 14; a API já estava na v24.0)**. **F2 validada inteira (09/nov)**, com a correção do
->   "Adicionar à agenda" no iPhone (`802d700`). Produção: não. **Próximo:** F3.
+>   "Adicionar à agenda" no iPhone (`802d700`). Produção: não.
+>   **F3a a F3d (bot leva ao portal, Minhas consultas, Configurações › Portal) na `main` e no staging (10/nov, `207cf87`;
+>   migração `20270107120000`)**; decisões F3-1 a F3-4 na seção 15.1. **Próximo: validação do cliente** pelo roteiro
+>   15.3.1 (clínica `clinica-teste`). Depois: D5 + F3e (domiciliar e turma, desenho antes) e as capturas na fila.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

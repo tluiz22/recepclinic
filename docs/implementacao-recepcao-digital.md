@@ -606,3 +606,60 @@ do mesmo celular e finalidade revoga o anterior; colunas de remarcar, encaixe e 
 
 Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright local (390 px: link → P5 "Passo 1 de 4"
 → horário → P8b com o celular → "Usar outro número" → P7 com o mesmo horário; 1280 px: vencido; estados por HTTP).
+
+### 15.3 F3b, F3c e F3d feitas (09 e 10/nov/2026, branch `recepcao-f3`)
+
+- **F3b (`d7166b4`):** Marcar consulta, retorno, exame e o "Encaixe ou antecipar" sem nada marcado mandam o link do
+  portal (`bot/portalLink.ts`); o chat só marca onde o portal ainda não cobre (clínica sem endereço do portal ou com o
+  Portal desligado, profissional fora do portal, domiciliar, turma, exame de agenda de profissional). Encaixe (F3-2):
+  aviso no link, nos horários e na revisão; a marcação entra na lista de espera. Funil do bot pelo portal (link_sent,
+  page_opened, link_expired, confirmed). Pedido não concluído do link do portal ("Não concluímos a sua marcação").
+  Mensagem personalizável "Link para marcar" sem `{paciente}`.
+- **F3c (`e5cc880`):** P12 `/{clínica}/minhas-consultas` (celular e código ou link do bot), Remarcar (mesmo
+  profissional e local, "Confirme a remarcação") e Cancelar ("Tem certeza?"), antecedência só no portal (RD10). Remarcar
+  do bot e do lembrete pelo portal, sem o prazo (I7, F3-4). Cancelamento pela clínica (bloqueio): link do portal por 2
+  dias que marca de novo o mesmo atendimento (F3-3); tela Avisar com ele. Minhas consultas no início e nas telas finais.
+- **F3d (`7a35c60`):** Configurações › Portal (Administrador): link da clínica e dos profissionais com "Copiar link
+  para…" (`?de=`), QR code (PNG, cartaz A4, link do cartaz), "Mostrar no portal" / "Tirar do portal" e a antecedência.
+  A origem segue pelas telas (`origem=`) e grava `appointments.portal_place`. Bot: "Informações › Convênios" diz quem
+  não atende particular (pendência da F1).
+- **Revisões (10/nov):** `security-review` sem achados altos; `/code-review` com 10 achados, todos corrigidos
+  (`78fca3a`): links de remarcar de atendimentos diferentes não se anulam; uma marcação por link (o de remarcar não é
+  gasto por consulta nova); o link de remarcar dispensa o prazo só para remarcar, só enquanto vale (+30 min); a lista
+  mostra o Remarcar dele; novo link da clínica com 2 dias e a origem; ação explícita na API; textos num lugar só.
+- **Testes:** 1183 de unidade, 1148 de banco; Playwright local em 390 e 1280 px (link do bot, encaixe, Minhas
+  consultas, remarcar, cancelar, Configurações › Portal, QR, cartaz, copiar).
+- **Staging (10/nov):** migração `20270107120000_portal_links` aplicada e conferida; `main` em `207cf87`. Endereço do
+  portal no staging só na Clínica Exemplo Saúde (`clinica-teste`); as outras clínicas com bot seguem no chat até o
+  Suporte definir o endereço. **Produção: não** (antes dela, o Suporte define o endereço de toda clínica com bot).
+- **Fora desta entrega:** D5 + F3e (domiciliar e turma no portal), desenho antes. Capturas da ajuda na fila
+  (`config-*` e `config-mensagens`), recaptura só com autorização.
+
+#### 15.3.1 Roteiro de validação da F3 (staging, clínica `clinica-teste`)
+
+1. **Bot leva ao portal:** no WhatsApp de testes da clínica, "Oi" → especialidade → profissional → Consultas › Marcar
+   consulta: chega "Para escolher o dia e o horário de *consulta com …*, toque no link…". O link abre o portal já no
+   atendimento do profissional, sem pedir o código ("Passo 1 de 4"); na tela "Para quem…", "Confirmação no WhatsApp,
+   celular final …" e "Usar outro número". Marcar: a confirmação chega; na Agenda, "Portal · WhatsApp".
+2. Abrir o mesmo link de novo: "Este link já foi usado" (com "Minhas consultas"). Pedir outro link e abrir o anterior:
+   "Este link não vale mais".
+3. **Retorno e exame:** Marcar retorno e Marcar exame mandam o link do portal (retorno: a lista das consultas com direito).
+4. **Encaixe:** Consultas › Encaixe ou antecipar sem consulta marcada → Marcar consulta: o link avisa da lista de
+   espera; nos horários e na revisão, "Ao marcar, você entra na lista de espera…"; marcado, aparece na Lista de espera.
+5. **Pedido não concluído:** pedir o link e não abrir por 30 minutos: chega "Não concluímos a sua marcação" com Novo
+   link / Falar com a recepção / Desistir; "Novo link" manda outro.
+6. **Minhas consultas:** no início do portal, "Minhas consultas" → celular e código → a lista. Consulta a mais de 24 h:
+   Remarcar (dias do mesmo profissional) → "Confirme a remarcação" (marcado para × novo horário) → "Pronto, remarcado"
+   e o aviso no WhatsApp. Cancelar → "Tem certeza?" → "Não, manter" volta; "Sim, cancelar" cancela e avisa.
+   Consulta a menos de 24 h: só "Falar com a recepção".
+7. **Remarcar pelo WhatsApp:** Consultas › Remarcar (ou o botão do lembrete): chega o link do portal com os dias do
+   mesmo profissional; remarca mesmo a menos de 24 h.
+8. **Cancelamento pela clínica:** Agenda › Bloquear um período com consulta e cancelar: o aviso traz o link do portal
+   (vale 2 dias) que marca de novo o mesmo atendimento; a tela Avisar mostra o mesmo link.
+9. **Configurações › Portal** (Administrador): o link da clínica e de cada profissional; "Copiar link para… Instagram"
+   ("Link para o Instagram copiado"); QR code → Baixar imagem, Imprimir cartaz, Copiar link do cartaz; "Tirar do
+   portal" (some do portal e o link dele não abre) e "Mostrar no portal"; mudar a antecedência para 48 h e conferir em
+   Minhas consultas.
+10. **Origem:** marcar pelo link copiado para o Instagram (`?de=instagram`): na Agenda, "Portal · link da clínica"
+    (Métricas da origem chegam na F6).
+11. **Informações › Convênios** no bot, com um profissional só convênio: "… Não atende particular."
