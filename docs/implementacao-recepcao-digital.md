@@ -586,3 +586,22 @@ Decisões do cliente pedidas antes do código (uma por vez): seção 15.1.
 | F3-1 | Atendimento domiciliar e em turma (o portal não marca) | **Decidido (cliente, 09/nov): entram no portal** (endereço do domiciliar e turma). Telas novas: rodada no canvas (D5) e aprovação antes do código; nova parte **F3e** |
 | F3-2 | "Encaixe ou antecipar" sem consulta marcada | **Decidido (cliente, 09/nov): o link abre o portal, que marca e põe na lista de espera** (como hoje); aviso "Se vagar um horário mais cedo, avisamos no WhatsApp" nos horários e na revisão |
 | F3-3 | Links da página antiga `/agendar/…` (Remarcar do lembrete, remarcação após cancelamento pela clínica, pedido não concluído) | **Decidido (cliente, 09/nov): todos abrem o portal.** Os já enviados valem até vencer (no máximo 2 dias); depois a página antiga sai. Retorno cancelado pela clínica segue sem o limite do prazo |
+
+### 15.2 F3a feita (09/nov/2026, branch `recepcao-f3`)
+
+Migração `20270107120000_portal_links.sql`: `portal_links` (token = id, 22 caracteres no endereço; celular da conversa,
+finalidade `book`/`return`/`exam`/`reschedule`/`my_appointments`, profissional ou exame, 30 min, uma marcação, um novo
+do mesmo celular e finalidade revoga o anterior; colunas de remarcar, encaixe e funil já prontas para F3b/F3c),
+`portal_sessions.link_id`, `resolve_portal_link_clinic` (só a plataforma) e a limpeza diária (30 dias).
+
+- `/s/{token}` (`agendar…/s/…`; local `/portal/s/…`): válido abre uma sessão nova com o celular comprovado e leva ao
+  atendimento do profissional escolhido na conversa (P5), ao retorno, ao exame ou ao início; vencido/trocado "Este
+  link não vale mais" (410), usado "Este link já foi usado" (410), inexistente 404; portal desligado ou clínica sem
+  endereço do portal: "Agendamento indisponível".
+- P7 pulada; "Passo n de N" sem o celular. P8/P8b: "Confirmação no WhatsApp, celular final 0123" e "Usar outro
+  número" (posta "trocar" na P7 do mesmo horário: solta a reserva, esquece o celular e o link, pede o código).
+- Marcação (consulta, exame, retorno) por sessão do link: `portal_entry = whatsapp` e o link fica usado.
+- **Para a produção:** toda clínica com bot precisa do endereço do portal (Suporte) antes da F3b subir.
+
+Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright local (390 px: link → P5 "Passo 1 de 4"
+→ horário → P8b com o celular → "Usar outro número" → P7 com o mesmo horário; 1280 px: vencido; estados por HTTP).
