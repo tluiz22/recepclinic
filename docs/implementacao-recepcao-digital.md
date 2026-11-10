@@ -588,6 +588,9 @@ Decisões do cliente pedidas antes do código (uma por vez): seção 15.1.
 | F3-3 | Links da página antiga `/agendar/…` (Remarcar do lembrete, remarcação após cancelamento pela clínica, pedido não concluído) | **Decidido (cliente, 09/nov): todos abrem o portal.** Os já enviados valem até vencer (no máximo 2 dias); depois a página antiga sai. Retorno cancelado pela clínica segue sem o limite do prazo |
 | F3-4 | O "Remarcar" do WhatsApp (bot e lembrete), que abre o portal, respeita a antecedência da RD10? | **Decidido (cliente, 10/nov): não**; o link do bot remarca a qualquer hora (como o cancelar pelo WhatsApp). O prazo vale só para quem entra direto em Minhas consultas |
 | F3-9 | Quando a F3f (fim da marcação pelo chat) vai ao ar? | **Decidido (cliente, 10/nov): depois da F3e validada no staging, do portal ligado na clínica piloto em produção e das 3 primeiras marcações reais pelo portal sem problema** (sai o prazo de ~2 semanas; seção 15.4) |
+| F3-5 | Bot sem link do portal (sem endereço, erro, clínica suspensa) depois da F3f | **Decidido (cliente, 10/nov): passa para a recepção** (conversa em Aguardando) |
+| F3-6 | Fim do "Primeiro horário disponível"? | **Decidido (cliente, 10/nov): acaba**; o portal mostra o próximo horário de cada médico |
+| F3-7 | Profissional "Fora do portal" no bot depois da F3f | **Decidido (cliente, 10/nov): passa para a recepção** |
 
 ### 15.2 F3a feita (09/nov/2026, branch `recepcao-f3`)
 
@@ -697,8 +700,10 @@ tela) → **F3e** (código) → **F3f** (limpeza) → produção.
 - **Fica:** Cancelar pelo WhatsApp (I7), encaixe de quem tem consulta, Informações gerais, Perguntas frequentes, Falar
   com a recepção, oferta de vaga, confirmação de presença, a escolha de especialidade/profissional no começo; a tabela
   `booking_links` só leitura (histórico das Métricas; sai depois, em migração própria).
-- **Decisões a pedir (uma por vez):** F3-5 bot sem portal (desligado, sem endereço, fora do ar) → recepção?;
-  F3-6 fim do "Primeiro horário disponível"?; F3-7 profissional "Fora do portal" → recepção?
+- **Decisões (cliente, 10/nov):** **F3-5** sem link do portal (clínica sem endereço do portal, erro ou clínica
+  suspensa): o bot passa para a recepção ("a recepção vai te atender por aqui"; conversa em Aguardando). **F3-6** o
+  "Primeiro horário disponível" acaba (o portal mostra o próximo horário de cada médico na lista). **F3-7** profissional
+  "Fora do portal": o bot passa para a recepção (o médico segue fora do portal).
 - **Testes:** os de banco do bot que percorrem o chat passam a testar o link ou saem; Playwright WhatsApp → portal em
   390/1280; artigos da Central que falam da marcação no chat revistos; capturas na fila.
 
