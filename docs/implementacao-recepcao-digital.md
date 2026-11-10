@@ -706,4 +706,11 @@ e "Rodada 5 (D5): exame em turma"), revisada tela por tela e aprovada. Sem códi
 - **Turma, dia (TU2a):** lista de cartões (dia por extenso e hora) com "Ver mais dias", no lugar da faixa de dias;
   **sem número de vagas**, só as turmas com vaga no prazo. A reserva segura uma vaga. Recusada: faixa de dias (TU2b).
 
-Próximo: F3e (código), começando pela decisão do exame em agenda de profissional (15.4).
+- **Exame em agenda de profissional (F3-8, cliente, 10/nov):** **na lista "Marcar exame"** (EP1a), com a etiqueta
+  "Com o médico" (nome, ou "2 cardiologistas"); com mais de um profissional, a tela "Com quem você vai fazer o exame?"
+  (EP1b: nome, especialidade, valor e convênios, próximo horário). Depois, o caminho dos exames (P5 a P10). Recusadas:
+  só na página do médico (EP2), as duas e fora do portal.
+
+**F3e em partes** (branch `recepcao-d5`, testes a cada parte): **F3e-1** domiciliar (onde, endereço, revisão,
+remarcar) → **F3e-2** turma → **F3e-3** exame do profissional → bot (`portalLink.ts` deixa de mandar ao chat o que o
+portal passa a cobrir) e Jornada do bot → revisões, staging.
