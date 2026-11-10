@@ -17,6 +17,9 @@ interface Props {
 const { state, action, phoneHelp = "Vamos mandar um código de 6 números no WhatsApp deste celular. A mensagem chega do RecepClinic, o sistema de agendamento da clínica." } = Astro.props;
 const { problem, pending, devCode, blockedUntil, unavailable, turnstile } = state;
 const waitSeconds = pending ? resendWaitSeconds(pending.sentAt) : 0;
+// Celular já comprovado, mas o próximo passo parou (limite do dia, bloqueio): só o aviso e o "Trocar número", sem pedir
+// o celular nem o código de novo.
+const verifiedPhone = !pending && state.session?.verified && state.session.phone && (blockedUntil || problem?.field === "page") ? state.session.phone : null;
 const input =
   "min-h-14 w-full rounded-xl border-[1.5px] border-gray-300 bg-white px-3.5 text-xl text-gray-900 focus:border-clinic-ink focus:outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink aria-[invalid=true]:border-red-700";
 const cta = "flex min-h-[58px] w-full items-center justify-center rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45 sm:w-auto sm:min-w-[260px]";
@@ -42,7 +45,16 @@ const notice = "rounded-[14px] border px-4 py-3 text-[17px]";
 {problem?.field === "page" && <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">{problem.text}</p>}
 
 {
-  pending ? (
+  verifiedPhone ? (
+    <form method="POST" action={action} class="flex max-w-[460px] flex-col gap-1.5">
+      <label for="celular-comprovado" class="text-base font-semibold text-gray-700">Celular com DDD</label>
+      <div class="flex items-center gap-2.5">
+        <input id="celular-comprovado" type="text" value={formatPhoneBR(verifiedPhone)} readonly class={input.replace("bg-white", "bg-gray-100").replace("text-gray-900", "text-gray-700")} />
+        <input type="hidden" name="acao" value="trocar" />
+        <button type="submit" class={`${link} whitespace-nowrap`}>Trocar número</button>
+      </div>
+    </form>
+  ) : pending ? (
     <>
       <form method="POST" action={action} class="flex max-w-[460px] flex-col gap-1.5">
         <label for="celular-fixo" class="text-base font-semibold text-gray-700">Celular com DDD</label>
@@ -116,7 +128,7 @@ const notice = "rounded-[14px] border px-4 py-3 text-[17px]";
   Usamos seu número só para o agendamento.{" "}
   <a href="https://www.recepclinic.com.br/privacidade" target="_blank" rel="noopener" class="font-semibold text-clinic-ink">Privacidade</a>
 </p>
-{turnstile && !pending && <script is:inline src={TURNSTILE_SCRIPT} async defer />}
+{turnstile && !pending && !verifiedPhone && <script is:inline src={TURNSTILE_SCRIPT} async defer />}
 
 <script>
   // "Reenviar código em 0:59": o contador e, no fim, o botão.

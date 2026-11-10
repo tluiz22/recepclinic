@@ -10,6 +10,7 @@ import PortalPhoneCode from "../../../../components/portal/PortalPhoneCode.astro
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import PortalSummary from "../../../../components/portal/PortalSummary.astro";
 import { capitalize } from "../../../../lib/vocabulary";
+import { HOLD_LIMIT_TEXT } from "../../../../lib/portalIdentity";
 import { formatInstant } from "../../../../lib/clinicTime";
 import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
 import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page";
@@ -85,9 +86,11 @@ if (page.kind === "open" && professional && consultation) {
         : await holdSlot(db, clinicId, session.id, slot);
       if (hold.status === "ok") return Astro.redirect(portalHref(`${base}/${professional.slug}/reserva`, { ...keep, date: params.get("date"), reserva: hold.holdId }));
       if (hold.status === "taken") return Astro.redirect(portalHref(timesPath, { ...keep, date: params.get("date"), erro: "horario" }));
+      // Sessão vencida ou celular não mais comprovado: a página pede o celular de novo.
+      if (hold.status === "session") state.session = { ...session, verified: false };
       state.problem = {
         field: "page",
-        text: hold.status === "limit" ? "Este celular já reservou muitos horários hoje. Para marcar, fale com a recepção." : "Confirme o seu celular de novo.",
+        text: hold.status === "limit" ? HOLD_LIMIT_TEXT : "Confirme o seu celular de novo.",
       };
       return null;
     },

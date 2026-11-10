@@ -291,7 +291,7 @@ nunca desfaz o atendimento**; ela aparece na Agenda como hoje (FE).
 | Consultar horários | 60 por sessão em 10 min; 300 por IP em 10 min |
 | Pedir código | 3 por telefone por hora; 10 por IP por hora |
 | Errar o código | 5 por código; depois, novo código |
-| Reservar | 1 reserva ativa por sessão e por telefone; 5 reservas por telefone por dia |
+| Reservar | 1 reserva ativa por sessão e por telefone; 5 consultas marcadas por telefone em 24 h (só a reserva que vira consulta conta; cliente, 10/nov/2026) |
 | Confirmar | Limites do bot por telefone (atendimentos futuros) |
 
 ### 7.3 Reserva temporária

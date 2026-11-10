@@ -22,7 +22,7 @@ import { isProfessionalDayOpen, professionalDates, professionalSlots } from "../
 import { findReturnCard, returnLastShownDate, returnScope, setHoldReturn, type ReturnCard } from "../../../../lib/data/portal/returnVisit";
 import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
 import { ofName, portalHref, receptionWhatsappHref } from "../../../../lib/portal";
-import { blockedText, ipPrefix, LIMITS } from "../../../../lib/portalIdentity";
+import { blockedText, ipPrefix, LIMITS, HOLD_LIMIT_TEXT } from "../../../../lib/portalIdentity";
 import { dayMonth, returnUntil } from "../../../../lib/portalReturn";
 
 const page = await openPortalPage(Astro);
@@ -95,7 +95,7 @@ if (page.kind === "open") {
       // Sessão vencida ou celular não mais comprovado: a lista pede o celular de novo.
       if (hold.status === "session") return Astro.redirect(listHref);
       if (hold.status === "taken") return Astro.redirect(portalHref(timesPath, { ...keep, date, erro: "horario" }));
-      problem = hold.status === "limit" ? "Este celular já reservou muitos horários hoje. Para marcar, fale com a recepção." : "Não conseguimos reservar o horário. Tente de novo.";
+      problem = hold.status === "limit" ? HOLD_LIMIT_TEXT : "Não conseguimos reservar o horário. Tente de novo.";
     }
   }
 

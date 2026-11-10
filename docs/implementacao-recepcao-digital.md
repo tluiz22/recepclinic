@@ -664,6 +664,18 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
     (Métricas da origem chegam na F6).
 11. **Informações › Convênios** no bot, com um profissional só convênio: "… Não atende particular."
 
+#### 15.3.2 Validação da F3 (registro)
+
+- **10/nov, item 1 (achado do cliente):** depois de marcar, "marcar nova consulta" → celular → código → a tela pediu o
+  celular de novo e avisou "Este celular já reservou muitos horários hoje". Causa: o limite de 5 reservas por celular em
+  24 h contava toda reserva, até a que virou consulta (4 testes da madrugada + a consulta de hoje). **Decisão do cliente:
+  contam só as reservas que viraram consulta marcada** (migração `20270107130000_portal_limite_marcadas`). Tela: com o
+  celular já comprovado, o aviso aparece com o celular e "Trocar número", sem pedir o celular nem o código de novo; o
+  texto fala do botão da recepção no topo (no computador ele se chama "Falar com a recepção").
+- **Pedido do cliente (10/nov): desbloqueio pela recepção na ficha do paciente.** Hoje o painel não mostra nem libera
+  um celular bloqueado no portal (limite do dia ou bloqueio por tentativas; a função `portal_release_block` já existe
+  no banco, sem tela). Decidido o lugar: **ficha do paciente**. Próximo: desenhar as opções da tela para aprovação.
+
 ### 15.4 Próximas partes da F3 (plano, 10/nov/2026)
 
 Ordem proposta ao cliente: validação da F3 (15.3.1) → **D5** (desenho de domiciliar e turma no portal, aprovação tela a

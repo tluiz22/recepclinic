@@ -24,8 +24,10 @@ export const LIMITS = {
   verifyPerIp: { action: "verify", limit: 30, windowSeconds: 3600 },
   verifyPerSession: { action: "verify", limit: 15, windowSeconds: 3600 },
 } as const;
-/** Reservas por celular em 24 h. */
+/** Consultas marcadas pelo portal por celular em 24 h (só as reservas que viraram consulta contam; cliente, 10/nov). */
 export const MAX_HOLDS_PER_DAY = 5;
+/** Aviso de quem passou do limite acima. */
+export const HOLD_LIMIT_TEXT = 'Este celular já marcou muitas consultas pelo portal nas últimas 24 horas. Para marcar outra, fale com a recepção pelo botão no topo da página.';
 
 export type LimitRule = { action: string; limit: number; windowSeconds: number };
 
