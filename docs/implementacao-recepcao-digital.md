@@ -680,7 +680,8 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
 - **10/nov, achados do cliente (4, na `main`):**
   1. **Sem prazo para remarcar e cancelar pelo portal** (RD10 revista): padrão 0 h e todas as clínicas em 0 h (migração
      `20270109120000_portal_sem_prazo`); quem quiser põe um prazo em Configurações › Portal.
-  2. **Confirme a remarcação** no celular: "Confirmar remarcação" numa barra fixa no rodapé (sempre à vista).
+  2. **Confirme a remarcação** no celular: "Confirmar remarcação" numa barra fixa no rodapé (sempre à vista); o mesmo
+     na revisão da marcação ("Confirmar agendamento") e na do retorno ("Marcar retorno") (cliente, 10/nov).
   3. **Ficha do paciente**, cartão Dados: o nome aparece (o "Editar" dali muda o nome).
   4. **Bot**: data com o ano em 2 números (25/11/84, 251184) vira 25/11/1984 com o "Você quis dizer…?" (20xx se não
      for futura, senão 19xx).
