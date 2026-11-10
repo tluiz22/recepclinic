@@ -584,3 +584,5 @@ Decisões do cliente pedidas antes do código (uma por vez): seção 15.1.
 | # | Pergunta | Decisão |
 |---|---|---|
 | F3-1 | Atendimento domiciliar e em turma (o portal não marca) | **Decidido (cliente, 09/nov): entram no portal** (endereço do domiciliar e turma). Telas novas: rodada no canvas (D5) e aprovação antes do código; nova parte **F3e** |
+| F3-2 | "Encaixe ou antecipar" sem consulta marcada | **Decidido (cliente, 09/nov): o link abre o portal, que marca e põe na lista de espera** (como hoje); aviso "Se vagar um horário mais cedo, avisamos no WhatsApp" nos horários e na revisão |
+| F3-3 | Links da página antiga `/agendar/…` (Remarcar do lembrete, remarcação após cancelamento pela clínica, pedido não concluído) | **Decidido (cliente, 09/nov): todos abrem o portal.** Os já enviados valem até vencer (no máximo 2 dias); depois a página antiga sai. Retorno cancelado pela clínica segue sem o limite do prazo |
