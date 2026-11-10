@@ -685,10 +685,20 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   3. **Ficha do paciente**, cartão Dados: o nome aparece (o "Editar" dali muda o nome).
   4. **Bot**: data com o ano em 2 números (25/11/84, 251184) vira 25/11/1984 com o "Você quis dizer…?" (20xx se não
      for futura, senão 19xx).
-- **Pedido do cliente (10/nov): desbloqueio pela recepção na ficha do paciente.** Hoje o painel não mostra nem libera
-  um celular bloqueado no portal (limite do dia ou bloqueio por tentativas; a função `portal_release_block` já existe
-  no banco, sem tela). Decidido o lugar: **ficha do paciente**. **Pendente (cliente, 10/nov):** desenhar as opções e implementar junto com as
-  correções dos achados, depois que a implementação da outra sessão (`recepcao-d5`) subir para o staging.
+- **Pedido do cliente (10/nov): desbloqueio pela recepção na ficha do paciente. Feito (10/nov, `main`).** Canvas:
+  https://claude.ai/artifact/JW4oj3TYsfoaDEiMAbzJk1. Decisões do cliente: **opção A**, faixa amarela no alto da ficha,
+  só enquanto houver bloqueio (motivo, até quando, os outros pacientes do mesmo celular) com "Liberar agora" e
+  confirmação; **libera os dois tipos**: código pedido demais (`portal_blocks`, chave `phone:`) e o limite do dia (5
+  consultas marcadas em 24 h). Migração `20270109130000_portal_liberar_celular`: tabela `portal_limit_resets` (a
+  contagem do limite recomeça na última liberação; `portal_hold_slot` e `portal_hold_group_slot` recriadas só com isso),
+  `portal_phone_status` e `portal_release_phone` (Administrador e Recepção). Bloqueio por IP ou por sessão fica para o
+  monitor da F6. Teste `tests/db/portal-liberar-celular.test.ts`; artigo "Ficha do paciente" com o campo "Portal
+  bloqueado".
+  **Roteiro (staging, `clinica-teste`):** no portal, pedir o código 4 vezes em 1 hora com o mesmo celular (o 4º
+  bloqueia) → na ficha de um paciente desse celular, a faixa "Portal bloqueado para este celular · Pediu código demais
+  · libera sozinho às …" → "Liberar agora" → confirmar → "Portal liberado para …" e a faixa some → o portal manda o
+  código de novo. Limite do dia: marcar 5 consultas pelo portal com o mesmo celular → a faixa mostra "Marcou 5
+  consultas em 24 h" → liberar → a 6ª marca.
 
 ### 15.4 Próximas partes da F3 (plano, 10/nov/2026)
 

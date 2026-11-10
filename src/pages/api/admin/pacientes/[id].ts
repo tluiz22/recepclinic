@@ -5,11 +5,14 @@ import { todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
-import { anonymizePatient, setPatientActive, setPatientInsurance, updatePatient } from "../../../../lib/data/patients";
+import { anonymizePatient, getContact, getPatient, setPatientActive, setPatientInsurance, updatePatient } from "../../../../lib/data/patients";
+import { releasePortalPhone } from "../../../../lib/data/portalPhone";
+import { formatPhoneBR } from "../../../../lib/phone";
 import { formOptionalText, formText } from "../../../../lib/forms";
 
 // Paciente (F4.7): salvar dados, plano de saúde (com o item), desativar e reativar;
-// anonimizar a pedido (F9.4, LGPD: só Administrador e Suporte; o banco confere de novo).
+// anonimizar a pedido (F9.4, LGPD: só Administrador e Suporte; o banco confere de novo); liberar o celular no portal
+// (validação da F3, cliente, 10/nov/2026: Administrador e Recepção; o banco confere de novo).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
   const id = params.id!;
@@ -57,6 +60,13 @@ export const POST: APIRoute = async (context) => {
           const { canceled } = await anonymizePatient(db, clinic.clinicId, id);
           const futures = canceled > 0 ? ` ${canceled} ${canceled === 1 ? "atendimento futuro cancelado" : "atendimentos futuros cancelados"}.` : "";
           return { redirectTo: page, message: `Anonimizado.${futures}` };
+        }
+        case "liberar_portal": {
+          if (!clinic.features.includes("portal")) throw new DataError("not_enabled", "Portal não liberado");
+          const patient = await getPatient(db, clinic.clinicId, id);
+          const contact = await getContact(db, clinic.clinicId, patient.contactId);
+          await releasePortalPhone(db, clinic.clinicId, contact.phone);
+          return { redirectTo: page, message: `Portal liberado para ${formatPhoneBR(contact.phone)}.` };
         }
         default:
           throw new DataError("invalid", "Ação desconhecida", { acao: "Ação desconhecida." });
