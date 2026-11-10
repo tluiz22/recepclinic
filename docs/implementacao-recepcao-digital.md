@@ -699,6 +699,14 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   · libera sozinho às …" → "Liberar agora" → confirmar → "Portal liberado para …" e a faixa some → o portal manda o
   código de novo. Limite do dia: marcar 5 consultas pelo portal com o mesmo celular → a faixa mostra "Marcou 5
   consultas em 24 h" → liberar → a 6ª marca.
+- **Pergunta do cliente (10/nov), item 1: "Usar outro número".** Hoje o cadastro não muda: o portal identifica pelo
+  celular comprovado; com um número sem cadastro, nasce um contato e uma ficha nova (a antiga segue com o número
+  antigo). Para criança com pai e mãe marcando cada um pelo seu número, isso divide a ficha (histórico, lembretes,
+  Minhas consultas, retorno, regra de uma consulta futura por médico, documentos, métricas). **Decisão do cliente:
+  vários responsáveis por paciente** (a recepção liga outro responsável, com o número dele, à ficha; bot e portal
+  reconhecem o paciente pelos dois números; ninguém se liga sozinho pelo portal). **Planejar em outra sessão**:
+  decisão de arquitetura nova em `arquitetura.md`, desenho no canvas (ficha, quem recebe as mensagens, bot e portal)
+  e as etapas.
 
 ### 15.4 Próximas partes da F3 (plano, 10/nov/2026)
 
@@ -886,6 +894,8 @@ R2 (atendimento aberto), R3b (Próximos horários livres) e M4 (celular), rodada
 ### 16.1 F5a feita (10/nov/2026, branch `agenda-colunas`)
 
 As quatro partes num commit só (`f3d057f0`) e as correções da revisão. **Sem migração.**
+
+**Na `main` e no staging (10/nov/2026, `cd08925`)**: juntada a pedido do cliente depois de trazer a `main` (testes: astro check, 1202 de unidade e 1166 de banco; a correção da reserva do exame da F3e conferida). Validação do cliente pendente; captura `agenda-dia` na fila.
 
 - **Grade** (`AgendaGrid.astro`, regras puras em `src/lib/agendaGrid.ts`): linhas de 30 min (2 px por minuto), faixa de
   horas pelo horário de atendimento do dia e pelo que está marcado; itens sobrepostos dividem a coluna; linha de agora;

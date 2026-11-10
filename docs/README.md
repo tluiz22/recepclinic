@@ -35,8 +35,10 @@
 > migração `20270107130000` no staging). 4 achados corrigidos em `a6b1263` (portal sem prazo, padrão 0 h, migração
 > `20270109120000` no staging; botão fixo na confirmação da remarcação; nome no cartão Dados; data com ano de 2 números
 > no bot), registro na 15.3.2. **Desbloqueio do portal na ficha (faixa no alto, opção A) em `8a6e737`, migração
-> `20270109130000` no staging** (roteiro na 15.3.2). **Os 4 achados e o desbloqueio validados (10/nov).** Próximo:
-> resto do roteiro 15.3.1, depois o 15.5.4 da F3e.
+> `20270109130000` no staging** (roteiro na 15.3.2). **Os 4 achados e o desbloqueio validados (10/nov).**
+> **F5a (Agenda em colunas, seção 16) juntada na `main` e no staging (10/nov, `cd08925`)**; a `agenda-colunas` fica igual
+> à `main`. **Vários responsáveis por paciente** (decisão do cliente, 10/nov; 15.3.2): planejar em outra sessão.
+> Próximo: cliente segue a validação no staging (resto do 15.3.1, o 15.5.4 da F3e e a F5a).
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >
