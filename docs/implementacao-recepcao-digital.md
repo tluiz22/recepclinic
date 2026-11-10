@@ -674,7 +674,8 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   texto fala do botão da recepção no topo (no computador ele se chama "Falar com a recepção").
 - **Pedido do cliente (10/nov): desbloqueio pela recepção na ficha do paciente.** Hoje o painel não mostra nem libera
   um celular bloqueado no portal (limite do dia ou bloqueio por tentativas; a função `portal_release_block` já existe
-  no banco, sem tela). Decidido o lugar: **ficha do paciente**. Próximo: desenhar as opções da tela para aprovação.
+  no banco, sem tela). Decidido o lugar: **ficha do paciente**. **Pendente (cliente, 10/nov):** desenhar as opções e implementar junto com as
+  correções dos achados, depois que a implementação da outra sessão (`recepcao-d5`) subir para o staging.
 
 ### 15.4 Próximas partes da F3 (plano, 10/nov/2026)
 

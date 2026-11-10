@@ -29,7 +29,7 @@
 > em [`frente-validacao.md`](frente-validacao.md); ajustes direto na `main`. **Implementação** (worktree
 > `../recepclinic-impl`, branch curta da `main`): D5 → F3e → F3f (seção 15.4). Antes de juntar a branch, trazer a `main`.
 > **Validação da F3 (10/nov):** item 1 em andamento. Ajuste `c9cb2b5` (limite do portal conta só consultas marcadas;
-> migração `20270107130000` no staging). Pedido: desbloqueio do portal na ficha do paciente (desenhar opções). Registro na
+> migração `20270107130000` no staging). **Pendente:** desbloqueio do portal na ficha do paciente (desenhar opções), junto com as correções dos achados, depois que a implementação da outra sessão subir para o staging. Registro na
 > seção 15.3.2 do plano. Próximo: cliente valida o ajuste no staging e segue o item 1 pelo bot. A `main` foi trazida para
 > a `recepcao-d5` (implementação) em 10/nov, testes ok, sem push.
 >
