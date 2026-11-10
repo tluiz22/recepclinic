@@ -685,3 +685,25 @@ tela) → **F3e** (código; junto, a decisão do exame em agenda de profissional
   F3-6 fim do "Primeiro horário disponível"?; F3-7 profissional "Fora do portal" → recepção?
 - **Testes:** os de banco do bot que percorrem o chat passam a testar o link ou saem; Playwright WhatsApp → portal em
   390/1280; artigos da Central que falam da marcação no chat revistos; capturas na fila.
+
+### 15.5 D5 feita: domiciliar e turma no portal (10/nov/2026, branch `recepcao-d5`) [Cliente]
+
+Rodada 5 no canvas (https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb, fileiras "Rodada 5 (D5): atendimento domiciliar"
+e "Rodada 5 (D5): exame em turma"), revisada tela por tela e aprovada. Sem código.
+
+- **Onde (DM1c):** só para o profissional que atende no consultório e em casa: dois botões "No consultório R$ 350" /
+  "Em casa R$ 550" em cima dos dias (P6); os dias e horários mudam com o lugar. Sem tela nova. Quem atende só em casa
+  pula a escolha e mostra "Em casa" no resumo. Recusadas: tela própria (DM1a) e junto da P5 (DM1b).
+- **Endereço (DM2b):** depois do paciente (P8/P8b), com o celular já comprovado e o horário em reserva: "Mesmo
+  endereço da última visita" (o padrão do contato, como o bot) ou "Outro endereço". Recusado: antes dos horários (DM2a).
+- **Campos:** rua e número, complemento (se tiver), bairro e ponto de referência (se tiver); cidade da clínica, com
+  "fale com a recepção" para outra. Gravado num texto só (`appointments.home_visit_address` e o padrão do contato,
+  como o bot): sem migração prevista.
+- **Revisão (DM3):** linha "Endereço do atendimento" com Alterar (volta à DM2b).
+- **Remarcar em casa (DM4):** "Confirme a remarcação" pergunta "O endereço continua o mesmo?" ("Sim, é esse"
+  marcado; "Não, mudou" abre os campos ali). Retorno de domiciliar segue recusado (regra do bot).
+- **Turma, lista de exames (TU1):** etiqueta "Em grupo, horário fixo" e a linha que explica o termo.
+- **Turma, dia (TU2a):** lista de cartões (dia por extenso e hora) com "Ver mais dias", no lugar da faixa de dias;
+  **sem número de vagas**, só as turmas com vaga no prazo. A reserva segura uma vaga. Recusada: faixa de dias (TU2b).
+
+Próximo: F3e (código), começando pela decisão do exame em agenda de profissional (15.4).
