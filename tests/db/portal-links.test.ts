@@ -67,10 +67,10 @@ describe("link do bot no portal", () => {
     expect(session).toMatchObject({ phone, verified: true, linkId });
     expect(await resolveClinicByPortalLink(linkId, env())).toBe(fixture.clinicId);
     expect(await resolveClinicByPortalLink("00000000-0000-4000-8000-000000000000", env())).toBeNull();
-    expect(portalLinkTarget({ purpose: "book", professionalId: dra.id, serviceId: null }, portal, "/c")).toBe(`/c/${dra.slug}/atendimento`);
-    expect(portalLinkTarget({ purpose: "return", professionalId: null, serviceId: null }, portal, "/c")).toBe("/c/retorno");
+    expect(portalLinkTarget({ purpose: "book", professionalId: dra.id, serviceId: null, appointmentId: null }, portal, "/c")).toBe(`/c/${dra.slug}/atendimento`);
+    expect(portalLinkTarget({ purpose: "return", professionalId: null, serviceId: null, appointmentId: null }, portal, "/c")).toBe("/c/retorno");
     // Profissional que saiu do portal: o início da clínica.
-    expect(portalLinkTarget({ purpose: "book", professionalId: "00000000-0000-4000-8000-000000000000", serviceId: null }, portal, "/c")).toBe("/c");
+    expect(portalLinkTarget({ purpose: "book", professionalId: "00000000-0000-4000-8000-000000000000", serviceId: null, appointmentId: null }, portal, "/c")).toBe("/c");
   });
 
   it("um link novo do mesmo celular e finalidade revoga o anterior; vencido não vale", async () => {

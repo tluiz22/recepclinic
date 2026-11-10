@@ -1,0 +1,129 @@
+---
+// Remarcar, passo 2 (F3c): "Confirme a remarcação" com o horário de hoje e o novo, e "Confirmar remarcação" (uma vez
+// só: o botão trava no envio e o banco confere o horário). Depois: Minhas consultas com "Pronto, remarcado" e o aviso
+// da remarcação pelo WhatsApp. Ocupado no meio: volta aos horários do mesmo dia, com o aviso.
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import { portalCta, portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { capitalize } from "../../../../lib/vocabulary";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
+import { openChangePage } from "../../../../lib/data/portal/changePage";
+import { afterLinkBooking, sessionLinkFor } from "../../../../lib/data/portal/links";
+import { isRescheduleSlotFree, rescheduleMine, rescheduleScope } from "../../../../lib/data/portal/myAppointments";
+import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
+import { mapsHref, portalHref } from "../../../../lib/portal";
+
+const view = await openChangePage(Astro, "remarcar");
+if (view.kind === "redirect") return view.response;
+const params = Astro.url.searchParams;
+const choice = parseSlotChoice(params.get("start"));
+
+let problem: string | null = null;
+let newWhen = "";
+let oldWhen = "";
+let what = "";
+let locationName = "";
+let locationAddress: string | null = null;
+if (view.kind === "open") {
+  const { page, item, session } = view;
+  const { db, portal } = page;
+  const timesHref = (erro: string | null) => portalHref(`${view.listHref}/remarcar`, { a: item.id, date: params.get("date"), erro });
+  const scope = await rescheduleScope(db, portal.clinicId, item, { timeZone: portal.timeZone, sessionId: session.id, rebook: view.rebook });
+  const slot = choice && choice.agendaId === item.agendaId ? { start: choice.start, locationId: choice.locationId } : null;
+  if (!slot || !(await isRescheduleSlotFree(db, portal.clinicId, item, scope, slot, portal.timeZone))) {
+    return Astro.redirect(timesHref(slot ? "horario" : null));
+  }
+  if (Astro.request.method === "POST") {
+    const outcome = await rescheduleMine(db, portal.clinicId, {
+      item,
+      slot,
+      scope,
+      rebook: view.rebook,
+      leadHours: view.leadHours,
+      sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null),
+    });
+    if (outcome.status === "done") {
+      // Pelo link do bot (Remarcar do menu ou do lembrete): o link fica usado e o funil fecha.
+      const { link } = await sessionLinkFor(db, portal.clinicId, session, item.id);
+      if (link) await afterLinkBooking(db, portal.clinicId, link.id, outcome.appointmentId);
+      return Astro.redirect(portalHref(view.listHref, { aviso: view.rebook ? "marcada" : "remarcada" }));
+    }
+    if (outcome.status === "taken") return Astro.redirect(timesHref("horario"));
+    if (outcome.status === "duplicate") return Astro.redirect(portalHref(view.listHref, { aviso: "duplicado" }));
+    if (outcome.status === "lead") return Astro.redirect(portalHref(view.listHref, { aviso: "prazo" }));
+    if (outcome.status === "gone") return Astro.redirect(portalHref(view.listHref, { aviso: "mudou" }));
+    problem = "Não conseguimos remarcar agora. Toque em “Confirmar remarcação” de novo ou fale com a recepção.";
+  }
+  const tz = portal.timeZone;
+  newWhen = capitalize(formatInstant(slot.start, tz, "EEEE, d 'de' MMMM 'às' HH:mm"));
+  oldWhen = capitalize(formatInstant(item.start, tz, "EEEE, d 'de' MMMM 'às' HH:mm"));
+  what = item.category === "exam" ? item.serviceName : `${item.category === "return_visit" ? "Retorno" : item.serviceName}${item.professionalName ? ` com ${item.professionalName}` : ""}`;
+  const location = scope.locations.find((l) => l.id === slot.locationId);
+  locationName = location?.name ?? item.locationName;
+  locationAddress = slot.locationId === item.locationId ? item.locationAddress : null;
+}
+const page = view.page;
+const back = view.kind === "open" ? portalHref(`${view.listHref}/remarcar`, { a: view.item.id, date: params.get("date") }) : "";
+const here = view.kind === "open" ? portalHref(`${view.listHref}/confirmar`, { a: view.item.id, date: params.get("date"), start: params.get("start") }) : "";
+const row = "flex flex-col gap-0.5 border-t border-gray-100 py-3 first:border-t-0";
+---
+
+<PortalLayout
+  title={view.kind === "open" ? "Confirme a remarcação" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {
+    view.kind === "open" && (
+      <div class="flex max-w-[620px] flex-col gap-[18px]">
+        <PortalStepBar back={back} />
+        <h1 class={portalTitle}>Confirme {view.rebook ? "o novo horário" : "a remarcação"}</h1>
+        {problem && <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">{problem}</p>}
+        <div class="flex flex-col rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 lg:px-[18px]">
+          <p class={row}>
+            <span class="text-[15px] text-gray-600">Paciente</span>
+            <b class="text-lg">{view.item.patientName}</b>
+          </p>
+          <p class={row}>
+            <span class="text-[15px] text-gray-600">Atendimento</span>
+            <b class="text-lg">{what}</b>
+          </p>
+          {!view.rebook && (
+            <p class={row}>
+              <span class="text-[15px] text-gray-600">Marcado para</span>
+              <span class="text-lg text-gray-700 line-through decoration-gray-400">{oldWhen}</span>
+            </p>
+          )}
+          <p class={row}>
+            <span class="text-[15px] text-gray-600">Novo horário</span>
+            <b class="text-lg">{newWhen}</b>
+            <a href={back} class="inline-flex min-h-11 items-center self-start px-0 text-base font-bold text-clinic-ink underline">Trocar o horário</a>
+          </p>
+          <p class={row}>
+            <span class="text-[15px] text-gray-600">Local</span>
+            <span class="text-lg">
+              {locationName}
+              {locationAddress && (
+                <>
+                  {" · "}
+                  <a href={mapsHref(locationAddress)} target="_blank" rel="noopener" class="font-semibold text-clinic-ink underline">Ver no mapa</a>
+                </>
+              )}
+            </span>
+          </p>
+        </div>
+        <p class="text-[17px] text-gray-700">A confirmação chega no WhatsApp.</p>
+        <form method="POST" action={here}>
+          <button type="submit" class={portalCta} data-sending-label="Remarcando…">
+            Confirmar {view.rebook ? "novo horário" : "remarcação"}
+          </button>
+        </form>
+      </div>
+    )
+  }
+</PortalLayout>

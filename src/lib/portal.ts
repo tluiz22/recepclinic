@@ -32,6 +32,14 @@ export function portalBase(clinicSlug: string, hostname: string): string {
   return isPortalHost(hostname) ? `/${clinicSlug}` : `${PORTAL_PREFIX}/${clinicSlug}`;
 }
 
+/** "Minhas consultas" (F3c, P12) nas ações do início da clínica e do profissional. */
+export const MY_APPOINTMENTS = (base: string) => ({
+  href: `${base}/minhas-consultas`,
+  label: "Minhas consultas",
+  detail: "Remarcar ou cancelar o que já está marcado",
+  icon: "mine" as const,
+});
+
 /** Link com os parâmetros preenchidos (os vazios ficam de fora). */
 export function portalHref(path: string, params: Record<string, string | null | undefined> = {}): string {
   const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => !!entry[1]));

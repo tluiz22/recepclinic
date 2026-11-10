@@ -44,8 +44,11 @@ const sec = "flex min-h-14 w-full items-center justify-center rounded-xl border-
         {kind === "expired" ? "Pedir novo link no WhatsApp" : "Falar com a clínica no WhatsApp"}
       </a>
     )}
+    {home && kind === "used" && (
+      <a href={`${home}/minhas-consultas`} class={cta}>Minhas consultas</a>
+    )}
     {home && kind !== "unavailable" && (
-      <a href={home} class={kind === "used" ? cta : sec}>{kind === "used" ? "Agendar outra consulta" : "Agendar pelo portal"}</a>
+      <a href={home} class={sec}>{kind === "used" ? "Agendar outra consulta" : "Agendar pelo portal"}</a>
     )}
   </div>
 </section>

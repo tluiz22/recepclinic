@@ -5,6 +5,7 @@ import { DataError, unwrap } from "../errors";
 import { logError } from "../../log";
 import { joinWaitlist } from "../waitlist/entries";
 import { logWebFunnelEvent } from "../whatsapp/funnel";
+import { hasFeature } from "../features";
 import { examSlug, type PortalClinic } from "./portal";
 
 // Link do portal mandado pelo bot (F3a; proposta 3.4; plano, seção 15). O token é o id (em 22 caracteres no endereço
@@ -26,6 +27,8 @@ export type PortalLink = {
   professionalId: string | null;
   serviceId: string | null;
   appointmentId: string | null;
+  /** Remarcação depois do cancelamento pela clínica (F3-3): o atendimento cancelado. */
+  canceledAppointmentId: string | null;
   joinWaitlist: boolean;
   funnelSessionId: string | null;
   expiresAt: Date;
@@ -40,12 +43,14 @@ export type PortalLinkInput = {
   professionalId?: string | null;
   serviceId?: string | null;
   appointmentId?: string | null;
+  canceledAppointmentId?: string | null;
+  originAppointmentId?: string | null;
   joinWaitlist?: boolean;
   funnelSessionId?: string | null;
   ttlMs?: number;
 };
 
-const COLUMNS = "id, phone, contact_id, purpose, professional_id, service_id, appointment_id, join_waitlist, funnel_session_id, expires_at, used_at, revoked_at";
+const COLUMNS = "id, phone, contact_id, purpose, professional_id, service_id, appointment_id, canceled_appointment_id, join_waitlist, funnel_session_id, expires_at, used_at, revoked_at";
 
 type Row = {
   id: string;
@@ -55,6 +60,7 @@ type Row = {
   professional_id: string | null;
   service_id: string | null;
   appointment_id: string | null;
+  canceled_appointment_id: string | null;
   join_waitlist: boolean;
   funnel_session_id: string | null;
   expires_at: string;
@@ -70,6 +76,7 @@ const toLink = (row: Row): PortalLink => ({
   professionalId: row.professional_id,
   serviceId: row.service_id,
   appointmentId: row.appointment_id,
+  canceledAppointmentId: row.canceled_appointment_id,
   joinWaitlist: row.join_waitlist,
   funnelSessionId: row.funnel_session_id,
   expiresAt: new Date(row.expires_at),
@@ -103,6 +110,9 @@ export async function createPortalLink(db: DbClient, clinicId: string, input: Po
     professional_id: input.professionalId ?? null,
     service_id: input.serviceId ?? null,
     appointment_id: input.appointmentId ?? null,
+    canceled_appointment_id: input.canceledAppointmentId ?? null,
+    origin_appointment_id: input.originAppointmentId ?? null,
+    return_deadline_waived: !!input.canceledAppointmentId,
     join_waitlist: input.joinWaitlist ?? false,
     funnel_session_id: input.funnelSessionId ?? null,
     created_at: now.toISOString(),
@@ -158,8 +168,11 @@ export async function openLinkSession(
  * profissional escolhido na conversa já na escolha do atendimento (P5, pulada com uma opção só; o Voltar leva ao
  * início dele), o exame escolhido, a lista dos exames, o retorno ou o início da clínica.
  */
-export function portalLinkTarget(link: Pick<PortalLink, "purpose" | "professionalId" | "serviceId">, portal: PortalClinic, base: string): string {
+export function portalLinkTarget(link: Pick<PortalLink, "purpose" | "professionalId" | "serviceId" | "appointmentId">, portal: PortalClinic, base: string): string {
   if (link.purpose === "return") return `${base}/retorno`;
+  // Remarcar (F3c; I7): os dias e horários do mesmo profissional; Minhas consultas: a lista do celular.
+  if (link.purpose === "reschedule" && link.appointmentId) return `${base}/minhas-consultas/remarcar?a=${link.appointmentId}`;
+  if (link.purpose === "my_appointments") return `${base}/minhas-consultas`;
   if (link.purpose === "exam") {
     const exam = portal.exams.find((e) => e.serviceId === link.serviceId);
     return exam ? `${base}/${examSlug(exam.serviceId)}/atendimento?de=exames` : `${base}/exames`;
@@ -243,6 +256,7 @@ export async function renewPortalLink(db: DbClient, clinicId: string, linkId: st
       professionalId: old.professionalId,
       serviceId: old.serviceId,
       appointmentId: old.appointmentId,
+      canceledAppointmentId: old.canceledAppointmentId,
       joinWaitlist: old.joinWaitlist,
       funnelSessionId: old.funnelSessionId,
     },
@@ -254,4 +268,78 @@ export async function renewPortalLink(db: DbClient, clinicId: string, linkId: st
 export async function sessionJoinsWaitlist(db: DbClient, clinicId: string, session: { linkId: string | null } | null): Promise<boolean> {
   if (!session?.linkId) return false;
   return (await getPortalLink(db, clinicId, session.linkId))?.joinWaitlist ?? false;
+}
+
+/**
+ * O que o link do bot desta sessão libera para um atendimento (F3c): remarcar sem a antecedência (F3-4, o link do
+ * Remarcar do bot e do lembrete) e, no link da clínica depois do cancelamento (F3-3), marcar de novo o cancelado.
+ */
+export async function sessionLinkFor(
+  db: DbClient,
+  clinicId: string,
+  session: { linkId: string | null } | null,
+  appointmentId: string,
+): Promise<{ noLead: boolean; rebook: boolean; link: PortalLink | null }> {
+  const link = session?.linkId ? await getPortalLink(db, clinicId, session.linkId) : null;
+  const mine = !!link && link.purpose === "reschedule" && link.appointmentId === appointmentId && !link.usedAt;
+  return { noLead: mine, rebook: mine && link!.canceledAppointmentId === appointmentId, link: mine ? link : null };
+}
+
+/** Remarcação depois do cancelamento pela clínica: 2 dias, como o link de hoje (F5.4). */
+export const PORTAL_REBOOKING_TTL_MS = 2 * 24 * 60 * 60_000;
+
+/**
+ * Link de remarcação do portal para um atendimento cancelado pela clínica (F3-3): o mesmo paciente, serviço e agenda,
+ * no consultório; retorno sem o limite do prazo. null = o portal não cobre (sem endereço ou Portal desligado,
+ * domiciliar, turma, paciente sem celular): quem chamou faz o link de hoje.
+ */
+export async function createPortalRebookingLink(
+  db: DbClient,
+  clinicId: string,
+  appointment: { id: string; patientId: string; serviceId: string; locationId: string; originAppointmentId: string | null },
+  now: Date = new Date(),
+): Promise<PortalLink | null> {
+  const [clinic, portalOn, location, service, patient] = await Promise.all([
+    db.from("clinics").select("portal_slug").eq("id", clinicId).maybeSingle().then((r) => unwrap(r, "Clínica")),
+    hasFeature(db, clinicId, "portal"),
+    db.from("locations").select("type").eq("clinic_id", clinicId).eq("id", appointment.locationId).maybeSingle().then((r) => unwrap(r, "Local")),
+    db.from("services").select("scheduling_mode").eq("clinic_id", clinicId).eq("id", appointment.serviceId).maybeSingle().then((r) => unwrap(r, "Serviço")),
+    db.from("patients").select("contact_id, contacts ( phone )").eq("clinic_id", clinicId).eq("id", appointment.patientId).maybeSingle().then((r) => unwrap(r, "Paciente")),
+  ]);
+  const phone = (patient as unknown as { contacts: { phone: string } | null } | null)?.contacts?.phone ?? null;
+  if (!clinic?.portal_slug || !portalOn || location?.type !== "clinic" || service?.scheduling_mode === "group" || !phone) return null;
+  return createPortalLink(
+    db,
+    clinicId,
+    {
+      phone,
+      contactId: patient!.contact_id,
+      purpose: "reschedule",
+      appointmentId: appointment.id,
+      canceledAppointmentId: appointment.id,
+      originAppointmentId: appointment.originAppointmentId,
+      ttlMs: PORTAL_REBOOKING_TTL_MS,
+    },
+    now,
+  );
+}
+
+/** Links de remarcação do portal ainda válidos de cada atendimento cancelado pela clínica (tela "Avisar"). */
+export async function listValidPortalRebookingLinks(db: DbClient, clinicId: string, canceledAppointmentIds: string[], now: Date = new Date()): Promise<Map<string, PortalLink>> {
+  if (!canceledAppointmentIds.length) return new Map();
+  const rows = unwrap(
+    await db
+      .from("portal_links")
+      .select(COLUMNS)
+      .eq("clinic_id", clinicId)
+      .in("canceled_appointment_id", canceledAppointmentIds)
+      .is("used_at", null)
+      .is("revoked_at", null)
+      .gt("expires_at", now.toISOString())
+      .order("created_at", { ascending: false }),
+    "Links de remarcação do portal",
+  ) as Row[];
+  const result = new Map<string, PortalLink>();
+  for (const row of rows) if (row.canceled_appointment_id && !result.has(row.canceled_appointment_id)) result.set(row.canceled_appointment_id, toLink(row));
+  return result;
 }

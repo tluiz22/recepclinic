@@ -426,6 +426,9 @@ export const keptAskPresence = (phrase: string, end: "a" | "o") => `${cancelKept
 export const PRESENCE_NOT_UNDERSTOOD = "Não entendi. Deseja confirmar sua presença? Toque em Sim ou Não.";
 export const KEPT_PRESENCE_DECLINED = 'Tudo bem! Se quiser confirmar depois, é só tocar em "Confirmar presença" no lembrete.';
 
+/** Remarcar pelo portal (F3c; I7). */
+export const portalRescheduleLink = (phrase: string, patientName: string, url: string) =>
+  `Para escolher o novo dia e horário para ${phrase} de *${patientName}*, toque no link abaixo. Ele vale por 30 minutos e é só para este número:\n${url}`;
 export const rescheduleLink = (phrase: string, patientName: string, url: string) =>
   `Prontinho! Escolha o novo dia e horário para ${phrase} de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
 export const returnDeadlinePassed = (patientName: string, lastDate: string, receptionAvailable: boolean, d: Designation) =>

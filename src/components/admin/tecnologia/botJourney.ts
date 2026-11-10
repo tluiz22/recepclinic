@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "09/11/2026";
+export const JOURNEY_UPDATED = "10/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -231,7 +231,7 @@ export const JOURNEY: JourneySection[] = [
   {
     id: "remarcar-cancelar",
     title: "4. Remarcar ou cancelar",
-    intro: "Pelo menu (Consultas ou Exames), pela entrada da conversa ou pelos botões do lembrete.",
+    intro: "Pelo menu (Consultas ou Exames), pela entrada da conversa ou pelos botões do lembrete. No portal, Minhas consultas também remarca e cancela (com o prazo de antecedência da clínica, padrão 24 h).",
     flow: [
       check("Há atendimento futuro neste número?", "Não: avisa e volta ao menu."),
       bot("Pede a data de nascimento e mostra o atendimento", "Pelo lembrete, vai direto ao atendimento do lembrete."),
@@ -239,9 +239,12 @@ export const JOURNEY: JourneySection[] = [
         [
           "Remarcar",
           [
-            bot("Domiciliar: confirma o endereço. Retorno: confere o prazo"),
-            bot("Manda o link para o novo dia e horário", "Venceu sem remarcar: item 10."),
-            page("Escolhe o novo horário e confirma", "O quadro de confirmação mostra o horário atual e o novo."),
+            bot("Retorno: confere o prazo. Domiciliar e turma: confirma o endereço e segue no link de hoje (entram no portal depois)"),
+            bot(
+              "\"Para escolher o novo dia e horário para a consulta de *[paciente]*, toque no link abaixo…\"",
+              "Link do portal (F3c, 10/nov/2026), sem o prazo de antecedência: o Remarcar do WhatsApp remarca a qualquer hora. Venceu sem remarcar: item 10.",
+            ),
+            page("Portal: dias e horários do mesmo profissional, \"Confirme a remarcação\" com o horário de hoje e o novo", "Sem pedir o código: o celular da conversa já vem confirmado."),
             auto("Confirmação da remarcação"),
           ],
         ],
@@ -302,7 +305,10 @@ export const JOURNEY: JourneySection[] = [
         ["Remarcar", [bot("Segue o caminho do Remarcar (item 4)")]],
         ["Cancelar", [bot("Segue o caminho do Cancelar (item 4)")]],
       ),
-      auto("Se a clínica bloquear o dia: aviso de cancelamento com o link para remarcar"),
+      auto(
+        "Se a clínica bloquear o dia: aviso de cancelamento com o link para remarcar",
+        "O link abre o portal (F3c) com os dias e horários do mesmo profissional, por 2 dias; retorno sem o limite do prazo. Domiciliar e turma: o link de hoje.",
+      ),
     ],
   },
   {

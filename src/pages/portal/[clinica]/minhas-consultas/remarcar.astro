@@ -1,0 +1,171 @@
+---
+// Remarcar, passo 1 (F3c; P12 → P6 com o mesmo profissional e tipo de local; I7). Os dias e horários livres da mesma
+// agenda e serviço (o horário de hoje não ocupa a vaga; retorno só até o fim do prazo, menos na remarcação depois do
+// cancelamento pela clínica). "Continuar" leva à confirmação, que confere o horário de novo.
+import PatientDayStrip from "../../../../components/public/PatientDayStrip.astro";
+import PatientSlots, { type PatientSlot } from "../../../../components/public/PatientSlots.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { capitalize } from "../../../../lib/vocabulary";
+import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../lib/clinicTime";
+import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
+import { slotChoiceValue } from "../../../../lib/data/agenda/publicBooking";
+import { openChangePage } from "../../../../lib/data/portal/changePage";
+import { rescheduleDates, rescheduleScope, rescheduleSlots } from "../../../../lib/data/portal/myAppointments";
+import { portalHref } from "../../../../lib/portal";
+
+const view = await openChangePage(Astro, "remarcar");
+if (view.kind === "redirect") return view.response;
+const params = Astro.url.searchParams;
+const dateParam = (name: string) => {
+  const value = params.get(name);
+  return value && isCalendarDate(value) ? value : null;
+};
+
+let strip: DayStrip | null = null;
+let slotOptions: PatientSlot[] = [];
+let timeZone = "America/Fortaleza";
+let when = "";
+let what = "";
+let here = "";
+if (view.kind === "open") {
+  const { page, item, session } = view;
+  const { db, portal } = page;
+  timeZone = portal.timeZone;
+  const scope = await rescheduleScope(db, portal.clinicId, item, { timeZone, sessionId: session.id, rebook: view.rebook });
+  const dates = await rescheduleDates(db, portal.clinicId, item, scope);
+  strip = buildDayStrip(dates, dateParam("date"), dateParam("start"));
+  if (strip.unavailable && !strip.selected && dates.length) strip = { ...buildDayStrip(dates, null, null), unavailable: strip.unavailable };
+  const slots = strip.selected ? await rescheduleSlots(db, portal.clinicId, item, scope, strip.selected) : [];
+  const names = new Map(scope.locations.map((l) => [l.id, l.name]));
+  slotOptions = slots.map((slot) => ({
+    value: slotChoiceValue({ start: slot.start, agendaId: item.agendaId, locationId: slot.locationId }),
+    label: formatInstant(slot.start, timeZone, "HH:mm"),
+    detail: scope.locations.length > 1 ? (names.get(slot.locationId) ?? "") : "",
+    summary: `${capitalize(formatInstant(slot.start, timeZone, "EEE").slice(0, 3))}, ${formatInstant(slot.start, timeZone, "dd/MM 'às' HH:mm")}`,
+  }));
+  when = capitalize(formatInstant(item.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm"));
+  what = item.category === "exam" ? item.serviceName : `${item.category === "return_visit" ? "Retorno" : item.serviceName}${item.professionalName ? ` com ${item.professionalName}` : ""}`;
+  here = `${view.listHref}/remarcar`;
+}
+const dayHref = (date: string, start: string) => portalHref(here, { a: view.kind === "open" ? view.item.id : null, date, start });
+const taken = params.get("erro") === "horario";
+const page = view.kind === "open" ? view.page : view.page;
+---
+
+<PortalLayout
+  title={view.kind === "open" ? `Remarcar: ${what}` : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {
+    view.kind === "open" && strip && (
+      <form method="GET" action={`${view.listHref}/confirmar`} id="portal-horario" class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-4">
+          <PortalStepBar back={view.listHref} />
+          <input type="hidden" name="a" value={view.item.id} />
+          <div class="flex flex-col gap-1.5">
+            <h1 class={portalTitle}>Escolha o novo dia e horário</h1>
+            <p class="text-[17px] text-gray-700">
+              <b>{view.item.patientName}</b>, {what}.
+              {view.rebook ? " A clínica cancelou o horário anterior." : ` Marcado para ${when.charAt(0).toLowerCase()}${when.slice(1)}.`}
+            </p>
+          </div>
+          <div id="portal-escolha" class="flex flex-col gap-4" aria-live="polite">
+            {taken && <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">Esse horário acabou de ser ocupado. Escolha outro.</p>}
+            {strip.unavailable && (
+              <p class={`${portalNotice} border-amber-200 bg-amber-50 text-amber-900`} role="status">
+                {capitalize(formatCalendarDate(strip.unavailable, "EEEE, d 'de' MMMM"))} não tem horário livre. Mostramos o próximo dia com horário.
+              </p>
+            )}
+            {strip.selected ? (
+              <>
+                <p class="text-base text-gray-600">Só aparecem os dias com horário livre.</p>
+                <input type="hidden" name="date" value={strip.selected} />
+                <PatientDayStrip strip={strip} title="Dias com horário" href={dayHref} />
+                <p class="mt-1 font-display text-[21px] font-bold lg:text-[22px]">{capitalize(formatCalendarDate(strip.selected, "EEEE, d 'de' MMMM"))}</p>
+                {slotOptions.length ? <PatientSlots options={slotOptions} /> : <p class="text-base text-gray-600">Nenhum horário livre nesse dia. Escolha outro dia.</p>}
+              </>
+            ) : (
+              <p class="rounded-[14px] border border-gray-200 bg-white px-4 py-4" role="status">
+                Não há outro horário livre no prazo. Toque em "Recepção", no topo, para falar com a clínica.
+              </p>
+            )}
+          </div>
+          <div class="sticky bottom-0 -mx-4 mt-4 flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 lg:hidden">
+            <p class="min-w-0 text-base leading-tight">
+              <span class="block text-gray-600">Novo horário</span>
+              <b class="block truncate text-lg" data-portal-slot>Escolha um horário</b>
+            </p>
+            <button type="submit" class="min-h-14 shrink-0 rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45" data-portal-continue disabled={!slotOptions.length}>Continuar</button>
+          </div>
+        </div>
+        <PortalSummary
+          title="Remarcação"
+          rows={[
+            { label: "Paciente", value: view.item.patientName },
+            { label: "Atendimento", value: what },
+            ...(view.rebook ? [] : [{ label: "Marcado para", value: when }]),
+            { label: "Novo horário", value: null, live: "slot" },
+          ]}
+        >
+          <button type="submit" class="mt-3 min-h-14 rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45" data-portal-continue disabled={!slotOptions.length}>Continuar</button>
+        </PortalSummary>
+      </form>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // Como nos horários do agendamento: o horário escolhido vai para a barra e o resumo; um dia troca só os horários.
+  const area = document.getElementById("portal-escolha");
+  const form = document.getElementById("portal-horario") as HTMLFormElement | null;
+  const EMPTY = "Escolha um horário";
+  const refresh = () => {
+    const chosen = area?.querySelector<HTMLInputElement>('input[name="start"]:checked');
+    document.querySelectorAll<HTMLElement>("[data-portal-slot], [data-portal-live=slot]").forEach((el) => {
+      el.textContent = chosen?.dataset.summary ?? (el.dataset.portalLive ? "a escolher" : EMPTY);
+      el.classList.toggle("italic", !chosen && !!el.dataset.portalLive);
+    });
+    const hasOptions = !!area?.querySelector('input[name="start"]');
+    document.querySelectorAll<HTMLButtonElement>("[data-portal-continue]").forEach((b) => (b.disabled = !hasOptions));
+  };
+  area?.addEventListener("change", refresh);
+  area?.addEventListener("click", async (event) => {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>("a[data-agendar-nav]");
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    area.setAttribute("aria-busy", "true");
+    area.classList.add("opacity-60");
+    try {
+      const response = await fetch(link.href, { headers: { Accept: "text/html" } });
+      if (!response.ok) throw new Error(String(response.status));
+      const next = new DOMParser().parseFromString(await response.text(), "text/html").getElementById("portal-escolha");
+      if (!next) throw new Error("sem os horários");
+      area.replaceChildren(...Array.from(next.childNodes));
+      history.replaceState(null, "", link.href);
+      area.querySelector<HTMLElement>('[aria-current="date"]')?.focus();
+    } catch {
+      window.location.href = link.href;
+      return;
+    } finally {
+      area.removeAttribute("aria-busy");
+      area.classList.remove("opacity-60");
+    }
+    refresh();
+  });
+  form?.addEventListener("submit", (event) => {
+    const first = area?.querySelector<HTMLInputElement>('input[name="start"]');
+    if (first && !area?.querySelector('input[name="start"]:checked')) {
+      event.preventDefault();
+      first.reportValidity();
+    }
+  });
+  refresh();
+</script>

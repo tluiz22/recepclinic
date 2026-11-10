@@ -1,7 +1,7 @@
 ---
 // Início do profissional (PP, link do profissional; cliente 08/nov): foto, nome, registro, especialidades, próximo
 // horário, "Agendar consulta com {nome}", valores e convênios, local e orientações. Sem outros médicos da clínica.
-// "Minhas consultas" chega com a identificação pelo celular (F2b/F2c).
+// "Minhas consultas" (F3c) fica nas ações de baixo.
 import type { PortalClinic, PortalProfessional } from "../../lib/data/portal/portal";
 import { mapsHref, nextSlotLabel, privateLabel, withName } from "../../lib/portal";
 import PortalAvatar from "./PortalAvatar.astro";
@@ -13,7 +13,7 @@ interface Props {
   base: string;
   next: Date | null;
   /** "Marcar retorno" e "Marcar exame" (D4), quando a clínica tem. */
-  actions?: { href: string; label: string; detail: string; icon: "return" | "exam" }[];
+  actions?: { href: string; label: string; detail: string; icon: "return" | "exam" | "mine" }[];
 }
 
 const { portal, professional, base, next, actions = [] } = Astro.props;

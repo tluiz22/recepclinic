@@ -10,7 +10,7 @@ import { bookedSummary, type BookedSummary } from "../../../../lib/data/portal/b
 import { openHoldPage } from "../../../../lib/data/portal/holdPage";
 import { capitalize } from "../../../../lib/vocabulary";
 import { formatInstant } from "../../../../lib/clinicTime";
-import { helpForOf, mapsHref, portalHref, receptionWhatsappHref, visitWords, whoLabel } from "../../../../lib/portal";
+import { helpForOf, mapsHref, portalHref, visitWords, whoLabel } from "../../../../lib/portal";
 import { phoneEnding } from "../../../../lib/portalIdentity";
 
 const view = await openHoldPage(Astro);
@@ -24,7 +24,6 @@ if (professional && !booked && page.kind === "open") Astro.response.status = 404
 const location = professional && booked ? (professional.locations.find((l) => l.id === booked!.locationId) ?? null) : null;
 const when = booked ? capitalize(formatInstant(booked.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "";
 const canceled = booked?.status === "canceled";
-const phone = page.kind === "open" ? page.portal.brand.whatsappPhone : null;
 const calendar = professional && hold ? portalHref(`${view.base}/${professional.slug}/calendario`, { reserva: hold.id }) : "";
 // Exame (F2d): "Exame marcado!" e o preparo.
 const words = visitWords(professional);
@@ -85,13 +84,9 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
             </div>
             <p class="text-[17px] text-gray-700">
               Precisa remarcar ou cancelar?{" "}
-              {phone ? (
-                <a href={receptionWhatsappHref(phone, `Olá! Marquei ${words.a} pelo portal e preciso de ajuda.`)} target="_blank" rel="noopener" class="font-bold text-clinic-ink underline">
-                  Fale com a recepção no WhatsApp
-                </a>
-              ) : (
-                "Fale com a recepção."
-              )}
+              <a href={`${view.base}/minhas-consultas`} class="font-bold text-clinic-ink underline">
+                Minhas consultas
+              </a>
             </p>
           </>
         )}

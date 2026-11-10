@@ -81,3 +81,44 @@ export async function offerPortalLink(b: Bot, category: "consultation" | "exam" 
   }
   return true;
 }
+
+/** O portal está aberto para a clínica (endereço definido, Portal ligado, clínica ativa). */
+async function portalOpen(b: Bot): Promise<boolean> {
+  const clinic = unwrap(await b.db.from("clinics").select("portal_slug").eq("id", b.clinicId).maybeSingle(), "Clínica") as { portal_slug: string | null } | null;
+  if (!clinic?.portal_slug) return false;
+  return (await loadPortal(b.db, b.clinicId, clinic.portal_slug)).status === "open";
+}
+
+/**
+ * Remarcar (F3c; I7): o link do portal com os dias e horários do mesmo profissional, sem a antecedência (F3-4). Turma
+ * e domiciliar seguem no chat (F3e). false = o portal não cobre: quem chamou segue com o link de hoje.
+ */
+export async function offerPortalReschedule(
+  b: Bot,
+  appointment: { id: string; serviceId: string; locationType: string; category: string; serviceName: string; patientName: string },
+): Promise<boolean> {
+  try {
+    if (appointment.locationType !== "clinic" || !(await portalOpen(b))) return false;
+    const service = unwrap(await b.db.from("services").select("scheduling_mode").eq("clinic_id", b.clinicId).eq("id", appointment.serviceId).maybeSingle(), "Serviço");
+    if (!service || service.scheduling_mode === "group") return false;
+  } catch (error) {
+    logError("bot: portal para remarcar", error, { clinica: b.clinicId });
+    return false;
+  }
+  try {
+    const link = await createPortalLink(
+      b.db,
+      b.clinicId,
+      { phone: b.phone, contactId: b.convo.contactId, purpose: "reschedule", appointmentId: appointment.id, funnelSessionId: b.convo.funnelSessionId },
+      b.now,
+    );
+    const { phrase } = t.appointmentWords(appointment.category as "consultation" | "return_visit" | "exam", appointment.serviceName);
+    await say(b, "bot_reschedule_link", t.portalRescheduleLink(phrase, appointment.patientName, portalLinkUrl(b.sender.baseUrl, shortId(link.id))));
+    await end(b, "link_sent", { portal_link_id: link.id, purpose: "reschedule", appointment_id: appointment.id });
+  } catch (error) {
+    logError("bot: link do portal (remarcar)", error, { clinica: b.clinicId });
+    await say(b, "bot_reschedule_link_error", t.linkError(b.clinic.designation));
+    await end(b, "error", { reason: "link_error" });
+  }
+  return true;
+}

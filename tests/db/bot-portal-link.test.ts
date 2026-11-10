@@ -89,6 +89,8 @@ const choose = async (phone: string, reply: Sent[], title: string) => say(phone,
 async function consultations(phone: string, option = "Marcar consulta"): Promise<Sent[]> {
   await restart(phone);
   let reply = await say(phone, "Oi");
+  // Número com agendamento: "Identificamos um agendamento…" (entrada da conversa); "Não, outro assunto" leva ao menu.
+  if (reply.at(-1)!.options.some((o) => o.id === "entry_no")) reply = await say(phone, { id: "entry_no" });
   reply = await choose(phone, reply, "Cardiologia");
   reply = await choose(phone, reply, "Consultas");
   return choose(phone, reply, option);
@@ -178,6 +180,24 @@ describe("bot leva ao portal (F3b)", () => {
     expect((await db.from("waitlist_entries").select("created_via").eq("appointment_id", appointment.id).single()).data).toEqual({ created_via: "booking_link" });
     const { data: funnel } = await db.from("bot_funnel_events").select("step, source, appointment_id").eq("session_id", link!.funnel_session_id!).eq("step", "confirmed").single();
     expect(funnel).toEqual({ step: "confirmed", source: "web", appointment_id: appointment.id });
+  });
+
+  it("Remarcar (F3c; I7): o link do portal com os dias do mesmo profissional, sem a antecedência", async () => {
+    const phone = "+5584991239001"; // contato do Paciente Um (fixture)
+    await adminClient().from("appointments").update({ status: "canceled", canceled_at: new Date().toISOString() }).eq("patient_id", f.ids.p1).in("status", ["scheduled", "confirmed"]);
+    const { appointment } = await bookAppointment(
+      asDb(f.reception),
+      f.clinicId,
+      { patientId: f.ids.p1, serviceId: f.ids.consulta2, agendaId: f.ids.agendaDra2, start: at(MON1, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null, anyTime: true, acceptedWarnings: true },
+    );
+    let reply = await consultations(phone, "Remarcar");
+    if (reply.at(-1)!.body.includes("data de nascimento")) reply = await say(phone, "01/01/2020");
+    if (reply.at(-1)!.options.length && !reply.at(-1)!.body.includes("toque no link")) reply = await say(phone, { id: reply.at(-1)!.options[0].id });
+    const text = reply.map((m) => m.body).join("\n");
+    expect(text).toMatch(/Para escolher o novo dia e horário para a consulta de \*Paciente Um\*, toque no link abaixo\. Ele vale por 30 minutos e é só para este número:\nhttps:\/\/agendar\.exemplo\.test\/s\//);
+    expect(await lastPortalLink(phone)).toMatchObject({ purpose: "reschedule" });
+    const { data } = await adminClient().from("portal_links").select("appointment_id").eq("clinic_id", f.clinicId).eq("phone", phone).eq("purpose", "reschedule").single();
+    expect(data!.appointment_id).toBe(appointment.id);
   });
 
   it("link vencido sem marcar: \"Não concluímos a sua marcação\" uma vez, e \"Novo link\" manda outro", async () => {
