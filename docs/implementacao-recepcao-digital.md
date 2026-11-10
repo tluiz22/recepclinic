@@ -677,7 +677,7 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   contam só as reservas que viraram consulta marcada** (migração `20270107130000_portal_limite_marcadas`). Tela: com o
   celular já comprovado, o aviso aparece com o celular e "Trocar número", sem pedir o celular nem o código de novo; o
   texto fala do botão da recepção no topo (no computador ele se chama "Falar com a recepção").
-- **10/nov, achados do cliente (4, na `main`):**
+- **10/nov, achados do cliente (4, na `main`; validados no staging em 10/nov):**
   1. **Sem prazo para remarcar e cancelar pelo portal** (RD10 revista): padrão 0 h e todas as clínicas em 0 h (migração
      `20270109120000_portal_sem_prazo`); quem quiser põe um prazo em Configurações › Portal.
   2. **Confirme a remarcação** no celular: "Confirmar remarcação" numa barra fixa no rodapé (sempre à vista); o mesmo
@@ -685,7 +685,7 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   3. **Ficha do paciente**, cartão Dados: o nome aparece (o "Editar" dali muda o nome).
   4. **Bot**: data com o ano em 2 números (25/11/84, 251184) vira 25/11/1984 com o "Você quis dizer…?" (20xx se não
      for futura, senão 19xx).
-- **Pedido do cliente (10/nov): desbloqueio pela recepção na ficha do paciente. Feito (10/nov, `main`).** Canvas:
+- **Pedido do cliente (10/nov): desbloqueio pela recepção na ficha do paciente. Feito e validado no staging (10/nov).** Canvas:
   https://claude.ai/artifact/JW4oj3TYsfoaDEiMAbzJk1. Decisões do cliente: **opção A**, faixa amarela no alto da ficha,
   só enquanto houver bloqueio (motivo, até quando, os outros pacientes do mesmo celular) com "Liberar agora" e
   confirmação; **libera os dois tipos**: código pedido demais (`portal_blocks`, chave `phone:`) e o limite do dia (5
