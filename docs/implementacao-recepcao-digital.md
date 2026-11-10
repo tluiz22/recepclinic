@@ -805,3 +805,27 @@ worktree durante o comando e apagada em seguida.
 - **Migrações da F3e para o staging, nesta ordem:** `20270108120000_portal_domiciliar`, `20270108130000_portal_turma`
   (`create or replace`), `20270108140000_portal_reserva_exame`.
 - **Testes:** 1188 de unidade; 1159 de banco (bateria inteira).
+
+#### 15.5.4 F3e no staging e roteiro de validação (10/nov/2026)
+
+Migrações `20270108120000`, `20270108130000` e `20270108140000` aplicadas no staging (simulação → aplicar → conferir:
+coluna `slot_holds.home_visit_address` e função `portal_hold_group_slot` no banco; histórico em dia). Produção: não.
+
+**Roteiro (clínica `clinica-teste`, celular de testes):**
+
+1. **Preparar:** um profissional com o local "Domiciliar" e horário em casa (Configurações › Horários) e o serviço de
+   Consulta com valor diferente em casa; um exame em turma na agenda de Exames (Configurações › Serviços, "Turma", com
+   capacidade).
+2. **Em casa pelo portal:** abrir o portal → profissional → "Em casa" (só os dias e horários de casa, com o valor de
+   casa) → horário → celular e código → paciente → **endereço** (com campos vazios, o erro mantém o resto) → revisão
+   com "Endereço do atendimento" e "Particular, R$ …, em casa" → "Consulta marcada!" com o endereço → na Agenda, o
+   atendimento com o endereço.
+3. **Endereço salvo:** marcar de novo em casa com o mesmo celular: aparece "Mesmo endereço da última visita".
+4. **Remarcar em casa:** Minhas consultas → Remarcar → "O endereço continua o mesmo?" → "Não, mudou" → novo endereço
+   no atendimento.
+5. **Bot:** no WhatsApp, Marcar consulta com esse profissional manda o link do portal (sem perguntar o endereço no
+   chat); Remarcar a consulta em casa também.
+6. **Turma:** Marcar exame → a turma com "Em grupo, horário fixo" → lista de dias (sem número de vagas) → marcar.
+   Com a turma cheia (marcados e reservas), o dia some.
+7. **Agenda de Exames:** enquanto alguém confirma a turma (reserva aberta), outro exame no mesmo horário continua
+   aparecendo no portal.
