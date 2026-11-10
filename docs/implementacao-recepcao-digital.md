@@ -879,6 +879,19 @@ coluna `slot_holds.home_visit_address` e função `portal_hold_group_slot` no ba
 7. **Agenda de Exames:** enquanto alguém confirma a turma (reserva aberta), outro exame no mesmo horário continua
    aparecendo no portal.
 
+#### 15.5.5 Exames repetidos na agenda de Exames (cliente, 10/nov/2026)
+
+Pergunta do cliente na validação: no staging, Espirometria e Exame com Arquivo apareciam em dobro na agenda de Exames.
+Causa: a migração do serviço com um dono (`20261230120000`) fez uma cópia do exame que estava em duas agendas (Exames e
+Dra. Ana Karina), e a do exame só na agenda de Exames (`20270101150000`) levou a cópia para Exames. Os pares tinham
+valor, duração e preparo iguais; as desativações foram feitas na tela (08/nov). Na produção aconteceria o mesmo.
+**Decisão do cliente: juntar.** Migração `20270110120000_juntar_exames_repetidos` (só dados): por clínica, os exames
+da Equipe com o mesmo nome e modo viram um só. Fica o ativo; empatados, o de mais atendimentos, depois o mais antigo.
+Ele mantém as próprias características e recebe os atendimentos (histórico e futuros), séries, links, lista de espera,
+links e reservas do portal, e os horários só do outro (desativados se o outro estava desativado); o outro é apagado.
+Teste `tests/db/juntar-exames-repetidos.test.ts`. Aplicada no banco local (10/nov, com o OK do cliente).
+Na produção, vai junto com as migrações do bloco multiprofissional e a `20270101150000`, depois delas.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),
