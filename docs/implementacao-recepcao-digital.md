@@ -574,6 +574,7 @@ Divisão técnica (como a F2), na branch `recepcao-f3`:
 | **F3b Bot leva ao portal** | Marcar consulta, Marcar retorno e Marcar exame mandam o link (acaba a marcação no chat); textos e jornada do bot (`botJourney.ts`) |
 | **F3c Minhas consultas** | P12 no portal (Remarcar com o mesmo médico e modalidade, Cancelar com confirmação, RD10 só no portal); Remarcar do bot e dos lembretes abre o portal; Cancelar segue no chat |
 | **F3d Links e Configurações › Portal** | Configurações › Portal (Administrador), "Copiar link para…" (`?de=`, grava `portal_place`), QR com cartaz A4, antecedência (RD10), "Mostrar no portal"; apelidos reservados (`retorno`, `exames`…) |
+| **D5 + F3e Domiciliar e turma no portal** | Desenho no canvas (endereço do domiciliar, escolha da turma), aprovação tela por tela, depois o código |
 | **Fechamento** | "Informações › Convênios" diz quem não atende particular (pendência da F1); `security-review`, `/code-review`, staging e roteiro de validação |
 
 Decisões do cliente pedidas antes do código (uma por vez): seção 15.1.
@@ -582,4 +583,4 @@ Decisões do cliente pedidas antes do código (uma por vez): seção 15.1.
 
 | # | Pergunta | Decisão |
 |---|---|---|
-| F3-1 | Atendimento domiciliar e em turma (o portal não marca) | A decidir |
+| F3-1 | Atendimento domiciliar e em turma (o portal não marca) | **Decidido (cliente, 09/nov): entram no portal** (endereço do domiciliar e turma). Telas novas: rodada no canvas (D5) e aprovação antes do código; nova parte **F3e** |
