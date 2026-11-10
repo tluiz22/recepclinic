@@ -12,7 +12,7 @@
 | 1 | Multiprofissional: especialidades (ME), convênios por profissional (MC), informações do bot por profissional (MI) e escolha do profissional no bot (MB) | [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md), seção 8 | No staging, a validar |
 | 2 | Serviços por profissional (MS: S2, S3, S1, S4) | [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md), fim da seção 10 | No staging, a validar |
 | 3 | Ajuste da Central que foi junto com o BaaS do Asaas (`9b22e00`) | [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), 13.10 | No staging e na produção, a validar |
-| 4 | Desbloqueio do portal pela recepção, na ficha do paciente (pedido do cliente na validação da F3, 10/nov) | [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md), 15.3.2 | **Pendente:** desenhar as opções e implementar com as correções dos achados, depois que a implementação da outra sessão subir para o staging |
+| 4 | Desbloqueio do portal pela recepção, na ficha do paciente (pedido do cliente na validação da F3, 10/nov) | [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md), 15.3.2 | **Pendente:** desenhar as opções e implementar com as correções dos achados (a F3e já está no staging desde 10/nov; vem depois dos roteiros 15.3.1 e 15.5.4) |
 
 Itens 1 e 2: conferir também, em clínica com **um profissional só** (a piloto do staging), que o bot e a Marcar ficaram
 iguais a antes.
