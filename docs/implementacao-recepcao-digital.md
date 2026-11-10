@@ -563,3 +563,23 @@ de cada uma travaria o portal das clínicas pequenas.
   no staging sem cookie. **Validado pelo cliente no iPhone (09/nov). F2 inteira validada.**
 - Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
   enviados primeiro com a resposta da Meta (`templateSummary.ts`).
+
+## 15. F3: plano em partes (09/nov/2026)
+
+Divisão técnica (como a F2), na branch `recepcao-f3`:
+
+| Parte | O que entrega |
+|---|---|
+| **F3a Link do bot no portal** | `agendar…/s/{token}`: abre o portal com o celular da conversa já comprovado (sem código), "Agendando pelo número ·· 4321" e "Usar outro número"; 30 min, uma marcação, revogado ao emitir outro; vencido/usado → P13 |
+| **F3b Bot leva ao portal** | Marcar consulta, Marcar retorno e Marcar exame mandam o link (acaba a marcação no chat); textos e jornada do bot (`botJourney.ts`) |
+| **F3c Minhas consultas** | P12 no portal (Remarcar com o mesmo médico e modalidade, Cancelar com confirmação, RD10 só no portal); Remarcar do bot e dos lembretes abre o portal; Cancelar segue no chat |
+| **F3d Links e Configurações › Portal** | Configurações › Portal (Administrador), "Copiar link para…" (`?de=`, grava `portal_place`), QR com cartaz A4, antecedência (RD10), "Mostrar no portal"; apelidos reservados (`retorno`, `exames`…) |
+| **Fechamento** | "Informações › Convênios" diz quem não atende particular (pendência da F1); `security-review`, `/code-review`, staging e roteiro de validação |
+
+Decisões do cliente pedidas antes do código (uma por vez): seção 15.1.
+
+### 15.1 Decisões da F3
+
+| # | Pergunta | Decisão |
+|---|---|---|
+| F3-1 | Atendimento domiciliar e em turma (o portal não marca) | A decidir |
