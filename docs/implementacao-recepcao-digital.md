@@ -113,7 +113,7 @@ Em cada etapa: unidade e banco; Playwright em 390 e 1280 px; `security-review` n
 | I10 | Como o Portal entra nos planos de venda | **Decidido (cliente, 08/nov): item próprio no Básico**, sem mudar o preço (Básico: Portal, Bot, Lembrete e Resumo do dia) |
 | I11 | Métricas › Retomar contato com o prazo do retorno da I9 | **Decidido (cliente, 08/nov): sim, igual ao bot, já na F1** (função `app.return_last_date` no banco, usada por `metrics_return_rights`) |
 
-A decidir na F3 (proposta, seção 17): se a antecedência da RD10 vale também para cancelar pelo WhatsApp.
+Decidido (cliente, 09/nov; proposta, seção 17): a antecedência da RD10 vale só no portal; cancelar pelo WhatsApp segue sem prazo.
 
 ## 7. F1 feita (08/nov/2026, branch `recepcao-f1`)
 

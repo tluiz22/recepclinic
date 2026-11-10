@@ -546,7 +546,7 @@ Planejamento aprovado pelo cliente em 08/nov; RD1 a RD14 respondidas no mesmo di
 | RD14 | Recepção restrita por profissional nas conversas; equipes de recepção | **Mesma restrição da agenda** (médicos liberados à pessoa, padrão todos; número geral: todas veem); sem equipes na 1ª versão. **Revista em 08/nov (rodada 3):** conversa sem profissional; toda a recepção vê todas as conversas; restrição por profissional só na Agenda |
 
 Em aberto para a reunião com a clínica: RD6 (se usam limitação de horário por convênio) e as perguntas do roteiro.
-A decidir na F3: se o prazo da RD10 vale também para cancelar pelo WhatsApp.
+Decidido (cliente, 09/nov): o prazo da RD10 vale **só no portal**; no WhatsApp o paciente cancela a qualquer hora, como hoje (saber tarde é melhor que a falta: a vaga é liberada e a lista de espera avisada).
 
 Fora do código: advogado (termo, política, menores), template de autenticação na Meta, conferência dos limites da Meta
 para vários números, preço do item "Portal" e "Vários números" no contrato.
