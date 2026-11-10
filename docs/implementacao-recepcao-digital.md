@@ -253,8 +253,9 @@ recepção, estados de erro, tela do Suporte com erro e correção).
    (buscar por um sintoma), médico (filtrar por um convênio), "Como será o atendimento?", dia e horário,
    "Continuar". Conferir o "Voltar" de cada tela (volta com o que foi escolhido) e o botão "Recepção".
 3. No computador, o mesmo caminho: resumo "Seu agendamento" ao lado, com "Trocar".
-4. Link do profissional: `agendar-teste.recepclinic.com.br/clinica-teste/{apelido}` (apelido em Configurações ›
-   Profissionais): sem outros médicos e sem "Trocar".
+4. Link do profissional: `agendar-teste.recepclinic.com.br/clinica-teste/{apelido}`. O apelido sai do nome (sem
+   acento, ex.: `dr-mateus`) e o painel só mostra o link na F3 (Configurações › Portal, "Copiar link"); até lá, o
+   Claude lista os do staging. Sem outros médicos e sem "Trocar".
 5. Sistema › Matriz: desligar o "Portal de agendamento" da clínica: o endereço mostra "Agendamento indisponível".
    Religar.
 6. `agendar-teste.recepclinic.com.br/admin` e um endereço inexistente: "Link não encontrado" (o painel não abre).
