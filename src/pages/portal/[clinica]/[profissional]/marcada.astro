@@ -76,7 +76,7 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
             </dl>
             {professional.exam && <PortalPreparation exam={professional.exam} title="Antes do exame" fileLabel="Baixar orientações completas (PDF)" />}
             <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-              <a href={calendar} download={`${words.file}.ics`} class={portalCta}>Adicionar à agenda do celular</a>
+              <a href={calendar} class={portalCta}>Adicionar à agenda do celular</a>
               {location?.address && (
                 <a href={mapsHref(location.address)} target="_blank" rel="noopener" class={portalSecondary}>
                   Ver no mapa

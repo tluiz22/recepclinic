@@ -60,11 +60,23 @@ function toNewPatient(value: unknown): NewPatientData | null {
 
 /** A reserva desta sessão (ativa, já marcada ou vencida); null = não é desta sessão ou não existe. */
 export async function loadHold(db: DbClient, clinicId: string, sessionId: string, holdId: string, now: Date = new Date()): Promise<PortalHold | null> {
+  return readHold(db, clinicId, sessionId, holdId, now);
+}
+
+/**
+ * A reserva pelo id, de qualquer sessão: só para o .ics da P10 ("Adicionar à agenda do celular"). No iPhone, o
+ * Calendário baixa o arquivo sem os cookies do Safari (validação de 09/nov/2026: "Não encontrado"); o id é aleatório
+ * (uuid), e quem chama só aceita a reserva já marcada.
+ */
+export async function loadHoldById(db: DbClient, clinicId: string, holdId: string, now: Date = new Date()): Promise<PortalHold | null> {
+  return readHold(db, clinicId, null, holdId, now);
+}
+
+async function readHold(db: DbClient, clinicId: string, sessionId: string | null, holdId: string, now: Date): Promise<PortalHold | null> {
   if (!/^[0-9a-f-]{36}$/.test(holdId)) return null;
-  const row = unwrap(
-    await db.from("slot_holds").select(HOLD_COLUMNS).eq("clinic_id", clinicId).eq("session_id", sessionId).eq("id", holdId).maybeSingle(),
-    "Reserva do horário",
-  );
+  let query = db.from("slot_holds").select(HOLD_COLUMNS).eq("clinic_id", clinicId).eq("id", holdId);
+  if (sessionId !== null) query = query.eq("session_id", sessionId);
+  const row = unwrap(await query.maybeSingle(), "Reserva do horário");
   if (!row) return null;
   const state = row.appointment_id ? "booked" : !row.released_at && new Date(row.expires_at) > now ? "active" : "gone";
   return {

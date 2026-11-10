@@ -2,7 +2,7 @@ import type { AstroCookies } from "astro";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { bookAppointment } from "../../src/lib/data/agenda/appointments";
-import { bookingBlock, confirmPortalBooking, findDuplicate, loadHold, phonePatients, setHoldPatient } from "../../src/lib/data/portal/booking";
+import { bookingBlock, confirmPortalBooking, findDuplicate, loadHold, loadHoldById, phonePatients, setHoldPatient } from "../../src/lib/data/portal/booking";
 import { ensureSession, holdSlot, readSession, sendCode, verifyCode, type PortalSession } from "../../src/lib/data/portal/identity";
 import { loadPortal, type PortalProfessional } from "../../src/lib/data/portal/portal";
 import { listOpenBirthdateChecks, resolveBirthdateCheck } from "../../src/lib/data/portalBirthdate";
@@ -109,6 +109,10 @@ describe("marcar pelo portal", () => {
     expect(await confirm(session, holdId)).toEqual({ status: "booked", appointmentId });
     const hold = await loadHold(service, fixture.clinicId, session.id, holdId);
     expect(hold).toMatchObject({ state: "booked", appointmentId });
+    // "Adicionar à agenda" (.ics): no iPhone o Calendário baixa sem o cookie da sessão; vale pelo id da reserva.
+    expect(await loadHold(service, fixture.clinicId, "00000000-0000-4000-8000-000000000000", holdId)).toBeNull();
+    expect(await loadHoldById(service, fixture.clinicId, holdId)).toMatchObject({ state: "booked", appointmentId });
+    expect(await loadHoldById(service, fixture.clinicId, "nao-e-um-id")).toBeNull();
     const { count } = await db.from("appointments").select("id", { count: "exact", head: true }).eq("patient_id", appointment!.patient_id);
     expect(count).toBe(1);
     // Conta no limite de pacientes novos do telefone, como o bot.
