@@ -476,6 +476,9 @@ begin
   insert into public.slot_holds (clinic_id, agenda_id, service_id, location_id, starts_at, ends_at, session_id, phone, expires_at)
     values (c_a, ag_ped, s_consulta, l_office, (monday + 2 + time '09:00') at time zone tz, (monday + 2 + time '09:30') at time zone tz,
             ps_a, '+5584988880001', now() - interval '1 minute');
+  -- F3a: um link do bot (consulta) já vencido, na mesma sessão.
+  insert into public.portal_links (clinic_id, phone, purpose, expires_at)
+    values (c_a, '+5584988880001', 'book', now() - interval '1 minute');
   -- F2c: a confirmação do primeiro atendimento já saiu pela fila e uma data de nascimento a conferir (João).
   insert into public.notice_queue (clinic_id, appointment_id, kind, status, claimed_at, finished_at)
     values (c_a, ap_first, 'confirmation', 'sent', now(), now());

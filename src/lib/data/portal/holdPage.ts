@@ -3,6 +3,7 @@ import { capitalize } from "../../vocabulary";
 import { formatInstant } from "../../clinicTime";
 import { chosenModality, flowParams, modalityOptions, PRIVATE_MODALITY, portalHref, professionalSteps, readFlow, stepPosition, type ModalityOption, type PortalFlow, type PortalStep } from "../../portal";
 import type { BlockText } from "../../portalBooking";
+import { slotChoiceValue } from "../agenda/publicBooking";
 import { loadHold, type BlockReason, type PortalHold } from "./booking";
 import { readSession, type PortalSession } from "./identity";
 import { openPortalPage, professionalOf, singleProfessional, type PortalPage } from "./page";
@@ -35,6 +36,10 @@ export type HoldPage = {
   /** Plano escolhido na P5 (null = particular). */
   planId: string | null;
   entry: "clinic_link" | "professional_link";
+  /** Sessão aberta pelo link do bot (F3a): a P8 mostra o celular e "Usar outro número". */
+  viaBotLink: boolean;
+  /** A P7 com o mesmo horário ("Usar outro número" posta "trocar" nela, que solta a reserva e pede o celular). */
+  phoneHref: string;
 };
 
 export async function openHoldPage(Astro: AstroGlobal): Promise<HoldPage> {
@@ -78,8 +83,10 @@ export async function openHoldPage(Astro: AstroGlobal): Promise<HoldPage> {
     when: hold ? capitalize(formatInstant(hold.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "",
     href: (screen, extra = {}) => portalHref(`${base}/${slug}/${screen}`, { ...keep, reserva: hold?.id ?? holdId, ...extra }),
     timesHref: (release = false) => portalHref(`${base}/${slug}/horarios`, { ...keep, soltar: release ? "1" : null }),
-    step: (s) => stepPosition(professionalSteps(flow, options.length > 1), s),
+    step: (s) => stepPosition(professionalSteps(flow, options.length > 1, !!session?.linkId), s),
     planId,
+    viaBotLink: !!session?.linkId,
+    phoneHref: portalHref(`${base}/${slug}/continuar`, { ...keep, start: hold ? slotChoiceValue(hold) : null }),
     // Pela clínica (lista, especialidade ou a clínica de um profissional só) ou pelo link do profissional.
     entry: flow.from || (page.kind === "open" && singleProfessional(page.portal)) ? "clinic_link" : "professional_link",
   };

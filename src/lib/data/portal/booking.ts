@@ -9,6 +9,7 @@ import { findContactByPhone, listContactPatients, registerPatient, type Contact 
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent, type BotLimitHit } from "../whatsapp/botLimits";
 import { dispatchNotice, enqueueNotice } from "../whatsapp/noticeQueue";
 import type { ClinicSender } from "../whatsapp/send";
+import { markPortalLinkUsed } from "./links";
 import type { PortalProfessional } from "./portal";
 
 // Marcar a consulta pelo portal (F2c; especificação P8 a P10; proposta, cenários 1 a 3, 8, 9, 15 e 17). O portal pega
@@ -371,11 +372,15 @@ export async function afterBooking(
   now: Date,
 ): Promise<void> {
   try {
+    // Sessão aberta pelo link do bot (F3a): a origem é o WhatsApp e o link fica gasto (uma marcação por link).
+    const linkId = await holdLinkId(db, clinicId, input.hold.id);
+    const entry = linkId ? "whatsapp" : input.entry;
+    if (linkId) await markPortalLinkUsed(db, clinicId, linkId, now);
     unwrap(
       await db
         .from("appointments")
         // Particular: sem convênio no atendimento (o banco copia o do cadastro ao gravar).
-        .update(input.insurancePlanId === undefined ? { portal_entry: input.entry } : { portal_entry: input.entry, insurance_plan_id: input.insurancePlanId })
+        .update(input.insurancePlanId === undefined ? { portal_entry: entry } : { portal_entry: entry, insurance_plan_id: input.insurancePlanId })
         .eq("clinic_id", clinicId)
         .eq("id", input.appointmentId),
       "Atendimento",
@@ -407,6 +412,15 @@ export async function afterBooking(
   } catch (error) {
     logError("portal: depois da marcação", error, { clinica: clinicId, atendimento: input.appointmentId });
   }
+}
+
+/** O link do bot da sessão que fez a reserva (null = entrada direta, com o código). */
+async function holdLinkId(db: DbClient, clinicId: string, holdId: string): Promise<string | null> {
+  const row = unwrap(
+    await db.from("slot_holds").select("portal_sessions ( link_id )").eq("clinic_id", clinicId).eq("id", holdId).maybeSingle(),
+    "Reserva do horário",
+  ) as { portal_sessions: { link_id: string | null } | null } | null;
+  return row?.portal_sessions?.link_id ?? null;
 }
 
 /** Resumo do atendimento marcado (P10 e .ics), só pela reserva desta sessão. */

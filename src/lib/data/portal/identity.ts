@@ -22,7 +22,8 @@ import {
 // clínica, limites de uso com bloqueio progressivo e a reserva do horário. Tudo com a credencial limitada à clínica;
 // as contas de limite e a reserva ficam em funções do banco (migração 20270104120000).
 
-export type PortalSession = { id: string; phone: string | null; verified: boolean; expiresAt: Date };
+/** `linkId`: a sessão abriu pelo link do bot (F3a), com o celular da conversa comprovado. */
+export type PortalSession = { id: string; phone: string | null; verified: boolean; expiresAt: Date; linkId: string | null };
 
 /** Sessão do cookie, se é desta clínica e não venceu. */
 export async function readSession(db: DbClient, clinicId: string, cookies: AstroCookies, now: Date = new Date()): Promise<PortalSession | null> {
@@ -31,14 +32,14 @@ export async function readSession(db: DbClient, clinicId: string, cookies: Astro
   const row = unwrap(
     await db
       .from("portal_sessions")
-      .select("id, phone, phone_verified_at, expires_at")
+      .select("id, phone, phone_verified_at, expires_at, link_id")
       .eq("clinic_id", clinicId)
       .eq("token_hash", hashToken(token))
       .gt("expires_at", now.toISOString())
       .maybeSingle(),
     "Sessão do portal",
   );
-  return row ? { id: row.id, phone: row.phone, verified: !!row.phone_verified_at, expiresAt: new Date(row.expires_at) } : null;
+  return row ? { id: row.id, phone: row.phone, verified: !!row.phone_verified_at, expiresAt: new Date(row.expires_at), linkId: row.link_id } : null;
 }
 
 /** A sessão do cookie, ou uma nova (cookie HttpOnly, SameSite=Lax; Secure fora do computador local). */
@@ -59,7 +60,7 @@ export async function ensureSession(
     .single();
   if (error) throw error;
   cookies.set(SESSION_COOKIE, token, { path: "/", httpOnly: true, sameSite: "lax", secure, expires: expiresAt });
-  return { id: data.id, phone: null, verified: false, expiresAt };
+  return { id: data.id, phone: null, verified: false, expiresAt, linkId: null };
 }
 
 /** Conta um uso; null = pode seguir; senão, bloqueado até a data. */
@@ -178,10 +179,10 @@ export async function verifyCode(db: DbClient, clinicId: string, session: Portal
   return { status: row?.outcome === "exhausted" ? "exhausted" : "expired" };
 }
 
-/** "Trocar número": o celular comprovado e o código pendente deixam de valer nesta sessão. */
+/** "Trocar número" / "Usar outro número": o celular comprovado, o link do bot e o código pendente deixam de valer nesta sessão. */
 export async function forgetPhone(db: DbClient, clinicId: string, sessionId: string, now: Date = new Date()): Promise<void> {
   unwrap(await db.from("portal_codes").update({ used_at: now.toISOString() }).eq("session_id", sessionId).is("used_at", null), "Código do portal");
-  unwrap(await db.from("portal_sessions").update({ phone: null, phone_verified_at: null }).eq("id", sessionId), "Sessão do portal");
+  unwrap(await db.from("portal_sessions").update({ phone: null, phone_verified_at: null, link_id: null }).eq("id", sessionId), "Sessão do portal");
   await releaseHold(db, clinicId, sessionId);
 }
 

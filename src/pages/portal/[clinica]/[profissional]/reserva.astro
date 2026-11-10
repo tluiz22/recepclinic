@@ -4,6 +4,7 @@
 // direto à P8b. Escolhido, confere a idade limite do médico, consulta já marcada com ele e os limites do telefone (os
 // do bot) e segue para a revisão. O contador da reserva fica visível; o Voltar solta a reserva (horários do dia).
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
+import PortalLinkPhone from "../../../../components/portal/PortalLinkPhone.astro";
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
@@ -72,6 +73,7 @@ const card =
         <div class="flex min-w-0 flex-col gap-[18px]">
           <PortalStepBar back={view.timesHref(true)} step={view.step("patient")} />
           <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("reserva")} />
+          {view.viaBotLink && <PortalLinkPhone phone={hold.phone} action={view.phoneHref} />}
           <h1 class={portalTitle}>Para quem é {theVisit(professional)}?</h1>
           {problem && (
             <div class={`${portalNotice} flex flex-col gap-1 border-red-200 bg-red-50 text-red-800`} role="alert">

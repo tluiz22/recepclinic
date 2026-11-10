@@ -1731,6 +1731,62 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"portal_links": {
+                  Row: {
+                    "appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string | null,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"id": string,"join_waitlist": boolean,"origin_appointment_id": string | null,"phone": string,"professional_id": string | null,"purpose": string,"return_deadline_waived": boolean,"revoked_at": string | null,"service_id": string | null,"used_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"created_at"?: string,"expires_at": string,"funnel_session_id"?: string | null,"id"?: string,"join_waitlist"?: boolean,"origin_appointment_id"?: string | null,"phone": string,"professional_id"?: string | null,"purpose": string,"return_deadline_waived"?: boolean,"revoked_at"?: string | null,"service_id"?: string | null,"used_at"?: string | null
+                  }
+                  Update: {
+                    "appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"created_at"?: string,"expires_at"?: string,"funnel_session_id"?: string | null,"id"?: string,"join_waitlist"?: boolean,"origin_appointment_id"?: string | null,"phone"?: string,"professional_id"?: string | null,"purpose"?: string,"return_deadline_waived"?: boolean,"revoked_at"?: string | null,"service_id"?: string | null,"used_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_links_clinic_id_appointment_id_fkey"
+      columns: ["clinic_id","appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "portal_links_clinic_id_canceled_appointment_id_fkey"
+      columns: ["clinic_id","canceled_appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "portal_links_clinic_id_contact_id_fkey"
+      columns: ["clinic_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "portal_links_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "portal_links_clinic_id_origin_appointment_id_fkey"
+      columns: ["clinic_id","origin_appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "portal_links_clinic_id_professional_id_fkey"
+      columns: ["clinic_id","professional_id"]
+isOneToOne: false
+      referencedRelation: "professionals"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "portal_links_clinic_id_service_id_fkey"
+      columns: ["clinic_id","service_id"]
+isOneToOne: false
+      referencedRelation: "services"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"portal_rate_hits": {
                   Row: {
                     "action": string,"at": string,"clinic_id": string,"id": number,"key": string
@@ -1753,14 +1809,14 @@ isOneToOne: false
                   ]
                 },"portal_sessions": {
                   Row: {
-                    "clinic_id": string,"created_at": string,"expires_at": string,"id": string,"ip_prefix": string | null,"phone": string | null,"phone_verified_at": string | null,"token_hash": string
+                    "clinic_id": string,"created_at": string,"expires_at": string,"id": string,"ip_prefix": string | null,"link_id": string | null,"phone": string | null,"phone_verified_at": string | null,"token_hash": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"created_at"?: string,"expires_at": string,"id"?: string,"ip_prefix"?: string | null,"phone"?: string | null,"phone_verified_at"?: string | null,"token_hash": string
+                    "clinic_id": string,"created_at"?: string,"expires_at": string,"id"?: string,"ip_prefix"?: string | null,"link_id"?: string | null,"phone"?: string | null,"phone_verified_at"?: string | null,"token_hash": string
                   }
                   Update: {
-                    "clinic_id"?: string,"created_at"?: string,"expires_at"?: string,"id"?: string,"ip_prefix"?: string | null,"phone"?: string | null,"phone_verified_at"?: string | null,"token_hash"?: string
+                    "clinic_id"?: string,"created_at"?: string,"expires_at"?: string,"id"?: string,"ip_prefix"?: string | null,"link_id"?: string | null,"phone"?: string | null,"phone_verified_at"?: string | null,"token_hash"?: string
                   }
                   Relationships: [
                     {
@@ -1768,6 +1824,12 @@ isOneToOne: false
       columns: ["clinic_id"]
 isOneToOne: false
       referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "portal_sessions_link_id_fkey"
+      columns: ["link_id"]
+isOneToOne: false
+      referencedRelation: "portal_links"
       referencedColumns: ["id"]
     }
                   ]
@@ -2822,6 +2884,9 @@ isOneToOne: false
                            },
 "resolve_portal_clinic":
 { Args: { "p_slug": string }; Returns: string
+                           },
+"resolve_portal_link_clinic":
+{ Args: { "p_link_id": string }; Returns: string
                            },
 "resolve_service_clinic":
 { Args: { "p_service_id": string }; Returns: string

@@ -13,6 +13,7 @@ import {
   portalBase,
   portalHref,
   portalPublicUrl,
+  portalLinkUrl,
   portalRewrite,
   portalSteps,
   priceLine,
@@ -63,6 +64,11 @@ describe("endereço do portal", () => {
     expect(portalPublicUrl(new URL("https://teste.recepclinic.com.br/admin"), "vs")).toBe("https://agendar-teste.recepclinic.com.br/vs");
     expect(portalPublicUrl(new URL("https://app.recepclinic.com.br/admin"), "vs")).toBe("https://agendar.recepclinic.com.br/vs");
     expect(portalPublicUrl(new URL("http://localhost:4321/admin"), "vs")).toBe("http://localhost:4321/portal/vs");
+    // Link do bot (F3a): sem a clínica no endereço.
+    expect(portalLinkUrl("https://app.recepclinic.com.br", "abc")).toBe("https://agendar.recepclinic.com.br/s/abc");
+    expect(portalLinkUrl("https://teste.recepclinic.com.br", "abc")).toBe("https://agendar-teste.recepclinic.com.br/s/abc");
+    expect(portalLinkUrl("http://localhost:4321", "abc")).toBe("http://localhost:4321/portal/s/abc");
+    expect(portalSteps({ specialty: false, professional: false, modality: true, phone: false })).toEqual(["modality", "time", "patient", "review"]);
   });
 
   it("sugere o apelido pelo nome da clínica", () => {

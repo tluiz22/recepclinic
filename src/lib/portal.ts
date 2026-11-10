@@ -44,10 +44,18 @@ export function portalHref(path: string, params: Record<string, string | null | 
  * (app.), ao agendar.; no computador local, ao /portal do próprio servidor.
  */
 export function portalPublicUrl(appUrl: URL, clinicSlug: string): string {
-  const match = appUrl.hostname.match(/^(teste|app)\.(.+)$/);
-  if (match) return `https://${match[1] === "teste" ? "agendar-teste" : "agendar"}.${match[2]}/${clinicSlug}`;
-  return `${appUrl.origin}${PORTAL_PREFIX}/${clinicSlug}`;
+  return `${portalPublicRoot(appUrl)}/${clinicSlug}`;
 }
+
+/** Começo do endereço público do portal: "https://agendar.…", "https://agendar-teste.…" ou "{local}/portal". */
+export function portalPublicRoot(appUrl: URL): string {
+  const match = appUrl.hostname.match(/^(teste|app)\.(.+)$/);
+  if (match) return `https://${match[1] === "teste" ? "agendar-teste" : "agendar"}.${match[2]}`;
+  return `${appUrl.origin}${PORTAL_PREFIX}`;
+}
+
+/** Link do bot (F3a): "https://agendar.…/s/{token}", com o token em 22 caracteres (`shortId`). */
+export const portalLinkUrl = (appBaseUrl: string, token: string): string => `${portalPublicRoot(new URL(appBaseUrl))}/s/${token}`;
 
 /** Sugestão de apelido pelo nome da clínica, como o dos profissionais: "Clínica Vila Serena" → "clinica-vila-serena". */
 export function suggestPortalSlug(name: string): string {
@@ -85,13 +93,14 @@ export type PortalStep = "specialty" | "professional" | "modality" | "time" | "p
  * nenhum dos dois. Particular ou convênio some com uma opção só. Depois do horário, o celular, quem será atendido e a
  * revisão (F2c).
  */
-export function portalSteps(flags: { specialty: boolean; professional: boolean; modality: boolean }): PortalStep[] {
+export function portalSteps(flags: { specialty: boolean; professional: boolean; modality: boolean; phone?: boolean }): PortalStep[] {
   return [
     ...(flags.specialty ? (["specialty"] as const) : []),
     ...(flags.professional ? (["professional"] as const) : []),
     ...(flags.modality ? (["modality"] as const) : []),
     "time",
-    "phone",
+    // Pelo link do bot (F3a), o celular já vem comprovado da conversa: sem o passo.
+    ...(flags.phone === false ? [] : (["phone"] as const)),
     "patient",
     "review",
   ];
@@ -268,8 +277,8 @@ export function changeProfessionalHref(base: string, flow: PortalFlow): string |
 }
 
 /** Passos do caminho pelo médico: especialidade e lista só se o paciente passou por elas. */
-export const professionalSteps = (flow: PortalFlow, modality: boolean) =>
-  portalSteps({ specialty: flow.from !== null && flow.specialty !== null, professional: flow.from === "medicos" || flow.from === "exames", modality });
+export const professionalSteps = (flow: PortalFlow, modality: boolean, viaBotLink = false) =>
+  portalSteps({ specialty: flow.from !== null && flow.specialty !== null, professional: flow.from === "medicos" || flow.from === "exames", modality, phone: !viaBotLink });
 
 /** "Médico" ou "Exame" (F2d: o exame passa pelas mesmas telas da consulta). */
 export const whoLabel = (p: { exam?: unknown }) => (p.exam ? "Exame" : "Médico");

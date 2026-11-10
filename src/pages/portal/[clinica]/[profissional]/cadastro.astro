@@ -7,6 +7,7 @@
 // diferente, "Sim (manter a cadastrada)", "É, mas a data certa é a digitada" (a recepção confere; o portal não muda o
 // cadastro) ou "Não, é outra pessoa". O cadastro só é gravado na marcação (P9).
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
+import PortalLinkPhone from "../../../../components/portal/PortalLinkPhone.astro";
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
@@ -130,6 +131,7 @@ const label = "text-base font-semibold text-gray-700";
         <div class="flex min-w-0 flex-col gap-[18px]">
           <PortalStepBar back={back} step={view.step("patient")} />
           <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("cadastro")} />
+          {view.viaBotLink && <PortalLinkPhone phone={hold.phone} action={view.phoneHref} />}
           {pageProblem && (
             <div class={`${portalNotice} flex flex-col gap-1 border-red-200 bg-red-50 text-red-800`} role="alert">
               <p>{pageProblem}</p>

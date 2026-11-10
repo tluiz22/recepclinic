@@ -48,10 +48,12 @@ let slotOptions: PatientSlot[] = [];
 let unavailableOpen = false;
 let blockedUntil: Date | null = null;
 let sessionId: string | null = null;
+let viaBotLink = false;
 if (page.kind === "open" && professional && consultation && modality) {
   // Limite de consultas de horários (F2b; proposta 7.2): por IP e, com sessão, por sessão.
   const session = await readSession(page.db, page.portal.clinicId, Astro.cookies);
   sessionId = session?.id ?? null;
+  viaBotLink = !!session?.linkId;
   const ip = ipPrefix((() => {
     try {
       return Astro.clientAddress;
@@ -90,7 +92,7 @@ const dayHref = (date: string, start: string) => portalHref(timesPath, { ...keep
 const back = professional ? (options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : backFromProfessional(base, professional.slug, flow, single)) : base;
 const changeDoctor = changeProfessionalHref(base, flow);
 const changeModality = options.length > 1 ? portalHref(modalityPath, { ...flowParams(flow), mod: modality?.value }) : null;
-const step = stepPosition(professionalSteps(flow, options.length > 1), "time");
+const step = stepPosition(professionalSteps(flow, options.length > 1, viaBotLink), "time");
 const taken = params.get("erro") === "horario";
 const unavailableNote = !strip?.unavailable
   ? null
