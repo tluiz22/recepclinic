@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createPortalCodeSender, portalCodeTemplateState } from "./codeSender";
 
 const config = { phoneNumberId: "1380810041790028", wabaId: "1608311683725577", token: "tok-recepclinic" };
@@ -57,5 +57,45 @@ describe("código do portal pelo número do RecepClinic (seção 14)", () => {
     expect(await portalCodeTemplateState(config, none.fetcher)).toEqual({ status: "missing", rejectionReason: null });
     const down = fakeFetch(() => ({ status: 400, body: { error: { code: 100, message: "Unsupported get request" } } }));
     expect(await portalCodeTemplateState(config, down.fetcher)).toMatchObject({ status: "error" });
+  });
+});
+
+describe("entrega do código no webhook (seção 14)", () => {
+  it("a falha de entrega do número do RecepClinic vai para Sistema › Erros com o motivo da Meta; não procura clínica", async () => {
+    const { processWebhook } = await import("./webhook");
+    const { setErrorSink } = await import("../../log");
+    const records: { scope: string; message: string }[] = [];
+    setErrorSink(async (record) => void records.push(record));
+    const silence = vi.spyOn(console, "error").mockImplementation(() => {});
+    const resolveClinic = vi.fn(async () => null);
+    try {
+      const payload = {
+        entry: [
+          {
+            changes: [
+              {
+                field: "messages",
+                value: {
+                  metadata: { phone_number_id: config.phoneNumberId },
+                  statuses: [
+                    { id: "wamid.1", status: "sent" },
+                    { id: "wamid.1", status: "failed", errors: [{ code: 131042, title: "Business eligibility payment issue" }] },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      };
+      const summary = await processWebhook(payload, { resolveClinic, clientFor: () => ({}) as never, codePhoneNumberId: config.phoneNumberId });
+      expect(summary).toMatchObject({ statuses: 2, unknownNumbers: 0, errors: 0 });
+      expect(resolveClinic).not.toHaveBeenCalled();
+      expect(records).toHaveLength(1);
+      expect(records[0].scope).toBe("código do portal não entregue");
+      expect(records[0].message).toContain("131042 Business eligibility payment issue");
+    } finally {
+      setErrorSink(null);
+      silence.mockRestore();
+    }
   });
 });
