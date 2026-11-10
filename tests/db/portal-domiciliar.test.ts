@@ -4,7 +4,7 @@ import type { DbClient } from "../../src/lib/data/clients";
 import { confirmPortalBooking, lastHomeAddress, loadHold, setHoldAddress, setHoldPatient } from "../../src/lib/data/portal/booking";
 import { ensureSession, holdSlot, readSession, sendCode, verifyCode, type PortalSession } from "../../src/lib/data/portal/identity";
 import { findMyAppointment, rescheduleMine, rescheduleScope, rescheduleSlots } from "../../src/lib/data/portal/myAppointments";
-import { loadPortal, locationsAt, placesOf, professionalDates, professionalSlots, type PortalProfessional } from "../../src/lib/data/portal/portal";
+import { loadPortal, locationsAt, placesOf, priceAt, professionalDates, professionalSlots, type PortalProfessional } from "../../src/lib/data/portal/portal";
 import { addDays, todayIn } from "../../src/lib/clinicTime";
 import { adminClient, clinicServiceClient } from "./helpers";
 import { setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -83,6 +83,10 @@ describe("atendimento em casa pelo portal", () => {
     ]);
     expect(placesOf(dra)).toEqual(["clinic", "home_visit"]);
     expect(dra.consultations[0].prices.home_visit).toBe(45000);
+    // O valor do local escolhido (revisão e tela final, cliente 10/nov), não o menor.
+    expect(priceAt(dra.consultations[0], fixture.ids.home)).toBe(45000);
+    expect(priceAt(dra.consultations[0], fixture.ids.office)).toBe(30000);
+    expect(priceAt(dra.consultations[0], null)).toBe(30000);
     // Os dias em casa são só os do horário em casa (o consultório não entra).
     const home = await professionalDates(service, fixture.clinicId, dra, dra.consultations[0].serviceId, TZ, { count: 3, scope: { locations: locationsAt(dra, "home_visit") } });
     expect(home.length).toBeGreaterThan(0);

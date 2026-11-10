@@ -7,7 +7,7 @@ import { slotChoiceValue } from "../agenda/publicBooking";
 import { loadHold, type BlockReason, type PortalHold } from "./booking";
 import { readSession, type PortalSession } from "./identity";
 import { openPortalPage, professionalOf, singleProfessional, type PortalPage } from "./page";
-import type { PortalConsultation, PortalLocation, PortalProfessional } from "./portal";
+import { priceAt, type PortalConsultation, type PortalLocation, type PortalProfessional } from "./portal";
 
 // Telas depois da reserva (F2c: P8, P8b, P9, P10): a clínica, o profissional do endereço, o caminho de antes (no
 // endereço, para o Voltar) e a reserva desta sessão. A reserva de outro profissional (endereço trocado à mão) não vale.
@@ -85,7 +85,7 @@ export async function openHoldPage(Astro: AstroGlobal): Promise<HoldPage> {
     consultation,
     location,
     atHome: location?.type === "home_visit",
-    modalityText: modalityLabelAt(modality, location && consultation ? consultation.prices[location.type] : null, location?.type === "home_visit"),
+    modalityText: modalityLabelAt(modality, location && consultation ? priceAt(consultation, location.id) : null, location?.type === "home_visit"),
     when: hold ? capitalize(formatInstant(hold.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "",
     href: (screen, extra = {}) => portalHref(`${base}/${slug}/${screen}`, { ...keep, reserva: hold?.id ?? holdId, ...extra }),
     timesHref: (release = false) => portalHref(`${base}/${slug}/horarios`, { ...keep, soltar: release ? "1" : null }),

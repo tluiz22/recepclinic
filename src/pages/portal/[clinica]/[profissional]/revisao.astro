@@ -15,6 +15,7 @@ import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { portalCta, portalLink, portalNotice, portalTitle } from "../../../../components/portal/styles";
 import { confirmPortalBooking, phonePatients, type PortalPatient } from "../../../../lib/data/portal/booking";
 import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
+import { priceAt } from "../../../../lib/data/portal/portal";
 import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
 import { bookingKind, changeProfessionalHref, flowParams, formatPrice, helpForOf, mapsHref, portalHref, PRIVATE_MODALITY, visitWords, whoLabel } from "../../../../lib/portal";
 import { birthdateText, blockMessage, shortDate } from "../../../../lib/portalBooking";
@@ -75,7 +76,7 @@ const patientBirth = existing?.birthdate ?? hold?.newPatient?.birthdate ?? null;
 const changePatient = existing ? view.href("reserva") : view.href("cadastro");
 const changeAddress = view.href("endereco");
 // O valor do lugar do atendimento (F3e-1: em casa pode custar outro valor).
-const priceCents = (location ? consultation?.prices[location.type] : null) ?? consultation?.priceCents ?? null;
+const priceCents = consultation ? priceAt(consultation, location?.id) : null;
 const birthNotice = Astro.url.searchParams.get("aviso") === "data" && hold?.informedBirthdate;
 const row = "flex items-start justify-between gap-3 border-b border-gray-100 py-3 last:border-b-0";
 const dt = "text-[15px] text-gray-600";

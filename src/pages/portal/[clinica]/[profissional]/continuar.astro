@@ -14,7 +14,7 @@ import { HOLD_LIMIT_TEXT } from "../../../../lib/portalIdentity";
 import { formatInstant } from "../../../../lib/clinicTime";
 import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
 import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page";
-import { groupSessions, isSlotStillFree } from "../../../../lib/data/portal/portal";
+import { groupSessions, isSlotStillFree, priceAt } from "../../../../lib/data/portal/portal";
 import { holdGroupSlot, holdSlot, readSession } from "../../../../lib/data/portal/identity";
 import { holdBlocked, runIdentityStep, type IdentityState } from "../../../../lib/data/portal/identityStep";
 import { changeProfessionalHref, chosenModality, flowParams, helpForOf, modalityLabelAt, modalityOptions, portalHref, professionalSteps, readFlow, stepPosition, whoLabel } from "../../../../lib/portal";
@@ -102,7 +102,7 @@ const when = choice ? `${capitalize(formatInstant(choice.start, timeZone, "EEE")
 const back = portalHref(timesPath, { ...keep, date: params.get("date") });
 const chosenLocation = professional?.locations.find((l) => l.id === choice?.locationId) ?? null;
 const atHome = chosenLocation?.type === "home_visit";
-const modalityText = modalityLabelAt(modality, chosenLocation && consultation ? consultation.prices[chosenLocation.type] : null, atHome);
+const modalityText = modalityLabelAt(modality, chosenLocation && consultation ? priceAt(consultation, chosenLocation.id) : null, atHome);
 const step = stepPosition(professionalSteps(flow, options.length > 1, false, atHome), "phone");
 const changeDoctor = changeProfessionalHref(base, flow);
 const link = "inline-flex min-h-11 items-center px-1 text-base font-bold text-clinic-ink underline";

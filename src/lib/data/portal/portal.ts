@@ -39,7 +39,13 @@ export type PortalConsultation = {
   priceCents: number | null;
   /** O menor valor no consultório e em casa (F3e-1: a escolha "No consultório R$ 350 / Em casa R$ 550"). */
   prices: Partial<Record<LocationType, number | null>>;
+  /** O valor em cada local (a revisão e a tela final mostram o do local escolhido, cliente 10/nov). */
+  pricesByLocation: Record<string, number | null>;
 };
+
+/** O valor no local do horário escolhido; sem o local, o menor (o "a partir de"). */
+export const priceAt = (consultation: Pick<PortalConsultation, "priceCents" | "pricesByLocation">, locationId: string | null | undefined) =>
+  (locationId ? consultation.pricesByLocation[locationId] : null) ?? consultation.priceCents;
 
 export type PortalSpecialty = { id: string; name: string; terms: string[] };
 
@@ -85,6 +91,8 @@ export type PortalExam = {
   priceVaries: boolean;
   /** Locais da clínica onde o exame tem horário. */
   locationIds: string[];
+  /** O valor em cada local. */
+  pricesByLocation: Record<string, number | null>;
   /** Preparo, na formatação do WhatsApp; null = sem preparo. */
   preparation: string | null;
   /** Tem o arquivo com as orientações (o link público /preparo/…). */
@@ -195,6 +203,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
         durationMinutes: service.durationMinutes,
         priceCents: minAt(() => true) ?? service.priceCents,
         prices: byType,
+        pricesByLocation: Object.fromEntries(ids.map((id) => [id, servicePriceAt(service, id) ?? service.priceCents])),
       });
     }
     if (!consultations.length) continue;
@@ -257,6 +266,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
         priceCents: prices.length ? Math.min(...prices) : service.priceCents,
         priceVaries: new Set(prices).size > 1,
         locationIds,
+        pricesByLocation: Object.fromEntries(locationIds.map((id) => [id, servicePriceAt(service, id) ?? service.priceCents])),
         preparation: service.preparationInstructions?.trim() || null,
         hasPreparationFile: !!service.preparationFile,
         isGroup: service.schedulingMode === "group",
@@ -314,7 +324,7 @@ export function examProfessional(portal: Pick<PortalClinic, "examBase">, exam: P
     privatePriceVaries: exam.priceVaries,
     // Só os locais deste exame (o cartão e os horários não mostram onde ele não é feito).
     locations: portal.examBase.locations.filter((l) => exam.locationIds.includes(l.id)),
-    consultations: [{ serviceId: exam.serviceId, name: exam.name, durationMinutes: exam.durationMinutes, priceCents: exam.priceCents, prices: { clinic: exam.priceCents } }],
+    consultations: [{ serviceId: exam.serviceId, name: exam.name, durationMinutes: exam.durationMinutes, priceCents: exam.priceCents, prices: { clinic: exam.priceCents }, pricesByLocation: exam.pricesByLocation }],
     exam,
   };
 }
