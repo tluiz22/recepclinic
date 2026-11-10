@@ -557,5 +557,9 @@ de cada uma travaria o portal das clínicas pequenas.
   webhook manda a falha de entrega desse número para Sistema › Erros ("código do portal não entregue", com o motivo da
   Meta; `cc45117`) e o app foi inscrito na conta `1608311683725577` com o desvio para o webhook do **staging**.
   **Atenção na produção:** inscrever de novo **sem** o desvio (senão os avisos vão para o staging).
+- **Validação da F2 (09/nov): roteiros 9.1 a 13.1 validados pelo cliente**, menos "Adicionar à agenda do celular" no
+  iPhone ("Não encontrado": o Calendário baixa o .ics sem o cookie da sessão). Corrigido (`802d700`): o .ics vale pelo
+  id da reserva marcada (aleatório) até o fim do atendimento, "inline" no iPhone, sem o atributo `download`; conferido
+  no staging sem cookie. Falta o cliente refazer no iPhone.
 - Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
   enviados primeiro com a resposta da Meta (`templateSummary.ts`).
