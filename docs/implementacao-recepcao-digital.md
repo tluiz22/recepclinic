@@ -587,6 +587,7 @@ Decisões do cliente pedidas antes do código (uma por vez): seção 15.1.
 | F3-2 | "Encaixe ou antecipar" sem consulta marcada | **Decidido (cliente, 09/nov): o link abre o portal, que marca e põe na lista de espera** (como hoje); aviso "Se vagar um horário mais cedo, avisamos no WhatsApp" nos horários e na revisão |
 | F3-3 | Links da página antiga `/agendar/…` (Remarcar do lembrete, remarcação após cancelamento pela clínica, pedido não concluído) | **Decidido (cliente, 09/nov): todos abrem o portal.** Os já enviados valem até vencer (no máximo 2 dias); depois a página antiga sai. Retorno cancelado pela clínica segue sem o limite do prazo |
 | F3-4 | O "Remarcar" do WhatsApp (bot e lembrete), que abre o portal, respeita a antecedência da RD10? | **Decidido (cliente, 10/nov): não**; o link do bot remarca a qualquer hora (como o cancelar pelo WhatsApp). O prazo vale só para quem entra direto em Minhas consultas |
+| F3-9 | Quando a F3f (fim da marcação pelo chat) vai ao ar? | **Decidido (cliente, 10/nov): depois da F3e validada no staging, do portal ligado na clínica piloto em produção e das 3 primeiras marcações reais pelo portal sem problema** (sai o prazo de ~2 semanas; seção 15.4) |
 
 ### 15.2 F3a feita (09/nov/2026, branch `recepcao-f3`)
 
@@ -684,8 +685,10 @@ tela) → **F3e** (código) → **F3f** (limpeza) → produção.
 
 **F3f, limpeza do caminho antigo** (branch curta própria, sem migração):
 
-- **Condições:** F3e validada; toda clínica com bot com o endereço do portal
-  (staging e produção); portal na produção por ~2 semanas como reserva.
+- **Condições (revistas pelo cliente, 10/nov, F3-9):** F3e validada no staging; produção com o portal ligado na clínica
+  piloto (a única em produção, poucos agendamentos); as **3 primeiras marcações reais pelo portal sem problema**. Sai o
+  prazo de ~2 semanas (com uma clínica e poucos agendamentos, dava pouca informação). A F3f não tem migração: se der
+  errado, desfaz o commit e o chat volta. Toda clínica com bot precisa do endereço do portal antes (staging e produção).
 - **Sai:** a marcação no chat (`bot/booking.ts`: serviço, profissional/"Primeiro horário", local, endereço, convênio,
   para quem, paciente, idade, link `/agendar`; a lista do retorno no chat), o Remarcar com `/agendar` e a confirmação do
   endereço do domiciliar (`manage.ts`), a página `/agendar/{link}` e `api/agendar` (depois de vencerem os últimos links,
