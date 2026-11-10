@@ -28,6 +28,9 @@
 > **Duas sessões (cliente, 10/nov):** **Validação** (pasta do repositório, `main`): roteiro 15.3.1 da F3 e o que falta
 > em [`frente-validacao.md`](frente-validacao.md); ajustes direto na `main`. **Implementação** (worktree
 > `../recepclinic-impl`, branch curta da `main`): D5 → F3e → F3f (seção 15.4). Antes de juntar a branch, trazer a `main`.
+> **Validação da F3 (10/nov):** item 1 em andamento. Ajuste `c9cb2b5` (limite do portal conta só consultas marcadas;
+> migração `20270107130000` no staging). Pedido: desbloqueio do portal na ficha do paciente (desenhar opções). Registro na
+> seção 15.3.2 do plano.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >
