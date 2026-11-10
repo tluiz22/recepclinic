@@ -7,7 +7,8 @@ import { recordOutboundMessage, type SendOutcome } from "./messages";
 import type { ClinicSender } from "./send";
 import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, paramCount } from "./templates";
 import { logError } from "../../log";
-import { bookingPath } from "../../publicId";
+import { bookingPath, shortId } from "../../publicId";
+import { portalLinkUrl } from "../../portal";
 
 // Avisos ao paciente (F6.2), como no piloto: marcado, remarcado e cancelado,
 // pela Agenda do painel e pela página /agendar. Sempre por template (podem
@@ -152,14 +153,23 @@ export type ClinicCancellationNotice = { appointmentId: string; status: NoticeSt
 export async function notifyClinicCancellations(
   db: DbClient,
   clinicId: string,
-  canceled: { appointmentId: string; rebookingLinkId: string | null }[],
+  canceled: { appointmentId: string; rebookingLinkId: string | null; portalLinkId?: string | null }[],
   sender: ClinicSender | null,
   now: Date = new Date(),
 ): Promise<ClinicCancellationNotice[]> {
   const result: ClinicCancellationNotice[] = [];
-  for (const { appointmentId, rebookingLinkId } of canceled) {
-    const status = rebookingLinkId
-      ? await sendAppointmentNotice(db, clinicId, appointmentId, "clinic_cancellation", sender, now, `${sender?.baseUrl ?? ""}${bookingPath(rebookingLinkId)}`)
+  for (const { appointmentId, rebookingLinkId, portalLinkId } of canceled) {
+    // O link do portal (F3-3) quando há; senão, o de /agendar.
+    // Sem quem envie (WhatsApp não carregou), o aviso fica "não conectado" igual, mas com o mesmo modelo.
+    const url = portalLinkId
+      ? sender
+        ? portalLinkUrl(sender.baseUrl, shortId(portalLinkId))
+        : ""
+      : rebookingLinkId
+        ? `${sender?.baseUrl ?? ""}${bookingPath(rebookingLinkId)}`
+        : null;
+    const status = url !== null
+      ? await sendAppointmentNotice(db, clinicId, appointmentId, "clinic_cancellation", sender, now, url)
       : await sendAppointmentNotice(db, clinicId, appointmentId, "cancellation", sender, now);
     result.push({ appointmentId, status });
   }

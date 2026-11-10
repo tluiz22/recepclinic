@@ -32,6 +32,14 @@ export function portalBase(clinicSlug: string, hostname: string): string {
   return isPortalHost(hostname) ? `/${clinicSlug}` : `${PORTAL_PREFIX}/${clinicSlug}`;
 }
 
+/** "Minhas consultas" (F3c, P12) nas ações do início da clínica e do profissional. */
+export const MY_APPOINTMENTS = (base: string) => ({
+  href: `${base}/minhas-consultas`,
+  label: "Minhas consultas",
+  detail: "Remarcar ou cancelar o que já está marcado",
+  icon: "mine" as const,
+});
+
 /** Link com os parâmetros preenchidos (os vazios ficam de fora). */
 export function portalHref(path: string, params: Record<string, string | null | undefined> = {}): string {
   const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => !!entry[1]));
@@ -44,10 +52,24 @@ export function portalHref(path: string, params: Record<string, string | null | 
  * (app.), ao agendar.; no computador local, ao /portal do próprio servidor.
  */
 export function portalPublicUrl(appUrl: URL, clinicSlug: string): string {
-  const match = appUrl.hostname.match(/^(teste|app)\.(.+)$/);
-  if (match) return `https://${match[1] === "teste" ? "agendar-teste" : "agendar"}.${match[2]}/${clinicSlug}`;
-  return `${appUrl.origin}${PORTAL_PREFIX}/${clinicSlug}`;
+  return `${portalPublicRoot(appUrl)}/${clinicSlug}`;
 }
+
+/** Começo do endereço público do portal: "https://agendar.…", "https://agendar-teste.…" ou "{local}/portal". */
+export function portalPublicRoot(appUrl: URL): string {
+  const match = appUrl.hostname.match(/^(teste|app)\.(.+)$/);
+  if (match) return `https://${match[1] === "teste" ? "agendar-teste" : "agendar"}.${match[2]}`;
+  return `${appUrl.origin}${PORTAL_PREFIX}`;
+}
+
+/** Link público do profissional (PP): "https://agendar.…/{clínica}/{profissional}". */
+export const professionalPublicUrl = (appUrl: URL, clinicSlug: string, professionalSlug: string) => `${portalPublicUrl(appUrl, clinicSlug)}/${professionalSlug}`;
+
+/** O link marcado com o lugar onde vai ser posto (F3d; R7): "…?de=instagram". */
+export const linkForPlace = (url: string, place: PortalPlaceParam) => `${url}?de=${place}`;
+
+/** Link do bot (F3a): "https://agendar.…/s/{token}", com o token em 22 caracteres (`shortId`). */
+export const portalLinkUrl = (appBaseUrl: string, token: string): string => `${portalPublicRoot(new URL(appBaseUrl))}/s/${token}`;
 
 /** Sugestão de apelido pelo nome da clínica, como o dos profissionais: "Clínica Vila Serena" → "clinica-vila-serena". */
 export function suggestPortalSlug(name: string): string {
@@ -85,13 +107,14 @@ export type PortalStep = "specialty" | "professional" | "modality" | "time" | "p
  * nenhum dos dois. Particular ou convênio some com uma opção só. Depois do horário, o celular, quem será atendido e a
  * revisão (F2c).
  */
-export function portalSteps(flags: { specialty: boolean; professional: boolean; modality: boolean }): PortalStep[] {
+export function portalSteps(flags: { specialty: boolean; professional: boolean; modality: boolean; phone?: boolean }): PortalStep[] {
   return [
     ...(flags.specialty ? (["specialty"] as const) : []),
     ...(flags.professional ? (["professional"] as const) : []),
     ...(flags.modality ? (["modality"] as const) : []),
     "time",
-    "phone",
+    // Pelo link do bot (F3a), o celular já vem comprovado da conversa: sem o passo.
+    ...(flags.phone === false ? [] : (["phone"] as const)),
     "patient",
     "review",
   ];
@@ -227,7 +250,28 @@ export const doctorsCount = (n: number) => `${n} ${n === 1 ? "médico" : "médic
  * ou do link do profissional (nenhum dos dois). `esp`: especialidade escolhida ("todos" = a lista inteira, pela
  * busca do nome); `conv`: o filtro "Atende meu convênio" da lista; `nome`: o nome digitado na busca da lista.
  */
-export type PortalFlow = { from: "medicos" | "especialidade" | "exames" | null; specialty: string | null; plan: string | null; name: string | null };
+/**
+ * Onde o link foi posto (F3d; R7 "Copiar link para…"): o endereço leva `?de=instagram` (ou `origem=`, nas telas
+ * seguintes) e a marcação grava `appointments.portal_place`. Sem marca: "origem não informada".
+ */
+export const PORTAL_PLACES = { instagram: "instagram", site: "site", google: "google", mensagem: "message", cartaz: "poster", outro: "other" } as const;
+export type PortalPlaceParam = keyof typeof PORTAL_PLACES;
+export const PORTAL_PLACE_LABELS: Record<PortalPlaceParam, string> = {
+  instagram: "Instagram",
+  site: "Site",
+  google: "Google",
+  mensagem: "Mensagem",
+  cartaz: "Cartaz",
+  outro: "Outro lugar",
+};
+
+/** A origem do endereço (`origem`, ou o `de` do link copiado). */
+export function readPlace(params: URLSearchParams): PortalPlaceParam | null {
+  const value = params.get("origem") ?? params.get("de");
+  return value && Object.hasOwn(PORTAL_PLACES, value) ? (value as PortalPlaceParam) : null;
+}
+
+export type PortalFlow = { from: "medicos" | "especialidade" | "exames" | null; specialty: string | null; plan: string | null; name: string | null; place: PortalPlaceParam | null };
 
 const ID = /^[a-z0-9-]{1,64}$/i;
 const idParam = (value: string | null) => (value && ID.test(value) ? value : null);
@@ -239,37 +283,39 @@ export function readFlow(params: URLSearchParams): PortalFlow {
     specialty: idParam(params.get("esp")),
     plan: idParam(params.get("conv")),
     name: params.get("nome")?.trim().slice(0, 60) || null,
+    place: readPlace(params),
   };
 }
 
-export const flowParams = (flow: PortalFlow) => ({ de: flow.from, esp: flow.specialty, conv: flow.plan, nome: flow.name });
+export const flowParams = (flow: PortalFlow) => ({ de: flow.from, esp: flow.specialty, conv: flow.plan, nome: flow.name, origem: flow.place });
 
 /** A lista de médicos com a especialidade, o filtro e o nome de antes. */
-export const doctorsHref = (base: string, flow: Pick<PortalFlow, "specialty" | "plan" | "name">) =>
-  portalHref(`${base}/medicos`, { esp: flow.specialty, conv: flow.plan, nome: flow.name });
+export const doctorsHref = (base: string, flow: Pick<PortalFlow, "specialty" | "plan" | "name"> & { place?: PortalPlaceParam | null }) =>
+  portalHref(`${base}/medicos`, { esp: flow.specialty, conv: flow.plan, nome: flow.name, origem: flow.place });
 
 /**
  * Voltar da primeira tela do médico (P5, ou P6 quando a P5 é pulada): a lista de médicos, a especialidade ou o
  * início do profissional (na clínica de um só profissional, o início da clínica é o dele).
  */
 export function backFromProfessional(base: string, professionalSlug: string, flow: PortalFlow, singleProfessional: boolean): string {
+  const origem = { origem: flow.place };
   if (flow.from === "medicos") return doctorsHref(base, flow);
-  if (flow.from === "especialidade") return `${base}/especialidade`;
-  if (flow.from === "exames") return `${base}/exames`;
-  return singleProfessional ? base : `${base}/${professionalSlug}`;
+  if (flow.from === "especialidade") return portalHref(`${base}/especialidade`, origem);
+  if (flow.from === "exames") return portalHref(`${base}/exames`, origem);
+  return portalHref(singleProfessional ? base : `${base}/${professionalSlug}`, origem);
 }
 
 /** "Trocar" o médico (ou o exame, F2d): só pela clínica (o link do profissional não mostra outros médicos). */
 export function changeProfessionalHref(base: string, flow: PortalFlow): string | null {
   if (flow.from === "medicos") return doctorsHref(base, flow);
-  if (flow.from === "especialidade") return `${base}/especialidade`;
-  if (flow.from === "exames") return `${base}/exames`;
+  if (flow.from === "especialidade") return portalHref(`${base}/especialidade`, { origem: flow.place });
+  if (flow.from === "exames") return portalHref(`${base}/exames`, { origem: flow.place });
   return null;
 }
 
 /** Passos do caminho pelo médico: especialidade e lista só se o paciente passou por elas. */
-export const professionalSteps = (flow: PortalFlow, modality: boolean) =>
-  portalSteps({ specialty: flow.from !== null && flow.specialty !== null, professional: flow.from === "medicos" || flow.from === "exames", modality });
+export const professionalSteps = (flow: PortalFlow, modality: boolean, viaBotLink = false) =>
+  portalSteps({ specialty: flow.from !== null && flow.specialty !== null, professional: flow.from === "medicos" || flow.from === "exames", modality, phone: !viaBotLink });
 
 /** "Médico" ou "Exame" (F2d: o exame passa pelas mesmas telas da consulta). */
 export const whoLabel = (p: { exam?: unknown }) => (p.exam ? "Exame" : "Médico");

@@ -21,6 +21,7 @@ import { askHandoffSubject, end, go, repeatYesNo, say, sayInvalidBirthdate, send
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu } from "./menus";
 import * as t from "./texts";
+import { offerPortalReschedule } from "./portalLink";
 import { logError } from "../../../log";
 
 // Bot II (F6.4), com as regras do piloto (Fases 3b, 16, 17, 19, 25):
@@ -501,6 +502,8 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
       return showMenu(b);
     }
   }
+  // Uma jornada só (F3c; I7): os dias e horários no portal; domiciliar e turma seguem aqui (portalLink.ts).
+  if (await offerPortalReschedule(b, appointment)) return;
   // Domiciliar: sempre reconfirma o endereço (piloto, Fase 16).
   if (appointment.locationType === "home_visit" && homeAddress === undefined) {
     const current = appointment.homeVisitAddress;

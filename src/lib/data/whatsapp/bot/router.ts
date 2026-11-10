@@ -44,7 +44,7 @@ import {
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
-import { handleNotCompleted, NOT_COMPLETED, promptExpiredLinks, promptPendingCancel } from "./notCompleted";
+import { handleNotCompleted, NOT_COMPLETED, promptExpiredLinks, promptExpiredPortalLinks, promptPendingCancel } from "./notCompleted";
 import { askReceptionReason, firstMessageAnswer, handleKnowledgeReply, handleReceptionReason, knowledgeHookFor, pendingReasonOf, performTakeover, REASON_KEY } from "./knowledge/respond";
 import { logError } from "../../../log";
 
@@ -361,6 +361,7 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
   // Pedido não concluído (PN2): links do bot que venceram sem uso.
   try {
     await promptExpiredLinks(db, clinicId, sender, now);
+    await promptExpiredPortalLinks(db, clinicId, sender, now);
   } catch (error) {
     logError("bot: pedido não concluído", error, { clinica: clinicId });
   }

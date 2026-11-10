@@ -142,6 +142,9 @@ const PATH_RULES: PathRule[] = [
   // Exames: na Agenda (F4.5), o serviço de exame só aparece com o item, e o
   // banco recusa marcar sem ele (o cadastro do serviço é travado desde a F4.3).
   // Configurações (F4.4b): convênios, contatos do resumo do dia e hora do lembrete.
+  // Configurações › Portal (F3d): com o item "Portal de agendamento".
+  { prefix: "/admin/configuracoes/portal", feature: "portal" },
+  { prefix: "/api/admin/configuracoes/portal", feature: "portal" },
   { prefix: "/admin/configuracoes/convenios", feature: "insurance" },
   { prefix: "/api/admin/configuracoes/convenios", feature: "insurance" },
   { prefix: "/admin/configuracoes/contatos", feature: "team_summary" },

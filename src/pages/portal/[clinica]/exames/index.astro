@@ -8,7 +8,7 @@ import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { openPortalPage } from "../../../../lib/data/portal/page";
 import { examProfessional, nextFreeSlots } from "../../../../lib/data/portal/portal";
-import { formatPrice, portalHref, portalSteps, receptionWhatsappHref, stepPosition } from "../../../../lib/portal";
+import { formatPrice, portalHref, portalSteps, readPlace, receptionWhatsappHref, stepPosition } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 if (page.kind === "not_found") Astro.response.status = 404;
@@ -67,7 +67,7 @@ const waHref = waPhone ? receptionWhatsappHref(waPhone, "Olá! Quero marcar um e
           {exams.map((exam) => (
             <li data-name={exam.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")}>
               <a
-                href={portalHref(`${base}/${exam.slug}/atendimento`, { de: "exames" })}
+                href={portalHref(`${base}/${exam.slug}/atendimento`, { de: "exames", origem: readPlace(Astro.url.searchParams) })}
                 class="flex min-h-16 w-full items-center gap-3.5 rounded-xl border-[1.5px] border-gray-300 bg-white px-4 py-3 text-left text-gray-900 no-underline hover:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink"
               >
                 <span class="flex min-w-0 flex-1 flex-col gap-0.5">

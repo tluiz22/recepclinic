@@ -6,6 +6,8 @@
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalWaitlistNotice from "../../../../components/portal/PortalWaitlistNotice.astro";
+import { sessionJoinsWaitlist } from "../../../../lib/data/portal/links";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { portalCta, portalLink, portalNotice, portalTitle } from "../../../../components/portal/styles";
@@ -37,9 +39,11 @@ const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortalez
 let hold: PortalHold | null = null;
 let card: ReturnCard | null = null;
 let problem: string | null = null;
+let waitlist = false;
 if (page.kind === "open") {
   const { db, portal } = page;
   const session = await readSession(db, portal.clinicId, Astro.cookies);
+  waitlist = await sessionJoinsWaitlist(db, portal.clinicId, session);
   hold = session ? await loadHold(db, portal.clinicId, session.id, holdId) : null;
   if (hold && !hold.returnOriginId) hold = null;
   if (hold?.state === "booked") return Astro.redirect(doneHref);
@@ -94,6 +98,7 @@ const dt = "text-[15px] text-gray-600";
         <PortalStepBar back={timesHref(true)} step={{ current: 3, total: 3 }} />
         <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={here} />
         <h1 class={portalTitle}>Confira o retorno</h1>
+        {waitlist && <PortalWaitlistNotice />}
         {problem && (
           <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">
             {problem}

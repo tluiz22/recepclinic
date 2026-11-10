@@ -7,6 +7,8 @@
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalWaitlistNotice from "../../../../components/portal/PortalWaitlistNotice.astro";
+import { sessionJoinsWaitlist } from "../../../../lib/data/portal/links";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalPreparation from "../../../../components/portal/PortalPreparation.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
@@ -21,6 +23,7 @@ import { todayIn } from "../../../../lib/clinicTime";
 
 const view = await openHoldPage(Astro);
 const { page, professional, hold, session, timeZone, modality, when, consultation, location } = view;
+const waitlist = page.kind === "open" ? await sessionJoinsWaitlist(page.db, page.portal.clinicId, session) : false;
 if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
 if (page.kind === "open" && professional && hold?.state === "active" && !hold.patientId && !hold.newPatient) return Astro.redirect(view.href("reserva"));
 
@@ -43,6 +46,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
       timeZone,
       insurancePlanId: view.planId,
       entry: view.entry,
+      place: view.flow.place,
       sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null),
     });
     if (outcome.status === "booked") return Astro.redirect(view.href("marcada"));
@@ -86,6 +90,7 @@ const dt = "text-[15px] text-gray-600";
         <PortalStepBar back={changePatient} step={view.step("review")} />
         <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("revisao")} />
         <h1 class={portalTitle}>Confira e confirme</h1>
+        {waitlist && <PortalWaitlistNotice />}
         {problem && (
           <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">
             {problem}

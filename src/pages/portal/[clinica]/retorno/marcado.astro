@@ -11,7 +11,7 @@ import { bookedSummary, loadHold, type BookedSummary, type PortalHold } from "..
 import { readSession } from "../../../../lib/data/portal/identity";
 import { openPortalPage } from "../../../../lib/data/portal/page";
 import type { PortalProfessional } from "../../../../lib/data/portal/portal";
-import { mapsHref, ofName, portalHref, receptionWhatsappHref } from "../../../../lib/portal";
+import { mapsHref, ofName, portalHref } from "../../../../lib/portal";
 import { phoneEnding } from "../../../../lib/portalIdentity";
 
 const page = await openPortalPage(Astro);
@@ -34,7 +34,6 @@ if (page.kind !== "unavailable" && !booked) Astro.response.status = 404;
 const location = professional && booked ? (professional.locations.find((l) => l.id === booked!.locationId) ?? null) : null;
 const when = booked ? capitalize(formatInstant(booked.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "";
 const canceled = booked?.status === "canceled";
-const phone = page.kind === "open" ? page.portal.brand.whatsappPhone : null;
 const calendar = professional && hold ? portalHref(`${base}/${professional.slug}/calendario`, { reserva: hold.id }) : "";
 const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0";
 ---
@@ -89,13 +88,9 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
             </div>
             <p class="text-[17px] text-gray-700">
               Precisa remarcar ou cancelar?{" "}
-              {phone ? (
-                <a href={receptionWhatsappHref(phone, "Olá! Marquei um retorno pelo portal e preciso de ajuda.")} target="_blank" rel="noopener" class="font-bold text-clinic-ink underline">
-                  Fale com a recepção no WhatsApp
-                </a>
-              ) : (
-                "Fale com a recepção."
-              )}
+              <a href={`${base}/minhas-consultas`} class="font-bold text-clinic-ink underline">
+                Minhas consultas
+              </a>
             </p>
           </>
         )}

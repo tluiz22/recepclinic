@@ -21,7 +21,9 @@ import { formatPhoneBR } from "../../../lib/phone";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { clinicLabel } from "../../../lib/data/whatsapp/templates";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
-import { bookingPath } from "../../../lib/publicId";
+import { bookingPath, shortId } from "../../../lib/publicId";
+import { portalLinkUrl } from "../../../lib/portal";
+import { listValidPortalRebookingLinks } from "../../../lib/data/portal/links";
 
 const clinic = Astro.locals.clinic!;
 const vocabulary = vocabularyFor(clinic.clinicProfile);
@@ -31,7 +33,11 @@ const backTo = safeReturnPath(back, "/admin/agenda");
 const db = createUserClient(Astro.request, Astro.cookies);
 const appointments = (await listAgendaAppointmentsByIds(db, clinic.clinicId, ids)).filter((a) => a.status === "canceled");
 const settings = await getClinicSettings(db, clinic.clinicId);
-const links = await listValidRebookingLinks(db, clinic.clinicId, appointments.map((a) => a.id));
+const [links, portalLinks] = await Promise.all([
+  listValidRebookingLinks(db, clinic.clinicId, appointments.map((a) => a.id)),
+  // Link do portal (F3-3), quando o portal cobre o atendimento.
+  listValidPortalRebookingLinks(db, clinic.clinicId, appointments.map((a) => a.id)),
+]);
 // Por que o aviso automático não saiu: a última tentativa registrada (nenhuma = WhatsApp não conectado).
 const attempts = appointments.length
   ? (
@@ -52,6 +58,8 @@ const REASONS: Record<string, string> = {
 };
 const reasonFor = (id: string) => REASONS[lastStatus.get(id) ?? ""] ?? "o WhatsApp da clínica não está conectado";
 const rebookingFor = (appointmentId: string) => {
+  const portal = portalLinks.get(appointmentId);
+  if (portal) return { url: portalLinkUrl(Astro.url.origin, shortId(portal.id)), expiresAt: portal.expiresAt };
   const link = links.get(appointmentId);
   return link ? { url: new URL(bookingPath(link.id), Astro.url.origin).toString(), expiresAt: link.expiresAt } : null;
 };

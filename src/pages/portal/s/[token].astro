@@ -1,0 +1,56 @@
+---
+// Link do bot (F3a; proposta 3.4; especificação P1 e P13): agendar.recepclinic.com.br/s/{token}. Válido, abre uma
+// sessão do portal com o celular da conversa já comprovado (sem código) e leva ao passo do escopo (profissional
+// escolhido na conversa, retorno, exame). Vencido ou trocado por outro: "Este link não vale mais" (410); já marcou:
+// "Este link já foi usado" (410, sem nenhum dado da consulta); inexistente: "Link não encontrado" (404). Nada no
+// endereço diz de quem é o link.
+import PortalLayout from "../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../components/portal/PortalNotice.astro";
+import { portalBase } from "../../../lib/portal";
+import { ipPrefix } from "../../../lib/portalIdentity";
+import { parsePublicId } from "../../../lib/publicId";
+import { createClinicServiceClient } from "../../../lib/data/clinicService";
+import { unwrap } from "../../../lib/data/errors";
+import { resolveClinicByPortalLink } from "../../../lib/data/platform";
+import { getPublicClinicBrand, type PublicClinicBrand } from "../../../lib/data/config/brand";
+import { getPortalLink, logPortalLinkStep, openLinkSession, portalLinkState, portalLinkTarget, type PortalLinkState } from "../../../lib/data/portal/links";
+import { loadPortal } from "../../../lib/data/portal/portal";
+import { clientIpOf } from "../../../lib/data/portal/identityStep";
+
+let kind: "not_found" | "unavailable" | Exclude<PortalLinkState, "valid"> = "not_found";
+let brand: PublicClinicBrand | null = null;
+let home: string | null = null;
+
+const linkId = parsePublicId(Astro.params.token);
+const clinicId = linkId ? await resolveClinicByPortalLink(linkId) : null;
+if (clinicId && linkId) {
+  const db = createClinicServiceClient(clinicId);
+  const link = await getPortalLink(db, clinicId, linkId);
+  const clinic = unwrap(await db.from("clinics").select("portal_slug").eq("id", clinicId).maybeSingle(), "Clínica") as { portal_slug: string | null } | null;
+  const slug = clinic?.portal_slug ?? null;
+  const portal = link && slug ? await loadPortal(db, clinicId, slug) : null;
+  if (link && portal?.status === "open") {
+    const base = portalBase(portal.slug, Astro.url.hostname);
+    brand = portal.brand;
+    home = base;
+    const state = portalLinkState(link);
+    if (state === "valid") {
+      await openLinkSession(db, clinicId, link, Astro.cookies, { ip: ipPrefix(clientIpOf(Astro)), secure: Astro.url.protocol === "https:" });
+      await logPortalLinkStep(db, clinicId, link, "page_opened");
+      return Astro.redirect(portalLinkTarget(link, portal, base));
+    }
+    if (state === "expired") await logPortalLinkStep(db, clinicId, link, "link_expired");
+    kind = state;
+  } else if (link) {
+    // Portal desligado, clínica suspensa ou sem o endereço do portal (o Suporte define): a clínica no WhatsApp.
+    kind = "unavailable";
+    brand = portal?.status === "unavailable" ? portal.brand : await getPublicClinicBrand(db, clinicId);
+  }
+}
+Astro.response.status = kind === "not_found" ? 404 : kind === "unavailable" ? 200 : 410;
+const titles = { not_found: "Link não encontrado", unavailable: "Agendamento indisponível", expired: "Este link não vale mais", used: "Este link já foi usado" };
+---
+
+<PortalLayout title={titles[kind]} brand={brand}>
+  <PortalNotice kind={kind} brand={brand} home={home} />
+</PortalLayout>

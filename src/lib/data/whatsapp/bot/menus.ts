@@ -179,7 +179,7 @@ export async function handleInfo(b: Bot, selection: Selection): Promise<void> {
         b,
         "bot_info_insurance",
         b.clinic.insurancePlans !== null && b.clinic.professionalName
-          ? t.insuranceInfoText(b.clinic.professionalName, b.clinic.insurancePlans, b.clinic.insuranceInfo)
+          ? t.insuranceInfoText(b.clinic.professionalName, b.clinic.insurancePlans, b.clinic.insuranceInfo, b.clinic.acceptsPrivate)
           : b.clinic.insuranceInfo!,
       );
       break;

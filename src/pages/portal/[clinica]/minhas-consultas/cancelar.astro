@@ -1,0 +1,70 @@
+---
+// Cancelar (F3c; P12 "Tem certeza? A vaga será liberada."; RD10 só no portal). Confirma com o atendimento; "Sim,
+// cancelar" cancela pelo canal do portal (uma vez só) e manda o aviso do cancelamento pelo WhatsApp; "Não, manter" volta
+// à lista. Dentro da antecedência, a lista já mostra só "Falar com a recepção".
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import { portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
+import { openChangePage } from "../../../../lib/data/portal/changePage";
+import { cancelMine, whatOf, whenOf } from "../../../../lib/data/portal/myAppointments";
+import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
+import { portalHref } from "../../../../lib/portal";
+
+const view = await openChangePage(Astro, "cancelar");
+if (view.kind === "redirect") return view.response;
+
+let problem: string | null = null;
+let when = "";
+let what = "";
+if (view.kind === "open") {
+  const { page, item } = view;
+  const { db, portal } = page;
+  if (Astro.request.method === "POST") {
+    const outcome = await cancelMine(db, portal.clinicId, { item, leadHours: view.leadHours, sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null) });
+    if (outcome.status === "done") return Astro.redirect(portalHref(view.listHref, { aviso: "cancelada" }));
+    if (outcome.status === "lead") return Astro.redirect(portalHref(view.listHref, { aviso: "prazo" }));
+    if (outcome.status === "gone") return Astro.redirect(portalHref(view.listHref, { aviso: "mudou" }));
+    problem = "Não conseguimos cancelar agora. Toque em “Sim, cancelar” de novo ou fale com a recepção.";
+  }
+  when = whenOf(item.start, portal.timeZone);
+  what = whatOf(item);
+}
+const page = view.page;
+// Como o botão principal, em vermelho (a ação desfaz a marcação).
+const danger =
+  "flex min-h-[58px] w-full items-center justify-center rounded-xl bg-red-700 px-6 text-[19px] font-bold text-white hover:bg-red-800 disabled:opacity-45 sm:w-auto sm:min-w-[220px]";
+const here = view.kind === "open" ? portalHref(`${view.listHref}/cancelar`, { a: view.item.id }) : "";
+---
+
+<PortalLayout
+  title={view.kind === "open" ? "Cancelar" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {
+    view.kind === "open" && (
+      <div class="flex max-w-[620px] flex-col gap-[18px]">
+        <PortalStepBar back={view.listHref} />
+        <h1 class={portalTitle}>Tem certeza?</h1>
+        <p class="text-[17px] text-gray-700">A vaga será liberada para outra pessoa.</p>
+        {problem && <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">{problem}</p>}
+        <div class="flex flex-col gap-0.5 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-3.5 lg:px-[18px]">
+          <b class="text-[19px]">{view.item.patientName}</b>
+          <span class="text-base text-gray-700">{what}</span>
+          <span class="text-[17px] font-semibold">{when}</span>
+          <span class="text-base text-gray-700">{view.item.locationName}</span>
+        </div>
+        <form method="POST" action={here} class="flex flex-col gap-2.5 sm:flex-row">
+          <button type="submit" class={danger} data-sending-label="Cancelando…">
+            Sim, cancelar
+          </button>
+          <a href={view.listHref} class={portalSecondary}>Não, manter</a>
+        </form>
+      </div>
+    )
+  }
+</PortalLayout>

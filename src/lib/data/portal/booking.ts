@@ -9,6 +9,8 @@ import { findContactByPhone, listContactPatients, registerPatient, type Contact 
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent, type BotLimitHit } from "../whatsapp/botLimits";
 import { dispatchNotice, enqueueNotice } from "../whatsapp/noticeQueue";
 import type { ClinicSender } from "../whatsapp/send";
+import { afterLinkBooking, getPortalLink, linkSpentByBooking } from "./links";
+import { PORTAL_PLACES, type PortalPlaceParam } from "../../portal";
 import type { PortalProfessional } from "./portal";
 
 // Marcar a consulta pelo portal (F2c; especificação P8 a P10; proposta, cenários 1 a 3, 8, 9, 15 e 17). O portal pega
@@ -253,6 +255,8 @@ export async function confirmPortalBooking(
     /** Plano escolhido na P5 (null = particular). */
     insurancePlanId: string | null;
     entry: "whatsapp" | "clinic_link" | "professional_link";
+    /** Onde o link foi posto (F3d, `?de=instagram`); null = origem não informada. */
+    place?: PortalPlaceParam | null;
     sender: ClinicSender | null;
   },
   now: Date = new Date(),
@@ -332,7 +336,7 @@ export async function confirmPortalBooking(
     .eq("id", hold.id);
   if (done.error) logError("portal: reserva sem o atendimento", done.error, { clinica: clinicId, reserva: hold.id });
 
-  await afterBooking(db, clinicId, { appointmentId, hold, insurancePlanId: input.insurancePlanId, entry: input.entry }, now);
+  await afterBooking(db, clinicId, { appointmentId, hold, insurancePlanId: input.insurancePlanId, entry: input.entry, place: input.place ?? null }, now);
   await enqueueNotice(db, clinicId, appointmentId, "confirmation", now).catch((error) => logError("portal: confirmação fora da fila", error, { clinica: clinicId }));
   // Sem quem envia agora (falha ao carregar o WhatsApp da clínica): a linha fica pendente e a rotina manda.
   if (input.sender) await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
@@ -367,15 +371,26 @@ async function registerNew(db: DbClient, clinicId: string, phone: string, data: 
 export async function afterBooking(
   db: DbClient,
   clinicId: string,
-  input: { appointmentId: string; hold: PortalHold; insurancePlanId?: string | null; entry: "whatsapp" | "clinic_link" | "professional_link" },
+  input: { appointmentId: string; hold: PortalHold; insurancePlanId?: string | null; entry: "whatsapp" | "clinic_link" | "professional_link"; place?: PortalPlaceParam | null },
   now: Date,
 ): Promise<void> {
   try {
+    // Sessão aberta pelo link do bot (F3a): a origem é o WhatsApp. O link de marcar ainda não usado fica gasto (uma
+    // marcação por link: o funil fecha e o encaixe entra na lista uma vez só); o de remarcar não é gasto.
+    const linkId = await holdLinkId(db, clinicId, input.hold.id);
+    const link = linkId ? await getPortalLink(db, clinicId, linkId) : null;
+    const entry = link ? "whatsapp" : input.entry;
+    if (link && linkSpentByBooking(link)) await afterLinkBooking(db, clinicId, link.id, input.appointmentId, now);
     unwrap(
       await db
         .from("appointments")
         // Particular: sem convênio no atendimento (o banco copia o do cadastro ao gravar).
-        .update(input.insurancePlanId === undefined ? { portal_entry: input.entry } : { portal_entry: input.entry, insurance_plan_id: input.insurancePlanId })
+        .update({
+          portal_entry: entry,
+          // O lugar do link (F3d) só na entrada pelos links da clínica e do profissional.
+          portal_place: entry !== "whatsapp" && input.place ? PORTAL_PLACES[input.place] : null,
+          ...(input.insurancePlanId === undefined ? {} : { insurance_plan_id: input.insurancePlanId }),
+        })
         .eq("clinic_id", clinicId)
         .eq("id", input.appointmentId),
       "Atendimento",
@@ -407,6 +422,15 @@ export async function afterBooking(
   } catch (error) {
     logError("portal: depois da marcação", error, { clinica: clinicId, atendimento: input.appointmentId });
   }
+}
+
+/** O link do bot da sessão que fez a reserva (null = entrada direta, com o código). */
+async function holdLinkId(db: DbClient, clinicId: string, holdId: string): Promise<string | null> {
+  const row = unwrap(
+    await db.from("slot_holds").select("portal_sessions ( link_id )").eq("clinic_id", clinicId).eq("id", holdId).maybeSingle(),
+    "Reserva do horário",
+  ) as { portal_sessions: { link_id: string | null } | null } | null;
+  return row?.portal_sessions?.link_id ?? null;
 }
 
 /** Resumo do atendimento marcado (P10 e .ics), só pela reserva desta sessão. */

@@ -7,6 +7,8 @@ import PatientDayStrip from "../../../../components/public/PatientDayStrip.astro
 import PatientSlots, { type PatientSlot } from "../../../../components/public/PatientSlots.astro";
 import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalWaitlistNotice from "../../../../components/portal/PortalWaitlistNotice.astro";
+import { sessionJoinsWaitlist } from "../../../../lib/data/portal/links";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import PortalSummary from "../../../../components/portal/PortalSummary.astro";
@@ -47,12 +49,14 @@ let unavailableOpen = false;
 let blockedUntil: Date | null = null;
 let problem: string | null = null;
 let lastShown = "";
+let waitlist = false;
 if (page.kind === "open") {
   const { db, portal } = page;
   const clinicId = portal.clinicId;
   const session = await readSession(db, clinicId, Astro.cookies);
   // Sem o celular comprovado (sessão vencida) ou consulta sem direito: de volta à lista, que pede o celular ou explica.
   if (!session?.verified || !session.phone) return Astro.redirect(listHref);
+  waitlist = await sessionJoinsWaitlist(db, clinicId, session);
   card = await findReturnCard(db, portal, session.phone, originId);
   if (!card) return Astro.redirect(listHref);
   const scope = returnScope(card);
@@ -162,6 +166,7 @@ const trocar = "inline-flex min-h-11 shrink-0 items-center px-1 text-base font-b
             </p>
           </PortalDoctor>
           <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Escolha o dia do retorno</h1>
+          {waitlist && <PortalWaitlistNotice />}
           <div id="portal-escolha" class="flex flex-col gap-4" aria-live="polite">
             {blockedUntil && (
               <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="alert">
