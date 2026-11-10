@@ -889,7 +889,8 @@ valor, duração e preparo iguais; as desativações foram feitas na tela (08/no
 da Equipe com o mesmo nome e modo viram um só. Fica o ativo; empatados, o de mais atendimentos, depois o mais antigo.
 Ele mantém as próprias características e recebe os atendimentos (histórico e futuros), séries, links, lista de espera,
 links e reservas do portal, e os horários só do outro (desativados se o outro estava desativado); o outro é apagado.
-Teste `tests/db/juntar-exames-repetidos.test.ts`. Aplicada no banco local (10/nov, com o OK do cliente).
+Teste `tests/db/juntar-exames-repetidos.test.ts`. Aplicada no banco local e no staging (10/nov, com o OK do cliente;
+conferido: uma Espirometria ativa com os 8 atendimentos das duas, um Exame com Arquivo; nenhum repetido no staging).
 Na produção, vai junto com as migrações do bloco multiprofissional e a `20270101150000`, depois delas.
 
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)

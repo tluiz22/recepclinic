@@ -39,7 +39,8 @@
 > **F5a (Agenda em colunas, seção 16) juntada na `main` e no staging (10/nov, `cd08925`)**; a `agenda-colunas` fica igual
 > à `main`. **Validação (sessão de 10/nov, noite):** **roteiro 15.3.1 da F3 validado inteiro**; o achado do item 9 (Minhas
 > consultas pelo link do profissional) foi corrigido em `692b13d` e `f542bf9` (sem migração). Agora: 15.5.4 (F3e); depois,
-> a seção 16 (F5a).
+> a seção 16 (F5a). Exames repetidos na agenda de Exames juntados (migração `20270110120000`, local e staging; 15.5.5).
+> Teste de Conversas "mensagens novas por pessoa" (`nao-atendimento-central`) já falhava antes desta sessão: ver à parte.
 > **Vários responsáveis por paciente** (decisão do cliente, 10/nov; 15.3.2): planejar em outra sessão.
 > Próximo: cliente segue a validação no staging (resto do 15.3.1, o 15.5.4 da F3e e a F5a).
 >
