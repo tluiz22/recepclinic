@@ -19,8 +19,8 @@
 >   **Validação parada no código (09/nov):** a Meta só cria o template do código em empresa verificada; decisão do
 >   cliente: o código sai de um **número do RecepClinic** (+55 61 9656-4772, template já aprovado). Seção 14 do plano.
 >   **Código pelo número do RecepClinic, aviso na tela do código e guia "Pagamento na Meta" na `main` e no staging
->   (09/nov, seção 14; a API já estava na v24.0)**. **F2 validada (09/nov)**, menos "Adicionar à agenda" no iPhone
->   (corrigido, `802d700`; cliente refaz). **Próximo:** F3.
+>   (09/nov, seção 14; a API já estava na v24.0)**. **F2 validada inteira (09/nov)**, com a correção do
+>   "Adicionar à agenda" no iPhone (`802d700`). Produção: não. **Próximo:** F3.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >

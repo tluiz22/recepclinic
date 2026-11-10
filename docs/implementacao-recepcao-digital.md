@@ -560,6 +560,6 @@ de cada uma travaria o portal das clínicas pequenas.
 - **Validação da F2 (09/nov): roteiros 9.1 a 13.1 validados pelo cliente**, menos "Adicionar à agenda do celular" no
   iPhone ("Não encontrado": o Calendário baixa o .ics sem o cookie da sessão). Corrigido (`802d700`): o .ics vale pelo
   id da reserva marcada (aleatório) até o fim do atendimento, "inline" no iPhone, sem o atributo `download`; conferido
-  no staging sem cookie. Falta o cliente refazer no iPhone.
+  no staging sem cookie. **Validado pelo cliente no iPhone (09/nov). F2 inteira validada.**
 - Mensagem do Suporte depois de "Criar na Meta" e "Atualizar situação" (09/nov): só os templates pendentes, os não
   enviados primeiro com a resposta da Meta (`templateSummary.ts`).
