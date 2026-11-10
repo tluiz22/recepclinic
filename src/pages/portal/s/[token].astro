@@ -13,7 +13,7 @@ import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { unwrap } from "../../../lib/data/errors";
 import { resolveClinicByPortalLink } from "../../../lib/data/platform";
 import { getPublicClinicBrand, type PublicClinicBrand } from "../../../lib/data/config/brand";
-import { getPortalLink, openLinkSession, portalLinkState, portalLinkTarget, type PortalLinkState } from "../../../lib/data/portal/links";
+import { getPortalLink, logPortalLinkStep, openLinkSession, portalLinkState, portalLinkTarget, type PortalLinkState } from "../../../lib/data/portal/links";
 import { loadPortal } from "../../../lib/data/portal/portal";
 import { clientIpOf } from "../../../lib/data/portal/identityStep";
 
@@ -36,8 +36,10 @@ if (clinicId && linkId) {
     const state = portalLinkState(link);
     if (state === "valid") {
       await openLinkSession(db, clinicId, link, Astro.cookies, { ip: ipPrefix(clientIpOf(Astro)), secure: Astro.url.protocol === "https:" });
+      await logPortalLinkStep(db, clinicId, link, "page_opened");
       return Astro.redirect(portalLinkTarget(link, portal, base));
     }
+    if (state === "expired") await logPortalLinkStep(db, clinicId, link, "link_expired");
     kind = state;
   } else if (link) {
     // Portal desligado, clínica suspensa ou sem o endereço do portal (o Suporte define): a clínica no WhatsApp.

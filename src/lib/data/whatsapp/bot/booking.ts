@@ -15,6 +15,7 @@ import { askHandoffSubject, attachContact, end, go, offerReception, repeatYesNo,
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu, showSubmenu } from "./menus";
 import * as t from "./texts";
+import { offerPortalLink } from "./portalLink";
 import { logError } from "../../../log";
 
 // Marcar pelo bot (F6.3), com as regras do piloto (Fases 3b, 6, 16, 17, 21)
@@ -149,6 +150,8 @@ export async function startBooking(
 ): Promise<void> {
   await open(b, category === "exam" ? "exam" : "booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
+  // Uma jornada só (F3b): o link do portal; o chat só onde o portal ainda não marca (portalLink.ts).
+  if (await offerPortalLink(b, category, { joinWaitlist })) return;
   const services = servicesOf(await b.catalog(), category);
   if (!services.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
   const ctx: BookingContext = { category, ...(joinWaitlist ? { joinWaitlist } : {}) };
@@ -934,6 +937,7 @@ async function restart(b: Bot): Promise<void> {
 export async function startReturn(b: Bot, { joinWaitlist = false } = {}): Promise<void> {
   await open(b, "return_booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
+  if (await offerPortalLink(b, "return_visit", { joinWaitlist })) return;
   // Cada cópia do retorno com a agenda dela (MS): a origem é a consulta naquela agenda.
   const services = (await b.catalog()).copies.filter((s) => s.category === "return_visit");
   const deadline = services[0]?.returnDeadlineDays ?? null;

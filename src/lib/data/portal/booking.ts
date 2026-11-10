@@ -9,7 +9,7 @@ import { findContactByPhone, listContactPatients, registerPatient, type Contact 
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent, type BotLimitHit } from "../whatsapp/botLimits";
 import { dispatchNotice, enqueueNotice } from "../whatsapp/noticeQueue";
 import type { ClinicSender } from "../whatsapp/send";
-import { markPortalLinkUsed } from "./links";
+import { afterLinkBooking } from "./links";
 import type { PortalProfessional } from "./portal";
 
 // Marcar a consulta pelo portal (F2c; especificação P8 a P10; proposta, cenários 1 a 3, 8, 9, 15 e 17). O portal pega
@@ -375,7 +375,7 @@ export async function afterBooking(
     // Sessão aberta pelo link do bot (F3a): a origem é o WhatsApp e o link fica gasto (uma marcação por link).
     const linkId = await holdLinkId(db, clinicId, input.hold.id);
     const entry = linkId ? "whatsapp" : input.entry;
-    if (linkId) await markPortalLinkUsed(db, clinicId, linkId, now);
+    if (linkId) await afterLinkBooking(db, clinicId, linkId, input.appointmentId, now);
     unwrap(
       await db
         .from("appointments")

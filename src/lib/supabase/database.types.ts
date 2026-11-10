@@ -1733,14 +1733,14 @@ isOneToOne: false
                   ]
                 },"portal_links": {
                   Row: {
-                    "appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string | null,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"id": string,"join_waitlist": boolean,"origin_appointment_id": string | null,"phone": string,"professional_id": string | null,"purpose": string,"return_deadline_waived": boolean,"revoked_at": string | null,"service_id": string | null,"used_at": string | null
+                    "appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string | null,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"id": string,"join_waitlist": boolean,"not_completed_prompted_at": string | null,"origin_appointment_id": string | null,"phone": string,"professional_id": string | null,"purpose": string,"return_deadline_waived": boolean,"revoked_at": string | null,"service_id": string | null,"used_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"created_at"?: string,"expires_at": string,"funnel_session_id"?: string | null,"id"?: string,"join_waitlist"?: boolean,"origin_appointment_id"?: string | null,"phone": string,"professional_id"?: string | null,"purpose": string,"return_deadline_waived"?: boolean,"revoked_at"?: string | null,"service_id"?: string | null,"used_at"?: string | null
+                    "appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"created_at"?: string,"expires_at": string,"funnel_session_id"?: string | null,"id"?: string,"join_waitlist"?: boolean,"not_completed_prompted_at"?: string | null,"origin_appointment_id"?: string | null,"phone": string,"professional_id"?: string | null,"purpose": string,"return_deadline_waived"?: boolean,"revoked_at"?: string | null,"service_id"?: string | null,"used_at"?: string | null
                   }
                   Update: {
-                    "appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"created_at"?: string,"expires_at"?: string,"funnel_session_id"?: string | null,"id"?: string,"join_waitlist"?: boolean,"origin_appointment_id"?: string | null,"phone"?: string,"professional_id"?: string | null,"purpose"?: string,"return_deadline_waived"?: boolean,"revoked_at"?: string | null,"service_id"?: string | null,"used_at"?: string | null
+                    "appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"created_at"?: string,"expires_at"?: string,"funnel_session_id"?: string | null,"id"?: string,"join_waitlist"?: boolean,"not_completed_prompted_at"?: string | null,"origin_appointment_id"?: string | null,"phone"?: string,"professional_id"?: string | null,"purpose"?: string,"return_deadline_waived"?: boolean,"revoked_at"?: string | null,"service_id"?: string | null,"used_at"?: string | null
                   }
                   Relationships: [
                     {

@@ -8,6 +8,8 @@ import PatientDayStrip from "../../../../components/public/PatientDayStrip.astro
 import PatientSlots, { type PatientSlot } from "../../../../components/public/PatientSlots.astro";
 import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalWaitlistNotice from "../../../../components/portal/PortalWaitlistNotice.astro";
+import { sessionJoinsWaitlist } from "../../../../lib/data/portal/links";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalPreparation from "../../../../components/portal/PortalPreparation.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
@@ -49,11 +51,13 @@ let unavailableOpen = false;
 let blockedUntil: Date | null = null;
 let sessionId: string | null = null;
 let viaBotLink = false;
+let waitlist = false;
 if (page.kind === "open" && professional && consultation && modality) {
   // Limite de consultas de horários (F2b; proposta 7.2): por IP e, com sessão, por sessão.
   const session = await readSession(page.db, page.portal.clinicId, Astro.cookies);
   sessionId = session?.id ?? null;
   viaBotLink = !!session?.linkId;
+  waitlist = await sessionJoinsWaitlist(page.db, page.portal.clinicId, session);
   const ip = ipPrefix((() => {
     try {
       return Astro.clientAddress;
@@ -130,6 +134,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
           {Object.entries(keep).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
           {professional.exam && <PortalPreparation exam={professional.exam} />}
           <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Escolha o dia e o horário</h1>
+          {waitlist && <PortalWaitlistNotice />}
           {professional.consultations.length > 1 && (
             <nav aria-label="Tipo de consulta" class="flex flex-col gap-2">
               <p class="text-base font-semibold text-gray-700">Tipo de consulta</p>

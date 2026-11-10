@@ -37,13 +37,15 @@ create table public.portal_links (
   foreign key (clinic_id, appointment_id) references public.appointments (clinic_id, id) on delete cascade,
   foreign key (clinic_id, canceled_appointment_id) references public.appointments (clinic_id, id) on delete cascade,
   foreign key (clinic_id, origin_appointment_id) references public.appointments (clinic_id, id) on delete cascade,
-  check (purpose <> 'reschedule' or appointment_id is not null),
-  check (purpose <> 'exam' or service_id is not null)
+  -- Pedido não concluído (PN2): link vencido sem uso recebe a mensagem uma vez.
+  not_completed_prompted_at timestamptz,
+  check (purpose <> 'reschedule' or appointment_id is not null)
 );
 
--- Revogar o anterior do mesmo celular e finalidade; limpeza diária.
+-- Revogar o anterior do mesmo celular e finalidade; pedido não concluído; limpeza diária.
 create index portal_links_phone_idx on public.portal_links (clinic_id, phone, purpose) where used_at is null and revoked_at is null;
 create index portal_links_expires_idx on public.portal_links (expires_at);
+create index portal_links_not_completed_idx on public.portal_links (clinic_id, expires_at) where used_at is null and not_completed_prompted_at is null;
 
 select app.enable_clinic_data_rls('public.portal_links');
 -- Ninguém apaga pela API (a limpeza diária roda pela plataforma).

@@ -307,6 +307,14 @@ export const SELF_MINOR = "Para menores de 18 anos, o agendamento precisa ser fe
 export const bookingLink = (serviceName: string, patientName: string, url: string) =>
   `Prontinho! Escolha o melhor dia e horário para *${serviceName}* de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
 
+/**
+ * Link do portal (F3b; proposta 3.4): o que vai marcar, a validade e que é só deste número. Do "Encaixe ou antecipar"
+ * sem nada marcado (F3-2): ao marcar, entra na lista de espera.
+ */
+export const portalLink = (what: string, url: string, joinWaitlist = false) =>
+  `Para escolher o dia e o horário ${what === "retorno" ? "do" : "de"} *${what}*, toque no link abaixo. Ele vale por 30 minutos e é só para este número:\n${url}` +
+  (joinWaitlist ? "\n\nAo marcar, você entra na lista de espera: se vagar um horário mais cedo, avisamos aqui." : "");
+
 /** Acima da idade limite, com o profissional escolhido ou a clínica (cliente, 31/out/2026). */
 export const ageLimit = (professionalName: string | null, d: Designation, limitYears: number, w: Words) =>
   `${ageLimitNotice(professionalName, d, limitYears)}\n\nDeseja agendar para ${w.feminine ? "outra criança" : "outra pessoa"}?`;
@@ -584,6 +592,12 @@ export const notCompletedButtons = (kind: NotCompletedKind, receptionAvailable: 
   ...(receptionAvailable ? [button(NOT_COMPLETED_IDS.reception, "Falar com a recepção")] : []),
   button(NOT_COMPLETED_IDS.giveUp, "Desistir"),
 ];
+
+/** Link do portal vencido sem marcar (F3b): o portal pergunta o paciente depois, então a mensagem não tem nome. */
+export const NOT_COMPLETED_PORTAL = "Não concluímos a sua marcação. Como prefere seguir?";
+
+/** Novo link do portal no pedido não concluído. */
+export const notCompletedPortalLink = (url: string) => `Aqui está um novo link para marcar:\n${url}\n\nEle vale por 30 minutos e é só para este número.`;
 
 /** Novo link do pedido não concluído. */
 export const notCompletedNewLink = (kind: NotCompletedKind, patientName: string, url: string) =>

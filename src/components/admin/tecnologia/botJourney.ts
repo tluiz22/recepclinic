@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "08/11/2026";
+export const JOURNEY_UPDATED = "09/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -104,60 +104,86 @@ export const JOURNEY: JourneySection[] = [
   {
     id: "marcar",
     title: "2. Marcar consulta ou exame",
-    intro: "Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário são escolhidos numa página, com a agenda real.",
+    intro: "Consultas › Marcar consulta, ou Exames › Marcar exame. Uma jornada só: o bot manda o link do portal de agendamento; o chat só marca o que o portal ainda não marca.",
     flow: [
-      bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sem preço. Com um serviço só, o bot escolhe sozinho e avisa: \"Vamos marcar *Consulta*\"."),
-      check("O serviço tem horário livre no prazo da agenda?", "Prazo para oferecer horários do profissional da agenda (ou da Equipe), no cadastro dele (cliente, 08/nov/2026; antes, da clínica)."),
+      check(
+        "O portal marca este atendimento?",
+        "Sim quando a clínica tem o endereço do portal e o Portal ligado, o profissional aparece no portal e o atendimento é individual no consultório (F3b, 09/nov/2026). Domiciliar e em turma, por enquanto, seguem no chat (entram no portal depois).",
+      ),
       branch(
-        ["Não", [bot("\"No momento não há horários livres\" e pergunta se quer falar com a recepção", "Sim: a recepção assume (item 8). Não: o menu.")]],
         [
-          "Sim",
+          "Sim: link do portal",
           [
-            bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de uma agenda atende o serviço no contexto da conversa (com vários profissionais, o paciente já escolheu um no começo). Serviços por profissional (MS, 07/11): as cópias de mesmo nome viram uma opção; escolhida a agenda, valem o valor e o preparo da cópia dela; entre cópias diferentes não há \"Primeiro horário\"."),
-            bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
-            check("O caminho escolhido aceita convênios?", "Recurso Convênios ligado e algum plano ativo ligado ao profissional escolhido (agenda de exames: todos os planos). Profissional só particular: não pergunta (MC, 07/11/2026). Profissional só convênio (\"Atende particular\" desmarcado no cadastro, 08/11/2026): não pergunta e vai direto a \"Qual é o seu convênio?\"; plano não atendido não oferece particular, avisa e pergunta se quer falar com a recepção; sem nenhum plano ativo, avisa que a marcação é com a recepção."),
-            branch(
-              ["Não", [bot("Valor e formas de pagamento", "\"O valor da consulta (ou do exame) é R$ …\" e o texto de formas de pagamento das Configurações.")]],
-              [
-                "Sim",
-                [
-                  bot("O atendimento será particular ou por convênio?"),
-                  branch(
-                    ["Particular", [bot("Valor e formas de pagamento")]],
-                    [
-                      "Convênio",
-                      [
-                        bot("Qual é o seu convênio?", "Até 8 planos: lista com \"Outro convênio\"; mais que isso, o paciente escreve e confirma na lista. Só os planos ativos que o caminho atende."),
-                        check("O plano é atendido pelo profissional escolhido (ou por algum, no \"Primeiro horário\")?"),
-                        branch(
-                          ["Sim", [bot("\"Atendemos pelo convênio *X*\"", "Sem valor. O plano fica no atendimento; a página só oferece quem atende o plano.")]],
-                          ["Não", [bot("Não atende e pergunta se quer particular", "Sim: valor e formas de pagamento. Não: pergunta se quer falar com a recepção (item 8).")]],
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ],
-            ),
-            bot("É para você ou para outra pessoa?", "Clínica pediátrica: só no exame."),
-            bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite no cadastro do profissional da agenda (cliente, 08/nov/2026; antes, da clínica). No \"Primeiro horário\": \"A clínica atende…\"."),
             bot(
-              "Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento",
-              "Número novo: o paciente primeiro, depois o nome de quem escreve (paciente menor: \"do responsável\"), que recebe os lembretes. Menor de 18 anos marcando para si: só pelo responsável. Acima da idade limite: \"Dr(a). X atende pacientes até N anos. Deseja agendar para outra criança?\"",
+              "\"Para escolher o dia e o horário de *consulta com Dr(a). X*, toque no link abaixo. Ele vale por 30 minutos e é só para este número\"",
+              "Com vários profissionais, o escolhido no começo da conversa; exame: o exame (com mais de um, a lista dos exames). Venceu sem marcar: item 10.",
             ),
-            check("O paciente já tem esse atendimento marcado?"),
-            branch(
-              ["Sim", [bot("Avisa o dia marcado e indica Remarcar")]],
+            page(
+              "Portal: particular ou convênio, dia e horário, para quem é, revisão e \"Confirmar agendamento\"",
+              "Sem pedir o código: o celular da conversa já vem confirmado (\"Usar outro número\" pede o código). Um link marca uma vez; outro link do mesmo número desfaz o anterior.",
+            ),
+            auto("Confirmação da marcação, com dia, hora e local"),
+            auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
+          ],
+        ],
+        [
+          "Não: marcação no chat (como antes)",
+          [
+          bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sem preço. Com um serviço só, o bot escolhe sozinho e avisa: \"Vamos marcar *Consulta*\"."),
+          check("O serviço tem horário livre no prazo da agenda?", "Prazo para oferecer horários do profissional da agenda (ou da Equipe), no cadastro dele (cliente, 08/nov/2026; antes, da clínica)."),
+          branch(
+            ["Não", [bot("\"No momento não há horários livres\" e pergunta se quer falar com a recepção", "Sim: a recepção assume (item 8). Não: o menu.")]],
+            [
+              "Sim",
               [
-                "Não",
-                [
-                  bot("Manda o link para escolher dia e horário", "O link vale 30 minutos. Venceu sem marcar: item 10."),
-                  page("Escolhe o dia e o horário livres e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
-                  auto("Confirmação da marcação, com dia, hora e local"),
-                  auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
-                ],
+                bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de uma agenda atende o serviço no contexto da conversa (com vários profissionais, o paciente já escolheu um no começo). Serviços por profissional (MS, 07/11): as cópias de mesmo nome viram uma opção; escolhida a agenda, valem o valor e o preparo da cópia dela; entre cópias diferentes não há \"Primeiro horário\"."),
+                bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
+                check("O caminho escolhido aceita convênios?", "Recurso Convênios ligado e algum plano ativo ligado ao profissional escolhido (agenda de exames: todos os planos). Profissional só particular: não pergunta (MC, 07/11/2026). Profissional só convênio (\"Atende particular\" desmarcado no cadastro, 08/11/2026): não pergunta e vai direto a \"Qual é o seu convênio?\"; plano não atendido não oferece particular, avisa e pergunta se quer falar com a recepção; sem nenhum plano ativo, avisa que a marcação é com a recepção."),
+                branch(
+                  ["Não", [bot("Valor e formas de pagamento", "\"O valor da consulta (ou do exame) é R$ …\" e o texto de formas de pagamento das Configurações.")]],
+                  [
+                    "Sim",
+                    [
+                      bot("O atendimento será particular ou por convênio?"),
+                      branch(
+                        ["Particular", [bot("Valor e formas de pagamento")]],
+                        [
+                          "Convênio",
+                          [
+                            bot("Qual é o seu convênio?", "Até 8 planos: lista com \"Outro convênio\"; mais que isso, o paciente escreve e confirma na lista. Só os planos ativos que o caminho atende."),
+                            check("O plano é atendido pelo profissional escolhido (ou por algum, no \"Primeiro horário\")?"),
+                            branch(
+                              ["Sim", [bot("\"Atendemos pelo convênio *X*\"", "Sem valor. O plano fica no atendimento; a página só oferece quem atende o plano.")]],
+                              ["Não", [bot("Não atende e pergunta se quer particular", "Sim: valor e formas de pagamento. Não: pergunta se quer falar com a recepção (item 8).")]],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+                bot("É para você ou para outra pessoa?", "Clínica pediátrica: só no exame."),
+                bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite no cadastro do profissional da agenda (cliente, 08/nov/2026; antes, da clínica). No \"Primeiro horário\": \"A clínica atende…\"."),
+                bot(
+                  "Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento",
+                  "Número novo: o paciente primeiro, depois o nome de quem escreve (paciente menor: \"do responsável\"), que recebe os lembretes. Menor de 18 anos marcando para si: só pelo responsável. Acima da idade limite: \"Dr(a). X atende pacientes até N anos. Deseja agendar para outra criança?\"",
+                ),
+                check("O paciente já tem esse atendimento marcado?"),
+                branch(
+                  ["Sim", [bot("Avisa o dia marcado e indica Remarcar")]],
+                  [
+                    "Não",
+                    [
+                      bot("Manda o link para escolher dia e horário", "O link vale 30 minutos. Venceu sem marcar: item 10."),
+                      page("Escolhe o dia e o horário livres e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
+                      auto("Confirmação da marcação, com dia, hora e local"),
+                      auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
+                    ],
+                  ],
+                ),
               ],
-            ),
+            ],
+          ),
           ],
         ],
       ),
@@ -168,16 +194,35 @@ export const JOURNEY: JourneySection[] = [
     title: "3. Marcar retorno",
     intro: "Consultas › Marcar retorno. Só para quem tem direito, com o profissional da consulta de origem.",
     flow: [
-      check("Algum paciente deste número tem consulta recente, dentro do prazo do retorno, sem retorno marcado?"),
+      check("O portal marca o retorno?", "Mesma regra da marcação (item 2)."),
       branch(
-        ["Não", [bot("Explica o motivo (prazo vencido, retorno já usado, consulta domiciliar) e indica Marcar consulta")]],
         [
-          "Sim",
+          "Sim: link do portal",
           [
-            bot("Prazo e \"Para qual paciente é o retorno?\"", "Sem falar de valor."),
-            bot("Manda o link, com datas só até o fim do prazo"),
-            page("Escolhe o dia e o horário e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
+            bot("\"Para escolher o dia e o horário do *retorno*, toque no link abaixo…\""),
+            page(
+              "Portal: de qual consulta é o retorno, dias só até o fim do prazo, revisão sem valor e \"Marcar retorno\"",
+              "As mesmas regras do bot: sem direito, explica o motivo (prazo vencido com \"Agendar consulta com…\").",
+            ),
             auto("Confirmação da marcação"),
+          ],
+        ],
+        [
+          "Não: no chat (como antes)",
+          [
+          check("Algum paciente deste número tem consulta recente, dentro do prazo do retorno, sem retorno marcado?"),
+          branch(
+            ["Não", [bot("Explica o motivo (prazo vencido, retorno já usado, consulta domiciliar) e indica Marcar consulta")]],
+            [
+              "Sim",
+              [
+                bot("Prazo e \"Para qual paciente é o retorno?\"", "Sem falar de valor."),
+                bot("Manda o link, com datas só até o fim do prazo"),
+                page("Escolhe o dia e o horário e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
+                auto("Confirmação da marcação"),
+              ],
+            ],
+          ),
           ],
         ],
       ),
@@ -220,7 +265,7 @@ export const JOURNEY: JourneySection[] = [
     intro: "Com a Lista de espera ligada: para quem quer um horário mais cedo do que o marcado.",
     flow: [
       bot("Pergunta o tipo: Consulta, Retorno ou Exame", "Só quando o paciente pede \"encaixe\" por escrito sem dizer o tipo (só os tipos que a clínica oferece). Pelo menu Consultas ou Exames, o tipo já está escolhido."),
-      bot("Pede a data de nascimento e mostra o atendimento", "Sem atendimento marcado: oferece marcar agora e entrar na lista depois. Com mais de um serviço marcado, lista os serviços para escolher antes dos atendimentos."),
+      bot("Pede a data de nascimento e mostra o atendimento", "Sem atendimento marcado: oferece marcar agora; o link do portal avisa que, ao marcar, entra na lista de espera (o portal repete o aviso nos horários e na revisão). Com mais de um serviço marcado, lista os serviços para escolher antes dos atendimentos."),
       check("Há horário livre antes do atendimento?"),
       branch(
         ["Sim", [bot("\"Quer antecipar para um destes?\""), patient("Escolhe um horário (ou \"Nenhum desses\")"), bot("Confirma e antecipa")]],
@@ -353,7 +398,10 @@ export const JOURNEY: JourneySection[] = [
         "O pedido ainda está em aberto?",
         "Não manda nada se: a conversa está com a recepção ou em outro caminho, já há um link mais novo, o atendimento foi remarcado, cancelado ou marcado de outro jeito, ou a última mensagem do paciente tem mais de 24 horas. Sai uma vez por pedido.",
       ),
-      bot("\"Não concluímos a marcação | remarcação | o cancelamento de [paciente]. Como prefere seguir?\" com Novo link (no cancelamento, Cancelar agora) · Falar com a recepção · Desistir"),
+      bot(
+        "\"Não concluímos a marcação | remarcação | o cancelamento de [paciente]. Como prefere seguir?\" com Novo link (no cancelamento, Cancelar agora) · Falar com a recepção · Desistir",
+        "Link do portal vencido sem marcar: \"Não concluímos a sua marcação. Como prefere seguir?\" (o portal pergunta o paciente depois); o novo link abre o portal no mesmo ponto.",
+      ),
       branch(
         ["Novo link", [bot("Um novo link igual ao anterior, que vale 30 minutos")]],
         ["Cancelar agora", [bot("\"Confirma o cancelamento?\" de novo, com Sim e Não")]],

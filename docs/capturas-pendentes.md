@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `config-mensagens` — texto padrão de "Link para marcar" mudou para o link do portal, sem o marcador {paciente} (F3b, 09/11/2026)

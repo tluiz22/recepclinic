@@ -137,9 +137,11 @@ export const BOT_MESSAGES: BotMessageDef[] = [
   {
     key: "booking_link",
     label: "Link para marcar",
-    markers: ["servico", "paciente", "link"],
+    // Link do portal (F3b): o que vai marcar ("consulta com Dra. Ana", "retorno", o exame); {paciente} saiu (o portal
+    // pergunta para quem é). No link antigo (domiciliar, turma), {servico} é o serviço.
+    markers: ["servico", "link"],
     required: ["link"],
-    defaultText: "Prontinho! Escolha o melhor dia e horário para *{servico}* de {paciente} neste link:\n{link}\n\nO link vale por 30 minutos.",
+    defaultText: "Para escolher o dia e o horário de *{servico}*, toque no link abaixo. Ele vale por 30 minutos e é só para este número:\n{link}",
   },
   {
     key: "cancel_done",

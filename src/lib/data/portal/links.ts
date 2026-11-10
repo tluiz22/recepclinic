@@ -2,6 +2,9 @@ import type { AstroCookies } from "astro";
 import { hashToken, newSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from "../../portalIdentity";
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
+import { logError } from "../../log";
+import { joinWaitlist } from "../waitlist/entries";
+import { logWebFunnelEvent } from "../whatsapp/funnel";
 import { examSlug, type PortalClinic } from "./portal";
 
 // Link do portal mandado pelo bot (F3a; proposta 3.4; plano, seção 15). O token é o id (em 22 caracteres no endereço
@@ -79,7 +82,6 @@ export async function createPortalLink(db: DbClient, clinicId: string, input: Po
   const ttl = input.ttlMs ?? PORTAL_LINK_TTL_MS;
   if (!(ttl > 0)) throw new DataError("invalid", "Link do portal: validade inválida");
   if (input.purpose === "reschedule" && !input.appointmentId) throw new DataError("invalid", "Link do portal: remarcar precisa do atendimento");
-  if (input.purpose === "exam" && !input.serviceId) throw new DataError("invalid", "Link do portal: exame precisa do serviço");
   unwrap(
     await db
       .from("portal_links")
@@ -175,4 +177,81 @@ export async function markPortalLinkUsed(db: DbClient, clinicId: string, linkId:
     await db.from("portal_links").update({ used_at: now.toISOString() }).eq("clinic_id", clinicId).eq("id", linkId).is("used_at", null),
     "Link do portal",
   );
+}
+
+const CATEGORY = { book: "consultation", return: "return_visit", exam: "exam", reschedule: "consultation", my_appointments: "consultation" } as const;
+
+/**
+ * Passo do funil do bot (Fase 15; Métricas › Agendamento digital): o link ligado à tentativa do bot que o gerou.
+ * Medição: uma falha nunca impede abrir nem marcar.
+ */
+export async function logPortalLinkStep(
+  db: DbClient,
+  clinicId: string,
+  link: PortalLink,
+  step: "page_opened" | "link_expired" | "confirmed",
+  metadata: Record<string, unknown> = {},
+  now: Date = new Date(),
+): Promise<void> {
+  try {
+    await logWebFunnelEvent(
+      db,
+      clinicId,
+      {
+        funnelSessionId: link.funnelSessionId,
+        contactPhone: link.phone,
+        contactId: link.contactId,
+        mode: link.purpose === "reschedule" ? "reschedule" : "create",
+        serviceCategory: CATEGORY[link.purpose],
+      },
+      step,
+      { ...metadata, portal: true },
+      now,
+    );
+  } catch (error) {
+    logError("portal: funil não registrado", error, { clinica: clinicId });
+  }
+}
+
+/**
+ * Depois da marcação pelo link (melhor esforço, a consulta já está marcada): o link fica usado, o funil do bot fecha
+ * com o atendimento e, vindo do "Encaixe ou antecipar" sem nada marcado (F3-2), o atendimento entra na lista de espera.
+ */
+export async function afterLinkBooking(db: DbClient, clinicId: string, linkId: string, appointmentId: string, now: Date = new Date()): Promise<void> {
+  try {
+    await markPortalLinkUsed(db, clinicId, linkId, now);
+    const link = await getPortalLink(db, clinicId, linkId);
+    if (!link) return;
+    await logPortalLinkStep(db, clinicId, link, "confirmed", { appointment_id: appointmentId }, now);
+    if (link.joinWaitlist) await joinWaitlist(db, clinicId, appointmentId, { via: "booking_link", actorId: null }, now);
+  } catch (error) {
+    logError("portal: depois da marcação pelo link", error, { clinica: clinicId, link: linkId });
+  }
+}
+
+/** Pedido não concluído: um link novo igual ao vencido (mesma finalidade, escopo, encaixe e funil), por 30 minutos. */
+export async function renewPortalLink(db: DbClient, clinicId: string, linkId: string, now: Date = new Date()): Promise<PortalLink> {
+  const old = await getPortalLink(db, clinicId, linkId);
+  if (!old) throw new DataError("not_found", "Link do portal");
+  return createPortalLink(
+    db,
+    clinicId,
+    {
+      phone: old.phone,
+      contactId: old.contactId,
+      purpose: old.purpose,
+      professionalId: old.professionalId,
+      serviceId: old.serviceId,
+      appointmentId: old.appointmentId,
+      joinWaitlist: old.joinWaitlist,
+      funnelSessionId: old.funnelSessionId,
+    },
+    now,
+  );
+}
+
+/** A sessão veio do "Encaixe ou antecipar" (F3-2): o aviso da lista de espera nos horários e na revisão. */
+export async function sessionJoinsWaitlist(db: DbClient, clinicId: string, session: { linkId: string | null } | null): Promise<boolean> {
+  if (!session?.linkId) return false;
+  return (await getPortalLink(db, clinicId, session.linkId))?.joinWaitlist ?? false;
 }
