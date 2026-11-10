@@ -63,8 +63,10 @@ import { addDays, formatCalendarDate, formatInstant, localDateOf, todayIn } from
 import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
-import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
+import { getContact, getPatient, listContactPatients, previewAnonymization } from "../../../lib/data/patients";
 import { listOpenBirthdateChecks } from "../../../lib/data/portalBirthdate";
+import { portalPhoneBlock } from "../../../lib/data/portalPhone";
+import { MAX_HOLDS_PER_DAY } from "../../../lib/portalIdentity";
 import { shortDate } from "../../../lib/portalBooking";
 import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
 import { listPatientNotes, NOTE_MAX } from "../../../lib/data/patientNotes";
@@ -205,6 +207,27 @@ const humanConversation =
   clinic.features.includes("whatsapp_bot") && !anonymized && phoneOk
     ? await listHumanAttention(db, clinic.clinicId, contact.phone).then((items) => items[0], () => undefined)
     : undefined;
+// Celular bloqueado no portal (validação da F3, cliente, 10/nov/2026; faixa no alto, opção A): código pedido demais ou o
+// limite do dia; "Liberar agora" solta os dois. Só Administrador e Recepção; o bloqueio vale para todos os pacientes do celular.
+const canReleasePortal = clinic.features.includes("portal") && !anonymized && phoneOk && (clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+const portalBlock = canReleasePortal ? await portalPhoneBlock(db, clinic.clinicId, contact.phone).catch(() => null) : null;
+const portalBlockPatients = portalBlock ? await listContactPatients(db, clinic.clinicId, contact.id).catch(() => [patient]) : [];
+// "às 15:40" hoje; "amanhã às 09:10"; senão "dd/MM às HH:mm".
+const whenFree = (date: Date) => {
+  const day = localDateOf(date, clinic.timezone);
+  const time = formatInstant(date, clinic.timezone, "HH:mm");
+  return day === today ? `às ${time}` : day === addDays(today, 1) ? `amanhã às ${time}` : `${formatInstant(date, clinic.timezone, "dd/MM")} às ${time}`;
+};
+const portalBlockReasons = portalBlock
+  ? [
+      portalBlock.blockedUntil ? `Pediu código demais · libera sozinho ${whenFree(portalBlock.blockedUntil)}` : null,
+      portalBlock.limitUntil ? `Marcou ${MAX_HOLDS_PER_DAY} consultas em 24 h · libera sozinho ${whenFree(portalBlock.limitUntil)}` : null,
+    ].filter((r): r is string => r !== null)
+  : [];
+const portalBlockOthers = portalBlockPatients.filter((p) => p.id !== patient.id).map((p) => p.fullName);
+const portalBlockWho = portalBlockOthers.length
+  ? `Celular ${formatPhoneBR(contact.phone)}; vale também para ${portalBlockOthers.join(", ")}.`
+  : `Celular ${formatPhoneBR(contact.phone)}.`;
 
 // Nota de cada pagamento: a ativa (emitida, emitindo ou cancelando); sem ela, "Sem nota".
 const INVOICE_PILL: Partial<Record<InvoiceStatus, { tone: PillTone; text: (n: string | null) => string }>> = {
@@ -377,6 +400,37 @@ const canBook = patient.isActive && !anonymized;
       )
     }
   </section>
+
+  {
+    portalBlock && (
+      <section aria-labelledby="portal-bloqueado" class="mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-2.5 rounded-xl border border-pend-500 bg-pend-50 px-4 py-3.5 sm:px-[18px]">
+        <div class="flex min-w-0 flex-[1_1_320px] items-start gap-2.5">
+          <Icon name="lock" class="mt-0.5 h-5 w-5 shrink-0 text-pend-800" strokeWidth={2} />
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <h2 id="portal-bloqueado" class="text-[12.5px] font-bold tracking-[.05em] text-pend-800 uppercase">Portal bloqueado para este celular</h2>
+            {portalBlockReasons.map((reason) => (
+              <strong class="text-[16.5px] text-ink">{reason}</strong>
+            ))}
+            <span class="text-sm text-ink-mid">{portalBlockWho}</span>
+          </div>
+        </div>
+        <form method="POST" action={action} class="w-full sm:w-auto">
+          <input type="hidden" name="acao" value="liberar_portal" />
+          <button
+            type="submit"
+            class={`${buttonClass("secondary", "sm")} js-confirm-delete w-full sm:w-auto`}
+            data-sending-label="Liberando…"
+            data-confirm-title={`Liberar o portal para ${formatPhoneBR(contact.phone)}?`}
+            data-confirm-message={`O celular volta a receber o código e a marcar pelo portal agora, sem esperar.${portalBlockOthers.length ? ` Vale também para ${portalBlockOthers.join(", ")}.` : ""} Se pedir código demais de novo, o portal bloqueia outra vez sozinho.`}
+            data-confirm-label="Liberar agora"
+            data-confirm-tone="primary"
+          >
+            Liberar agora
+          </button>
+        </form>
+      </section>
+    )
+  }
 
   {
     nextAppointment && (() => {

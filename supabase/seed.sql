@@ -473,6 +473,8 @@ begin
   insert into public.portal_rate_hits (clinic_id, key, action) values (c_a, 'ip:200.10.20', 'code');
   insert into public.portal_blocks (clinic_id, key, action, level, blocked_until, released_at)
     values (c_a, 'ip:200.10.99', 'code', 1, now() - interval '1 hour', now() - interval '2 hours');
+  -- Desbloqueio pela recepção (10/nov/2026): uma liberação antiga (fora das 24 h; não muda a contagem de hoje).
+  insert into public.portal_limit_resets (clinic_id, phone, created_at) values (c_a, '+5584988880001', now() - interval '3 days');
   insert into public.slot_holds (clinic_id, agenda_id, service_id, location_id, starts_at, ends_at, session_id, phone, expires_at)
     values (c_a, ag_ped, s_consulta, l_office, (monday + 2 + time '09:00') at time zone tz, (monday + 2 + time '09:30') at time zone tz,
             ps_a, '+5584988880001', now() - interval '1 minute');

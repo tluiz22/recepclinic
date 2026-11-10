@@ -1731,6 +1731,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"portal_limit_resets": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"created_by": string | null,"id": string,"phone": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"phone": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"phone"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_limit_resets_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"portal_links": {
                   Row: {
                     "appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string | null,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"id": string,"join_waitlist": boolean,"not_completed_prompted_at": string | null,"origin_appointment_id": string | null,"phone": string,"professional_id": string | null,"purpose": string,"return_deadline_waived": boolean,"revoked_at": string | null,"service_id": string | null,"used_at": string | null
@@ -2854,6 +2874,11 @@ isOneToOne: false
               "hold_expires_at": string,"hold_id": string,"outcome": string
             }[]
                            },
+"portal_phone_status":
+{ Args: { "p_clinic_id": string,"p_max_per_day": number,"p_phone": string }; Returns: {
+              "blocked_until": string,"limit_until": string,"marked": number
+            }[]
+                           },
 "portal_rate_hit":
 { Args: { "p_action": string,"p_clinic_id": string,"p_key": string,"p_limit": number,"p_window_seconds": number }; Returns: string
                            },
@@ -2862,6 +2887,9 @@ isOneToOne: false
                            },
 "portal_release_hold":
 { Args: { "p_clinic_id": string,"p_session_id": string }; Returns: undefined
+                           },
+"portal_release_phone":
+{ Args: { "p_clinic_id": string,"p_phone": string }; Returns: undefined
                            },
 "publish_knowledge_base":
 { Args: Record<PropertyKey, never>; Returns: number
