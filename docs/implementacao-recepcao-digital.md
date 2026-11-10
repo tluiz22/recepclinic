@@ -679,11 +679,11 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
 ### 15.4 Próximas partes da F3 (plano, 10/nov/2026)
 
 Ordem proposta ao cliente: validação da F3 (15.3.1) → **D5** (desenho de domiciliar e turma no portal, aprovação tela a
-tela) → **F3e** (código; junto, a decisão do exame em agenda de profissional) → **F3f** (limpeza) → produção.
+tela) → **F3e** (código) → **F3f** (limpeza) → produção.
 
 **F3f, limpeza do caminho antigo** (branch curta própria, sem migração):
 
-- **Condições:** F3e validada; exame em agenda de profissional decidido; toda clínica com bot com o endereço do portal
+- **Condições:** F3e validada; toda clínica com bot com o endereço do portal
   (staging e produção); portal na produção por ~2 semanas como reserva.
 - **Sai:** a marcação no chat (`bot/booking.ts`: serviço, profissional/"Primeiro horário", local, endereço, convênio,
   para quem, paciente, idade, link `/agendar`; a lista do retorno no chat), o Remarcar com `/agendar` e a confirmação do
@@ -718,14 +718,15 @@ e "Rodada 5 (D5): exame em turma"), revisada tela por tela e aprovada. Sem códi
 - **Turma, dia (TU2a):** lista de cartões (dia por extenso e hora) com "Ver mais dias", no lugar da faixa de dias;
   **sem número de vagas**, só as turmas com vaga no prazo. A reserva segura uma vaga. Recusada: faixa de dias (TU2b).
 
-- **Exame em agenda de profissional (F3-8, cliente, 10/nov):** **na lista "Marcar exame"** (EP1a), com a etiqueta
-  "Com o médico" (nome, ou "2 cardiologistas"); com mais de um profissional, a tela "Com quem você vai fazer o exame?"
-  (EP1b: nome, especialidade, valor e convênios, próximo horário). Depois, o caminho dos exames (P5 a P10). Recusadas:
-  só na página do médico (EP2), as duas e fora do portal.
+- **Exame em agenda de profissional (F3-8, 10/nov): sem efeito.** A pergunta foi feita e respondida (na lista de
+  exames, EP1a/EP1b), mas o caso não existe: desde 08/nov (decisão do cliente, migração `20270101150000`) exame é
+  sempre da agenda de Exames e o banco recusa exame com profissional (`services_exam_team_only`). O item vinha do plano
+  da F3b sem conferência no código; a F3e-3 foi desfeita antes do commit. As telas EP1a, EP1b e EP2 ficam no canvas só
+  como registro.
 
 **F3e em partes** (branch `recepcao-d5`, testes a cada parte): **F3e-1** domiciliar (onde, endereço, revisão,
-remarcar) → **F3e-2** turma → **F3e-3** exame do profissional → bot (`portalLink.ts` deixa de mandar ao chat o que o
-portal passa a cobrir) e Jornada do bot → revisões, staging.
+remarcar) → **F3e-2** turma (o bot e a Jornada do bot junto de cada parte) → revisões (`security-review`,
+`/code-review`), staging. A F3e-3 (exame do profissional) saiu: o caso não existe (F3-8 acima).
 
 #### 15.5.1 F3e-1 feita: atendimento em casa no portal (10/nov/2026, branch `recepcao-d5`)
 

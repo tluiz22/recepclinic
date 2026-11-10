@@ -14,7 +14,7 @@ import * as t from "./texts";
 //
 // O bot segue com a marcação no chat (como antes) só onde o portal ainda não marca, para nenhuma clínica perder o
 // que tem hoje: clínica sem o endereço do portal (o Suporte define) ou com o Portal desligado; profissional fora do
-// portal ("Mostrar no portal" desmarcado); exame que o portal não mostra (de agenda de profissional, F3e-3). O
+// portal ("Mostrar no portal" desmarcado); exame que o portal não mostra (sem horário num local da clínica; exame é sempre da agenda de Exames, migração 20270101150000). O
 // domiciliar (F3e-1) e a turma da agenda da equipe (F3e-2) já marcam pelo portal (D5).
 
 type Route = { purpose: PortalLinkPurpose; what: string; professionalId: string | null; serviceId: string | null };
@@ -43,7 +43,7 @@ async function routeOf(b: Bot, category: "consultation" | "exam" | "return_visit
   const services = catalog.copies.filter((s) => s.category === category);
   if (!services.length || !services.every(portalCovers)) return null;
   if (category === "return_visit") return { purpose: "return", what: "retorno", professionalId: null, serviceId: null };
-  // Consulta e exame: quem o portal mostra (o profissional fora do portal e o exame de agenda de profissional, não).
+  // Consulta e exame: quem o portal mostra (o profissional fora do portal e o exame sem horário num local da clínica, não).
   const portal = await loadPortal(b.db, b.clinicId, slug);
   if (portal.status !== "open") return null;
   if (category === "exam") {
