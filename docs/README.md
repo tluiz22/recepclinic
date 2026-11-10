@@ -37,8 +37,9 @@
 > no bot), registro na 15.3.2. **Desbloqueio do portal na ficha (faixa no alto, opção A) em `8a6e737`, migração
 > `20270109130000` no staging** (roteiro na 15.3.2). **Os 4 achados e o desbloqueio validados (10/nov).**
 > **F5a (Agenda em colunas, seção 16) juntada na `main` e no staging (10/nov, `cd08925`)**; a `agenda-colunas` fica igual
-> à `main`. **Validação (sessão de 10/nov, noite):** roteiro 15.3.1 itens 1 a 11; item 9: achado (Minhas consultas pelo
-> link do profissional) corrigido em `692b13d` (sem migração), roteiro na 15.3.2. Depois: 15.5.4 (F3e) e seção 16 (F5a).
+> à `main`. **Validação (sessão de 10/nov, noite):** **roteiro 15.3.1 da F3 validado inteiro**; o achado do item 9 (Minhas
+> consultas pelo link do profissional) foi corrigido em `692b13d` e `f542bf9` (sem migração). Agora: 15.5.4 (F3e); depois,
+> a seção 16 (F5a).
 > **Vários responsáveis por paciente** (decisão do cliente, 10/nov; 15.3.2): planejar em outra sessão.
 > Próximo: cliente segue a validação no staging (resto do 15.3.1, o 15.5.4 da F3e e a F5a).
 >

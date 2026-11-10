@@ -671,6 +671,8 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
 
 #### 15.3.2 Validação da F3 (registro)
 
+- **10/nov: roteiro 15.3.1 inteiro validado no staging (itens 1 a 11)**, com o achado do item 9 corrigido (`692b13d`,
+  `f542bf9`).
 - **10/nov, item 1 (achado do cliente):** depois de marcar, "marcar nova consulta" → celular → código → a tela pediu o
   celular de novo e avisou "Este celular já reservou muitos horários hoje". Causa: o limite de 5 reservas por celular em
   24 h contava toda reserva, até a que virou consulta (4 testes da madrugada + a consulta de hoje). **Decisão do cliente:
