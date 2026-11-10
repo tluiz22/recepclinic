@@ -157,7 +157,15 @@ export async function loadBusy(
  * sessão de quem pergunta (a própria reserva não ocupa). Bot e Marcar não passam este parâmetro (por ora, a reserva só
  * vale entre pacientes do portal; a confirmação confere de novo).
  */
-export type PortalHolds = { exceptSession: string | null };
+export type PortalHolds = {
+  exceptSession: string | null;
+  /** Exame (cliente, 10/nov/2026): só a reserva do mesmo exame ocupa (exames diferentes não se bloqueiam). */
+  serviceId?: string;
+};
+
+/** As reservas que ocupam o horário deste serviço: no exame, só as do mesmo exame (migração 20270108140000). */
+const holdsFor = (holds: PortalHolds | undefined, category: string, serviceId: string): PortalHolds | undefined =>
+  holds && category === "exam" ? { ...holds, serviceId } : holds;
 
 async function loadHolds(db: DbClient, clinicId: string, agendaId: string, from: Date, to: Date, holds: PortalHolds): Promise<BusyInterval[]> {
   // A validade da reserva é do relógio de agora (o banco confere igual), não do instante da consulta de horários.
@@ -171,6 +179,7 @@ async function loadHolds(db: DbClient, clinicId: string, agendaId: string, from:
     .lt("starts_at", to.toISOString())
     .gt("ends_at", from.toISOString());
   if (holds.exceptSession) query = query.neq("session_id", holds.exceptSession);
+  if (holds.serviceId) query = query.eq("service_id", holds.serviceId);
   const rows = unwrap(await query, "Reservas do portal");
   return rows.map((h) => ({ start: new Date(h.starts_at), end: new Date(h.ends_at) }));
 }
@@ -260,7 +269,7 @@ export async function getFreeSlots(
   if (!plan) return [];
   const { start, end } = dayBounds(query.date, plan.timeZone);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId, plan.category === "exam", query.holds),
+    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId, plan.category === "exam", holdsFor(query.holds, plan.category, query.serviceId)),
     loadClinicHolidays(db, clinicId, query.date, query.date),
   ]);
   return slotsOn(plan, query.date, busy, holidays, now);
@@ -381,7 +390,7 @@ export async function getNextAvailableDates(
   const firstDate = todayIn(plan.timeZone, now);
   const finalDate = searchEnd(firstDate, query);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam", query.holds),
+    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam", holdsFor(query.holds, plan.category, query.serviceId)),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
   ]);
   const result: DateWithSlots[] = [];

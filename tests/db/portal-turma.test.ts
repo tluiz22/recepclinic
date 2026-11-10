@@ -2,7 +2,7 @@ import type { AstroCookies } from "astro";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { confirmPortalBooking, setHoldPatient } from "../../src/lib/data/portal/booking";
-import { ensureSession, holdGroupSlot, readSession, sendCode, verifyCode, type PortalSession } from "../../src/lib/data/portal/identity";
+import { ensureSession, holdGroupSlot, holdSlot, readSession, sendCode, verifyCode, type PortalSession } from "../../src/lib/data/portal/identity";
 import { examProfessional, groupSessions, isSlotStillFree, loadPortal, nextFreeSlot, professionalDates, professionalSlots, type PortalProfessional } from "../../src/lib/data/portal/portal";
 import { adminClient, clinicServiceClient } from "./helpers";
 import { setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -106,6 +106,37 @@ describe("exame em turma pelo portal", () => {
     const dani = await verified();
     // Seis reservas seguidas (cada uma solta a anterior), nenhuma marcada: todas valem.
     for (const s of [...sessions.slice(3, 8), sessions[0]]) expect((await holdOn(dani, s)).status).toBe("ok");
+  });
+
+  it("agenda de Exames: a vaga da turma não esconde o exame individual no mesmo horário, e vice-versa (cliente, 10/nov)", async () => {
+    // O exame individual passa a ter horário às 10:00 de segunda, junto da turma.
+    const w = await adminClient()
+      .from("availability_windows")
+      .insert({ clinic_id: fixture.clinicId, agenda_id: fixture.ids.agendaExams, location_id: fixture.ids.office, service_id: fixture.ids.exame, weekday: 1, start_time: "10:00", end_time: "10:20" })
+      .select("id")
+      .single();
+    if (w.error) throw w.error;
+    try {
+      const loaded = await loadPortal(service, fixture.clinicId, "x");
+      if (loaded.status !== "open") throw new Error("portal indisponível");
+      const exam = examProfessional(loaded, loaded.exams.find((e) => e.serviceId === fixture.ids.exame)!)!;
+      const [, , , fourth] = await groupSessions(service, fixture.clinicId, turma, TZ, { count: 4 });
+      const eva = await verified();
+      expect((await holdOn(eva, fourth)).status).toBe("ok");
+      const ivo = await verified();
+      // Para o Ivo, o exame individual às 10:00 continua (outro exame não ocupa).
+      const slots = await professionalSlots(service, fixture.clinicId, exam, fixture.ids.exame, fourth.date, TZ, new Date(), ivo.id);
+      const ten = slots.find((s) => s.start.getTime() === fourth.start.getTime());
+      expect(ten).toBeTruthy();
+      const held = await holdSlot(service, fixture.clinicId, ivo.id, { agendaId: exam.agendaId, serviceId: fixture.ids.exame, locationId: ten!.locationId, start: ten!.start, end: new Date(ten!.start.getTime() + 20 * 60_000) });
+      expect(held.status).toBe("ok");
+      // O mesmo exame, para um terceiro: ocupado pela reserva do Ivo.
+      const ana = await verified();
+      const again = await holdSlot(service, fixture.clinicId, ana.id, { agendaId: exam.agendaId, serviceId: fixture.ids.exame, locationId: ten!.locationId, start: ten!.start, end: new Date(ten!.start.getTime() + 20 * 60_000) });
+      expect(again.status).toBe("taken");
+    } finally {
+      await adminClient().from("availability_windows").delete().eq("id", w.data.id);
+    }
   });
 
   it("a reserva de turma não serve para serviço individual nem para outra clínica", async () => {

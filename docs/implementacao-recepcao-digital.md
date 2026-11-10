@@ -787,3 +787,20 @@ worktree durante o comando e apagada em seguida.
 - **Playwright (porta 4322, clínica temporária apagada):** 390 e 1280 px; lista com a etiqueta → turma → lista de dias
   → celular e código → paciente → revisão com o preparo → duplo clique (um atendimento) → "Exame marcado!"; Voltar da
   lista de dias leva à lista de exames. Sem erros do portal no console.
+
+#### 15.5.3 Revisões da F3e (10/nov/2026)
+
+- **`security-review`:** sem achados (reserva e endereço presos à sessão comprovada; função da turma com a clínica, a
+  agenda e o serviço conferidos; saída escapada).
+- **`/code-review` (8 achados):** corrigidos o limite da turma (só reservas marcadas, como a `c9cb2b5`), o "Ver mais
+  dias" no teto de 60, o endereço do contato só depois de gravado no atendimento, a leitura das reservas da turma em
+  paralelo, os campos do endereço e a leitura do resultado da reserva num lugar só (`e2d7ced8`). Decididos pelo cliente:
+  - **Valor do local escolhido (cliente, 10/nov):** revisão, celular e tela final mostram o valor da unidade escolhida,
+    não o menor (`priceAt`, `97e31f96`).
+  - **Reserva na agenda de Exames (cliente, 10/nov):** só segura o mesmo exame (a turma, uma vaga); exames diferentes
+    no mesmo horário não se bloqueiam, como os exames marcados. Migração `20270108140000_portal_reserva_exame`
+    (`portal_hold_slot` sobre a versão da `20270107130000`), aplicada no banco local com o OK do cliente; `loadHolds`
+    filtra pelo exame. Isso também resolve o limite conhecido da 15.5.2.
+- **Migrações da F3e para o staging, nesta ordem:** `20270108120000_portal_domiciliar`, `20270108130000_portal_turma`
+  (`create or replace`), `20270108140000_portal_reserva_exame`.
+- **Testes:** 1188 de unidade; 1159 de banco (bateria inteira).
