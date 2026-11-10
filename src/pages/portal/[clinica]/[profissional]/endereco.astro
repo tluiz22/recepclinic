@@ -13,7 +13,7 @@ import { portalCta, portalError, portalInput, portalNotice, portalTitle } from "
 import { lastHomeAddress, phonePatients, setHoldAddress } from "../../../../lib/data/portal/booking";
 import { openHoldPage } from "../../../../lib/data/portal/holdPage";
 import { changeProfessionalHref, helpForOf, shortName, whoLabel } from "../../../../lib/portal";
-import { HOME_ADDRESS_MAX, joinHomeAddress, type HomeAddressField, type HomeAddressFields } from "../../../../lib/portalBooking";
+import { HOME_ADDRESS_INPUTS, HOME_ADDRESS_MAX, joinHomeAddress, type HomeAddressField, type HomeAddressFields } from "../../../../lib/portalBooking";
 
 const view = await openHoldPage(Astro);
 const { page, professional, hold, session, when } = view;
@@ -68,12 +68,7 @@ const options: { value: Choice; title: string; text: string }[] = [
 const card =
   "flex min-h-16 cursor-pointer items-start gap-3.5 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-3.5 text-lg has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink";
 const label = "text-base font-semibold text-gray-700";
-const inputs: { name: string; field: HomeAddressField; label: string; optional: boolean; autocomplete?: string }[] = [
-  { name: "rua", field: "street", label: "Rua e número", optional: false, autocomplete: "address-line1" },
-  { name: "complemento", field: "complement", label: "Complemento", optional: true, autocomplete: "address-line2" },
-  { name: "bairro", field: "district", label: "Bairro", optional: false },
-  { name: "referencia", field: "reference", label: "Ponto de referência", optional: true },
-];
+const inputs = HOME_ADDRESS_INPUTS;
 ---
 
 <PortalLayout

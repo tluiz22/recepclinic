@@ -7,7 +7,7 @@ import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { portalCta, portalError, portalInput, portalNotice, portalTitle } from "../../../../components/portal/styles";
-import { HOME_ADDRESS_MAX, joinHomeAddress, type HomeAddressField, type HomeAddressFields } from "../../../../lib/portalBooking";
+import { HOME_ADDRESS_INPUTS, HOME_ADDRESS_MAX, joinHomeAddress, type HomeAddressField, type HomeAddressFields } from "../../../../lib/portalBooking";
 import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
 import { openChangePage } from "../../../../lib/data/portal/changePage";
 import { afterLinkBooking } from "../../../../lib/data/portal/links";
@@ -84,12 +84,7 @@ if (view.kind === "open") {
   locationAddress = slot.locationId === item.locationId ? item.locationAddress : null;
 }
 const atHome = view.kind === "open" && view.item.locationType === "home_visit";
-const inputs: { name: string; field: HomeAddressField; label: string; optional: boolean; autocomplete?: string }[] = [
-  { name: "rua", field: "street", label: "Rua e número", optional: false, autocomplete: "address-line1" },
-  { name: "complemento", field: "complement", label: "Complemento", optional: true, autocomplete: "address-line2" },
-  { name: "bairro", field: "district", label: "Bairro", optional: false },
-  { name: "referencia", field: "reference", label: "Ponto de referência", optional: true },
-];
+const inputs = HOME_ADDRESS_INPUTS;
 const choiceCard =
   "flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-2.5 text-lg has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink";
 const page = view.page;

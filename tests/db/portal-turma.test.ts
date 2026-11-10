@@ -101,6 +101,13 @@ describe("exame em turma pelo portal", () => {
     expect(new Date(data!.scheduled_at).getTime()).toBe(third.start.getTime());
   });
 
+  it("reservas soltas sem marcar não contam no limite do celular (como a consulta, migração 20270107130000)", async () => {
+    const sessions = await groupSessions(service, fixture.clinicId, turma, TZ, { count: 8 });
+    const dani = await verified();
+    // Seis reservas seguidas (cada uma solta a anterior), nenhuma marcada: todas valem.
+    for (const s of [...sessions.slice(3, 8), sessions[0]]) expect((await holdOn(dani, s)).status).toBe("ok");
+  });
+
   it("a reserva de turma não serve para serviço individual nem para outra clínica", async () => {
     const session = await verified();
     const [first] = await groupSessions(service, fixture.clinicId, turma, TZ, { count: 1 });

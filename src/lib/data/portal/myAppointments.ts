@@ -270,6 +270,8 @@ export async function rescheduleMine(
   if (!input.scope.locations.some((l) => l.id === slot.locationId)) return { status: "taken" };
   if (!input.rebook && input.leadHours !== null && !outsideLead(item.start, input.leadHours, now)) return { status: "lead" };
   let appointmentId: string;
+  // O endereço novo só vira o padrão do contato se ficou gravado no atendimento.
+  let addressSaved = true;
   try {
     if (input.rebook) {
       const { appointment } = await bookAppointment(
@@ -293,7 +295,10 @@ export async function rescheduleMine(
       appointmentId = (await rescheduleAppointment(db, clinicId, item.id, { start: slot.start, locationId: slot.locationId, channel: "portal", actorId: null }, now)).id;
       if (atHome && address && address !== item.homeVisitAddress) {
         const saved = await db.from("appointments").update({ home_visit_address: address }).eq("clinic_id", clinicId).eq("id", appointmentId);
-        if (saved.error) logError("portal: endereço da remarcação não gravado", saved.error, { clinica: clinicId, atendimento: appointmentId });
+        if (saved.error) {
+          addressSaved = false;
+          logError("portal: endereço da remarcação não gravado", saved.error, { clinica: clinicId, atendimento: appointmentId });
+        }
       }
     }
   } catch (error) {
@@ -303,7 +308,7 @@ export async function rescheduleMine(
     logError("portal: não remarcou", error, { clinica: clinicId, atendimento: item.id });
     return { status: "failed" };
   }
-  if (atHome && address && input.phone && address !== item.homeVisitAddress) await saveContactHomeAddress(db, clinicId, input.phone, address);
+  if (atHome && address && addressSaved && input.phone && address !== item.homeVisitAddress) await saveContactHomeAddress(db, clinicId, input.phone, address);
   await sendAppointmentNotice(db, clinicId, appointmentId, input.rebook ? "confirmation" : "reschedule", input.sender, now);
   return { status: "done", appointmentId };
 }

@@ -475,7 +475,22 @@ export async function getGroupSessions(
   const from = dayBounds(firstDate, plan.timeZone).start;
   const to = dayBounds(finalDate, plan.timeZone).end;
 
-  const [booked, blocks, holidays] = await Promise.all([
+  const loadGroupHolds = async (holds: PortalHolds) => {
+    let held = db
+      .from("slot_holds")
+      .select("starts_at")
+      .eq("clinic_id", clinicId)
+      .eq("agenda_id", query.agendaId)
+      .eq("service_id", query.serviceId)
+      .is("released_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .gte("starts_at", from.toISOString())
+      .lt("starts_at", to.toISOString());
+    if (holds.exceptSession) held = held.neq("session_id", holds.exceptSession);
+    return unwrap(await held, "Reservas do portal");
+  };
+
+  const [booked, blocks, holidays, held] = await Promise.all([
     // Em páginas: uma linha por participante, 60 dias de turmas cheias passam das 1000 linhas da API.
     unwrapAll(
       (pageFrom, pageTo) =>
@@ -503,6 +518,7 @@ export async function getGroupSessions(
       .gt("ends_at", from.toISOString())
       .then((r) => unwrap(r, "Bloqueios da agenda")),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
+    query.holds ? loadGroupHolds(query.holds) : [],
   ]);
   const bookedAt = new Map<number, number>();
   for (const row of booked) {
@@ -510,22 +526,9 @@ export async function getGroupSessions(
     bookedAt.set(key, (bookedAt.get(key) ?? 0) + 1);
   }
   // Portal (F3e-2): a vaga que outro paciente está confirmando também conta (a própria reserva, não).
-  if (query.holds) {
-    let held = db
-      .from("slot_holds")
-      .select("starts_at")
-      .eq("clinic_id", clinicId)
-      .eq("agenda_id", query.agendaId)
-      .eq("service_id", query.serviceId)
-      .is("released_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .gte("starts_at", from.toISOString())
-      .lt("starts_at", to.toISOString());
-    if (query.holds.exceptSession) held = held.neq("session_id", query.holds.exceptSession);
-    for (const row of unwrap(await held, "Reservas do portal")) {
-      const key = new Date(row.starts_at).getTime();
-      bookedAt.set(key, (bookedAt.get(key) ?? 0) + 1);
-    }
+  for (const row of held) {
+    const key = new Date(row.starts_at).getTime();
+    bookedAt.set(key, (bookedAt.get(key) ?? 0) + 1);
   }
 
   const sessions: GroupSession[] = [];

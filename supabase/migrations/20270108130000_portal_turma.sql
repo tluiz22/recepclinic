@@ -8,7 +8,7 @@
 --
 -- Reversão: `drop function public.portal_hold_group_slot(uuid, uuid, uuid, uuid, uuid, timestamptz, timestamptz, integer, integer);`
 
-create function public.portal_hold_group_slot(
+create or replace function public.portal_hold_group_slot(
   p_clinic_id uuid,
   p_session_id uuid,
   p_agenda_id uuid,
@@ -57,7 +57,9 @@ begin
     return;
   end if;
 
-  if (select count(*) from public.slot_holds where clinic_id = p_clinic_id and phone = v_phone and created_at > now() - interval '24 hours') >= p_max_per_day then
+  -- Contam só as reservas que viraram consulta marcada (como portal_hold_slot, migração 20270107130000).
+  if (select count(*) from public.slot_holds where clinic_id = p_clinic_id and phone = v_phone and appointment_id is not null
+    and created_at > now() - interval '24 hours') >= p_max_per_day then
     return query select 'limit'::text, null::uuid, null::timestamptz;
     return;
   end if;

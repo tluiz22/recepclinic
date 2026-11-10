@@ -131,6 +131,14 @@ export function blockMessage(block: BlockText, professionalName: string, patient
 export type HomeAddressFields = { street: string; complement: string; district: string; reference: string };
 export type HomeAddressField = keyof HomeAddressFields;
 
+/** Os campos do formulário (tela do endereço e remarcação em casa). */
+export const HOME_ADDRESS_INPUTS: readonly { name: string; field: HomeAddressField; label: string; optional: boolean; autocomplete?: string }[] = [
+  { name: "rua", field: "street", label: "Rua e número", optional: false, autocomplete: "address-line1" },
+  { name: "complemento", field: "complement", label: "Complemento", optional: true, autocomplete: "address-line2" },
+  { name: "bairro", field: "district", label: "Bairro", optional: false },
+  { name: "referencia", field: "reference", label: "Ponto de referência", optional: true },
+];
+
 export const HOME_ADDRESS_MAX: Record<HomeAddressField, number> = { street: 150, complement: 80, district: 80, reference: 150 };
 /** O texto inteiro cabe na coluna (até 500 caracteres, migração 20270108120000). */
 export const HOME_ADDRESS_TEXT_MAX = 500;

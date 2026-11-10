@@ -63,7 +63,8 @@ let waitlist = false;
 // Turma (F3e-2, D5 TU2a): lista de dias com vaga, sem o número de vagas, com "Ver mais dias".
 const GROUP_PAGE = 8;
 const isGroup = !!professional?.exam?.isGroup;
-const groupShown = Math.min(Math.max(Number.parseInt(params.get("mais") ?? "", 10) || GROUP_PAGE, GROUP_PAGE), 60);
+const GROUP_MAX = 60;
+const groupShown = Math.min(Math.max(Number.parseInt(params.get("mais") ?? "", 10) || GROUP_PAGE, GROUP_PAGE), GROUP_MAX);
 let groupMore = false;
 if (page.kind === "open" && professional && consultation && modality) {
   // Limite de consultas de horários (F2b; proposta 7.2): por IP e, com sessão, por sessão.
@@ -87,7 +88,8 @@ if (page.kind === "open" && professional && consultation && modality) {
 }
 if (page.kind === "open" && professional && consultation && modality && !blockedUntil && isGroup) {
   const sessions = await groupSessions(page.db, page.portal.clinicId, professional, timeZone, { count: groupShown + 1, sessionId });
-  groupMore = sessions.length > groupShown;
+  // No teto (60 dias), sem "Ver mais dias": o link não traria nada novo.
+  groupMore = sessions.length > groupShown && groupShown < GROUP_MAX;
   const locationName = (id: string) => professional.locations.find((l) => l.id === id)?.name ?? "";
   slotOptions = sessions.slice(0, groupShown).map((s) => ({
     value: slotChoiceValue({ start: s.start, agendaId: professional.agendaId, locationId: s.locationId }),

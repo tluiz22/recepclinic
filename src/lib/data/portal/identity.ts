@@ -188,6 +188,12 @@ export async function forgetPhone(db: DbClient, clinicId: string, sessionId: str
 
 export type HoldResult = { status: "ok"; holdId: string; expiresAt: Date } | { status: "taken" | "limit" | "session" };
 
+function toHoldResult(data: unknown): HoldResult {
+  const row = (data as { outcome: string; hold_id: string | null; hold_expires_at: string | null }[])[0];
+  if (row?.outcome === "ok" && row.hold_id && row.hold_expires_at) return { status: "ok", holdId: row.hold_id, expiresAt: new Date(row.hold_expires_at) };
+  return { status: (row?.outcome ?? "taken") as "taken" | "limit" | "session" };
+}
+
 /** Reserva o horário para a sessão (a anterior dela é solta). */
 export async function holdSlot(
   db: DbClient,
@@ -206,9 +212,7 @@ export async function holdSlot(
     p_max_per_day: MAX_HOLDS_PER_DAY,
   });
   if (error) throw error;
-  const row = (data as { outcome: string; hold_id: string | null; hold_expires_at: string | null }[])[0];
-  if (row?.outcome === "ok" && row.hold_id && row.hold_expires_at) return { status: "ok", holdId: row.hold_id, expiresAt: new Date(row.hold_expires_at) };
-  return { status: (row?.outcome ?? "taken") as "taken" | "limit" | "session" };
+  return toHoldResult(data);
 }
 
 /**
@@ -233,9 +237,7 @@ export async function holdGroupSlot(
     p_max_per_day: MAX_HOLDS_PER_DAY,
   });
   if (error) throw error;
-  const row = (data as { outcome: string; hold_id: string | null; hold_expires_at: string | null }[])[0];
-  if (row?.outcome === "ok" && row.hold_id && row.hold_expires_at) return { status: "ok", holdId: row.hold_id, expiresAt: new Date(row.hold_expires_at) };
-  return { status: (row?.outcome ?? "taken") as "taken" | "limit" | "session" };
+  return toHoldResult(data);
 }
 
 export async function releaseHold(db: DbClient, clinicId: string, sessionId: string): Promise<void> {
