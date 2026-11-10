@@ -10,7 +10,7 @@ import { CONTROL, buttonClass } from "../../../components/admin/ui/styles";
 import { addDays, formatCalendarDate, isCalendarDate, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadAgendaScope } from "../../../lib/data/agenda/scope";
-import { listPortalHolds, loadSpecialtiesByProfessional } from "../../../lib/data/agenda/grid";
+import { listPortalHolds } from "../../../lib/data/agenda/grid";
 import { listFreeGapsRange } from "../../../lib/data/agenda/slots";
 import { listInsuranceLinks, listInsurancePlans } from "../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../lib/data/config/professionals";
@@ -36,13 +36,13 @@ const placeKey = placeParam === "consultorio" || placeParam === "casa" ? placePa
 /** Quantos dias à frente procura (o prazo de marcação vai até 60). */
 const SEARCH_DAYS = 30;
 
-const [scope, specialtiesOf, professionals, plans, links] = await Promise.all([
+const [scope, professionals, plans, links] = await Promise.all([
   loadAgendaScope(db, clinic.clinicId, new URL("/admin/agenda", Astro.url)),
-  loadSpecialtiesByProfessional(db, clinic.clinicId).catch(() => new Map<string, string[]>()),
   listProfessionals(db, clinic.clinicId).catch(() => []),
   listInsurancePlans(db, clinic.clinicId).catch(() => []),
   listInsuranceLinks(db, clinic.clinicId).catch(() => []),
 ]);
+const specialtiesOf = new Map(professionals.map((p) => [p.id, p.specialties.filter((sp) => sp.isActive).map((sp) => sp.name)]));
 const allColumns = buildColumns(scope.agendas.filter((a) => a.isActive), specialtiesOf);
 const filtered = filterColumns(allColumns, { specialty: params.get("esp"), agendaId: null });
 const specialty = filtered.filter.specialty;
@@ -59,7 +59,9 @@ const [gaps, holds] = await Promise.all([
 ]);
 const hasHome = gaps.some((g) => g.places.includes("home_visit"));
 const place = placeKey && hasHome ? PLACES[placeKey] : null;
-const results = nextFreeDays(ids, gaps, holds, { place });
+// Na agenda de Exames a reserva só segura o mesmo exame: lá os horários não aparecem como "em reserva".
+const teamAgendas = new Set(scope.agendas.filter((a) => a.kind === "resource").map((a) => a.id));
+const results = nextFreeDays(ids, gaps, holds.filter((h) => !teamAgendas.has(h.agendaId)), { place });
 
 // O que cada profissional atende: convênios e particular (a agenda da Equipe não mostra).
 const planName = new Map(plans.map((p) => [p.id, p.name]));

@@ -140,7 +140,9 @@ describe("marcar pelo portal", () => {
     expect(patients.map((p) => [p.fullName, p.isContactSelf])).toEqual([["Bebê Souza Lima", false]]);
   });
 
-  it("horário tomado pela recepção antes de confirmar: volta aos horários", async () => {
+  // F5a (R3): a recepção não marca mais horário em reserva (agenda-colunas.test.ts); o bot ainda não vê a reserva, então
+  // é ele quem toma o horário aqui.
+  it("horário tomado (pelo bot) antes de confirmar: volta aos horários", async () => {
     const { session, holdId, phone } = await holding("09:30");
     await setHoldPatient(service, fixture.clinicId, session.id, holdId, { newPatient: { for: "self", name: "Tomado Ramos", birthdate: yearsAgo(33), contactName: null } });
     const other = await registerPatient(asDb(fixture.reception), fixture.clinicId, { fullName: "Outra Pessoa Ramos", birthdate: yearsAgo(50), contact: { mode: "self", phone: newPhone() } }, today);
@@ -151,10 +153,8 @@ describe("marcar pelo portal", () => {
       agendaId: dra.agendaId,
       start: at(MON1, "09:30"),
       locationId: dra.locations[0].id,
-      channel: "admin",
-      actorId: fixture.reception.id,
-      anyTime: true,
-      acceptedWarnings: true,
+      channel: "whatsapp_bot",
+      actorId: null,
     });
     expect(await confirm(session, holdId)).toEqual({ status: "taken" });
     // O cadastro novo foi gravado, mas não marcou (o celular volta a escolher o horário).

@@ -863,3 +863,37 @@ R2 (atendimento aberto), R3b (Próximos horários livres) e M4 (celular), rodada
   horários e a conferência da Marcar passam a contar a reserva (no código, sem migração).
 - **Desempenho:** os horários livres do dia liam a ocupação agenda por agenda, em sequência; com 18 agendas, passa a ler
   em paralelo e por período (uma leitura por agenda para os dias da R3b).
+
+### 16.1 F5a feita (10/nov/2026, branch `agenda-colunas`)
+
+As quatro partes num commit só (`f3d057f0`) e as correções da revisão. **Sem migração.**
+
+- **Grade** (`AgendaGrid.astro`, regras puras em `src/lib/agendaGrid.ts`): linhas de 30 min (2 px por minuto), faixa de
+  horas pelo horário de atendimento do dia e pelo que está marcado; itens sobrepostos dividem a coluna; linha de agora;
+  abre na hora atual. A grade ocupa o resto da tela (rolagem só dentro dela). "Livre" aparece ao passar o mouse ou com
+  o foco (no toque, sempre) e leva à Marcar. A escolha da agenda não é mais lembrada (sai o cookie `rc_agenda`).
+- **Filtros:** até 7 agendas, "Agenda" (como hoje); a partir de 8, `ColumnPicker` (Especialidade ou Profissional, com
+  busca sem acento, setas e Enter); Situação em todas. Os filtros ficam no endereço (`agenda`, `esp`, `situacao`).
+- **Atendimento aberto:** o painel de hoje, à direita (372 px); a coluna dele vai para a primeira, destacada; Fechar e
+  Esc devolvem a ordem e o foco.
+- **Próximos horários livres** (`/admin/agenda/livres`, regra em `src/lib/nextFree.ts`): 30 dias a partir de "A partir
+  de"; cartões pela ordem do primeiro horário, "Mais cedo" quando só um tem o primeiro; convênios e particular do
+  profissional; "Ver mais dias" abre a agenda dele no dia seguinte ao último mostrado.
+- **Reserva do portal:** tracejada na grade; na agenda de Exames não esconde o "Livre" (a reserva só segura o mesmo
+  exame). Marcar e Remarcar da equipe não oferecem nem aceitam horário em reserva (`TEAM_HOLDS`, `respectHolds`);
+  o portal e o bot seguem como antes. O teste do portal "horário tomado antes de confirmar" passou a usar o bot.
+- **Celular:** `AgendaPhoneList` (uma agenda por vez, `ver` no endereço; setas, deslizar, lista com busca; com filtro
+  vindo do computador ou de "Ver mais dias", o link "Ver todas as agendas").
+- **Ajuda:** artigo "Ver a agenda" e textos das situações atualizados; captura `agenda-dia` na fila
+  (`capturas-pendentes.md`), à espera da autorização.
+- **Testes:** unidade (grade e próximos livres) e banco (`agenda-colunas.test.ts`: horários por período com o local,
+  reserva lida pela equipe, Marcar recusando a reserva). Playwright (390 e 1280 px, clínica local com 19 agendas
+  temporárias, apagadas no fim): voltar de Próximos horários livres e da Marcar com os filtros, busca dos filtros pelo
+  teclado, Situação, painel com Esc e foco, setas e "Mais", celular (setas, dia seguinte mantendo a agenda, painel
+  embaixo), sem rolagem lateral, sem erro no console. Achados corrigidos: seta da busca ia para "Todas"; Esc não
+  devolvia o foco.
+- **`/code-review`:** 10 achados; corrigidos 9 (celular preso num filtro, reserva de exame apagando horários de outros
+  exames, contagem com Situação "Cancelado", calendário perdendo a agenda do celular, busca pelas outras especialidades,
+  turmas sem paginação em 30 dias, especialidades lidas duas vezes e as inativas, dia com reserva antes de outro).
+  Fica: os bloqueios lidos duas vezes por agenda nos horários livres (custo pequeno, em paralelo).
+- **Tempo (local, 19 agendas):** Agenda ~0,2 s; Próximos horários livres ~0,4 s. Medir no staging (meta < 2 s).

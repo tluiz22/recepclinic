@@ -8,12 +8,12 @@ import { unwrap } from "../errors";
 /** Especialidades de cada profissional, na ordem do cadastro (a primeira dá o grupo da coluna). */
 export async function loadSpecialtiesByProfessional(db: DbClient, clinicId: string): Promise<Map<string, string[]>> {
   const rows = unwrap(
-    await db.from("professional_specialties").select("professional_id, position, kb_specialties ( name )").eq("clinic_id", clinicId).order("position"),
+    await db.from("professional_specialties").select("professional_id, position, kb_specialties ( name, is_active )").eq("clinic_id", clinicId).order("position"),
     "Especialidades dos profissionais",
-  ) as unknown as { professional_id: string; kb_specialties: { name: string } | null }[];
+  ) as unknown as { professional_id: string; kb_specialties: { name: string; is_active: boolean } | null }[];
   const result = new Map<string, string[]>();
   for (const row of rows) {
-    if (!row.kb_specialties) continue;
+    if (!row.kb_specialties?.is_active) continue;
     result.set(row.professional_id, [...(result.get(row.professional_id) ?? []), row.kb_specialties.name]);
   }
   return result;

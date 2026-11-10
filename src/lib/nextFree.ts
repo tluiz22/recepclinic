@@ -23,24 +23,17 @@ export function nextFreeDays(
       .filter((g) => g.agendaId === agendaId && !g.group && (!place || g.places.includes(place)))
       .sort((a, b) => a.start.getTime() - b.start.getTime());
     const held = (g: FreeGapLike) => holds.some((h) => h.agendaId === agendaId && h.start < g.end && h.end > g.start);
-    const days: NextFreeDay[] = [];
+    // Todos os dias com os horários (em reserva marcados); ficam os primeiros com algum horário que dá para marcar.
+    const byDate = new Map<string, NextFreeDay>();
     let first: Date | null = null;
     for (const gap of mine) {
       const isHeld = held(gap);
-      let day = days.find((d) => d.date === gap.date);
-      if (!day) {
-        if (days.length >= perAgenda) {
-          // Um dia só com reservas não conta: troca pelo próximo.
-          const onlyHeld = days.findIndex((d) => d.slots.every((s) => s.held));
-          if (onlyHeld === -1 || isHeld) continue;
-          days.splice(onlyHeld, 1);
-        }
-        day = { date: gap.date, slots: [] };
-        days.push(day);
-      }
+      const day = byDate.get(gap.date) ?? { date: gap.date, slots: [] };
+      byDate.set(gap.date, day);
       day.slots.push({ time: gap.time, held: isHeld });
       if (!isHeld && (!first || gap.start < first)) first = gap.start;
     }
-    return { agendaId, days: days.filter((d) => d.slots.some((s) => !s.held)), first };
+    const days = [...byDate.values()].filter((d) => d.slots.some((slot) => !slot.held)).slice(0, perAgenda);
+    return { agendaId, days, first };
   });
 }

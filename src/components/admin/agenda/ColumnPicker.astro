@@ -14,7 +14,7 @@ interface Props {
   allText: string;
   allHref: string;
   /** Opções, em grupos (o profissional, por especialidade); grupo sem nome = lista simples. */
-  groups: { name: string | null; options: { label: string; hint?: string; href: string; current: boolean }[] }[];
+  groups: { name: string | null; options: { label: string; hint?: string; terms?: string; href: string; current: boolean }[] }[];
   /** Escolhido agora (null = todos). */
   currentText: string | null;
   searchPlaceholder: string;
@@ -65,7 +65,7 @@ const active = currentText !== null;
           {group.options.map((option) => (
             <a
               href={option.href}
-              data-picker-option={`${option.label} ${option.hint ?? ""} ${group.name ?? ""}`.toLowerCase()}
+              data-picker-option={`${option.label} ${option.hint ?? ""} ${option.terms ?? ""} ${group.name ?? ""}`.toLowerCase()}
               aria-current={option.current ? "true" : undefined}
               class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-2.5 text-[15px] text-ink no-underline hover:bg-canvas aria-[current]:bg-brand-soft aria-[current]:font-semibold aria-[current]:text-brand-ink sm:min-h-9"
             >

@@ -15,18 +15,27 @@ interface Props {
   total: number;
   prevHref: string | null;
   nextHref: string | null;
-  pickerGroups: { name: string | null; options: { label: string; hint?: string; href: string; current: boolean }[] }[];
+  pickerGroups: { name: string | null; options: { label: string; hint?: string; terms?: string; href: string; current: boolean }[] }[];
+  /** Com filtro de agenda ou especialidade (vindo do computador ou de "Ver mais dias"): o link para ver todas. */
+  clearHref?: string | null;
   allHref: string;
   selectedKey: string;
 }
 
-const { column, position, total, prevHref, nextHref, pickerGroups, allHref, selectedKey } = Astro.props;
+const { column, position, total, prevHref, nextHref, pickerGroups, allHref, selectedKey, clearHref = null } = Astro.props;
 const arrow = "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-line-strong bg-white text-ink no-underline aria-disabled:opacity-40";
 const row = "flex min-h-14 items-center gap-3 border-t border-[#e7eeeb] px-4 py-2 no-underline first:border-t-0";
 const sorted = column ? [...column.items].sort((a, b) => a.top - b.top) : [];
 ---
 
 <section aria-label="Agenda de um profissional" data-phone-agenda class="sm:hidden">
+  {
+    clearHref && (
+      <a href={clearHref} class="mb-2 inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold text-brand no-underline">
+        Ver todas as agendas
+      </a>
+    )
+  }
   {
     total > 1 && column && (
       <div class="flex items-center gap-1.5">

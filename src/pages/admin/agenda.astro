@@ -100,7 +100,9 @@ const [allAppointments, blocks, serviceRefs, gaps, holds, windowSpans] = await P
 const appointments = situation ? allAppointments.filter((a) => appointmentSituation(a) === situation) : allAppointments;
 const tints = serviceTints(serviceRefs);
 // Horário em reserva: a reserva aparece no lugar do "Livre".
-const openGaps = gaps.filter((gap) => !holds.some((h) => h.agendaId === gap.agendaId && h.start < gap.end && h.end > gap.start));
+// Na agenda de Exames a reserva só segura o mesmo exame (20270108140000): lá o "Livre" fica (os outros exames marcam).
+const teamAgendas = new Set(scope.agendas.filter((a) => a.kind === "resource").map((a) => a.id));
+const openGaps = gaps.filter((gap) => teamAgendas.has(gap.agendaId) || !holds.some((h) => h.agendaId === gap.agendaId && h.start < gap.end && h.end > gap.start));
 const items = buildDayItems(appointments, situation ? [] : blocks, openGaps.map((gap) => ({ ...gap, agendaName: agendaNames.get(gap.agendaId) ?? "" })));
 
 const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
@@ -176,7 +178,7 @@ const columns = filtered.columns
   .map((column) => {
     const mine = items.filter((item) => itemAgendaId(item) === column.id);
     const mineHolds = holds.filter((h) => h.agendaId === column.id);
-    const count = mine.reduce((n, item) => n + (item.kind === "appointment" ? (item.appointment.status === "canceled" ? 0 : 1) : item.kind === "group" ? item.appointments.filter((a) => a.status !== "canceled").length : 0), 0);
+    const count = mine.reduce((n, item) => n + (item.kind === "appointment" ? (item.appointment.status === "canceled" && situation !== "canceled" ? 0 : 1) : item.kind === "group" ? item.appointments.filter((a) => a.status !== "canceled" || situation === "canceled").length : 0), 0);
     const raw: ((GridItem extends infer T ? (T extends GridItem ? Omit<T, "top" | "height" | "lane" | "lanes"> : never) : never) & { span: { start: number; end: number } })[] = [];
     for (const item of mine) {
       const span = clip(spanOf(item));
@@ -230,11 +232,12 @@ const phoneIndex = Math.max(0, columns.findIndex((c) => c.id === (verParam ?? se
 const phoneColumn = columns[phoneIndex] ?? null;
 const verLink = (id: string) => link({ ver: id });
 const groupsOf = (list: typeof allColumns, href: (id: string) => string, currentId: string | null) => {
-  const groups: { name: string | null; options: { label: string; hint?: string; href: string; current: boolean }[] }[] = [];
+  const groups: { name: string | null; options: { label: string; terms?: string; href: string; current: boolean }[] }[] = [];
   for (const column of list) {
     let group = groups.find((g) => g.name === column.group);
     if (!group) groups.push((group = { name: column.group, options: [] }));
-    group.options.push({ label: column.name, href: href(column.id), current: column.id === currentId });
+    // A busca também acha pelas outras especialidades do profissional.
+    group.options.push({ label: column.name, terms: column.specialties.join(" "), href: href(column.id), current: column.id === currentId });
   }
   return groups;
 };
@@ -301,6 +304,7 @@ const LEGEND = [
       {chosenAgendaId && <input type="hidden" name="agenda" value={chosenAgendaId} />}
       {specialty && <input type="hidden" name="esp" value={specialty} />}
       {situation && <input type="hidden" name="situacao" value={situation} />}
+      {verParam && isUuid(verParam) && <input type="hidden" name="ver" value={verParam} />}
       <h1 class="font-display text-[18px] leading-tight font-bold whitespace-nowrap text-ink first-letter:uppercase xl:text-[19px]">{title}</h1>
       <label class="absolute inset-0 cursor-pointer rounded-md focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand" title="Escolher o dia">
         <span class="sr-only">Escolher o dia</span>
@@ -431,6 +435,7 @@ const LEGEND = [
             nextHref={phoneIndex < columns.length - 1 ? verLink(columns[phoneIndex + 1].id) : null}
             pickerGroups={groupsOf(columns, verLink, phoneColumn?.id ?? null)}
             allHref={base}
+            clearHref={chosenAgendaId || specialty ? link({ agenda: null, esp: null, ver: phoneColumn?.id ?? null }) : null}
             selectedKey={sel}
           />
         </>

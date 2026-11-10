@@ -731,16 +731,23 @@ export async function listFreeGapsRange(
         loadBusy(db, clinicId, agenda.id, start, end, null, true),
         groupWindows.length === 0
           ? Promise.resolve([] as { service_id: string; scheduled_at: string }[])
-          : db
-              .from("appointments")
-              .select("service_id, scheduled_at")
-              .eq("clinic_id", clinicId)
-              .eq("agenda_id", agenda.id)
-              .in("status", ["scheduled", "confirmed"])
-              .eq("is_group_session", true)
-              .gte("scheduled_at", start.toISOString())
-              .lt("scheduled_at", end.toISOString())
-              .then((r) => unwrap(r, "Atendimentos da turma")),
+          : // Em páginas: 30 dias de turmas cheias passam das 1000 linhas da API.
+            unwrapAll(
+              (pageFrom, pageTo) =>
+                db
+                  .from("appointments")
+                  .select("service_id, scheduled_at")
+                  .eq("clinic_id", clinicId)
+                  .eq("agenda_id", agenda.id)
+                  .in("status", ["scheduled", "confirmed"])
+                  .eq("is_group_session", true)
+                  .gte("scheduled_at", start.toISOString())
+                  .lt("scheduled_at", end.toISOString())
+                  .order("scheduled_at")
+                  .order("id")
+                  .range(pageFrom, pageTo),
+              "Atendimentos da turma",
+            ),
       ]);
       const result: AgendaFreeGap[] = [];
       for (const date of openDates) {
