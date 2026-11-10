@@ -22,16 +22,17 @@
 >   (09/nov, seção 14; a API já estava na v24.0)**. **F2 validada inteira (09/nov)**, com a correção do
 >   "Adicionar à agenda" no iPhone (`802d700`). Produção: não.
 >   **F3a a F3d (bot leva ao portal, Minhas consultas, Configurações › Portal) na `main` e no staging (10/nov, `207cf87`;
->   migração `20270107120000`)**; decisões F3-1 a F3-4 na seção 15.1. **Próximo: validação do cliente** pelo roteiro
->   15.3.1 (clínica `clinica-teste`). Depois: D5 → F3e → F3f (limpeza do chat; seção 15.4) e as capturas na fila.
+>   migração `20270107120000`)**; decisões F3-1 a F3-4 na seção 15.1. **D5 e F3e (domiciliar e turma no portal) na
+>   `main` e no staging (10/nov, `9a35f68`; migrações `20270108120000` a `20270108140000` aplicadas)**; produção: não.
+>   Depois: F3f (limpeza do chat; seção 15.4; decisões F3-5 a F3-9) e as capturas na fila.
 >
-> **Duas sessões (cliente, 10/nov):** **Validação** (pasta do repositório, `main`): roteiro 15.3.1 da F3 e o que falta
-> em [`frente-validacao.md`](frente-validacao.md); ajustes direto na `main`. **Implementação** (worktree
-> `../recepclinic-impl`, branch curta da `main`): D5 → F3e → F3f (seção 15.4). Antes de juntar a branch, trazer a `main`.
-> **Validação da F3 (10/nov):** item 1 em andamento. Ajuste `c9cb2b5` (limite do portal conta só consultas marcadas;
-> migração `20270107130000` no staging). **Pendente:** desbloqueio do portal na ficha do paciente (desenhar opções), junto com as correções dos achados, depois que a implementação da outra sessão subir para o staging. Registro na
-> seção 15.3.2 do plano. Próximo: cliente valida o ajuste no staging e segue o item 1 pelo bot. A `main` foi trazida para
-> a `recepcao-d5` (implementação) em 10/nov, testes ok, sem push.
+> **Duas sessões (cliente, 10/nov):** **Validação** (pasta do repositório, `main`; este bloco é só dela): roteiro 15.3.1
+> da F3, depois o 15.5.4 da F3e (clínica `clinica-teste`), depois o desbloqueio do portal na ficha do paciente (15.3.2:
+> desenhar as opções e implementar com as correções dos achados); ajustes direto na `main`, com testes.
+> **Implementação:** branch curta da `main` (a `recepcao-d5` e o worktree `../recepclinic-impl` foram removidos). Banco
+> local único para as duas: migração só avisando antes.
+> **Validação da F3 (10/nov):** item 1 em andamento; ajuste `c9cb2b5` (limite do portal conta só consultas marcadas;
+> migração `20270107130000` no staging). Próximo: cliente segue o roteiro 15.3.1 a partir do item 1 pelo bot.
 >
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >
