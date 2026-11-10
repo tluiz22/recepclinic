@@ -14,6 +14,10 @@ import {
   portalHref,
   portalPublicUrl,
   portalLinkUrl,
+  readPlace,
+  linkForPlace,
+  professionalPublicUrl,
+  flowParams,
   portalRewrite,
   portalSteps,
   priceLine,
@@ -71,6 +75,18 @@ describe("endereço do portal", () => {
     expect(portalSteps({ specialty: false, professional: false, modality: true, phone: false })).toEqual(["modality", "time", "patient", "review"]);
   });
 
+  it("link marcado por lugar (F3d): ?de=instagram vira a origem e segue pelas telas", () => {
+    expect(linkForPlace("https://agendar.x/vs", "instagram")).toBe("https://agendar.x/vs?de=instagram");
+    expect(professionalPublicUrl(new URL("https://app.recepclinic.com.br/admin"), "vs", "dra-ana")).toBe("https://agendar.recepclinic.com.br/vs/dra-ana");
+    expect(readPlace(new URLSearchParams("de=instagram"))).toBe("instagram");
+    expect(readPlace(new URLSearchParams("de=medicos&origem=cartaz"))).toBe("cartaz");
+    expect(readPlace(new URLSearchParams("de=medicos"))).toBeNull();
+    expect(readPlace(new URLSearchParams("de=constructor"))).toBeNull();
+    const flow = readFlow(new URLSearchParams("de=medicos&origem=google&esp=abc"));
+    expect(flow).toMatchObject({ from: "medicos", place: "google", specialty: "abc" });
+    expect(flowParams(flow)).toMatchObject({ de: "medicos", origem: "google" });
+  });
+
   it("sugere o apelido pelo nome da clínica", () => {
     expect(suggestPortalSlug("Clínica Vila Serena")).toBe("clinica-vila-serena");
     expect(suggestPortalSlug("  São José & Filhos!  ")).toBe("sao-jose-filhos");
@@ -109,7 +125,7 @@ describe("passos", () => {
 
 describe("caminho", () => {
   it("lê só valores válidos do endereço", () => {
-    expect(readFlow(new URLSearchParams("de=x&esp=<script>&conv=abc-1"))).toEqual({ from: null, specialty: null, plan: "abc-1", name: null });
+    expect(readFlow(new URLSearchParams("de=x&esp=<script>&conv=abc-1"))).toEqual({ from: null, specialty: null, plan: "abc-1", name: null, place: null });
   });
   it("Voltar e Trocar levam à tela de onde o paciente veio", () => {
     const fromList = readFlow(new URLSearchParams("de=medicos&esp=e1&conv=p1"));

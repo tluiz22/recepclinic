@@ -10,3 +10,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 ## Pendentes
 
 - `config-mensagens` — texto padrão de "Link para marcar" mudou para o link do portal, sem o marcador {paciente} (F3b, 09/11/2026)
+- `config-agendas`, `config-clinica`, `config-convenios`, `config-feriados`, `config-horarios`, `config-lembretes`, `config-locais`, `config-mensagens`, `config-nota-fiscal`, `config-profissionais`, `config-servicos`, `config-whatsapp` — o menu lateral de Configurações ganhou "Portal" (clínica do seed com o item Portal; F3d, 10/11/2026)

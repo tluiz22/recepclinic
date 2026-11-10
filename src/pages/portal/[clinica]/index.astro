@@ -10,7 +10,7 @@ import PortalProfessionalHome from "../../../components/portal/PortalProfessiona
 import { openPortalPage, singleProfessional } from "../../../lib/data/portal/page";
 import { examProfessional, nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
 import { portalOffersReturn } from "../../../lib/data/portal/returnVisit";
-import { mapsHref } from "../../../lib/portal";
+import { mapsHref, portalHref, readPlace } from "../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 if (page.kind === "not_found") Astro.response.status = 404;
@@ -27,7 +27,9 @@ const bookable = portal?.professionals.some((p) => next.get(p.id)) ?? false;
 const examPros = portal ? portal.exams.map((e) => examProfessional(portal, e)).filter((p): p is NonNullable<typeof p> => !!p) : [];
 const examNext = portal && page.kind === "open" && examPros.length ? await nextFreeSlots(page.db, portal.clinicId, examPros, portal.timeZone) : new Map<string, Date | null>();
 const bookableExams = examPros.filter((p) => examNext.get(p.id));
-const startHref = specialties.length > 1 ? `${base}/especialidade` : `${base}/medicos`;
+// Link marcado por lugar (F3d, "?de=instagram"): a origem segue pelas telas até a marcação.
+const origem = readPlace(Astro.url.searchParams);
+const startHref = portalHref(specialties.length > 1 ? `${base}/especialidade` : `${base}/medicos`, { origem });
 const located = portal?.locations.filter((l) => l.address) ?? [];
 // "Marcar retorno" só com o serviço de retorno num médico do portal (D4).
 // "Marcar exame" só na clínica com exames marcáveis (item "Exames e procedimentos", F2d).
@@ -37,7 +39,7 @@ const actions = [
     ? [{ href: `${base}/retorno`, label: "Marcar retorno", detail: "Volta ao médico da última consulta, dentro do prazo", icon: "return" as const }]
     : []),
   ...(examNames.length
-    ? [{ href: `${base}/exames`, label: "Marcar exame", detail: examNames.length > 2 ? `${examNames.slice(0, 2).join(", ")} e outros` : examNames.join(" e "), icon: "exam" as const }]
+    ? [{ href: portalHref(`${base}/exames`, { origem }), label: "Marcar exame", detail: examNames.length > 2 ? `${examNames.slice(0, 2).join(", ")} e outros` : examNames.join(" e "), icon: "exam" as const }]
     : []),
   ...(portal ? [MY_APPOINTMENTS(base)] : []),
 ];
@@ -52,7 +54,7 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
 >
   {page.kind === "not_found" && <PortalNotice kind="not_found" />}
   {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
-  {portal && single && <PortalProfessionalHome portal={portal} professional={single} base={base} next={next.get(single.id) ?? null} actions={actions} />}
+  {portal && single && <PortalProfessionalHome portal={portal} professional={single} base={base} next={next.get(single.id) ?? null} actions={actions} origem={origem} />}
   {
     portal && !single && (
       <div class="grid gap-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-14">
@@ -85,7 +87,7 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
             </div>
           )}
           {portal.professionals.length > 0 && (
-            <a href={`${base}/medicos`} class="flex min-h-11 items-center self-start text-[17px] font-semibold text-clinic-ink">
+            <a href={portalHref(`${base}/medicos`, { origem })} class="flex min-h-11 items-center self-start text-[17px] font-semibold text-clinic-ink">
               Ver médicos, convênios e valores
             </a>
           )}

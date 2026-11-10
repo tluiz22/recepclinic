@@ -140,8 +140,11 @@ export const CHANGE_SPECIALTY_LABEL = "Outra especialidade";
 export const professionalChosen = (name: string, specialty: string | null) => `Atendimento com *${name}*${specialty ? ` (${specialty})` : ""}.`;
 export const EXAMS_CHOSEN = "Certo, vamos ver os exames.";
 /** Informações gerais › Convênios (MC + MI): os planos que o profissional atende e o texto dele. */
-export function insuranceInfoText(name: string, plans: string[], text: string | null): string {
-  const list = plans.length ? `Convênios atendidos por *${name}*: ${plans.join(", ")}.` : `*${name}* atende só particular.`;
+export function insuranceInfoText(name: string, plans: string[], text: string | null, acceptsPrivate = true): string {
+  // Só convênio ("Atende particular" desmarcado; pendência da F1, fechada na F3): diz que não atende particular.
+  const list = plans.length
+    ? `Convênios atendidos por *${name}*: ${plans.join(", ")}.${acceptsPrivate ? "" : " Não atende particular."}`
+    : `*${name}* atende só particular.`;
   return text ? `${list}\n\n${text}` : list;
 }
 

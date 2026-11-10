@@ -30,7 +30,7 @@ const plan = plans.find((p) => p.id === flow.plan) ?? null;
 const list = plan ? all.filter((p) => p.plans.some((pl) => pl.id === plan.id)) : all;
 const next = page.kind === "open" ? await nextFreeSlots(page.db, page.portal.clinicId, list, page.portal.timeZone) : new Map<string, Date | null>();
 const compact = list.length >= 6;
-const cardFlow = { de: "medicos", esp: flow.specialty, conv: plan?.id ?? null, nome: byName ? flow.name : null };
+const cardFlow = { de: "medicos", esp: flow.specialty, conv: plan?.id ?? null, nome: byName ? flow.name : null, origem: flow.place };
 const shownCount = list.filter((p) => !nameQuery || matchesName(p.name, nameQuery)).length;
 const steps = portalSteps({ specialty: !!flow.specialty && specialties.length > 1, professional: true, modality: true });
 const back = flow.specialty && specialties.length > 1 ? `${base}/especialidade` : base;
@@ -60,6 +60,7 @@ const nowDate = new Date();
           <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">{label}</h1>
           <form method="GET" class="flex flex-col gap-3 sm:flex-row sm:items-end" data-portal-filter>
             {flow.specialty && <input type="hidden" name="esp" value={flow.specialty} />}
+            {flow.place && <input type="hidden" name="origem" value={flow.place} />}
             {byName && (
               <div class="flex flex-1 flex-col gap-1.5">
                 <label for="nome" class="text-base font-semibold text-gray-700">Nome do médico</label>
@@ -88,7 +89,7 @@ const nowDate = new Date();
           {list.length === 0 && (
             <div class="flex flex-col gap-3 rounded-[14px] border border-gray-200 bg-white px-4 py-4" role="status">
               <p>Nenhum médico{specialty ? ` de ${specialty.name}` : ""} atende {plan?.name}.</p>
-              <a href={portalHref(`${base}/medicos`, { esp: flow.specialty })} class="self-start font-semibold text-clinic-ink">Ver todos</a>
+              <a href={portalHref(`${base}/medicos`, { esp: flow.specialty, origem: flow.place })} class="self-start font-semibold text-clinic-ink">Ver todos</a>
             </div>
           )}
           <p class="text-base text-gray-600" data-portal-name-empty hidden={!(nameQuery && shownCount === 0 && list.length > 0)}>Nenhum médico com esse nome. Confira a escrita ou fale com a recepção.</p>

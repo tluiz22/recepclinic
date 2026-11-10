@@ -1,5 +1,5 @@
 // Seções de Configurações no menu lateral (redesign R9, cliente, 17/out/2026):
-// 4 grupos, na ordem do guia de configuração. Convênios e Nota fiscal só com
+// 4 grupos, na ordem do guia de configuração. Convênios, Portal e Nota fiscal só com
 // o item liberado (D11); WhatsApp só para o Suporte (cliente, 08/out/2026).
 import type { IconName } from "../Icon.astro";
 import type { FeatureKey } from "../../../lib/features";
@@ -15,6 +15,7 @@ export type SectionId =
   | "horarios"
   | "feriados"
   | "convenios"
+  | "portal"
   | "lembretes"
   | "mensagens"
   | "whatsapp"
@@ -50,6 +51,7 @@ const SECTION_ICONS: Record<SectionId, IconName> = {
   horarios: "clock",
   feriados: "calendar-x",
   convenios: "credit-card",
+  portal: "globe",
   lembretes: "bell",
   mensagens: "chat-bubble",
   whatsapp: "device-phone",
@@ -107,6 +109,8 @@ export function configSections(
         item("horarios", "Horários", "/horarios"),
         item("feriados", "Feriados", "/feriados"),
         ...(features.includes("insurance") ? [item("convenios", "Convênios", "/convenios")] : []),
+        // Portal de agendamento (F3d; R7): os links, o QR e a antecedência, com o item "Portal" da Matriz.
+        ...(features.includes("portal") ? [item("portal", "Portal", "/portal")] : []),
       ],
     },
     {

@@ -61,6 +61,8 @@ export type BotClinic = {
   insurancePlans: string[] | null;
   /** Nome do profissional em uso (Informações › Convênios). */
   professionalName: string | null;
+  /** O profissional em uso atende particular ("Atende particular" no cadastro; F1). Sem profissional: true. */
+  acceptsPrivate: boolean;
   /** Como a clínica é chamada nos textos genéricos (cliente, 11/out/2026). */
   designation: Designation;
   /** Prazo para oferecer horários, em dias. */
@@ -234,6 +236,7 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     insuranceInfo: null,
     notes: null,
     insurancePlans: null,
+    acceptsPrivate: true,
     professionalName: null,
     designation: { noun: settings.message_noun, article: settings.message_noun_article as NounArticle },
     horizonDays: BOOKING_HORIZON_DEFAULT,
@@ -270,7 +273,7 @@ export async function createBot(env: BotEnv, convo: Conversation, incomingId: st
   return b;
 }
 
-type ProfessionalInfo = Pick<BotClinic, "paymentInfo" | "insuranceInfo" | "notes" | "insurancePlans" | "professionalName">;
+type ProfessionalInfo = Pick<BotClinic, "paymentInfo" | "insuranceInfo" | "notes" | "insurancePlans" | "professionalName" | "acceptsPrivate">;
 
 /** Informações que o bot responde e convênios de um profissional (MI e MC, 07/nov/2026); sem profissional, nada. */
 export async function professionalInfoFor(
@@ -279,8 +282,8 @@ export async function professionalInfoFor(
   features: readonly FeatureKey[],
   current: ProfessionalScope["current"],
 ): Promise<ProfessionalInfo> {
-  if (!current) return { paymentInfo: null, insuranceInfo: null, notes: null, insurancePlans: null, professionalName: null };
-  const [info, links] = await Promise.all([
+  if (!current) return { paymentInfo: null, insuranceInfo: null, notes: null, insurancePlans: null, professionalName: null, acceptsPrivate: true };
+  const [info, links, professional] = await Promise.all([
     db
       .from("professional_bot_info")
       .select("payment_info, insurance_info, notes")
@@ -296,6 +299,7 @@ export async function professionalInfoFor(
           .eq("professional_id", current.id)
           .then((r) => unwrap(r, "Convênios atendidos"))
       : Promise.resolve(null),
+    db.from("professionals").select("accepts_private").eq("clinic_id", clinicId).eq("id", current.id).maybeSingle().then((r) => unwrap(r, "Profissional")),
   ]);
   // Clínica sem nenhum plano ativo: o bot não fala de convênio (nem "só particular").
   const anyPlan =
@@ -314,6 +318,7 @@ export async function professionalInfoFor(
           .sort((x, y) => x.localeCompare(y, "pt-BR"))
       : null,
     professionalName: current.name,
+    acceptsPrivate: professional?.accepts_private ?? true,
   };
 }
 

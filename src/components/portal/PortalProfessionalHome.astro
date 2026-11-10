@@ -3,7 +3,7 @@
 // horário, "Agendar consulta com {nome}", valores e convênios, local e orientações. Sem outros médicos da clínica.
 // "Minhas consultas" (F3c) fica nas ações de baixo.
 import type { PortalClinic, PortalProfessional } from "../../lib/data/portal/portal";
-import { mapsHref, nextSlotLabel, privateLabel, withName } from "../../lib/portal";
+import { mapsHref, nextSlotLabel, privateLabel, withName, portalHref } from "../../lib/portal";
 import PortalAvatar from "./PortalAvatar.astro";
 import PortalMoreActions from "./PortalMoreActions.astro";
 
@@ -14,10 +14,13 @@ interface Props {
   next: Date | null;
   /** "Marcar retorno" e "Marcar exame" (D4), quando a clínica tem. */
   actions?: { href: string; label: string; detail: string; icon: "return" | "exam" | "mine" }[];
+  /** Onde o link foi posto (`?de=instagram`, F3d). */
+  origem?: string | null;
 }
 
-const { portal, professional, base, next, actions = [] } = Astro.props;
-const start = `${base}/${professional.slug}/atendimento`;
+const { portal, professional, base, next, actions = [], origem = null } = Astro.props;
+// Link marcado por lugar (F3d): a origem segue até a marcação.
+const start = portalHref(`${base}/${professional.slug}/atendimento`, { origem });
 const box = "flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5";
 const title = "text-[15px] font-semibold text-gray-600";
 ---

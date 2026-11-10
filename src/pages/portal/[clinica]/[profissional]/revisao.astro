@@ -46,6 +46,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
       timeZone,
       insurancePlanId: view.planId,
       entry: view.entry,
+      place: view.flow.place,
       sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null),
     });
     if (outcome.status === "booked") return Astro.redirect(view.href("marcada"));

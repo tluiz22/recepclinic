@@ -1,0 +1,55 @@
+---
+// Cartaz A4 do QR code (F3d; R7 "Imprimir cartaz", "Aponte a câmera para agendar"): o nome da clínica (ou do
+// profissional), o QR do link do cartaz (`?de=cartaz`) e o endereço por extenso, para imprimir e pôr na recepção ou no
+// consultório. Só o Administrador (área de Configurações), com o item "Portal".
+import "../../../../styles/global.css";
+import QRCode from "qrcode";
+import { createUserClient } from "../../../../lib/data/clients";
+import { loadPortalSettings } from "../../../../lib/data/config/portal";
+import { portalLinksOf } from "../../../../lib/data/config/portalLinks";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const settings = await loadPortalSettings(db, clinic.clinicId);
+const links = portalLinksOf(Astro.url, settings);
+const key = Astro.url.searchParams.get("p") ?? "clinica";
+const link = key === "clinica" ? links.clinic : links.professionals.get(key);
+if (!link) return Astro.redirect("/admin/configuracoes/portal");
+const professional = key === "clinica" ? null : settings.professionals.find((p) => p.id === key);
+const svg = await QRCode.toString(link.posterUrl, { type: "svg", errorCorrectionLevel: "M", margin: 0 });
+const shortUrl = link.url.replace(/^https?:\/\//, "");
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cartaz: {professional?.name ?? clinic.clinicName}</title>
+    <meta name="robots" content="noindex" />
+  </head>
+  <body class="bg-canvas text-ink print:bg-white">
+    <div class="mx-auto flex max-w-[210mm] items-center justify-between gap-3 px-4 py-4 print:hidden">
+      <a href="/admin/configuracoes/portal" class="text-[15px] font-semibold text-brand underline">Voltar</a>
+      <button type="button" data-print class="rounded-lg bg-brand px-5 py-2.5 text-[15px] font-bold text-white">Imprimir</button>
+    </div>
+    <main class="mx-auto flex min-h-[297mm] w-full max-w-[210mm] flex-col items-center justify-center gap-[12mm] bg-white px-[18mm] py-[20mm] text-center shadow-sm print:min-h-0 print:shadow-none">
+      <div class="flex flex-col gap-[4mm]">
+        <p class="text-[20pt] font-semibold text-ink-soft">{clinic.clinicName}</p>
+        <h1 class="font-display text-[38pt] leading-[1.05] font-bold">{professional ? `Agende com ${professional.name}` : "Agende sua consulta"}</h1>
+      </div>
+      <div class="w-[110mm] max-w-full [&_svg]:h-auto [&_svg]:w-full" set:html={svg} />
+      <p class="text-[26pt] font-bold">Aponte a câmera para agendar</p>
+      <p class="text-[14pt] break-all text-ink-soft">{shortUrl}</p>
+    </main>
+    <script>
+      document.querySelector("[data-print]")?.addEventListener("click", () => window.print());
+    </script>
+    <style is:global>
+      @page {
+        size: A4;
+        margin: 0;
+      }
+    </style>
+  </body>
+</html>

@@ -8,8 +8,10 @@ import PortalStepBar from "../../../components/portal/PortalStepBar.astro";
 import PortalSummary from "../../../components/portal/PortalSummary.astro";
 import { openPortalPage } from "../../../lib/data/portal/page";
 import { nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
-import { doctorsCount, matchesSpecialty, plainText, portalHref, portalSteps, stepPosition } from "../../../lib/portal";
+import { doctorsCount, matchesSpecialty, plainText, portalHref, portalSteps, readPlace, stepPosition } from "../../../lib/portal";
 
+// Link marcado por lugar (F3d): a origem segue até a marcação.
+const origem = readPlace(Astro.url.searchParams);
 const page = await openPortalPage(Astro);
 if (page.kind === "not_found") Astro.response.status = 404;
 const portal = page.kind === "open" ? page.portal : null;
@@ -26,8 +28,8 @@ const cards = portal
         search: plainText([specialty.name, ...specialty.terms].join(" | ")),
         href:
           doctors.length === 1
-            ? portalHref(`${base}/${doctors[0].slug}/atendimento`, { de: "especialidade", esp: specialty.id })
-            : portalHref(`${base}/medicos`, { esp: specialty.id }),
+            ? portalHref(`${base}/${doctors[0].slug}/atendimento`, { de: "especialidade", esp: specialty.id, origem })
+            : portalHref(`${base}/medicos`, { esp: specialty.id, origem }),
         visible: matchesSpecialty(specialty, query),
       }))
   : [];
@@ -52,6 +54,7 @@ const card =
           <PortalStepBar back={base} step={step} />
           <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Qual especialidade você procura?</h1>
           <form method="GET" class="flex flex-col gap-1.5" role="search" data-portal-search>
+            {origem && <input type="hidden" name="origem" value={origem} />}
             <label for="busca" class="text-base font-semibold text-gray-700">Buscar especialidade ou sintoma</label>
             <div class="relative">
               <svg aria-hidden="true" class="pointer-events-none absolute top-4 left-3.5 h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
@@ -68,7 +71,7 @@ const card =
             </div>
           </form>
           <p id="busca-resultado" class="text-base text-gray-600" aria-live="polite" data-portal-search-empty hidden={!noneVisible}>
-            Não encontramos "<span data-portal-search-term>{query}</span>". Veja <a href={`${base}/especialidade`} class="font-semibold text-clinic-ink" data-portal-search-clear>todas as especialidades</a> ou fale com a recepção.
+            Não encontramos "<span data-portal-search-term>{query}</span>". Veja <a href={portalHref(`${base}/especialidade`, { origem })} class="font-semibold text-clinic-ink" data-portal-search-clear>todas as especialidades</a> ou fale com a recepção.
           </p>
           <ul class="grid gap-2.5 lg:grid-cols-3" aria-label="Especialidades">
             {cards.map((c) => (
@@ -81,7 +84,7 @@ const card =
             ))}
           </ul>
           <a
-            href={portalHref(`${base}/medicos`, { esp: "todos" })}
+            href={portalHref(`${base}/medicos`, { esp: "todos", origem })}
             class="mt-2 flex min-h-12 items-center justify-center rounded-xl border-[1.5px] border-gray-300 bg-white px-5 text-[17px] font-semibold text-clinic-ink no-underline hover:border-clinic-ink sm:self-start"
           >
             Já sei o nome do médico
