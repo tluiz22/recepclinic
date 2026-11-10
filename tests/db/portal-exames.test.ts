@@ -10,7 +10,7 @@ import { adminClient, clinicServiceClient } from "./helpers";
 import { setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // F2d da recepção digital, parte 2: exames pelo portal. O exame passa pelas telas da consulta como um "profissional"
-// (agenda da equipe, todos os convênios ativos, sem idade limite); a turma (em grupo) fica fora; o mesmo exame já
+// (agenda da equipe, todos os convênios ativos, sem idade limite); a turma tem testes próprios (portal-turma.test.ts); o mesmo exame já
 // marcado impede outro, como no bot. Datas reais (a reserva vence pelo relógio do banco).
 
 const TZ = "America/Fortaleza";
@@ -81,9 +81,10 @@ afterAll(async () => {
 });
 
 describe("exames pelo portal", () => {
-  it("lista só o exame individual da agenda da equipe, com preparo, e o resolve pelo endereço", () => {
-    expect(portal.exams.map((e) => e.name)).toEqual(["Exame"]);
-    expect(portal.exams[0]).toMatchObject({ serviceId: fixture.ids.exame, slug: examSlug(fixture.ids.exame), preparation: "Jejum de *8 horas*.", hasPreparationFile: false });
+  it("lista os exames da agenda da equipe, com preparo, e os resolve pelo endereço", () => {
+    // A turma entra desde a F3e-2 (portal-turma.test.ts).
+    expect(portal.exams.map((e) => e.name)).toEqual(["Exame", "Turma"]);
+    expect(portal.exams[0]).toMatchObject({ serviceId: fixture.ids.exame, slug: examSlug(fixture.ids.exame), preparation: "Jejum de *8 horas*.", hasPreparationFile: false, isGroup: false });
     expect(exam).toMatchObject({ agendaId: fixture.ids.agendaExams, acceptsPrivate: true, ageLimitYears: null, privatePriceCents: 15000, name: "Exame" });
     // Todos os convênios ativos (agenda sem profissional, como o bot).
     expect(exam.plans.map((p) => p.id)).toContain(planId);

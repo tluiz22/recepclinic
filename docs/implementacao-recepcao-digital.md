@@ -749,3 +749,28 @@ local com o OK do cliente; staging e produção: não.
   campos) → "Pronto, remarcado". Console sem erros. Achado e corrigido: o atendimento em casa mostrava "Particular, a
   partir de R$ 300" no lugar de "Particular, R$ 450, em casa".
 - **Capturas da Central:** nenhuma tela com captura mudou.
+
+#### 15.5.2 F3e-2 feita: exame em turma no portal (10/nov/2026, branch `recepcao-d5`)
+
+Migração `20270108130000_portal_turma` (função `portal_hold_group_slot`: a reserva segura uma vaga enquanto marcados +
+reservas de outras sessões não chegam à capacidade), aplicada no banco local com o OK do cliente; staging e produção:
+não. Para aplicar só ela, a migração da sessão de validação (`20270107130000`, ainda sem commit) foi copiada para o
+worktree durante o comando e apagada em seguida.
+
+- **Dados:** a turma da agenda da equipe entra em `portal.exams` (`isGroup`); dias e horários = as sessões com vaga no
+  prazo (`groupSessions`), descontando as vagas que outros pacientes do portal estão confirmando
+  (`getGroupSessions` com `holds`). Próximo horário, "ainda livre" e a lista de exames passam a valer para a turma.
+- **Lista de exames (TU1):** etiqueta "Em grupo, horário fixo" e a linha "\"Em grupo\": várias pessoas fazem o exame
+  juntas, no mesmo horário".
+- **Dia da turma (TU2a):** "Escolha o dia", lista de cartões (dia por extenso e "às 10:00"), sem número de vagas, 8 por
+  vez com "Ver mais dias". O resto do caminho é o dos exames (celular, paciente, revisão com o preparo, "Exame marcado!").
+- **Bot:** Marcar exame com turma da agenda da equipe manda o link do portal. Remarcar turma segue no chat (o portal não
+  remarca turma). Jornada do bot atualizada.
+- **Limite conhecido:** a reserva de uma vaga de turma ainda conta como horário ocupado para um exame individual da
+  mesma agenda no mesmo horário (janelas da turma e dos exames individuais costumam ser separadas).
+- **Testes:** 1188 de unidade; banco: `portal-turma.test.ts` (lista e sessões, uma vaga por reserva, turma cheia por
+  reservas some e recusa, a mesma reserva ao recarregar, marcação como turma, função recusa serviço individual) e
+  `portal-exames` revisto; bateria inteira 1156 de 1157 (a falha é a de 15.5.1, da migração da sessão de validação).
+- **Playwright (porta 4322, clínica temporária apagada):** 390 e 1280 px; lista com a etiqueta → turma → lista de dias
+  → celular e código → paciente → revisão com o preparo → duplo clique (um atendimento) → "Exame marcado!"; Voltar da
+  lista de dias leva à lista de exames. Sem erros do portal no console.

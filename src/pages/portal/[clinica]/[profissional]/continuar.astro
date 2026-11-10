@@ -13,8 +13,8 @@ import { capitalize } from "../../../../lib/vocabulary";
 import { formatInstant } from "../../../../lib/clinicTime";
 import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
 import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page";
-import { isSlotStillFree } from "../../../../lib/data/portal/portal";
-import { holdSlot, readSession } from "../../../../lib/data/portal/identity";
+import { groupSessions, isSlotStillFree } from "../../../../lib/data/portal/portal";
+import { holdGroupSlot, holdSlot, readSession } from "../../../../lib/data/portal/identity";
 import { holdBlocked, runIdentityStep, type IdentityState } from "../../../../lib/data/portal/identityStep";
 import { changeProfessionalHref, chosenModality, flowParams, helpForOf, modalityLabelAt, modalityOptions, portalHref, professionalSteps, readFlow, stepPosition, whoLabel } from "../../../../lib/portal";
 
@@ -72,7 +72,17 @@ if (page.kind === "open" && professional && consultation) {
         state.blockedUntil = blocked;
         return null;
       }
-      const hold = await holdSlot(db, clinicId, session.id, slot);
+      // Turma (F3e-2): reserva uma vaga, com a capacidade da sessão escolhida.
+      const group = professional.exam?.isGroup
+        ? (await groupSessions(db, clinicId, professional, timeZone, { sessionId: session.id })).find(
+            (s) => s.start.getTime() === slot.start.getTime() && s.locationId === slot.locationId,
+          )
+        : null;
+      const hold = professional.exam?.isGroup
+        ? group
+          ? await holdGroupSlot(db, clinicId, session.id, { ...slot, capacity: group.capacity })
+          : ({ status: "taken" } as const)
+        : await holdSlot(db, clinicId, session.id, slot);
       if (hold.status === "ok") return Astro.redirect(portalHref(`${base}/${professional.slug}/reserva`, { ...keep, date: params.get("date"), reserva: hold.holdId }));
       if (hold.status === "taken") return Astro.redirect(portalHref(timesPath, { ...keep, date: params.get("date"), erro: "horario" }));
       state.problem = {

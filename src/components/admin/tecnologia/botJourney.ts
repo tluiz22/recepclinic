@@ -108,7 +108,7 @@ export const JOURNEY: JourneySection[] = [
     flow: [
       check(
         "O portal marca este atendimento?",
-        "Sim quando a clínica tem o endereço do portal e o Portal ligado, o profissional aparece no portal e o atendimento é individual, no consultório ou em casa (F3b, 09/nov/2026; domiciliar desde a F3e-1, 10/nov/2026). Em turma, por enquanto, segue no chat (entra no portal depois).",
+        "Sim quando a clínica tem o endereço do portal e o Portal ligado, o profissional aparece no portal e o atendimento é individual, no consultório ou em casa (F3b, 09/nov/2026; domiciliar desde a F3e-1, 10/nov/2026), ou exame em turma da agenda de Exames (F3e-2: o portal mostra a lista de dias com vaga). Exame da agenda de um profissional, por enquanto, segue no chat.",
       ),
       branch(
         [

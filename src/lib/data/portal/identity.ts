@@ -211,6 +211,33 @@ export async function holdSlot(
   return { status: (row?.outcome ?? "taken") as "taken" | "limit" | "session" };
 }
 
+/**
+ * Reserva uma vaga da turma (F3e-2): vale enquanto os marcados mais as reservas de outras sessões não chegam à
+ * capacidade (migração 20270108130000). A capacidade vem da leitura das turmas (getGroupSessions).
+ */
+export async function holdGroupSlot(
+  db: DbClient,
+  clinicId: string,
+  sessionId: string,
+  slot: { agendaId: string; serviceId: string; locationId: string; start: Date; end: Date; capacity: number },
+): Promise<HoldResult> {
+  const { data, error } = await db.rpc("portal_hold_group_slot", {
+    p_clinic_id: clinicId,
+    p_session_id: sessionId,
+    p_agenda_id: slot.agendaId,
+    p_service_id: slot.serviceId,
+    p_location_id: slot.locationId,
+    p_starts_at: slot.start.toISOString(),
+    p_ends_at: slot.end.toISOString(),
+    p_capacity: slot.capacity,
+    p_max_per_day: MAX_HOLDS_PER_DAY,
+  });
+  if (error) throw error;
+  const row = (data as { outcome: string; hold_id: string | null; hold_expires_at: string | null }[])[0];
+  if (row?.outcome === "ok" && row.hold_id && row.hold_expires_at) return { status: "ok", holdId: row.hold_id, expiresAt: new Date(row.hold_expires_at) };
+  return { status: (row?.outcome ?? "taken") as "taken" | "limit" | "session" };
+}
+
 export async function releaseHold(db: DbClient, clinicId: string, sessionId: string): Promise<void> {
   const { error } = await db.rpc("portal_release_hold", { p_clinic_id: clinicId, p_session_id: sessionId });
   if (error) throw error;

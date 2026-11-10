@@ -14,12 +14,13 @@ import * as t from "./texts";
 //
 // O bot segue com a marcação no chat (como antes) só onde o portal ainda não marca, para nenhuma clínica perder o
 // que tem hoje: clínica sem o endereço do portal (o Suporte define) ou com o Portal desligado; profissional fora do
-// portal ("Mostrar no portal" desmarcado); atendimento em turma (entra no portal na F3e-2, F3-1); exame que o portal
-// não mostra (de agenda de profissional, F3e-3). O domiciliar já marca pelo portal (F3e-1, D5).
+// portal ("Mostrar no portal" desmarcado); exame que o portal não mostra (de agenda de profissional, F3e-3). O
+// domiciliar (F3e-1) e a turma da agenda da equipe (F3e-2) já marcam pelo portal (D5).
 
 type Route = { purpose: PortalLinkPurpose; what: string; professionalId: string | null; serviceId: string | null };
 
-const portalCovers = (service: BotService) => !service.isGroup;
+// Turma só existe em Exame (F3e-2: o exame em turma da agenda da equipe está em portal.exams); consulta em grupo, não.
+const portalCovers = (service: BotService) => !service.isGroup || service.category === "exam";
 
 /**
  * O endereço do portal, se ele está aberto para a clínica (endereço definido pelo Suporte, item Portal ligado,

@@ -464,7 +464,7 @@ export async function getNextAvailableDatesAnyAgenda(
 export async function getGroupSessions(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; agendaId: string; count?: number; maxDaysAhead?: number; lastDate?: string | null },
+  query: { serviceId: string; agendaId: string; count?: number; maxDaysAhead?: number; lastDate?: string | null; holds?: PortalHolds },
   now: Date = new Date(),
 ): Promise<GroupSession[]> {
   const plan = await loadSchedulingPlan(db, clinicId, query);
@@ -508,6 +508,24 @@ export async function getGroupSessions(
   for (const row of booked) {
     const key = new Date(row.scheduled_at).getTime();
     bookedAt.set(key, (bookedAt.get(key) ?? 0) + 1);
+  }
+  // Portal (F3e-2): a vaga que outro paciente está confirmando também conta (a própria reserva, não).
+  if (query.holds) {
+    let held = db
+      .from("slot_holds")
+      .select("starts_at")
+      .eq("clinic_id", clinicId)
+      .eq("agenda_id", query.agendaId)
+      .eq("service_id", query.serviceId)
+      .is("released_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .gte("starts_at", from.toISOString())
+      .lt("starts_at", to.toISOString());
+    if (query.holds.exceptSession) held = held.neq("session_id", query.holds.exceptSession);
+    for (const row of unwrap(await held, "Reservas do portal")) {
+      const key = new Date(row.starts_at).getTime();
+      bookedAt.set(key, (bookedAt.get(key) ?? 0) + 1);
+    }
   }
 
   const sessions: GroupSession[] = [];

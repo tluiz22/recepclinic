@@ -75,10 +75,13 @@ const waHref = waPhone ? receptionWhatsappHref(waPhone, "Olá! Quero marcar um e
                   <span class="text-base text-gray-700">
                     {priceOf(exam)} Cerca de {exam.durationMinutes} min.
                   </span>
-                  <span
-                    class={`mt-1 self-start rounded-full px-2.5 py-0.5 text-[15px] font-semibold ${exam.preparation || exam.hasPreparationFile ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-700"}`}
-                  >
-                    {exam.preparation || exam.hasPreparationFile ? "Tem preparo" : "Sem preparo"}
+                  <span class="mt-1 flex flex-wrap gap-1.5">
+                    <span
+                      class={`rounded-full px-2.5 py-0.5 text-[15px] font-semibold ${exam.preparation || exam.hasPreparationFile ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-700"}`}
+                    >
+                      {exam.preparation || exam.hasPreparationFile ? "Tem preparo" : "Sem preparo"}
+                    </span>
+                    {exam.isGroup && <span class="rounded-full bg-sky-100 px-2.5 py-0.5 text-[15px] font-semibold text-sky-900">Em grupo, horário fixo</span>}
                   </span>
                 </span>
                 <svg aria-hidden="true" class="h-6 w-6 shrink-0 text-clinic-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
@@ -86,6 +89,7 @@ const waHref = waPhone ? receptionWhatsappHref(waPhone, "Olá! Quero marcar um e
             </li>
           ))}
         </ul>
+        {exams.some((e) => e.isGroup) && <p class="text-base text-gray-600">"Em grupo": várias pessoas fazem o exame juntas, no mesmo horário.</p>}
         {searchable && (
           <p class="text-base text-gray-600" data-portal-exam-empty hidden role="status">
             Nenhum exame com esse nome.

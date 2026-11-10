@@ -14,7 +14,7 @@ import { getReceptionHours } from "../config/receptionHours";
 import { listServices, servicePriceAt } from "../config/services";
 import { unwrap, unwrapOne } from "../errors";
 import { getClinicFeatures } from "../features";
-import { getFreeSlots, getNextAvailableDates, horizonLastDate, isAgendaOpenOn } from "../agenda/slots";
+import { getFreeSlots, getGroupSessions, getNextAvailableDates, horizonLastDate, isAgendaOpenOn, type GroupSession } from "../agenda/slots";
 import type { FreeSlot } from "../agenda/freeSlots";
 import { logError } from "../../log";
 
@@ -24,7 +24,7 @@ import { logError } from "../../log";
 // Quem aparece (mesma regra do catálogo do bot, catalog.ts): profissional ativo, marcado para o portal, com um serviço
 // de Consulta individual ativo na agenda dele e horário de atendimento cadastrado num local da clínica onde o serviço é
 // oferecido, que atende particular ou algum convênio ativo. Domiciliar (F3e-1, D5): o local "em casa" entra nos locais
-// do profissional, com o valor de lá. Turma fica fora desta etapa (retorno e exames: F2d). Perfil e idade limite da agenda valem quando o paciente for informado (P8, F2c).
+// do profissional, com o valor de lá. Turma (F3e-2): exame em grupo da agenda da equipe, por vaga (retorno e exames: F2d). Perfil e idade limite da agenda valem quando o paciente for informado (P8, F2c).
 // Os horários saem das mesmas funções do bot, do Marcar e do link de agendar (agenda/slots.ts): prazo do profissional,
 // feriados, bloqueios, intervalo e atendimentos marcados.
 
@@ -89,6 +89,8 @@ export type PortalExam = {
   preparation: string | null;
   /** Tem o arquivo com as orientações (o link público /preparo/…). */
   hasPreparationFile: boolean;
+  /** Em turma (F3e-2): horário fixo, várias pessoas juntas; o paciente escolhe o dia numa lista, sem o número de vagas. */
+  isGroup: boolean;
 };
 
 export const EXAM_SLUG_PREFIX = "exame-";
@@ -232,14 +234,15 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
   result.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   await signPhotos(db, clinicId, result);
 
-  // Exames (F2d): a agenda da equipe, os exames individuais dela com horário num local da clínica.
+  // Exames (F2d): a agenda da equipe, os exames dela (individuais e, desde a F3e-2, em turma) com horário num local da
+  // clínica (a turma, nas janelas dela).
   const exams: PortalExam[] = [];
   let examBase: PortalClinic["examBase"] = null;
   const team = agendas.find((a) => a.kind === "resource" && a.isActive);
   if (team && features.includes("exams")) {
     const examLocations = new Set<string>();
     for (const service of services) {
-      if (service.category !== "exam" || service.schedulingMode === "group" || !service.agendaIds.includes(team.id)) continue;
+      if (service.category !== "exam" || !service.agendaIds.includes(team.id)) continue;
       const offered = new Set(service.locations.map((l) => l.locationId).filter((id) => clinicLocations.has(id)));
       const here = windows.filter((w) => w.agenda_id === team.id && offered.has(w.location_id) && (w.service_id === null || w.service_id === service.id));
       if (!here.length) continue;
@@ -256,6 +259,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
         locationIds,
         preparation: service.preparationInstructions?.trim() || null,
         hasPreparationFile: !!service.preparationFile,
+        isGroup: service.schedulingMode === "group",
       });
     }
     exams.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
@@ -366,6 +370,29 @@ export const scopeLastDate = (professional: Pick<PortalProfessional, "horizonDay
   return scope.lastDate && scope.lastDate < own ? scope.lastDate : own;
 };
 
+/**
+ * Turma (F3e-2): as próximas sessões com vaga, nos locais do exame e no prazo da agenda, sem as vagas que outros
+ * pacientes do portal estão confirmando (`sessionId`: a de quem pergunta).
+ */
+export async function groupSessions(
+  db: DbClient,
+  clinicId: string,
+  professional: PortalProfessional,
+  timeZone: string,
+  { count = 60, now = new Date(), sessionId = null }: { count?: number; now?: Date; sessionId?: string | null } = {},
+): Promise<GroupSession[]> {
+  const serviceId = professional.consultations[0]?.serviceId;
+  if (!serviceId) return [];
+  const sessions = await getGroupSessions(
+    db,
+    clinicId,
+    { serviceId, agendaId: professional.agendaId, count, lastDate: lastBookableDate(professional, timeZone, now), holds: { exceptSession: sessionId } },
+    now,
+  );
+  const here = new Set(professional.locations.map((l) => l.id));
+  return sessions.filter((s) => here.has(s.locationId));
+}
+
 /** Próximas datas com horário livre do tipo de Consulta, nos locais da clínica (até `count`, no prazo). */
 export async function professionalDates(
   db: DbClient,
@@ -375,6 +402,10 @@ export async function professionalDates(
   timeZone: string,
   { count = 60, now = new Date(), sessionId = null, scope = {} }: { count?: number; now?: Date; sessionId?: string | null; scope?: SlotScope } = {},
 ): Promise<string[]> {
+  if (professional.exam?.isGroup) {
+    const sessions = await groupSessions(db, clinicId, professional, timeZone, { now, sessionId });
+    return [...new Set(sessions.map((s) => s.date))].slice(0, count);
+  }
   const lastDate = scopeLastDate(professional, timeZone, now, scope);
   const holds = { exceptSession: sessionId };
   const perLocation = await Promise.all(
@@ -401,6 +432,10 @@ export async function professionalSlots(
   scope: SlotScope = {},
 ): Promise<PortalSlot[]> {
   if (date > scopeLastDate(professional, timeZone, now, scope)) return [];
+  if (professional.exam?.isGroup) {
+    const sessions = await groupSessions(db, clinicId, professional, timeZone, { now, sessionId });
+    return sessions.filter((s) => s.date === date).map((s) => ({ start: s.start, time: s.time, locationId: s.locationId, serviceId }));
+  }
   const holds = { exceptSession: sessionId };
   const perLocation = await Promise.all(
     (scope.locations ?? professional.locations).map((location) =>
