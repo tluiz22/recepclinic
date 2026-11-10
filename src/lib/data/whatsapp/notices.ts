@@ -160,8 +160,15 @@ export async function notifyClinicCancellations(
   const result: ClinicCancellationNotice[] = [];
   for (const { appointmentId, rebookingLinkId, portalLinkId } of canceled) {
     // O link do portal (F3-3) quando há; senão, o de /agendar.
-    const url = portalLinkId && sender ? portalLinkUrl(sender.baseUrl, shortId(portalLinkId)) : rebookingLinkId ? `${sender?.baseUrl ?? ""}${bookingPath(rebookingLinkId)}` : null;
-    const status = url
+    // Sem quem envie (WhatsApp não carregou), o aviso fica "não conectado" igual, mas com o mesmo modelo.
+    const url = portalLinkId
+      ? sender
+        ? portalLinkUrl(sender.baseUrl, shortId(portalLinkId))
+        : ""
+      : rebookingLinkId
+        ? `${sender?.baseUrl ?? ""}${bookingPath(rebookingLinkId)}`
+        : null;
+    const status = url !== null
       ? await sendAppointmentNotice(db, clinicId, appointmentId, "clinic_cancellation", sender, now, url)
       : await sendAppointmentNotice(db, clinicId, appointmentId, "cancellation", sender, now);
     result.push({ appointmentId, status });

@@ -11,9 +11,9 @@ import PortalPhoneCode from "../../../../components/portal/PortalPhoneCode.astro
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { portalCta, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
 import { formatInstant } from "../../../../lib/clinicTime";
-import { capitalize } from "../../../../lib/vocabulary";
 import { runIdentityStep, type IdentityState } from "../../../../lib/data/portal/identityStep";
-import { leadHoursOf, listMyAppointments, outsideLead, type MyAppointment } from "../../../../lib/data/portal/myAppointments";
+import { leadHoursOf, listMyAppointments, outsideLead, whatOf, whenOf, type MyAppointment } from "../../../../lib/data/portal/myAppointments";
+import { sessionLinkFor } from "../../../../lib/data/portal/links";
 import { openPortalPage } from "../../../../lib/data/portal/page";
 import { mapsHref, portalHref, receptionWhatsappHref } from "../../../../lib/portal";
 import { phoneEnding } from "../../../../lib/portalIdentity";
@@ -28,6 +28,7 @@ let identity: IdentityState | null = null;
 let items: MyAppointment[] | null = null;
 let phone: string | null = null;
 let leadHours = 24;
+let waivedId: string | null = null;
 const now = new Date();
 if (page.kind === "open") {
   const { db, portal } = page;
@@ -42,6 +43,10 @@ if (page.kind === "open") {
   if (identity.session?.verified && identity.session.phone) {
     phone = identity.session.phone;
     [items, leadHours] = await Promise.all([listMyAppointments(db, portal.clinicId, phone, now), leadHoursOf(db, portal.clinicId)]);
+    // Link do bot para remarcar um atendimento (F3-4): esse remarca mesmo dentro do prazo.
+    const session = identity.session;
+    const waived = await Promise.all(items.map(async (i) => ((await sessionLinkFor(db, portal.clinicId, session, i.id)).noLead ? i.id : null)));
+    waivedId = waived.find(Boolean) ?? null;
   }
 }
 
@@ -57,9 +62,7 @@ const notice = NOTICES[Astro.url.searchParams.get("aviso") ?? ""] ?? null;
 const waPhone = page.kind === "open" ? page.portal.brand.whatsappPhone : null;
 const waHref = (item: MyAppointment) =>
   waPhone ? receptionWhatsappHref(waPhone, `Olá! Preciso remarcar ou cancelar o atendimento de ${item.patientName} em ${formatInstant(item.start, timeZone, "dd/MM 'às' HH:mm")}.`) : null;
-const whatOf = (item: MyAppointment) =>
-  item.category === "exam" ? item.serviceName : `${item.category === "return_visit" ? "Retorno" : item.serviceName}${item.professionalName ? ` com ${item.professionalName}` : ""}`;
-const whenOf = (item: MyAppointment) => capitalize(formatInstant(item.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm"));
+const whenText = (item: MyAppointment) => whenOf(item.start, timeZone);
 const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 text-[17px] font-bold no-underline sm:flex-none sm:min-w-[150px]";
 ---
 
@@ -105,13 +108,15 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
           <ul class="grid gap-3.5 lg:grid-cols-2 lg:gap-[18px]">
             {items.map((item) => {
               const free = outsideLead(item.start, leadHours, now);
+              // Dentro do prazo, mas com o link do bot de remarcar este atendimento: só o Remarcar.
+              const waived = !free && item.id === waivedId && item.canReschedule;
               const wa = waHref(item);
               return (
                 <li class="flex flex-col overflow-hidden rounded-2xl border-[1.5px] border-gray-200 bg-white">
                   <div class="flex flex-col gap-0.5 px-4 pt-3.5 pb-3 lg:px-[18px] lg:pt-4">
                     <b class="text-[19px] lg:text-xl">{item.patientName}</b>
                     <span class="text-base text-gray-700">{whatOf(item)}</span>
-                    <span class="text-[17px] font-semibold text-gray-900">{whenOf(item)}</span>
+                    <span class="text-[17px] font-semibold text-gray-900">{whenText(item)}</span>
                     <span class="text-base text-gray-700">
                       {item.locationName}
                       {item.locationAddress && (
@@ -127,15 +132,22 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
                       <>
                         <div class="flex gap-2.5">
                           {item.canReschedule && (
-                            <a href={portalHref(`${here}/remarcar`, { a: item.id })} class={`${small} bg-clinic text-clinic-text hover:opacity-90`} aria-label={`Remarcar: ${item.patientName}, ${whenOf(item)}`}>
+                            <a href={portalHref(`${here}/remarcar`, { a: item.id })} class={`${small} bg-clinic text-clinic-text hover:opacity-90`} aria-label={`Remarcar: ${item.patientName}, ${whenText(item)}`}>
                               Remarcar
                             </a>
                           )}
-                          <a href={portalHref(`${here}/cancelar`, { a: item.id })} class={`${small} border-[1.5px] border-clinic-ink bg-white text-clinic-ink hover:bg-clinic-tint`} aria-label={`Cancelar: ${item.patientName}, ${whenOf(item)}`}>
+                          <a href={portalHref(`${here}/cancelar`, { a: item.id })} class={`${small} border-[1.5px] border-clinic-ink bg-white text-clinic-ink hover:bg-clinic-tint`} aria-label={`Cancelar: ${item.patientName}, ${whenText(item)}`}>
                             Cancelar
                           </a>
                         </div>
                         {!item.canReschedule && <p class="text-[15px] text-gray-600">Para remarcar {item.isGroup ? "a turma" : "o atendimento em casa"}, fale com a recepção.</p>}
+                      </>
+                    ) : waived ? (
+                      <>
+                        <a href={portalHref(`${here}/remarcar`, { a: item.id })} class={`${small} bg-clinic text-clinic-text hover:opacity-90`} aria-label={`Remarcar: ${item.patientName}, ${whenText(item)}`}>
+                          Remarcar
+                        </a>
+                        <p class="text-[15px] text-gray-600">Para cancelar com menos de {leadHours} horas, responda no WhatsApp.</p>
                       </>
                     ) : (
                       <>

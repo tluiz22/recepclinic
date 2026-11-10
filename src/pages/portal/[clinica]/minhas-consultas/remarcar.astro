@@ -14,7 +14,7 @@ import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../l
 import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
 import { slotChoiceValue } from "../../../../lib/data/agenda/publicBooking";
 import { openChangePage } from "../../../../lib/data/portal/changePage";
-import { rescheduleDates, rescheduleScope, rescheduleSlots } from "../../../../lib/data/portal/myAppointments";
+import { rescheduleDates, rescheduleScope, rescheduleSlots, whatOf, whenOf } from "../../../../lib/data/portal/myAppointments";
 import { portalHref } from "../../../../lib/portal";
 
 const view = await openChangePage(Astro, "remarcar");
@@ -47,8 +47,8 @@ if (view.kind === "open") {
     detail: scope.locations.length > 1 ? (names.get(slot.locationId) ?? "") : "",
     summary: `${capitalize(formatInstant(slot.start, timeZone, "EEE").slice(0, 3))}, ${formatInstant(slot.start, timeZone, "dd/MM 'às' HH:mm")}`,
   }));
-  when = capitalize(formatInstant(item.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm"));
-  what = item.category === "exam" ? item.serviceName : `${item.category === "return_visit" ? "Retorno" : item.serviceName}${item.professionalName ? ` com ${item.professionalName}` : ""}`;
+  when = whenOf(item.start, timeZone);
+  what = whatOf(item);
   here = `${view.listHref}/remarcar`;
 }
 const dayHref = (date: string, start: string) => portalHref(here, { a: view.kind === "open" ? view.item.id : null, date, start });

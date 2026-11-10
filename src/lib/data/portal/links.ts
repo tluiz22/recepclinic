@@ -29,6 +29,8 @@ export type PortalLink = {
   appointmentId: string | null;
   /** Remarcação depois do cancelamento pela clínica (F3-3): o atendimento cancelado. */
   canceledAppointmentId: string | null;
+  /** Retorno: a consulta de origem (remarcação da clínica). */
+  originAppointmentId: string | null;
   joinWaitlist: boolean;
   funnelSessionId: string | null;
   expiresAt: Date;
@@ -50,7 +52,7 @@ export type PortalLinkInput = {
   ttlMs?: number;
 };
 
-const COLUMNS = "id, phone, contact_id, purpose, professional_id, service_id, appointment_id, canceled_appointment_id, join_waitlist, funnel_session_id, expires_at, used_at, revoked_at";
+const COLUMNS = "id, phone, contact_id, purpose, professional_id, service_id, appointment_id, canceled_appointment_id, origin_appointment_id, join_waitlist, funnel_session_id, expires_at, used_at, revoked_at";
 
 type Row = {
   id: string;
@@ -61,6 +63,7 @@ type Row = {
   service_id: string | null;
   appointment_id: string | null;
   canceled_appointment_id: string | null;
+  origin_appointment_id: string | null;
   join_waitlist: boolean;
   funnel_session_id: string | null;
   expires_at: string;
@@ -77,6 +80,7 @@ const toLink = (row: Row): PortalLink => ({
   serviceId: row.service_id,
   appointmentId: row.appointment_id,
   canceledAppointmentId: row.canceled_appointment_id,
+  originAppointmentId: row.origin_appointment_id,
   joinWaitlist: row.join_waitlist,
   funnelSessionId: row.funnel_session_id,
   expiresAt: new Date(row.expires_at),
@@ -98,7 +102,10 @@ export async function createPortalLink(db: DbClient, clinicId: string, input: Po
       .eq("purpose", input.purpose)
       .is("used_at", null)
       .is("revoked_at", null)
-      .gt("expires_at", now.toISOString()),
+      .gt("expires_at", now.toISOString())
+      // Remarcar: só o link do mesmo atendimento (dois atendimentos do mesmo celular, ou o do bot e o da clínica,
+      // não se anulam).
+      .filter("appointment_id", input.appointmentId ? "eq" : "is", input.appointmentId ?? null),
     "Link do portal",
   );
   // Todas as colunas, sempre (cuidado da F2.5 com valores padrão no supabase-js).
@@ -257,6 +264,9 @@ export async function renewPortalLink(db: DbClient, clinicId: string, linkId: st
       serviceId: old.serviceId,
       appointmentId: old.appointmentId,
       canceledAppointmentId: old.canceledAppointmentId,
+      originAppointmentId: old.originAppointmentId,
+      // A remarcação da clínica volta com os 2 dias dela; o do bot, com os 30 minutos.
+      ttlMs: old.canceledAppointmentId ? PORTAL_REBOOKING_TTL_MS : PORTAL_LINK_TTL_MS,
       joinWaitlist: old.joinWaitlist,
       funnelSessionId: old.funnelSessionId,
     },
@@ -267,8 +277,12 @@ export async function renewPortalLink(db: DbClient, clinicId: string, linkId: st
 /** A sessão veio do "Encaixe ou antecipar" (F3-2): o aviso da lista de espera nos horários e na revisão. */
 export async function sessionJoinsWaitlist(db: DbClient, clinicId: string, session: { linkId: string | null } | null): Promise<boolean> {
   if (!session?.linkId) return false;
-  return (await getPortalLink(db, clinicId, session.linkId))?.joinWaitlist ?? false;
+  const link = await getPortalLink(db, clinicId, session.linkId);
+  return !!link && link.joinWaitlist && !link.usedAt;
 }
+
+/** Folga depois da validade do link, para quem abriu no fim do prazo (F3c). */
+export const LINK_GRACE_MS = 30 * 60_000;
 
 /**
  * O que o link do bot desta sessão libera para um atendimento (F3c): remarcar sem a antecedência (F3-4, o link do
@@ -279,9 +293,13 @@ export async function sessionLinkFor(
   clinicId: string,
   session: { linkId: string | null } | null,
   appointmentId: string,
+  now: Date = new Date(),
 ): Promise<{ noLead: boolean; rebook: boolean; link: PortalLink | null }> {
   const link = session?.linkId ? await getPortalLink(db, clinicId, session.linkId) : null;
-  const mine = !!link && link.purpose === "reschedule" && link.appointmentId === appointmentId && !link.usedAt;
+  // Só o link ainda de pé: não usado, não trocado por outro e dentro da validade, com folga para quem abriu no fim
+  // do prazo e está no meio da remarcação.
+  const alive = !!link && !link.usedAt && !link.revokedAt && link.expiresAt.getTime() + LINK_GRACE_MS > now.getTime();
+  const mine = alive && link!.purpose === "reschedule" && link!.appointmentId === appointmentId;
   return { noLead: mine, rebook: mine && link!.canceledAppointmentId === appointmentId, link: mine ? link : null };
 }
 
@@ -342,4 +360,15 @@ export async function listValidPortalRebookingLinks(db: DbClient, clinicId: stri
   const result = new Map<string, PortalLink>();
   for (const row of rows) if (row.canceled_appointment_id && !result.has(row.canceled_appointment_id)) result.set(row.canceled_appointment_id, toLink(row));
   return result;
+}
+
+/** Finalidades em que a marcação de uma consulta, retorno ou exame gasta o link (F3a). */
+const BOOKING_PURPOSES: PortalLinkPurpose[] = ["book", "return", "exam"];
+
+/**
+ * O link do bot que a marcação desta sessão gasta (uma marcação por link): só o de marcar, ainda não usado. O de
+ * remarcar ou de Minhas consultas não é gasto por uma consulta nova.
+ */
+export function linkSpentByBooking(link: Pick<PortalLink, "purpose" | "usedAt"> | null): boolean {
+  return !!link && BOOKING_PURPOSES.includes(link.purpose) && !link.usedAt;
 }

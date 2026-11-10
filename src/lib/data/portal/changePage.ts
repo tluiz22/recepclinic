@@ -1,7 +1,7 @@
 import type { AstroGlobal } from "astro";
 import { portalHref } from "../../portal";
 import { readSession, type PortalSession } from "./identity";
-import { sessionLinkFor } from "./links";
+import { sessionLinkFor, type PortalLink } from "./links";
 import { findMyAppointment, leadHoursOf, outsideLead, type MyAppointment } from "./myAppointments";
 import { openPortalPage, type PortalPage } from "./page";
 
@@ -20,6 +20,8 @@ export type ChangePage =
       /** Antecedência que vale (null = não vale: link do bot). */
       leadHours: number | null;
       rebook: boolean;
+      /** O link do bot desta sessão para este atendimento (remarcar), se ainda vale. */
+      link: PortalLink | null;
       base: string;
       listHref: string;
     };
@@ -40,7 +42,8 @@ export async function openChangePage(Astro: AstroGlobal, action: "remarcar" | "c
   const rebook = allowed.rebook && action === "remarcar";
   const item = await findMyAppointment(db, portal.clinicId, session.phone, id, { canceledByClinic: rebook });
   if (!item || (action === "remarcar" && !item.canReschedule)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "mudou" })) };
-  const leadHours = allowed.noLead ? null : await leadHoursOf(db, portal.clinicId);
+  // O link do bot dispensa a antecedência só para remarcar (F3-4); cancelar pelo portal segue a regra (RD10).
+  const leadHours = allowed.noLead && action === "remarcar" ? null : await leadHoursOf(db, portal.clinicId);
   if (!rebook && leadHours !== null && !outsideLead(item.start, leadHours)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "prazo" })) };
-  return { kind: "open", page, session: { ...session, phone: session.phone }, item, leadHours, rebook, base, listHref };
+  return { kind: "open", page, session: { ...session, phone: session.phone }, item, leadHours, rebook, link: allowed.link, base, listHref };
 }

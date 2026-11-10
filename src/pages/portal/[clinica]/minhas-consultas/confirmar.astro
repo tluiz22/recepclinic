@@ -6,12 +6,10 @@ import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { portalCta, portalNotice, portalTitle } from "../../../../components/portal/styles";
-import { capitalize } from "../../../../lib/vocabulary";
-import { formatInstant } from "../../../../lib/clinicTime";
 import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
 import { openChangePage } from "../../../../lib/data/portal/changePage";
-import { afterLinkBooking, sessionLinkFor } from "../../../../lib/data/portal/links";
-import { isRescheduleSlotFree, rescheduleMine, rescheduleScope } from "../../../../lib/data/portal/myAppointments";
+import { afterLinkBooking } from "../../../../lib/data/portal/links";
+import { isRescheduleSlotFree, rescheduleMine, rescheduleScope, whatOf, whenOf } from "../../../../lib/data/portal/myAppointments";
 import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
 import { mapsHref, portalHref } from "../../../../lib/portal";
 
@@ -46,8 +44,7 @@ if (view.kind === "open") {
     });
     if (outcome.status === "done") {
       // Pelo link do bot (Remarcar do menu ou do lembrete): o link fica usado e o funil fecha.
-      const { link } = await sessionLinkFor(db, portal.clinicId, session, item.id);
-      if (link) await afterLinkBooking(db, portal.clinicId, link.id, outcome.appointmentId);
+      if (view.link) await afterLinkBooking(db, portal.clinicId, view.link.id, outcome.appointmentId);
       return Astro.redirect(portalHref(view.listHref, { aviso: view.rebook ? "marcada" : "remarcada" }));
     }
     if (outcome.status === "taken") return Astro.redirect(timesHref("horario"));
@@ -57,9 +54,9 @@ if (view.kind === "open") {
     problem = "Não conseguimos remarcar agora. Toque em “Confirmar remarcação” de novo ou fale com a recepção.";
   }
   const tz = portal.timeZone;
-  newWhen = capitalize(formatInstant(slot.start, tz, "EEEE, d 'de' MMMM 'às' HH:mm"));
-  oldWhen = capitalize(formatInstant(item.start, tz, "EEEE, d 'de' MMMM 'às' HH:mm"));
-  what = item.category === "exam" ? item.serviceName : `${item.category === "return_visit" ? "Retorno" : item.serviceName}${item.professionalName ? ` com ${item.professionalName}` : ""}`;
+  newWhen = whenOf(slot.start, tz);
+  oldWhen = whenOf(item.start, tz);
+  what = whatOf(item);
   const location = scope.locations.find((l) => l.id === slot.locationId);
   locationName = location?.name ?? item.locationName;
   locationAddress = slot.locationId === item.locationId ? item.locationAddress : null;

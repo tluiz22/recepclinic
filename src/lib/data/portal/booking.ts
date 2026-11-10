@@ -9,7 +9,7 @@ import { findContactByPhone, listContactPatients, registerPatient, type Contact 
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent, type BotLimitHit } from "../whatsapp/botLimits";
 import { dispatchNotice, enqueueNotice } from "../whatsapp/noticeQueue";
 import type { ClinicSender } from "../whatsapp/send";
-import { afterLinkBooking } from "./links";
+import { afterLinkBooking, getPortalLink, linkSpentByBooking } from "./links";
 import { PORTAL_PLACES, type PortalPlaceParam } from "../../portal";
 import type { PortalProfessional } from "./portal";
 
@@ -375,10 +375,12 @@ export async function afterBooking(
   now: Date,
 ): Promise<void> {
   try {
-    // Sessão aberta pelo link do bot (F3a): a origem é o WhatsApp e o link fica gasto (uma marcação por link).
+    // Sessão aberta pelo link do bot (F3a): a origem é o WhatsApp. O link de marcar ainda não usado fica gasto (uma
+    // marcação por link: o funil fecha e o encaixe entra na lista uma vez só); o de remarcar não é gasto.
     const linkId = await holdLinkId(db, clinicId, input.hold.id);
-    const entry = linkId ? "whatsapp" : input.entry;
-    if (linkId) await afterLinkBooking(db, clinicId, linkId, input.appointmentId, now);
+    const link = linkId ? await getPortalLink(db, clinicId, linkId) : null;
+    const entry = link ? "whatsapp" : input.entry;
+    if (link && linkSpentByBooking(link)) await afterLinkBooking(db, clinicId, link.id, input.appointmentId, now);
     unwrap(
       await db
         .from("appointments")

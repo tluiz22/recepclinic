@@ -21,17 +21,30 @@ type Route = { purpose: PortalLinkPurpose; what: string; professionalId: string 
 
 const portalCovers = (service: BotService) => !service.isGroup && service.agendas.every((a) => !a.locationTypes.includes("home_visit"));
 
+/**
+ * O endereço do portal, se ele está aberto para a clínica (endereço definido pelo Suporte, item Portal ligado,
+ * clínica ativa); null = fechado. Consulta leve: o catálogo do portal só é lido quando o link depende dele.
+ */
+async function openPortalSlug(b: Bot): Promise<string | null> {
+  if (!b.features.includes("portal")) return null;
+  const clinic = unwrap(await b.db.from("clinics").select("portal_slug, status").eq("id", b.clinicId).maybeSingle(), "Clínica") as {
+    portal_slug: string | null;
+    status: string;
+  } | null;
+  return clinic?.portal_slug && clinic.status !== "suspended" ? clinic.portal_slug : null;
+}
+
 /** Para onde o link leva; null = o portal ainda não cobre (o bot marca no chat, como antes). */
 async function routeOf(b: Bot, category: "consultation" | "exam" | "return_visit"): Promise<Route | null> {
-  const clinic = unwrap(await b.db.from("clinics").select("portal_slug").eq("id", b.clinicId).maybeSingle(), "Clínica") as { portal_slug: string | null } | null;
-  if (!clinic?.portal_slug) return null;
-  const portal = await loadPortal(b.db, b.clinicId, clinic.portal_slug);
-  if (portal.status !== "open") return null;
+  const slug = await openPortalSlug(b);
+  if (!slug) return null;
   const catalog = await b.catalog();
   const services = catalog.copies.filter((s) => s.category === category);
   if (!services.length || !services.every(portalCovers)) return null;
-
   if (category === "return_visit") return { purpose: "return", what: "retorno", professionalId: null, serviceId: null };
+  // Consulta e exame: quem o portal mostra (o profissional fora do portal e o exame de agenda de profissional, não).
+  const portal = await loadPortal(b.db, b.clinicId, slug);
+  if (portal.status !== "open") return null;
   if (category === "exam") {
     if (!services.every((s) => portal.exams.some((e) => e.serviceId === s.id))) return null;
     const names = [...new Set(services.map((s) => s.name))];
@@ -82,13 +95,6 @@ export async function offerPortalLink(b: Bot, category: "consultation" | "exam" 
   return true;
 }
 
-/** O portal está aberto para a clínica (endereço definido, Portal ligado, clínica ativa). */
-async function portalOpen(b: Bot): Promise<boolean> {
-  const clinic = unwrap(await b.db.from("clinics").select("portal_slug").eq("id", b.clinicId).maybeSingle(), "Clínica") as { portal_slug: string | null } | null;
-  if (!clinic?.portal_slug) return false;
-  return (await loadPortal(b.db, b.clinicId, clinic.portal_slug)).status === "open";
-}
-
 /**
  * Remarcar (F3c; I7): o link do portal com os dias e horários do mesmo profissional, sem a antecedência (F3-4). Turma
  * e domiciliar seguem no chat (F3e). false = o portal não cobre: quem chamou segue com o link de hoje.
@@ -98,7 +104,7 @@ export async function offerPortalReschedule(
   appointment: { id: string; serviceId: string; locationType: string; category: string; serviceName: string; patientName: string },
 ): Promise<boolean> {
   try {
-    if (appointment.locationType !== "clinic" || !(await portalOpen(b))) return false;
+    if (appointment.locationType !== "clinic" || !(await openPortalSlug(b))) return false;
     const service = unwrap(await b.db.from("services").select("scheduling_mode").eq("clinic_id", b.clinicId).eq("id", appointment.serviceId).maybeSingle(), "Serviço");
     if (!service || service.scheduling_mode === "group") return false;
   } catch (error) {

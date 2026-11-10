@@ -1,4 +1,5 @@
-import { addDays, localDateOf, todayIn } from "../../clinicTime";
+import { addDays, formatInstant, localDateOf, todayIn } from "../../clinicTime";
+import { capitalize } from "../../vocabulary";
 import { logError } from "../../log";
 import { bookAppointment, cancelAppointment, findReturnOrigin, rescheduleAppointment } from "../agenda/appointments";
 import { earliestDate, getFreeSlots, getNextAvailableDates, horizonLastDate } from "../agenda/slots";
@@ -86,6 +87,13 @@ const toItem = (row: Row): MyAppointment => {
     canReschedule: !isGroup && row.locations.type === "clinic",
   };
 };
+
+/** "Consulta com Dra. Ana", "Retorno com Dra. Ana" ou o nome do exame (lista, remarcar, confirmar e cancelar). */
+export const whatOf = (item: Pick<MyAppointment, "category" | "serviceName" | "professionalName">) =>
+  item.category === "exam" ? item.serviceName : `${item.category === "return_visit" ? "Retorno" : item.serviceName}${item.professionalName ? ` com ${item.professionalName}` : ""}`;
+
+/** "Quarta-feira, 11 de novembro às 08:00". */
+export const whenOf = (start: Date, timeZone: string) => capitalize(formatInstant(start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm"));
 
 /** Antecedência da clínica para cancelar e remarcar pelo portal (RD10), em horas. */
 export async function leadHoursOf(db: DbClient, clinicId: string): Promise<number> {

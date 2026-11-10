@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { bookAppointment } from "../../src/lib/data/agenda/appointments";
 import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
-import { createPortalLink, sessionLinkFor } from "../../src/lib/data/portal/links";
+import { createPortalLink, getPortalLink, linkSpentByBooking, portalLinkState, renewPortalLink, sessionLinkFor, PORTAL_REBOOKING_TTL_MS } from "../../src/lib/data/portal/links";
 import {
   cancelMine,
   findMyAppointment,
@@ -113,6 +113,11 @@ describe("Minhas consultas (F3c)", () => {
     expect(await sessionLinkFor(service, f.clinicId, { linkId: link.id }, appointment.id)).toMatchObject({ noLead: true, rebook: false });
     expect(await sessionLinkFor(service, f.clinicId, { linkId: link.id }, f.ids.p1)).toMatchObject({ noLead: false, rebook: false });
     expect(await sessionLinkFor(service, f.clinicId, null, appointment.id)).toMatchObject({ noLead: false });
+    // Vencido há mais de 30 min (a folga) ou trocado por outro: não libera mais.
+    expect(await sessionLinkFor(service, f.clinicId, { linkId: link.id }, appointment.id, new Date(link.expiresAt.getTime() + 31 * 60_000))).toMatchObject({ noLead: false });
+    expect(await sessionLinkFor(service, f.clinicId, { linkId: link.id }, appointment.id, new Date(link.expiresAt.getTime() + 10 * 60_000))).toMatchObject({ noLead: true });
+    await createPortalLink(service, f.clinicId, { phone: PHONE, purpose: "reschedule", appointmentId: appointment.id });
+    expect(await sessionLinkFor(service, f.clinicId, { linkId: link.id }, appointment.id)).toMatchObject({ noLead: false });
   });
 
   it("cancelamento pela clínica com o portal: o aviso leva o link do portal, que marca de novo o mesmo atendimento", async () => {
@@ -129,5 +134,25 @@ describe("Minhas consultas (F3c)", () => {
     expect(outcome.status).toBe("done");
     const { data } = await adminClient().from("appointments").select("patient_id, agenda_id, booking_channel, status").eq("id", (outcome as { appointmentId: string }).appointmentId).single();
     expect(data).toEqual({ patient_id: f.ids.p1, agenda_id: f.ids.agendaDra, booking_channel: "portal", status: "scheduled" });
+  });
+
+  it("revisão: links de remarcar de atendimentos diferentes do mesmo celular não se anulam; o novo link da clínica mantém os 2 dias e a origem", async () => {
+    const a = await book(f.ids.p1, MON2, "08:30");
+    const b = await book(f.ids.p2, MON2, "09:30", f.ids.agendaDra, f.ids.consulta);
+    const phone = PHONE;
+    const first = await createPortalLink(service, f.clinicId, { phone, purpose: "reschedule", appointmentId: a.id });
+    await createPortalLink(service, f.clinicId, { phone, purpose: "reschedule", appointmentId: b.id });
+    expect(portalLinkState((await getPortalLink(service, f.clinicId, first.id))!)).toBe("valid");
+    const again = await createPortalLink(service, f.clinicId, { phone, purpose: "reschedule", appointmentId: a.id });
+    expect(portalLinkState((await getPortalLink(service, f.clinicId, first.id))!)).toBe("expired");
+    // A marcação de uma consulta nova não gasta o link de remarcar.
+    expect(linkSpentByBooking(again)).toBe(false);
+    expect(linkSpentByBooking({ purpose: "book", usedAt: null })).toBe(true);
+    expect(linkSpentByBooking({ purpose: "book", usedAt: new Date() })).toBe(false);
+
+    const rebook = await createPortalLink(service, f.clinicId, { phone, purpose: "reschedule", appointmentId: a.id, canceledAppointmentId: a.id, originAppointmentId: null, ttlMs: PORTAL_REBOOKING_TTL_MS });
+    const renewed = await renewPortalLink(service, f.clinicId, rebook.id);
+    expect(renewed).toMatchObject({ canceledAppointmentId: a.id });
+    expect(renewed.expiresAt.getTime() - Date.now()).toBeGreaterThan(PORTAL_REBOOKING_TTL_MS - 60_000);
   });
 });

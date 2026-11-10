@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../lib/data/clients";
 import { setPortalLeadHours, setShowInPortal } from "../../../../lib/data/config/portal";
 import { runFormAction } from "../../../../lib/data/formAction";
+import { DataError } from "../../../../lib/data/errors";
 import { formInt, formText } from "../../../../lib/forms";
 
 // Configurações › Portal (F3d; R7): a antecedência para remarcar e cancelar pelo portal (RD10) e "Mostrar no portal"
@@ -22,7 +23,8 @@ export const POST: APIRoute = async (context) => {
         await setPortalLeadHours(db, clinicId, hours);
         return { redirectTo: page, message: `Antecedência salva: ${hours} ${hours === 1 ? "hora" : "horas"}.` };
       }
-      const id = formText(form, "profissional") ?? "";
+      if (action !== "mostrar" && action !== "ocultar") throw new DataError("invalid", "Portal: ação desconhecida");
+      const id = formText(form, "profissional");
       const show = action === "mostrar";
       const name = await setShowInPortal(db, clinicId, id, show);
       return { redirectTo: `${page}#profissional-${id}`, message: show ? `${name} aparece no portal.` : `${name} saiu do portal.` };

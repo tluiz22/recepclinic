@@ -6,10 +6,8 @@ import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
-import { capitalize } from "../../../../lib/vocabulary";
-import { formatInstant } from "../../../../lib/clinicTime";
 import { openChangePage } from "../../../../lib/data/portal/changePage";
-import { cancelMine } from "../../../../lib/data/portal/myAppointments";
+import { cancelMine, whatOf, whenOf } from "../../../../lib/data/portal/myAppointments";
 import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
 import { portalHref } from "../../../../lib/portal";
 
@@ -29,8 +27,8 @@ if (view.kind === "open") {
     if (outcome.status === "gone") return Astro.redirect(portalHref(view.listHref, { aviso: "mudou" }));
     problem = "Não conseguimos cancelar agora. Toque em “Sim, cancelar” de novo ou fale com a recepção.";
   }
-  when = capitalize(formatInstant(item.start, portal.timeZone, "EEEE, d 'de' MMMM 'às' HH:mm"));
-  what = item.category === "exam" ? item.serviceName : `${item.category === "return_visit" ? "Retorno" : item.serviceName}${item.professionalName ? ` com ${item.professionalName}` : ""}`;
+  when = whenOf(item.start, portal.timeZone);
+  what = whatOf(item);
 }
 const page = view.page;
 // Como o botão principal, em vermelho (a ação desfaz a marcação).
