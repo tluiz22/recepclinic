@@ -6,7 +6,8 @@ import { earliestDate, getFreeSlots, getNextAvailableDates, horizonLastDate } fr
 import { BOOKING_HORIZON_DEFAULT } from "../config/clinic";
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { sendAppointmentNotice } from "../whatsapp/notices";
+import { sendAppointmentNotice, sendOtherResponsibleNotice } from "../whatsapp/notices";
+import { recipientOfAppointment } from "../whatsapp/recipient";
 import type { ClinicSender } from "../whatsapp/send";
 import { phonePatients, saveContactHomeAddress } from "./booking";
 import { findContactByPhone } from "../patients";
@@ -92,6 +93,15 @@ async function loadBookers(db: DbClient, clinicId: string, sessionContactId: str
     labels.set(row.patient_id, byContact);
   }
   return { sessionContactId, labels };
+}
+
+/** Como quem mexeu aparece no aviso ao outro responsável (VR4): "Ana (mãe)"; sem a ligação, o primeiro nome. */
+async function actorLabel(db: DbClient, clinicId: string, patientId: string, contact: { id: string; fullName: string }): Promise<string> {
+  const row = unwrap(
+    await db.from("patient_contacts").select("kinship").eq("clinic_id", clinicId).eq("patient_id", patientId).eq("contact_id", contact.id).maybeSingle(),
+    "Responsável do paciente",
+  );
+  return responsibleLabel({ fullName: contact.fullName, kinship: row?.kinship ?? null, isSelf: false }, "");
 }
 
 /** "Marcada por você" / "Marcada por Carlos (pai), que recebe os avisos" / "Marcada pela recepção, com avisos para …". */
@@ -309,7 +319,10 @@ export async function rescheduleMine(
   if (!input.scope.locations.some((l) => l.id === slot.locationId)) return { status: "taken" };
   if (!input.rebook && input.leadHours !== null && !outsideLead(item.start, input.leadHours, now)) return { status: "lead" };
   // Quem remarca passa a ser quem marcou (UI-4, D14): a confirmação, o lembrete e os avisos seguintes vão para ele.
-  const sessionContactId = input.phone ? ((await findContactByPhone(db, clinicId, input.phone))?.id ?? null) : null;
+  const sessionContact = input.phone ? await findContactByPhone(db, clinicId, input.phone) : null;
+  const sessionContactId = sessionContact?.id ?? null;
+  // Quem marcou antes (VR4: recebe o aviso se não foi ele que remarcou).
+  const previousBooker = input.rebook ? null : await recipientOfAppointment(db, clinicId, item.id).catch(() => null);
   let appointmentId: string;
   // O endereço novo só vira o padrão do contato se ficou gravado no atendimento.
   let addressSaved = true;
@@ -357,6 +370,10 @@ export async function rescheduleMine(
   }
   if (atHome && address && addressSaved && input.phone && address !== item.homeVisitAddress) await saveContactHomeAddress(db, clinicId, input.phone, address);
   await sendAppointmentNotice(db, clinicId, appointmentId, input.rebook ? "confirmation" : "reschedule", input.sender, now);
+  if (previousBooker && sessionContact && previousBooker.id !== sessionContact.id) {
+    const actor = await actorLabel(db, clinicId, item.patientId, sessionContact).catch(() => firstNameOnly(sessionContact.fullName));
+    await sendOtherResponsibleNotice(db, clinicId, { appointmentId, kind: "rescheduled_by_other", booker: previousBooker, actor }, input.sender, now);
+  }
   return { status: "done", appointmentId };
 }
 
@@ -374,10 +391,18 @@ export async function cancelMine(
   now: Date = new Date(),
 ): Promise<ChangeOutcome> {
   if (input.leadHours !== null && !outsideLead(input.item.start, input.leadHours, now)) return { status: "lead" };
+  const booker = await recipientOfAppointment(db, clinicId, input.item.id).catch(() => null);
   const canceled = await cancelAppointment(db, clinicId, input.item.id, { channel: "portal", actorId: null }, now);
   if (!canceled) return { status: "gone" };
   const actor = input.phone ? await findContactByPhone(db, clinicId, input.phone).catch(() => null) : null;
   const to = actor ? { id: actor.id, full_name: actor.fullName, phone: actor.phone } : undefined;
   await sendAppointmentNotice(db, clinicId, canceled.id, "cancellation", input.sender, now, undefined, to);
+  // VR4: quem marcou recebe o aviso quando outro responsável cancela.
+  if (booker && actor && booker.id !== actor.id) {
+    const label = await actorLabel(db, clinicId, input.item.patientId, actor).catch(() => firstNameOnly(actor.fullName));
+    await sendOtherResponsibleNotice(db, clinicId, { appointmentId: canceled.id, kind: "canceled_by_other", booker, actor: label }, input.sender, now);
+  }
   return { status: "done", appointmentId: canceled.id };
 }
+
+const firstNameOnly = (name: string) => name.trim().split(/\s+/)[0] ?? name;

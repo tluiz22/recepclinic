@@ -5,7 +5,7 @@ import { getApprovedTemplate } from "./connection";
 import { resetConversationAfterNotice } from "./conversations";
 import { recordOutboundMessage, type SendOutcome } from "./messages";
 import type { ClinicSender } from "./send";
-import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, paramCount } from "./templates";
+import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, paramCount, serviceLine } from "./templates";
 import { logError } from "../../log";
 import { bookingPath, shortId } from "../../publicId";
 import { portalLinkUrl } from "../../portal";
@@ -189,3 +189,74 @@ export function clinicCancellationSummary(notices: ClinicCancellationNotice[]): 
   const missedText = missed === 1 ? "1 não saiu" : `${missed} não saíram`;
   return `${head} ${sentText}; ${missedText}: avise abaixo.`;
 }
+
+// ---------------------------------------------------------------------------
+// Aviso ao outro responsável (VR4, D14; textos do cliente, 11/nov/2026)
+// ---------------------------------------------------------------------------
+
+export type OtherResponsibleKind = "rescheduled_by_other" | "canceled_by_other";
+
+/**
+ * Quem marcou recebe o aviso quando outro responsável remarca ou cancela (portal; o bot depois da F3f). Só com o modelo
+ * aprovado na Meta (mensagem paga a mais só neste caso); sem ele, nada sai e nada é registrado. `actor`: quem mexeu,
+ * como aparece ("Ana (mãe)"). Nunca lança.
+ */
+export async function sendOtherResponsibleNotice(
+  db: DbClient,
+  clinicId: string,
+  input: { appointmentId: string; kind: OtherResponsibleKind; booker: RecipientContact; actor: string },
+  sender: ClinicSender | null,
+  now: Date = new Date(),
+): Promise<NoticeStatus> {
+  if (!sender) return "not_connected";
+  try {
+    const [row, template, settings] = await Promise.all([
+      db
+        .from("appointments")
+        .select(NOTICE_COLUMNS)
+        .eq("clinic_id", clinicId)
+        .eq("id", input.appointmentId)
+        .maybeSingle()
+        .then((r) => unwrapOne(r, "Atendimento") as unknown as NoticeRow),
+      getApprovedTemplate(db, clinicId, input.kind),
+      db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
+    ]);
+    if (!template) return "skipped_no_template";
+    const params = [
+      firstName(input.booker.full_name),
+      sender.clinicLabel,
+      input.actor,
+      firstName(row.patients.full_name),
+      serviceLine(row.services.name, row.agendas.professionals?.display_name ?? null),
+      formatAppointmentWhen(new Date(row.scheduled_at), settings.timezone),
+    ].map(cleanParam);
+    let outcome: SendOutcome;
+    try {
+      outcome = await sender.template(input.booker.phone, input.kind, template, params);
+    } catch (error) {
+      outcome = { sent: false, reason: error instanceof Error ? error.message : String(error) };
+    }
+    const status: NoticeStatus = outcome.sent ? "sent" : "failed";
+    await recordOutboundMessage(
+      db,
+      clinicId,
+      {
+        phone: input.booker.phone,
+        contactId: input.booker.id,
+        appointmentId: row.id,
+        messageType: `appointment_${input.kind}`,
+        templateName: template.name,
+        body: outcome.body ?? fillTemplate(template.body ?? defaultTemplate(input.kind)!.body, params),
+        status,
+        waMessageId: outcome.sent ? outcome.messageId : null,
+        retry: { outcome, context: { scheduledAt: new Date(row.scheduled_at).toISOString() } },
+      },
+      now,
+    );
+    return status;
+  } catch (error) {
+    logError("aviso ao outro responsável não enviado", error, { clinica: clinicId, atendimento: input.appointmentId });
+    return "failed";
+  }
+}
+

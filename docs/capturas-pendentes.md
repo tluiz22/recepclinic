@@ -14,3 +14,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 - `config-agendas`, `config-clinica`, `config-convenios`, `config-feriados`, `config-horarios`, `config-lembretes`, `config-locais`, `config-mensagens`, `config-nota-fiscal`, `config-profissionais`, `config-servicos`, `config-whatsapp` — o menu lateral de Configurações ganhou "Portal" (clínica do seed com o item Portal; F3d, 10/11/2026)
 - `config-horarios` — o texto de ajuda do Serviço, no formulário Novo horário, diz que aparecem só os serviços do local escolhido (10/11/2026)
 - `agenda-dia` — Agenda › Dia virou a grade por horário (uma coluna por agenda), com Situação e Próximos horários livres (F5a, 10/11/2026); Agenda na largura toda ao lado do menu (bordas, 11/11/2026)
+- `config-whatsapp`, `config-mensagens` — a lista de modelos ganhou "Remarcada por outro responsável" e "Cancelada por outro responsável" (clínica com o Portal; VR4, branch `varios-responsaveis`, 11/11/2026)

@@ -19,10 +19,12 @@
 > - **VR5 sem o bot feita (11/nov, mesma branch):** importação com o 2º responsável (migração
 >   `20270114120000_importacao_segundo_responsavel.sql`, aprovada pelo cliente e aplicada só no banco local), artigos e
 >   FAQ da Central; Métricas sem mudança; nenhuma captura da Central na fila. Detalhe na seção 8.
-> - **VR4: textos dos dois modelos aprovados pelo cliente (11/nov)**, sem código ainda (seção 8). O código precisa de
->   uma migração (as chaves novas no `whatsapp_templates_template_key_check`): perguntar ao cliente antes.
-> - **Próximo:** VR4 (código, com a migração, se o cliente aprovar). Depois da F3f: Remarcar/Cancelar do bot (resto da
->   VR3). No fim: `security-review`, `/code-review`, suíte inteira, staging (migrações antes do código) e roteiro.
+> - **VR4 feita (11/nov, mesma branch):** textos aprovados pelo cliente; migração `20270115120000_aviso_outro_responsavel.sql`
+>   (aprovada, só no banco local); envio pelo portal só com o modelo aprovado na Meta (envio à Meta pelo cliente, no
+>   staging). Capturas `config-whatsapp` e `config-mensagens` na fila (recaptura só com autorização). Seção 8.
+> - **Próximo:** depois da F3f, Remarcar/Cancelar do bot (resto da VR3, com o aviso da VR4). No fim: `security-review`,
+>   `/code-review`, suíte inteira, staging (migrações `20270113120000`, `20270114120000` e `20270115120000` antes do
+>   código), modelos novos enviados à Meta e roteiro de validação.
 
 ## 1. O problema
 
@@ -315,4 +317,23 @@ atendimento de {{4}} ({{5}})", que serve também para exame e retorno):
 - **Para o código:** migração com as duas chaves novas na lista de `whatsapp_templates.template_key` (e o
   `message_type`, se tiver lista), `DEFAULT_TEMPLATES`, o envio no `rescheduleMine` (para o anterior, antes de trocar
   quem marcou) e no `cancelMine`.
+
+### VR4 Aviso ao outro responsável: código (11/nov/2026, branch `varios-responsaveis`)
+
+- **Migração `20270115120000_aviso_outro_responsavel.sql`** (aprovada pelo cliente em 11/nov; só no banco local): as chaves
+  `rescheduled_by_other` e `canceled_by_other` na lista de `whatsapp_templates.template_key`.
+- **Modelos** `rc_remarcada_por_outro_v1` e `rc_cancelada_por_outro_v1` (`DEFAULT_TEMPLATES`, textos da seção acima):
+  em uso só com o item Portal (o bot entra depois da F3f); fora das Mensagens personalizáveis; rótulos "Remarcada por
+  outro responsável" e "Cancelada por outro responsável" em Configurações › WhatsApp e Mensagens.
+- **Envio** (`sendOtherResponsibleNotice`, `notices.ts`): só com o modelo aprovado (sem ele, nada sai nem é
+  registrado); `message_type` `appointment_rescheduled_by_other` / `appointment_canceled_by_other`, com o reenvio das
+  automáticas. No portal: Remarcar manda para quem marcou antes, quando não foi ele que remarcou (depois disso, quem
+  remarcou passa a ser quem marcou); Cancelar manda para quem marcou quando outro cancelou. {{3}} = "Ana (mãe)" pela
+  ligação. A remarcação depois do cancelamento pela clínica não manda (não é "outro responsável").
+- Jornada do bot (regra geral) e artigo "Responsável/contato" com o aviso.
+- **Capturas na fila** (`capturas-pendentes.md`): `config-whatsapp` e `config-mensagens` (a lista ganhou os dois modelos).
+
+Testes: `varios-responsaveis-portal.test.ts` (+2: sem o modelo nada sai; com ele, o pai recebe quando a mãe remarca,
+nada quando a mãe cancela a que passou a ser dela, a mãe recebe quando o pai cancela); `envio-whatsapp.test.ts` com os
+15 modelos padrão. Unidade 1219; banco dos envios e modelos 128 (14 arquivos + o revisto) verdes; `astro check` sem erros.
 

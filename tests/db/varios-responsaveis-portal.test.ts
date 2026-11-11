@@ -164,3 +164,43 @@ describe("Minhas consultas (UI-4)", () => {
     expect(await lastMessagePhone(appt.id, "appointment_cancellation")).toBe(DAD_PHONE);
   });
 });
+
+describe("aviso ao outro responsável (VR4)", () => {
+  it("sem o modelo aprovado, nada sai", async () => {
+    await clearFuture(f.ids.p1);
+    const appt = await book(f.ids.p1, at(MON1, "15:00"), dad);
+    const item = (await findMyAppointment(service, f.clinicId, MOM_PHONE, appt.id, { now: NOW }))!;
+    expect(await cancelMine(service, f.clinicId, { item, leadHours: null, sender, phone: MOM_PHONE }, NOW)).toMatchObject({ status: "done" });
+    expect(await lastMessagePhone(appt.id, "appointment_canceled_by_other")).toBeNull();
+  });
+
+  it("com o modelo aprovado: quem marcou recebe quando outro remarca ou cancela; quem mexe no que marcou, não", async () => {
+    await adminClient().from("whatsapp_templates").insert([
+      { clinic_id: f.clinicId, template_key: "rescheduled_by_other", name: "rc_remarcada_por_outro_v1", language: "pt_BR", status: "approved" },
+      { clinic_id: f.clinicId, template_key: "canceled_by_other", name: "rc_cancelada_por_outro_v1", language: "pt_BR", status: "approved" },
+    ]);
+    await clearFuture(f.ids.p1);
+    const appt = await book(f.ids.p1, at(MON1, "15:30"), dad);
+    // A mãe remarca a consulta que o pai marcou: o pai recebe.
+    const item = (await findMyAppointment(service, f.clinicId, MOM_PHONE, appt.id, { now: NOW }))!;
+    const scope = await rescheduleScope(service, f.clinicId, item, { timeZone: "America/Fortaleza", sessionId: null, rebook: false, now: NOW });
+    const [slot] = await rescheduleSlots(service, f.clinicId, item, scope, MON2, NOW);
+    expect(await rescheduleMine(service, f.clinicId, { item, slot, scope, rebook: false, leadHours: null, sender, phone: MOM_PHONE }, NOW)).toMatchObject({ status: "done" });
+    expect(await lastMessagePhone(appt.id, "appointment_rescheduled_by_other")).toBe(DAD_PHONE);
+    const { data } = await adminClient().from("whatsapp_messages").select("body").eq("appointment_id", appt.id).eq("message_type", "appointment_rescheduled_by_other").single();
+    expect(data!.body).toMatch(/Ana remarcou o atendimento de Paciente/);
+
+    // Agora a mãe é quem marcou; ela mesma cancela: só o aviso dela, nada para o pai.
+    const again = (await findMyAppointment(service, f.clinicId, MOM_PHONE, appt.id, { now: NOW }))!;
+    expect(await cancelMine(service, f.clinicId, { item: again, leadHours: null, sender, phone: MOM_PHONE }, NOW)).toMatchObject({ status: "done" });
+    expect(await lastMessagePhone(appt.id, "appointment_canceled_by_other")).toBeNull();
+
+    // O pai cancela a que a mãe marcou: a mãe recebe.
+    await clearFuture(f.ids.p1);
+    const byMom = await book(f.ids.p1, at(MON1, "16:00"), mom);
+    const fromDad = (await findMyAppointment(service, f.clinicId, DAD_PHONE, byMom.id, { now: NOW }))!;
+    expect(await cancelMine(service, f.clinicId, { item: fromDad, leadHours: null, sender, phone: DAD_PHONE }, NOW)).toMatchObject({ status: "done" });
+    expect(await lastMessagePhone(byMom.id, "appointment_canceled_by_other")).toBe(MOM_PHONE);
+  });
+});
+

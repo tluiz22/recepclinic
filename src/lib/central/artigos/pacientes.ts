@@ -104,7 +104,7 @@ export const pacientesArtigos = [
     ],
     fields: [
       { name: "Principal", text: "O primeiro responsável (quem cadastrou, até alguém trocar). Aparece primeiro, é o responsável financeiro e o padrão dos avisos quando a recepção marca." },
-      { name: "Para quem vão os avisos", text: "Confirmação, lembrete, preparo, orientações, avisos da clínica e oferta da lista de espera vão para quem marcou. Quando a recepção marca, ela escolhe em \"Confirmação e lembrete no WhatsApp para\" (padrão: quem está na conversa aberta, senão o principal). Quem remarca pelo portal passa a receber os avisos." },
+      { name: "Para quem vão os avisos", text: "Confirmação, lembrete, preparo, orientações, avisos da clínica e oferta da lista de espera vão para quem marcou. Quando a recepção marca, ela escolhe em \"Confirmação e lembrete no WhatsApp para\" (padrão: quem está na conversa aberta, senão o principal). Quem remarca pelo portal passa a receber os avisos. Quando outro responsável remarca ou cancela, quem marcou recebe \"Consulta remarcada\" ou \"Consulta cancelada\" (modelos próprios da Meta em Configurações › WhatsApp; só saem aprovados, e a Meta cobra cada envio)." },
       { name: "Portal e bot", text: "Cada responsável vê, no portal, as consultas de todos os pacientes ligados ao número dele, e pode remarcar e cancelar. \"Confirmar presença\" do lembrete vale de qualquer responsável ligado. Ninguém se liga sozinho pelo portal: o portal pede para falar com a recepção." },
       { name: "Desligar", text: "O responsável sai da ficha. As consultas futuras que ele marcou passam para o principal (os avisos não vão para quem saiu); as passadas continuam com ele." },
     ],
