@@ -448,6 +448,14 @@ describe("orientações gerais da consulta depois da entrega (08/out)", () => {
     await cancel(first);
 
     await adminClient().from("clinic_settings").update({ guidance_enabled: true }).eq("clinic_id", f.clinicId);
+    // Consulta em casa (cliente, 10/nov/2026): as orientações não saem.
+    const home = await book("09:00");
+    await adminClient().from("appointments").update({ location_id: f.ids.home, home_visit_address: "Rua das Flores, 10" }).eq("id", home);
+    expect(await confirmationDelivered(home, "wamid.f62.conf-guia-casa")).toMatchObject({ errors: 0 });
+    expect(meta.calls).toEqual([]);
+    expect((await outbound(home)).map((m) => m.message_type)).toEqual(["appointment_confirmation"]);
+    await cancel(home);
+
     const consult = await book("10:30");
     expect(await confirmationDelivered(consult, "wamid.f62.conf-guia-2")).toMatchObject({ errors: 0 });
     await status("wamid.f62.conf-guia-2", "read");

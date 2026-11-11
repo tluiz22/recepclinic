@@ -123,7 +123,7 @@ export const JOURNEY: JourneySection[] = [
               "Sem pedir o código: o celular da conversa já vem confirmado (\"Usar outro número\" pede o código). Um link marca uma vez; outro link do mesmo número desfaz o anterior. Profissional que atende no consultório e em casa: \"No consultório / Em casa\" em cima dos dias; em casa, o endereço depois do paciente (\"Mesmo endereço da última visita\" ou outro).",
             ),
             auto("Confirmação da marcação, com dia, hora e local"),
-            auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
+            auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem. Consulta em casa: sem as orientações."),
           ],
         ],
         [
@@ -177,7 +177,7 @@ export const JOURNEY: JourneySection[] = [
                       bot("Manda o link para escolher dia e horário", "O link vale 30 minutos. Venceu sem marcar: item 10."),
                       page("Escolhe o dia e o horário livres e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
                       auto("Confirmação da marcação, com dia, hora e local"),
-                      auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
+                      auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem. Consulta em casa: sem as orientações."),
                     ],
                   ],
                 ),
@@ -298,7 +298,7 @@ export const JOURNEY: JourneySection[] = [
     title: "7. Depois de marcar",
     intro: "Mensagens que saem sozinhas, sem ninguém da equipe.",
     flow: [
-      auto("Confirmação, com preparo ou orientações quando houver"),
+      auto("Confirmação, com preparo ou orientações quando houver", "Consulta em casa: sem as orientações gerais (cliente, 10/nov/2026)."),
       auto("Lembrete na véspera ou no dia (como a clínica escolher), com Confirmar presença · Remarcar · Cancelar"),
       branch(
         ["Confirmar presença", [bot("\"Presença confirmada ✓\"", "Em seguida, outra mensagem com o nome e o endereço do local e o link do Google Maps (só local da clínica com endereço)"), reception("A agenda mostra a presença confirmada")]],
