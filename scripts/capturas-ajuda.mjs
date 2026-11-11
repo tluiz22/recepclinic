@@ -16,7 +16,9 @@ import { chromium } from "playwright";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:4321";
 const OUT = new URL("../public/ajuda/", import.meta.url).pathname;
-const LOGIN = { email: "admin@exemplo-saude.local", password: "recepclinic-local" };
+// Staging (cliente, 11/nov/2026: imagens com dia cheio e o Portal ligado): BASE_URL, CAPTURAS_EMAIL e CAPTURAS_SENHA.
+const LOGIN = { email: process.env.CAPTURAS_EMAIL ?? "admin@exemplo-saude.local", password: process.env.CAPTURAS_SENHA ?? "recepclinic-local" };
+const LOCAL = BASE.startsWith("http://localhost");
 // A agenda do seed começa na segunda-feira da semana seguinte à de `supabase db reset`.
 const agendaDate = () => {
   const d = new Date();
@@ -27,13 +29,14 @@ const agendaDate = () => {
 // [nome do arquivo, caminho, textos a destacar (começam com…), seletores CSS a destacar]
 export const CAPTURAS = [
   ["inicio", "/admin/dashboard", ["Precisa de você"], []],
-  ["agenda-dia", "/admin/agenda", ["Marcar", "Bloquear"], []],
+  // Um dia com atendimentos: no local, o primeiro dia da agenda do seed; no staging, hoje (cliente, 11/nov/2026).
+  ["agenda-dia", `/admin/agenda${LOCAL ? `?date=${agendaDate()}` : ""}`, ["Marcar", "Bloquear"], []],
   ["marcar", "/admin/agenda/marcar", ["Paciente"], []],
   ["bloquear", "/admin/agenda/bloquear", ["Dia todo"], []],
   ["bloqueios", "/admin/agenda/bloqueios", [], []],
   ["pacientes", "/admin/pacientes", ["Novo paciente"], ["input[type=search],input[name=q]"]],
   ["paciente-novo", "/admin/pacientes/novo", [], ["button[type=submit]"]],
-  ["resumo-do-dia", "/admin/consultas", ["Lembretes", "A registrar"], []],
+  ["resumo-do-dia", `/admin/consultas${LOCAL ? `?tab=resumo&date=${agendaDate()}` : ""}`, ["Lembretes", "A registrar"], []],
   ["atendimento", "/admin/atendimento", [], []],
   // Conversa da Júlia aberta (criada num teste local, fora do seed; se faltar, usar outra só com mensagem do
   // paciente: a do Carlos, no seed, mostra "Não enviada"). Com a Central ligada, /admin/atendimento abre Conversas:
