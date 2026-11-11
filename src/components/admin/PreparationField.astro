@@ -17,6 +17,9 @@
 // leitura, para o texto continuar guardado ao salvar) e a prévia mostra a
 // mensagem exata, o arquivo com o início e o final; "Tirar o arquivo"
 // reabilita.
+//
+// Arquivo escolhido e ainda não salvo (cliente, 10/nov/2026): o botão "Tirar o
+// arquivo" o descarta e as instruções voltam a valer.
 import { MAX_PREPARATION_LENGTH, whatsAppTextToHtml } from "../../lib/whatsappFormat";
 import { PREPARATION_FILE_TYPES } from "../../lib/data/config/preparationFile";
 import { preparationFileCaption, preparationMessageText } from "../../lib/preparationMessage";
@@ -74,7 +77,10 @@ const tabClass =
       class="js-file-input text-sm text-ink file:mr-3 file:rounded-lg file:border file:border-line-strong file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold file:text-ink"
     />
     <input type="hidden" name="preparation_file" class="js-file-value" />
-    <p class="js-file-status text-sm text-ink-soft" role="status" aria-live="polite"></p>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <p class="js-file-status text-sm text-ink-soft" role="status" aria-live="polite"></p>
+      <button type="button" class="js-file-discard text-sm font-semibold text-brand underline-offset-2 hover:underline" hidden>Tirar o arquivo</button>
+    </div>
   </div>
   {
     help ? (
@@ -201,6 +207,8 @@ const tabClass =
     const value = box.querySelector<HTMLInputElement>(".js-file-value")!;
     const status = box.querySelector<HTMLElement>(".js-file-status")!;
     const remove = box.querySelector<HTMLInputElement>(".js-file-remove");
+    const discard = box.querySelector<HTMLButtonElement>(".js-file-discard")!;
+    let attempt = 0;
     const bubble = field.querySelector<HTMLElement>(".js-file-bubble")!;
     const image = field.querySelector<HTMLImageElement>(".js-file-image")!;
     const doc = field.querySelector<HTMLElement>(".js-file-doc")!;
@@ -221,10 +229,24 @@ const tabClass =
     show(saved);
     remove?.addEventListener("change", () => show(remove.checked && !value.value ? null : saved));
 
+    // Volta ao que estava antes de escolher: o arquivo salvo (ou nenhum, com "Tirar o arquivo" marcado).
+    const current = () => (remove?.checked || !saved ? null : saved);
+    discard.addEventListener("click", () => {
+      attempt++;
+      fileInput.value = "";
+      value.value = "";
+      status.textContent = "Arquivo tirado. O paciente recebe as instruções abaixo.";
+      discard.hidden = true;
+      show(current());
+      if (!current()) input.focus();
+    });
+
     fileInput.addEventListener("change", async () => {
       const file = fileInput.files?.[0];
+      const mine = ++attempt;
       value.value = "";
-      if (!file) return show(saved);
+      discard.hidden = !file;
+      if (!file) return show(current());
       // Imagem lida como "data:" (a política de segurança das telas não libera "blob:").
       const url = file.type.startsWith("image/")
         ? await new Promise<string>((resolve) => {
@@ -250,13 +272,16 @@ const tabClass =
         body.append("", file);
         const upload = await fetch(result.uploadUrl, { method: "PUT", headers: { "x-upsert": "false" }, body });
         if (!upload.ok) throw new Error("O arquivo não foi enviado. Confira a internet e tente de novo.");
+        if (mine !== attempt) return;
         value.value = JSON.stringify({ path: result.path, name: file.name, type: file.type, size: file.size });
         if (remove) remove.checked = false;
         status.textContent = "Arquivo pronto. Salve o serviço para guardar.";
       } catch (e) {
+        if (mine !== attempt) return;
+        discard.hidden = true;
         status.textContent = e instanceof Error && e.message ? e.message : "Não deu certo. Tente de novo.";
         fileInput.value = "";
-        show(saved);
+        show(current());
       }
     });
   }
