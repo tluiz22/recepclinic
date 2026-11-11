@@ -75,6 +75,7 @@ import { ownerOptionGroups, TEAM_OWNER_LABEL } from "../../../lib/serviceOwner";
 import { getWhatsappConnection } from "../../../lib/data/whatsapp/connection";
 import { formatCentsBRL } from "../../../lib/money";
 import { getContact, getPatient, searchPatients } from "../../../lib/data/patients";
+import { listPatientContacts, responsibleLabel } from "../../../lib/data/patientContacts";
 import { formatPhoneBR } from "../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 import { frequencyLabel } from "../../../lib/seriesLabels";
@@ -116,6 +117,8 @@ const state = {
   tipo: params.get("tipo") ?? "",
   // Com quem (MS): o id do profissional ou "equipe".
   prof: params.get("prof") ?? "",
+  // Responsável que recebe a confirmação e o lembrete (UI-6): vem da conversa aberta no Atendimento.
+  responsavel: isUuid(params.get("responsavel")) ? params.get("responsavel")! : "",
   volta: volta ?? "",
 };
 const link = (changes: Partial<typeof state> & { busca?: string }) => {
@@ -184,6 +187,11 @@ const location = new Map(locations.map((l) => [l.id, l]));
 
 const patient = state.patient_id ? await getPatient(db, clinic.clinicId, state.patient_id).catch(() => null) : null;
 const contact = patient ? await getContact(db, clinic.clinicId, patient.contactId) : null;
+// Vários responsáveis (VR2, UI-6): com 2 ou mais, a recepção escolhe quem recebe a confirmação e o lembrete; padrão: quem
+// está na conversa aberta no Atendimento, senão o principal. Alterar não muda quem marcou.
+const responsibles = patient && !editing ? await listPatientContacts(db, clinic.clinicId, patient.id) : [];
+const chooseBooker = responsibles.length > 1;
+const booker = responsibles.find((r) => r.contactId === state.responsavel) ?? responsibles.find((r) => r.isPrimary) ?? null;
 const results = !patient && busca ? await searchPatients(db, clinic.clinicId, busca) : [];
 
 // Já marcado (cliente, 17/out/2026): o selo na busca, os atendimentos futuros
@@ -496,9 +504,12 @@ const sends = sendsPatientMessages(clinic.clinicStatus, connection?.status);
 const confirmNotice = service && sends ? whatsappNoticeText(recipient, editing ? "alteracao" : "marcacao", service.category) : "";
 // Conferência do WhatsApp (cliente, 05/nov/2026, opção A2): ao marcar, o número que recebe a confirmação em destaque,
 // com "Conferi o número com o paciente" obrigatório (só quando a mensagem sai de verdade e no futuro).
-const confirmWhatsapp = contact && sends && !editing ? formatPhoneBR(contact.phone) : "";
-const confirmWhatsappLabel = patient?.isContactSelf ? "WhatsApp que recebe a confirmação" : `WhatsApp de ${contact?.fullName ?? ""} (recebe a confirmação)`;
-const confirmWhatsappFix = contact ? withReturn(`/admin/pacientes/contato/${contact.id}`, currentPath(Astro.url)) : "";
+const whatsappTarget = booker ? { id: booker.contactId, fullName: booker.fullName, phone: booker.phone, isSelf: booker.isSelf } : contact ? { id: contact.id, fullName: contact.fullName, phone: contact.phone, isSelf: !!patient?.isContactSelf } : null;
+const whatsappLabelFor = (t: { fullName: string; isSelf: boolean }) => (t.isSelf ? "WhatsApp que recebe a confirmação" : `WhatsApp de ${t.fullName} (recebe a confirmação)`);
+const whatsappFixFor = (id: string) => withReturn(`/admin/pacientes/contato/${id}`, currentPath(Astro.url));
+const confirmWhatsapp = whatsappTarget && sends && !editing ? formatPhoneBR(whatsappTarget.phone) : "";
+const confirmWhatsappLabel = whatsappTarget ? whatsappLabelFor(whatsappTarget) : "";
+const confirmWhatsappFix = whatsappTarget ? whatsappFixFor(whatsappTarget.id) : "";
 
 // Alterar: os dados de antes (a confirmação compara com os escolhidos), o
 // convênio para escolher e o endereço atual.
@@ -561,10 +572,36 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
               <p class="text-base leading-snug font-semibold text-ink">
                 {patient.fullName} <span class="text-[15px] font-normal text-ink-soft">{formatAgeAndBirth(patient.birthdate, today)}</span>
               </p>
-              <p class="text-sm leading-normal text-ink-soft">
-                {!patient.isContactSelf && `${capitalize(vocabulary.contact)}: ${contact.fullName} · `}
-                {formatPhoneBR(contact.phone)}
-              </p>
+              {chooseBooker ? (
+                <fieldset class="mt-2 flex flex-col gap-1.5" data-booker>
+                  <legend class="mb-1 text-[14.5px] font-semibold text-ink">Confirmação e lembrete no WhatsApp para</legend>
+                  {responsibles.map((r) => (
+                    <label class="flex min-h-9 items-center gap-2.5 text-[15px] text-ink">
+                      <input
+                        type="radio"
+                        name="booked_by_contact_id"
+                        value={r.contactId}
+                        form={FORM}
+                        checked={r.contactId === booker?.contactId}
+                        data-phone={sends ? formatPhoneBR(r.phone) : ""}
+                        data-label={whatsappLabelFor(r)}
+                        data-fix={whatsappFixFor(r.contactId)}
+                        class="h-[18px] w-[18px] shrink-0 accent-brand"
+                      />
+                      <span>
+                        {r.isSelf ? `${patient.fullName} (o próprio)` : responsibleLabel(r, r.fullName)}
+                        <span class="text-ink-soft tabular-nums"> · {formatPhoneBR(r.phone)}</span>
+                        {r.isPrimary && <span class="text-ink-soft"> · principal</span>}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              ) : (
+                <p class="text-sm leading-normal text-ink-soft">
+                  {!patient.isContactSelf && `${capitalize(vocabulary.contact)}: ${contact.fullName} · `}
+                  {formatPhoneBR(contact.phone)}
+                </p>
+              )}
               {patientUpcoming.length > 0 && (
                 <div class="mt-2 rounded-[10px] border border-line bg-canvas px-3 py-2 text-sm text-ink">
                   <p class="font-semibold">Já marcado</p>
@@ -1127,6 +1164,17 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
         submit.dataset.confirmMessage = [series ? SERIES_SKIP_NOTE : "", warnings].filter(Boolean).join(" ");
       });
     };
+    // Quem recebe a confirmação (UI-6): a escolha troca o número mostrado na confirmação. O ouvinte fica no próprio
+    // botão de rádio, que roda antes do syncMessage do documento.
+    for (const radio of document.querySelectorAll<HTMLInputElement>("[data-booker] input[type=radio]")) {
+      radio.addEventListener("change", () => {
+        for (const submit of document.querySelectorAll<HTMLButtonElement>("button[data-whatsapp-phone], button[data-confirm-whatsapp-label]")) {
+          if (radio.dataset.phone) submit.dataset.whatsappPhone = radio.dataset.phone;
+          if (radio.dataset.label) submit.dataset.confirmWhatsappLabel = radio.dataset.label;
+          if (radio.dataset.fix) submit.dataset.confirmWhatsappFix = radio.dataset.fix;
+        }
+      });
+    }
     document.addEventListener("change", syncMessage);
     document.addEventListener("input", syncMessage);
     syncMessage();

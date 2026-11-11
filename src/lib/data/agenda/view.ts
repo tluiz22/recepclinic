@@ -41,6 +41,8 @@ export type AgendaAppointment = {
   imported: boolean;
   /** Quem marcou pelo painel (null = WhatsApp, link ou sistema). */
   createdBy: string | null;
+  /** Responsável que marcou (ou para quem a recepção marcou): recebe os avisos (D14, VR-1). */
+  bookedByContactId?: string | null;
   bookingChannel: string;
   canceledBy: string | null;
   canceledAt: Date | null;
@@ -69,7 +71,7 @@ export type AgendaItem =
   | { kind: "free"; start: Date; end: Date; agendaId: string; agendaName: string; time: string; endTime: string; group?: FreeGroupInfo };
 
 export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
-  patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at, rescheduled_at,
+  patient_confirmed_at, reminder_response, created_by, booked_by_contact_id, booking_channel, canceled_by, canceled_at, rescheduled_at,
   origin_appointment_id, agenda_import_id, created_at, portal_entry, portal_place,
   agendas ( name ), services ( name, category ), locations ( name, type ),
   patients ( id, full_name, birthdate, is_contact_self, contacts ( full_name, phone ) )`;
@@ -87,6 +89,7 @@ export type AgendaRow = {
   patient_confirmed_at: string | null;
   reminder_response: string | null;
   created_by: string | null;
+  booked_by_contact_id?: string | null;
   booking_channel: string;
   canceled_by: string | null;
   canceled_at: string | null;
@@ -129,6 +132,7 @@ export const toAgendaAppointment = (row: AgendaRow): AgendaAppointment => {
     patientBirthdate: row.patients.birthdate,
     originAppointmentId: row.origin_appointment_id,
     createdBy: row.created_by,
+    bookedByContactId: row.booked_by_contact_id ?? null,
     bookingChannel: row.booking_channel,
     imported: row.agenda_import_id !== null,
     canceledBy: row.canceled_by,

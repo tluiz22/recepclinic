@@ -11,8 +11,11 @@
 >   `20270113120000_varios_responsaveis.sql` aplicada no banco local (com o OK do cliente), **não no staging**; detalhe
 >   na seção 8. **Não juntar na `main` ainda** (cliente, 11/nov): a branch só entra na `main` com a frente inteira
 >   pronta (VR1 a VR5); antes, a `main` vai para a produção.
-> - **Próximo:** seguir na mesma branch (`varios-responsaveis`, worktree `../recepclinic-impl`): VR2 e VR3 depois da F3f (bot enxuto, `implementacao-recepcao-digital.md` 15.6, BE-1); a parte do bot
->   fica menor (sem data de nascimento, Cancelar e Remarcar no chat).
+> - **VR2 (ficha e recepção) feita (11/nov, mesma branch, sem migração):** detalhe na seção 8. Validação pelo cliente
+>   pendente.
+> - **Próximo:** VR3 (portal e bot) na mesma branch (`varios-responsaveis`, worktree `../recepclinic-impl`), depois da
+>   F3f (bot enxuto, `implementacao-recepcao-digital.md` 15.6, BE-1); a parte do bot fica menor (sem data de nascimento,
+>   Cancelar e Remarcar no chat). VR2 e VR3 vão juntas ao staging.
 
 ## 1. O problema
 
@@ -165,3 +168,51 @@ revisto (sem o irmão; o caso do irmão passou para o teste novo).
 **Para a VR2/VR3 (anotado):** o cadastro "o próprio paciente" de um número que já é "próprio" de outra ficha (depois
 de tornar outro principal) recusa pela unicidade de `is_self`; a VR2 precisa de mensagem para isso. Bot, portal e
 mensagens ainda leem `patients.contact_id` (só o principal) até a VR3.
+
+### VR2 Ficha e recepção (11/nov/2026, branch `varios-responsaveis`, sem migração)
+
+Antes: `main` trazida para a branch (merge `c1407eba`), testes verdes. Canvas das telas não abriu (artefato não
+encontrado); feito pela descrição UI-1, UI-2 e UI-6 da seção 6.
+
+- **Ficha (UI-1):** o alto mostra só nome, selos, idade/plano, Marcar e Mais (sem o contato). O cartão "Quem fala com a
+  clínica" virou **"Responsáveis (n)"**: cada um com nome (abre a página do contato, onde se edita nome e telefone),
+  parentesco, selo Principal (só com mais de um), número em texto e WhatsApp; "+ Adicionar" e, nos não principais,
+  "Mais" com **Tornar principal** e **Desligar** (com confirmação). A conversa aberta no Atendimento aparece para
+  qualquer responsável. Com mais de um responsável, cada atendimento diz **"Marcada por Carlos (pai), que recebe os
+  avisos"**, ou "Marcada pela recepção · avisos para …" (marcação pelo painel); nos passados e cancelados, só "Marcada
+  por …". Administrador, Recepção e Suporte mexem; o Profissional só vê.
+- **Adicionar responsável (UI-2):** tela nova `/admin/pacientes/[id]/responsavel`. Busca por celular (com DDD) ou nome de
+  um contato já cadastrado; número sem cadastro → "Cadastrar e ligar", pede o nome. Se o número já cuida de uma **ficha
+  parecida** (mesmo nome, sem acento e caixa, e mesmo nascimento), aviso com **"Desativar a outra ficha"** já marcado,
+  com as consultas futuras dela ("remarque nesta ficha antes") e "Abrir a outra ficha". Parentesco opcional (sugestões
+  mãe, pai, avó…; até 40 letras). "Ligar …" pede confirmação ("Ligar … a … e desativar a outra ficha?"; sem a marca, o
+  texto não fala em desativar). Erro volta à mesma etapa com o que foi digitado. Voltar e Cancelar levam à ficha.
+- **Página do contato:** lista também os pacientes em que o número é outro responsável ("outro responsável (pai)").
+- **Marcar (UI-6):** com 2 ou mais responsáveis, "Confirmação e lembrete no WhatsApp para", um por responsável; padrão:
+  quem está na conversa aberta (o "Marcar consulta" do Atendimento manda `responsavel=`), senão o principal. A
+  confirmação mostra o número escolhido. Na marcação (e na série), a escolha vira `booked_by_contact_id`; conferida
+  antes de marcar. Alterar não muda quem marcou.
+- **Busca pelo celular de qualquer responsável:** Marcar e Pacientes (`patient_contacts`); o cartão continua com o
+  principal. O filtro "Falta CPF" do Financeiro segue pelo principal (responsável financeiro).
+- **Faixa "Portal bloqueado":** confere o celular de cada responsável e diz qual está bloqueado ("Celular … (pai)");
+  "Liberar agora" solta o celular desse responsável.
+- **Prévia da anonimização:** já feita na VR1.
+
+Código: `patientContacts.ts` (`similarRecordsOfContact`, `listContactLinkedPatients`, `responsibleLabel`,
+`setAppointmentsBooker`), `patients.ts` (`contactForResponsible`; busca pelo celular via `patient_contacts`),
+`agenda/view.ts` (`bookedByContactId`), ficha, `[id]/responsavel.astro`, página do contato, Marcar, API do paciente
+(`ligar_responsavel`, `desligar_responsavel`, `tornar_principal`, `liberar_portal` com o responsável) e da Agenda.
+
+Testes: `tests/db/varios-responsaveis-ficha.test.ts` (novo: número novo pede nome, ficha parecida com consultas futuras,
+página do contato, busca pelo celular do 2º responsável, quem recebe escolhido no Marcar e recusa de quem não é
+responsável). Unidade 1217, banco 1199, `astro check` sem erros. Playwright (script isolado, o MCP estava com a outra
+sessão) em 390 e 1280: ficha, Adicionar (Voltar, busca, número novo, erro de nome com o parentesco mantido, ligar),
+Desligar, página do contato, Marcar (padrão e vindo da conversa) e busca; sem erro no console. Sem captura da Central
+afetada (a do Marcar mostra o passo 1 vazio).
+
+**Para a VR3 (anotado):** as mensagens (confirmação, lembrete, avisos) ainda vão para o principal: a escolha do Marcar
+só vale depois da VR3 (por isso VR2 e VR3 vão juntas ao staging). Sessões novas de série geradas depois pegam o
+principal (a série não guarda quem marcou). A conversa do Atendimento ainda lista só os pacientes em que o número é o
+principal. Sem mensagem própria ainda para o "próprio paciente" repetido (anotado na VR1): não aparece pela ficha,
+porque ligar não marca `is_self`.
+

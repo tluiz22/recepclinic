@@ -259,6 +259,25 @@ async function contactForPhone(db: DbClient, clinicId: string, phone: string, fu
   throw fromDbError(error, "Contato");
 }
 
+/**
+ * Responsável novo da ficha (VR2, UI-2): o contato do celular, se já existe (reativado, se preciso); senão um contato
+ * novo com o nome informado. O nome só é pedido quando o número não tem cadastro.
+ */
+export async function contactForResponsible(db: DbClient, clinicId: string, input: { phone: string; fullName?: string | null }): Promise<Contact> {
+  const v = new Validation();
+  const phone = normalizePhone(input.phone ?? "");
+  v.check(phone !== null && !isAnonymizedPhone(phone), "phone", PATIENT_MESSAGES.invalidPhone);
+  v.throwIfInvalid("Responsável");
+  const existing = await findContactByPhone(db, clinicId, phone!);
+  if (existing?.anonymizedAt) throw new DataError("invalid", "Responsável: número anonimizado", { phone: "Este número foi anonimizado; use outro." });
+  const fullName = cleanText(input.fullName) ?? "";
+  if (!existing) {
+    v.check(fullName.length > 0, "fullName", "Informe o nome do responsável");
+    v.throwIfInvalid("Responsável");
+  }
+  return contactForPhone(db, clinicId, phone!, fullName);
+}
+
 // ---------------------------------------------------------------------------
 // Pacientes
 // ---------------------------------------------------------------------------
@@ -284,10 +303,9 @@ export async function listContactPatients(
 export async function searchPatients(db: DbClient, clinicId: string, query: string): Promise<PatientWithContact[]> {
   const term = parseSearch(query);
   if (!term || query.trim().length < 2) return [];
-  const byPhone = term.kind === "phone";
   let request = db
     .from("patients")
-    .select(`${PATIENT_COLUMNS}, contacts!${byPhone ? "inner" : "left"} ( ${CONTACT_COLUMNS} )`)
+    .select(`${PATIENT_COLUMNS}, contacts!left ( ${CONTACT_COLUMNS} )`)
     .eq("clinic_id", clinicId)
     .eq("is_active", true);
   let ids: string[] | null = null;
@@ -295,6 +313,11 @@ export async function searchPatients(db: DbClient, clinicId: string, query: stri
     ids = await idsByName(db, "patients", clinicId, term.text, false, 10);
     if (ids.length === 0) return [];
     request = request.in("id", ids);
+  } else if (term.kind === "phone") {
+    // Celular de qualquer responsável ligado (VR2, D14), não só o do principal.
+    const byPhone = await patientIdsByPhone(db, clinicId, term.digits);
+    if (byPhone.length === 0) return [];
+    request = request.in("id", byPhone);
   } else request = filterPatients(request, term);
   const found = unwrap(await request.order("full_name").limit(10), "Busca de pacientes") as unknown as (PatientRow & {
     contacts: ContactRow;
@@ -368,6 +391,10 @@ export async function listPatientsPage(
   } else if (term?.kind === "name") {
     // Sem o CPF de quem paga: os parecidos (até 150, para caber no endereço) pela função, em ordem de nome.
     const ids = await idsByName(db, "patients", clinicId, term.text, includeInactive, 150);
+    if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
+    request = request.in("id", ids);
+  } else if (term?.kind === "phone") {
+    const ids = await patientIdsByPhone(db, clinicId, term.digits);
     if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
     request = request.in("id", ids);
   } else if (term) request = filterPatients(request, term);
@@ -682,12 +709,20 @@ export async function setPatientActive(db: DbClient, clinicId: string, id: strin
 /** `%` e `_` digitados viram texto, não curinga, na busca por nome. */
 /** Filtro da busca de pacientes: nome, telefone do contato (embutido) ou data de nascimento. */
 /** Telefone do contato ou data de nascimento (o nome vai pela função do banco, C18). */
-function filterPatients<Q extends { ilike(column: string, pattern: string): Q; eq(column: string, value: string): Q }>(
-  request: Q,
-  term: Exclude<SearchTerm, { kind: "name" }>,
-): Q {
-  if (term.kind === "phone") return request.ilike("contacts.phone", `%${term.digits}%`);
+function filterPatients<Q extends { eq(column: string, value: string): Q }>(request: Q, term: Extract<SearchTerm, { kind: "birthdate" }>): Q {
   return request.eq("birthdate", term.date);
+}
+
+/**
+ * Pacientes de qualquer responsável com o número (VR2, D14: a busca pelo celular acha a ficha também pelo 2º
+ * responsável). Até 150 (cabe no endereço do filtro seguinte).
+ */
+async function patientIdsByPhone(db: DbClient, clinicId: string, digits: string): Promise<string[]> {
+  const rows = unwrap(
+    await db.from("patient_contacts").select("patient_id, contacts!inner ( phone )").eq("clinic_id", clinicId).ilike("contacts.phone", `%${digits}%`).limit(150),
+    "Busca pelo celular",
+  );
+  return [...new Set(rows.map((row) => row.patient_id))];
 }
 
 /** Quantos nomes parecidos as listas com páginas consideram, no máximo. */

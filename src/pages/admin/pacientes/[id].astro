@@ -65,6 +65,7 @@ import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agen
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, listContactPatients, previewAnonymization } from "../../../lib/data/patients";
 import { listOpenBirthdateChecks } from "../../../lib/data/portalBirthdate";
+import { listPatientContacts, responsibleLabel } from "../../../lib/data/patientContacts";
 import { portalPhoneBlock } from "../../../lib/data/portalPhone";
 import { MAX_HOLDS_PER_DAY } from "../../../lib/portalIdentity";
 import { shortDate } from "../../../lib/portalBooking";
@@ -82,12 +83,13 @@ const id = Astro.params.id!;
 const patient = isUuid(id) ? await getPatient(db, clinic.clinicId, id).catch(() => null) : null;
 if (!patient) return Astro.redirect("/admin/pacientes");
 const insuranceOn = clinic.features.includes("insurance");
-const [contact, history, noShows, plans, birthdateChecks] = await Promise.all([
+const [contact, history, noShows, plans, birthdateChecks, responsibles] = await Promise.all([
   getContact(db, clinic.clinicId, patient.contactId),
   listPatientAppointments(db, clinic.clinicId, patient.id),
   listNoShowStats(db, clinic.clinicId, [patient.id]),
   insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
   listOpenBirthdateChecks(db, clinic.clinicId, [patient.id]),
+  listPatientContacts(db, clinic.clinicId, patient.id),
 ]);
 // Portal (F2c, R4): a data informada diferente da cadastrada, para a recepção conferir com o paciente.
 const birthdateCheck = birthdateChecks.get(patient.id) ?? null;
@@ -204,17 +206,33 @@ const createdAt = await db
   .maybeSingle()
   .then((r) => r.data?.created_at ?? null, () => null);
 const sinceText = createdAt ? `${vocabulary.patient === "paciente" ? "paciente" : "na clínica"} desde ${createdAt.slice(0, 4)}` : null;
-const phoneOk = !isAnonymizedPhone(contact.phone);
 // C26: conversa do contato no atendimento humano (aguardando ou em atendimento), para dar andamento daqui.
-const humanConversation =
-  clinic.features.includes("whatsapp_bot") && !anonymized && phoneOk
-    ? await listHumanAttention(db, clinic.clinicId, contact.phone).then((items) => items[0], () => undefined)
-    : undefined;
+// Com vários responsáveis (VR2), a conversa aberta de qualquer um deles.
+const humanConversations =
+  clinic.features.includes("whatsapp_bot") && !anonymized
+    ? await Promise.all(
+        responsibles
+          .filter((r) => !isAnonymizedPhone(r.phone))
+          .map((r) => listHumanAttention(db, clinic.clinicId, r.phone).then((items) => (items[0] ? { item: items[0], name: r.fullName } : null), () => null)),
+      ).then((found) => found.filter((x) => x !== null))
+    : [];
 // Celular bloqueado no portal (validação da F3, cliente, 10/nov/2026; faixa no alto, opção A): código pedido demais ou o
 // limite do dia; "Liberar agora" solta os dois. Só Administrador e Recepção; o bloqueio vale para todos os pacientes do celular.
-const canReleasePortal = clinic.features.includes("portal") && !anonymized && phoneOk && (clinic.roles.includes("admin") || clinic.roles.includes("reception"));
-const portalBlock = canReleasePortal ? await portalPhoneBlock(db, clinic.clinicId, contact.phone).catch(() => null) : null;
-const portalBlockPatients = portalBlock ? await listContactPatients(db, clinic.clinicId, contact.id).catch(() => [patient]) : [];
+const canReleasePortal = clinic.features.includes("portal") && !anonymized && (clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+// Vários responsáveis (VR2, VR-5): a faixa mostra qual celular está bloqueado (o primeiro bloqueado, pela ordem da lista).
+const portalBlocks = canReleasePortal
+  ? (
+      await Promise.all(
+        responsibles
+          .filter((r) => !isAnonymizedPhone(r.phone))
+          .map(async (r) => ({ responsible: r, block: await portalPhoneBlock(db, clinic.clinicId, r.phone).catch(() => null) })),
+      )
+    ).filter((x) => x.block !== null)
+  : [];
+const portalBlock = portalBlocks[0]?.block ?? null;
+const blockedResponsible = portalBlocks[0]?.responsible ?? null;
+const blockedPhone = blockedResponsible?.phone ?? contact.phone;
+const portalBlockPatients = blockedResponsible ? await listContactPatients(db, clinic.clinicId, blockedResponsible.contactId).catch(() => [patient]) : [];
 // "às 15:40" hoje; "amanhã às 09:10"; senão "dd/MM às HH:mm".
 const whenFree = (date: Date) => {
   const day = localDateOf(date, clinic.timezone);
@@ -228,9 +246,10 @@ const portalBlockReasons = portalBlock
     ].filter((r): r is string => r !== null)
   : [];
 const portalBlockOthers = portalBlockPatients.filter((p) => p.id !== patient.id).map((p) => p.fullName);
+const blockedWho = blockedResponsible && responsibles.length > 1 ? ` (${responsibleLabel(blockedResponsible, `o próprio ${vocabulary.patient}`)})` : "";
 const portalBlockWho = portalBlockOthers.length
-  ? `Celular ${formatPhoneBR(contact.phone)}; vale também para ${portalBlockOthers.join(", ")}.`
-  : `Celular ${formatPhoneBR(contact.phone)}.`;
+  ? `Celular ${formatPhoneBR(blockedPhone)}${blockedWho}; vale também para ${portalBlockOthers.join(", ")}.`
+  : `Celular ${formatPhoneBR(blockedPhone)}${blockedWho}.`;
 
 // Nota de cada pagamento: a ativa (emitida, emitindo ou cancelando); sem ela, "Sem nota".
 const INVOICE_PILL: Partial<Record<InvoiceStatus, { tone: PillTone; text: (n: string | null) => string }>> = {
@@ -255,6 +274,32 @@ const fieldLabel = "text-[14.5px] font-semibold text-ink";
 const hint = "text-sm text-ink-soft";
 const radio = "flex items-center gap-2.5 text-[15px] text-ink";
 const canBook = patient.isActive && !anonymized;
+// Responsáveis (VR2, UI-1): Administrador, Recepção e Suporte ligam, desligam e tornam principal.
+const canManageResponsibles = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+const selfLabel = `O próprio ${vocabulary.patient}`;
+const whoLabel = (r: (typeof responsibles)[number]) => responsibleLabel(r, selfLabel);
+// "Marcada por … · avisos para …" (UI-1, VR-1): só com mais de um responsável (com um só, é sempre ele). Quem marcou e
+// já foi desligado continua nas consultas passadas: o nome vem do contato.
+const multipleResponsibles = responsibles.length > 1;
+const unlinkedBookers = multipleResponsibles
+  ? [...new Set(history.map((a) => a.bookedByContactId).filter((id): id is string => id !== null && !responsibles.some((r) => r.contactId === id)))]
+  : [];
+const bookerNames = new Map(
+  await Promise.all(unlinkedBookers.map((id) => getContact(db, clinic.clinicId, id).then((c) => [id, c.fullName.split(/\s+/)[0]] as const, () => [id, ""] as const))),
+);
+const bookedText = (a: (typeof history)[number]) => {
+  if (!multipleResponsibles || !a.bookedByContactId) return null;
+  const linked = responsibles.find((r) => r.contactId === a.bookedByContactId);
+  const name = linked
+    ? linked.isSelf
+      ? `${linked.fullName.split(/\s+/)[0]} (o próprio ${vocabulary.patient})`
+      : whoLabel(linked)
+    : bookerNames.get(a.bookedByContactId) || null;
+  if (!name) return null;
+  const active = (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now;
+  if (a.bookingChannel === "admin") return active ? `Marcada pela recepção · avisos para ${name}` : `Marcada pela recepção para ${name}`;
+  return active ? `Marcada por ${name}, que recebe os avisos` : `Marcada por ${name}`;
+};
 ---
 
 <AdminLayout title={patient.fullName}>
@@ -277,35 +322,6 @@ const canBook = patient.isActive && !anonymized;
         {!anonymized && (
           <span class="text-[15px] text-ink-mid">{[formatAge(patient.birthdate, today), insuranceOn ? planLabel : null, sinceText].filter(Boolean).join(" · ")}</span>
         )}
-        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[15.5px] text-ink">
-          {!patient.isContactSelf && (
-            <span>
-              {capitalize(vocabulary.contact)}:{" "}
-              <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="font-semibold text-brand no-underline hover:underline">{contact.fullName}</a> ·
-            </span>
-          )}
-          {phoneOk ? (
-            <>
-              <span class="tabular-nums">{formatPhoneBR(contact.phone)}</span>
-              <a
-                href={whatsappHref(contact.phone)}
-                target="_blank"
-                rel="noopener"
-                aria-label={`Abrir conversa no WhatsApp com ${contact.fullName}`}
-                class="inline-flex min-h-8 items-center rounded-[9px] border border-conf-500 bg-conf-500 px-2.5 text-[13.5px] font-semibold text-white no-underline hover:bg-conf-800"
-              >
-                WhatsApp
-              </a>
-            </>
-          ) : (
-            <span class="text-ink-soft">telefone anonimizado</span>
-          )}
-          {patient.isContactSelf && !anonymized && (
-            <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="text-[15px] font-semibold text-brand no-underline hover:underline">
-              Editar o telefone
-            </a>
-          )}
-        </div>
       </div>
       {
         !anonymized && (
@@ -419,11 +435,12 @@ const canBook = patient.isActive && !anonymized;
         </div>
         <form method="POST" action={action} class="w-full sm:w-auto">
           <input type="hidden" name="acao" value="liberar_portal" />
+          <input type="hidden" name="contact_id" value={blockedResponsible?.contactId ?? contact.id} />
           <button
             type="submit"
             class={`${buttonClass("secondary", "sm")} js-confirm-delete w-full sm:w-auto`}
             data-sending-label="Liberando…"
-            data-confirm-title={`Liberar o portal para ${formatPhoneBR(contact.phone)}?`}
+            data-confirm-title={`Liberar o portal para ${formatPhoneBR(blockedPhone)}?`}
             data-confirm-message={`O celular volta a receber o código e a marcar pelo portal agora, sem esperar.${portalBlockOthers.length ? ` Vale também para ${portalBlockOthers.join(", ")}.` : ""} Se pedir código demais de novo, o portal bloqueia outra vez sozinho.`}
             data-confirm-label="Liberar agora"
             data-confirm-tone="primary"
@@ -531,6 +548,7 @@ const canBook = patient.isActive && !anonymized;
               <span class={`min-w-0 flex-[1_1_200px] text-[15px] ${a.status === "canceled" ? "text-ink-soft" : "text-ink"}`}>
                 {serviceLook(a.category).label} · {a.agendaName}
                 {a.seriesId && <Tag class="ml-1.5">série</Tag>}
+                {bookedText(a) && <span class="block text-[13.5px] text-ink-soft">{bookedText(a)}</span>}
               </span>
               <span class="flex flex-wrap items-center gap-1.5">
                 {pending(a) ? (
@@ -915,15 +933,88 @@ const canBook = patient.isActive && !anonymized;
 
       {
         !anonymized && (
-          <section aria-labelledby="quem-fala-titulo" class="flex flex-col gap-1 rounded-xl border border-line bg-white px-3.5 py-3.5 lg:px-5 lg:py-[18px]">
+          <section aria-labelledby="responsaveis-titulo" class="flex flex-col gap-1 rounded-xl border border-line bg-white px-3.5 py-3.5 lg:px-5 lg:py-[18px]">
             <div class="flex items-center justify-between gap-3">
-              <h2 id="quem-fala-titulo" class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Quem fala com a clínica</h2>
-              <Button href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} size="sm">Editar</Button>
+              <h2 id="responsaveis-titulo" class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+                Responsáveis <span class="font-sans text-[15px] font-semibold text-ink-soft">({responsibles.length})</span>
+              </h2>
+              {canManageResponsibles && (
+                <Button href={withReturn(`/admin/pacientes/${patient.id}/responsavel`, volta)} size="sm">
+                  <Icon name="plus" class="h-4 w-4" strokeWidth={2.2} /> Adicionar
+                </Button>
+              )}
             </div>
-            <p class="text-[14.5px] leading-snug text-ink-mid">
-              {patient.isContactSelf ? `O próprio ${vocabulary.patient}` : `${contact.fullName} (${vocabulary.contact})`} · {phoneOk ? formatPhoneBR(contact.phone) : "telefone anonimizado"}
-            </p>
-            <HumanConversation item={humanConversation} timeZone={clinic.timezone} returnTo={here} name={contact.fullName} />
+            <ul class="flex flex-col">
+              {responsibles.map((r) => {
+                const phoneShown = !isAnonymizedPhone(r.phone);
+                const label = r.isSelf ? selfLabel : r.fullName;
+                return (
+                  <li class="flex flex-col gap-1.5 border-t border-line py-2.5 first:border-t-0 first:pt-1.5 last:pb-0" data-responsible={r.contactId}>
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <a href={withReturn(`/admin/pacientes/contato/${r.contactId}`, here)} class="text-[15px] font-semibold text-brand no-underline hover:underline">
+                        {label}
+                      </a>
+                      {r.kinship && !r.isSelf && <span class="text-[14.5px] text-ink-mid">{r.kinship}</span>}
+                      {r.isPrimary && multipleResponsibles && <Pill tone="info">Principal</Pill>}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      {phoneShown ? (
+                        <>
+                          <span class="text-[14.5px] text-ink tabular-nums">{formatPhoneBR(r.phone)}</span>
+                          <a
+                            href={whatsappHref(r.phone)}
+                            target="_blank"
+                            rel="noopener"
+                            aria-label={`Abrir conversa no WhatsApp com ${r.fullName}`}
+                            class="inline-flex min-h-8 items-center rounded-[9px] border border-conf-500 bg-conf-500 px-2.5 text-[13.5px] font-semibold text-white no-underline hover:bg-conf-800"
+                          >
+                            WhatsApp
+                          </a>
+                        </>
+                      ) : (
+                        <span class="text-[14.5px] text-ink-soft">telefone anonimizado</span>
+                      )}
+                      {canManageResponsibles && !r.isPrimary && (
+                        <MoreMenu id={`responsavel-${r.contactId}`} label={`Mais ações: ${r.fullName}`} size="sm">
+                          <form method="POST" action={action}>
+                            <input type="hidden" name="acao" value="tornar_principal" />
+                            <input type="hidden" name="contact_id" value={r.contactId} />
+                            <button
+                              type="submit"
+                              class={`${menuItemClass()} js-confirm-delete`}
+                              data-sending-label="Salvando…"
+                              data-confirm-title={`Tornar ${r.fullName} o principal?`}
+                              data-confirm-message={`${r.fullName} passa a aparecer primeiro, vira o responsável financeiro e recebe os avisos quando a recepção marcar. As consultas já marcadas continuam com quem marcou.`}
+                              data-confirm-label="Tornar principal"
+                              data-confirm-tone="primary"
+                            >
+                              Tornar principal
+                            </button>
+                          </form>
+                          <form method="POST" action={action}>
+                            <input type="hidden" name="acao" value="desligar_responsavel" />
+                            <input type="hidden" name="contact_id" value={r.contactId} />
+                            <button
+                              type="submit"
+                              class={`${menuItemClass(true)} js-confirm-delete`}
+                              data-sending-label="Desligando…"
+                              data-confirm-title={`Desligar ${r.fullName} de ${patient.fullName}?`}
+                              data-confirm-message={`${r.fullName} deixa de ver ${patient.fullName} no portal e no WhatsApp. Os avisos das consultas futuras que ${r.fullName} marcou passam ao principal. O cadastro de ${r.fullName} continua.`}
+                              data-confirm-label="Desligar"
+                            >
+                              Desligar
+                            </button>
+                          </form>
+                        </MoreMenu>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {humanConversations.map((c) => (
+              <HumanConversation item={c.item} timeZone={clinic.timezone} returnTo={here} name={c.name} />
+            ))}
           </section>
         )
       }

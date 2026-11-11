@@ -1,4 +1,5 @@
 import { safeReturnPath } from "../../../../../lib/returnPath";
+import { listPatientContacts, setAppointmentsBooker } from "../../../../../lib/data/patientContacts";
 import type { APIRoute } from "astro";
 import { localDateOf, localTimeOf } from "../../../../../lib/clinicTime";
 import { parseSlot } from "../../../../../lib/agendaSlot";
@@ -80,6 +81,13 @@ export const POST: APIRoute = async (context) => {
           const patientPlanId = isUuid(patientId) ? ((await getPatient(db, clinic.clinicId, patientId)).insurance?.planId ?? null) : null;
           const examPlan = isUuid(serviceId) ? await examPlanFor(db, clinic.clinicId, serviceId, patientPlanId) : { planId: patientPlanId, asPrivate: false };
           const asPrivateNote = examPlan.asPrivate ? " O exame não aceita o convênio do paciente: ficou como particular." : "";
+          // Com 2 ou mais responsáveis, para quem vão a confirmação e o lembrete (UI-6, VR-1); sem escolha, o principal.
+          const booker = formOptionalText(form, "booked_by_contact_id");
+          const bookerId = booker && isUuid(booker) ? booker : null;
+          // Confere antes de marcar (depois, um erro deixaria a consulta marcada com a mensagem de falha).
+          if (bookerId && isUuid(patientId) && !(await listPatientContacts(db, clinic.clinicId, patientId)).some((c) => c.contactId === bookerId)) {
+            throw new DataError("invalid", "Atendimento: este número não é responsável pelo paciente", { booked_by_contact_id: "Escolha um responsável ligado ao paciente." });
+          }
           if (formChecked(form, "repetir")) {
             // Série só começa no futuro (cliente, 28/out/2026).
             if (slot.start.getTime() <= Date.now()) {
@@ -100,6 +108,7 @@ export const POST: APIRoute = async (context) => {
               homeVisitAddress: formOptionalText(form, "home_visit_address"),
               actorId,
             });
+            await setAppointmentsBooker(db, clinic.clinicId, created.created.map((a) => a.id), bookerId);
             const skipped = created.skipped.length ? ` ${created.skipped.length} data(s) pulada(s): veja abaixo.` : "";
             const notice = await notify("confirmation", firstByDate(created.created));
             return done(`Série criada: ${created.created.length} sessão(ões) marcada(s).${skipped}${asPrivateNote}${notice}`, `/admin/agenda/serie/${created.series.id}`);
@@ -120,6 +129,7 @@ export const POST: APIRoute = async (context) => {
             // Data passada, até 90 dias (cliente, 28/out/2026): sem aviso ao paciente (notify só avisa o futuro).
             pastFrom: pastLimit(clinic.timezone),
           });
+          await setAppointmentsBooker(db, clinic.clinicId, [result.appointment.id], bookerId);
           const date = localDateOf(result.appointment.scheduledAt, clinic.timezone);
           const notice = await notify("confirmation", result.appointment);
           return done(["Atendimento marcado.", ...result.returnWarnings].join(" ") + asPrivateNote + notice, `/admin/agenda?date=${date}`);
