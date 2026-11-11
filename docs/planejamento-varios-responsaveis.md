@@ -9,8 +9,9 @@
 >   e as etapas VR1 a VR5 (seção 7).
 > - **VR1 (banco) feita (11/nov, sessão de implementação, branch `varios-responsaveis`):** migração
 >   `20270113120000_varios_responsaveis.sql` aplicada no banco local (com o OK do cliente), **não no staging**; detalhe
->   na seção 8. Branch pronta para a validação juntar (VR1 sozinha não muda tela, só o texto da anonimização).
-> - **Próximo:** VR2 e VR3 depois da F3f (bot enxuto, `implementacao-recepcao-digital.md` 15.6, BE-1); a parte do bot
+>   na seção 8. **Não juntar na `main` ainda** (cliente, 11/nov): a branch só entra na `main` com a frente inteira
+>   pronta (VR1 a VR5); antes, a `main` vai para a produção.
+> - **Próximo:** seguir na mesma branch (`varios-responsaveis`, worktree `../recepclinic-impl`): VR2 e VR3 depois da F3f (bot enxuto, `implementacao-recepcao-digital.md` 15.6, BE-1); a parte do bot
 >   fica menor (sem data de nascimento, Cancelar e Remarcar no chat).
 
 ## 1. O problema
