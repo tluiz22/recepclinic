@@ -114,9 +114,9 @@ export function blockMessage(block: BlockText, professionalName: string, patient
     case "age":
       return `${professionalName} atende pacientes até ${block.limit - 1} anos.`;
     case "already":
-      // Exame (F2d): o mesmo exame já marcado (como o bot).
-      if (kind === "exame") return `${patientName ?? "Este paciente"} já tem o exame ${professionalName} marcado ${block.when}. Para mudar o dia ou o horário, fale com a recepção.`;
-      return `${patientName ?? "Este paciente"} já tem consulta com ${professionalName} ${block.when}. Para mudar o dia ou o horário, fale com a recepção.`;
+      // Exame (F2d): o mesmo exame já marcado (como o bot). Sem mandar à recepção (cliente, 10/nov/2026).
+      if (kind === "exame") return `${patientName ?? "Este paciente"} já tem o exame ${professionalName} marcado ${block.when}. Para marcar um novo, remarque ou cancele o atual em Minhas consultas.`;
+      return `${patientName ?? "Este paciente"} já tem consulta com ${professionalName} ${block.when}. Para marcar uma nova, remarque ou cancele a atual em Minhas consultas.`;
     case "limit":
       if (block.reason === "future_appointments") return `Este número já tem ${block.current} ${block.current === 1 ? "consulta marcada" : "consultas marcadas"}. Fale com a recepção.`;
       return "Para este agendamento, fale com a recepção.";

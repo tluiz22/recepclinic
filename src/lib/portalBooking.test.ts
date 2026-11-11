@@ -62,7 +62,7 @@ describe("blockMessage", () => {
   it("idade, já marcado e limites", () => {
     expect(blockMessage({ kind: "age", limit: 14 }, "Dra. Ana Lima", "João")).toBe("Dra. Ana Lima atende pacientes até 13 anos.");
     expect(blockMessage({ kind: "already", when: "na quinta, 12/11 às 09:00" }, "Dra. Ana Lima", "João Souza")).toBe(
-      "João Souza já tem consulta com Dra. Ana Lima na quinta, 12/11 às 09:00. Para mudar o dia ou o horário, fale com a recepção.",
+      "João Souza já tem consulta com Dra. Ana Lima na quinta, 12/11 às 09:00. Para marcar uma nova, remarque ou cancele a atual em Minhas consultas.",
     );
     expect(blockMessage({ kind: "limit", reason: "future_appointments", current: 5 }, "X", null)).toBe("Este número já tem 5 consultas marcadas. Fale com a recepção.");
     expect(blockMessage({ kind: "limit", reason: "no_shows", current: 5 }, "X", null)).toBe("Para este agendamento, fale com a recepção.");

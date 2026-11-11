@@ -25,6 +25,8 @@ if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
 let patients: PortalPatient[] = [];
 let problem: string | null = null;
 let ageProblem = false;
+// Já marcado (cliente, 10/nov/2026): o link leva a Minhas consultas, para remarcar ou cancelar.
+let alreadyProblem = false;
 let chosen: string | null = hold?.patientId ?? null;
 const today = todayIn(timeZone);
 
@@ -43,6 +45,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
       if (block) {
         problem = blockMessage(toBlockText(block, timeZone), professional.name, patient.fullName, bookingKind(professional));
         ageProblem = block.kind === "age";
+        alreadyProblem = block.kind === "already";
       } else if (await setHoldPatient(db, portal.clinicId, session.id, hold.id, { patientId: patient.id })) {
         return Astro.redirect(view.href("revisao"));
       } else return Astro.redirect(view.href("reserva"));
@@ -81,6 +84,11 @@ const card =
               {ageProblem && changeDoctor && (
                 <a href={changeDoctor} class={`${portalLink} self-start`}>
                   Escolher outro médico
+                </a>
+              )}
+              {alreadyProblem && (
+                <a href={`${view.base}/minhas-consultas`} class={`${portalLink} self-start`}>
+                  Ver minhas consultas
                 </a>
               )}
             </div>

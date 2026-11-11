@@ -34,6 +34,8 @@ if (page.kind === "open" && professional && hold?.state === "active" && view.atH
 
 const today = todayIn(timeZone);
 let problem: string | null = null;
+// Já marcado (cliente, 10/nov/2026): o link leva a Minhas consultas, para remarcar ou cancelar.
+let alreadyProblem = false;
 // Outra aba ou o outro toque ainda marcando (tomou a reserva há menos de 1 min): a tela se atualiza até terminar.
 let confirming = !!hold?.confirmingAt && Date.now() - hold.confirmingAt.getTime() < 60_000;
 let existing: PortalPatient | null = null;
@@ -60,8 +62,10 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
     if (outcome.status === "taken") return Astro.redirect(portalHref(`${view.base}/${professional.slug}/horarios`, { ...flowParams(view.flow), mod: modality?.value ?? null, tipo: Astro.url.searchParams.get("tipo"), date: Astro.url.searchParams.get("date"), erro: "horario" }));
     if (outcome.status === "no_patient") return Astro.redirect(view.href("reserva"));
     if (outcome.status === "no_address") return Astro.redirect(view.href("endereco"));
-    if (outcome.status === "blocked") problem = blockMessage(toBlockText(outcome.reason, timeZone), professional.name, existing?.fullName ?? hold.newPatient?.name ?? null, bookingKind(professional));
-    else problem = "Não conseguimos marcar agora. Toque em “Confirmar agendamento” de novo ou fale com a recepção.";
+    if (outcome.status === "blocked") {
+      problem = blockMessage(toBlockText(outcome.reason, timeZone), professional.name, existing?.fullName ?? hold.newPatient?.name ?? null, bookingKind(professional));
+      alreadyProblem = outcome.reason.kind === "already";
+    } else problem = "Não conseguimos marcar agora. Toque em “Confirmar agendamento” de novo ou fale com a recepção.";
   }
 }
 if (hold?.state !== "active" || problem) confirming = false;
@@ -101,9 +105,14 @@ const dt = "text-[15px] text-gray-600";
         <h1 class={portalTitle}>Confira e confirme</h1>
         {waitlist && <PortalWaitlistNotice />}
         {problem && (
-          <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">
-            {problem}
-          </p>
+          <div class={`${portalNotice} flex flex-col gap-1 border-red-200 bg-red-50 text-red-800`} role="alert">
+            <p>{problem}</p>
+            {alreadyProblem && (
+              <a href={`${view.base}/minhas-consultas`} class={`${portalLink} self-start`}>
+                Ver minhas consultas
+              </a>
+            )}
+          </div>
         )}
         {birthNotice && hold.informedBirthdate && (
           <p class={`${portalNotice} border-amber-200 bg-amber-50 text-amber-900`} role="status">

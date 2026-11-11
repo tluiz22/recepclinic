@@ -32,6 +32,8 @@ type Field = "for" | "name" | "birthdate" | "contactName";
 const errors: Partial<Record<Field, string>> = {};
 let pageProblem: string | null = null;
 let ageProblem = false;
+// Já marcado (cliente, 10/nov/2026): o link leva a Minhas consultas, para remarcar ou cancelar.
+let alreadyProblem = false;
 let duplicate: DuplicateMatch | null = null;
 let hasPatients = false;
 let hasSelf = false;
@@ -84,6 +86,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
         if (block) {
           pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, match.fullName, bookingKind(professional));
           ageProblem = block.kind === "age";
+          alreadyProblem = block.kind === "already";
         } else if (await setHoldPatient(db, clinicId, session.id, hold.id, { patientId: match.id, informedBirthdate: match.sameBirthdate ? null : birth.date })) {
           return Astro.redirect(view.href("revisao", { aviso: answer === "corrigir" ? "data" : null }));
         } else return Astro.redirect(view.href("cadastro"));
@@ -94,6 +97,7 @@ if (page.kind === "open" && professional && session && hold?.state === "active")
         if (block) {
           pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, name, bookingKind(professional));
           ageProblem = block.kind === "age";
+          alreadyProblem = block.kind === "already";
         } else if (await setHoldPatient(db, clinicId, session.id, hold.id, { newPatient: data })) {
           return Astro.redirect(view.href("revisao"));
         } else return Astro.redirect(view.href("cadastro"));
@@ -138,6 +142,11 @@ const label = "text-base font-semibold text-gray-700";
               {ageProblem && changeDoctor && (
                 <a href={changeDoctor} class={`${portalLink} self-start`}>
                   Escolher outro médico
+                </a>
+              )}
+              {alreadyProblem && (
+                <a href={`${view.base}/minhas-consultas`} class={`${portalLink} self-start`}>
+                  Ver minhas consultas
                 </a>
               )}
             </div>

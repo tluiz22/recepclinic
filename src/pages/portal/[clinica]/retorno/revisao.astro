@@ -39,6 +39,8 @@ const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortalez
 let hold: PortalHold | null = null;
 let card: ReturnCard | null = null;
 let problem: string | null = null;
+// Já marcado (cliente, 10/nov/2026): o link leva a Minhas consultas, para remarcar ou cancelar.
+let alreadyProblem = false;
 let waitlist = false;
 if (page.kind === "open") {
   const { db, portal } = page;
@@ -61,14 +63,19 @@ if (page.kind === "open") {
     if (outcome.status === "no_patient") return Astro.redirect(portalHref(`${base}/retorno`, { aviso: "mudou" }));
     card = await findReturnCard(db, portal, hold.phone, hold.returnOriginId!);
     if (!card) return Astro.redirect(portalHref(`${base}/retorno`, { aviso: "mudou" }));
-    if (outcome.status === "blocked") problem = blockMessage(toBlockText(outcome.reason, timeZone), card.professional.name, card.patient.fullName);
-    else problem = "Não conseguimos marcar agora. Toque em “Marcar retorno” de novo ou fale com a recepção.";
+    if (outcome.status === "blocked") {
+      problem = blockMessage(toBlockText(outcome.reason, timeZone), card.professional.name, card.patient.fullName);
+      alreadyProblem = outcome.reason.kind === "already";
+    } else problem = "Não conseguimos marcar agora. Toque em “Marcar retorno” de novo ou fale com a recepção.";
   } else if (session && hold?.state === "active") {
     card = await findReturnCard(db, portal, hold.phone, hold.returnOriginId!);
     if (!card || card.patient.id !== hold.patientId || card.service.id !== hold.serviceId) return Astro.redirect(`${base}/retorno`);
     // Os limites do bot antes de confirmar (sem gravar), como na P9.
     const block = await returnBlock(db, portal.clinicId, hold.phone);
-    if (block) problem = blockMessage(toBlockText(block, timeZone), card.professional.name, card.patient.fullName);
+    if (block) {
+      problem = blockMessage(toBlockText(block, timeZone), card.professional.name, card.patient.fullName);
+      alreadyProblem = block.kind === "already";
+    }
   }
 }
 // Outra aba ou o outro toque ainda marcando (tomou a reserva há menos de 1 min): a tela se atualiza até terminar.
@@ -100,9 +107,14 @@ const dt = "text-[15px] text-gray-600";
         <h1 class={portalTitle}>Confira o retorno</h1>
         {waitlist && <PortalWaitlistNotice />}
         {problem && (
-          <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">
-            {problem}
-          </p>
+          <div class={`${portalNotice} flex flex-col gap-1 border-red-200 bg-red-50 text-red-800`} role="alert">
+            <p>{problem}</p>
+            {alreadyProblem && (
+              <a href={`${base}/minhas-consultas`} class={`${portalLink} self-start`}>
+                Ver minhas consultas
+              </a>
+            )}
+          </div>
         )}
         <div class="overflow-hidden rounded-2xl border-[1.5px] border-gray-200 bg-white">
           <p class="flex flex-col gap-0.5 bg-clinic px-4 py-4 text-clinic-text sm:px-5">
