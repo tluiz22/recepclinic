@@ -238,8 +238,8 @@ describe("exames: valores e preparo (cliente, 11/nov/2026)", () => {
     expect(page).toContain("examValuesText(exam)");
   });
 
-  it("o preparo sai da tela de dias e horários e fica só em \"Exame marcado\"", () => {
-    expect(readFileSync("src/pages/portal/[clinica]/[profissional]/horarios.astro", "utf8")).not.toContain("PortalPreparation");
+  it("o preparo sai dos dias e horários e da revisão e fica só em \"Exame marcado\"", () => {
+    for (const page of ["horarios", "revisao"]) expect(readFileSync(`src/pages/portal/[clinica]/[profissional]/${page}.astro`, "utf8")).not.toContain("PortalPreparation");
     expect(readFileSync("src/pages/portal/[clinica]/[profissional]/marcada.astro", "utf8")).toContain("<PortalPreparation");
   });
 });
