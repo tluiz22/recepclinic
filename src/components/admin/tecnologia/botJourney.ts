@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "10/11/2026";
+export const JOURNEY_UPDATED = "11/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -138,7 +138,7 @@ export const JOURNEY: JourneySection[] = [
               [
                 bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de uma agenda atende o serviço no contexto da conversa (com vários profissionais, o paciente já escolheu um no começo). Serviços por profissional (MS, 07/11): as cópias de mesmo nome viram uma opção; escolhida a agenda, valem o valor e o preparo da cópia dela; entre cópias diferentes não há \"Primeiro horário\"."),
                 bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
-                check("O caminho escolhido aceita convênios?", "Recurso Convênios ligado e algum plano ativo ligado ao profissional escolhido (agenda de exames: todos os planos). Profissional só particular: não pergunta (MC, 07/11/2026). Profissional só convênio (\"Atende particular\" desmarcado no cadastro, 08/11/2026): não pergunta e vai direto a \"Qual é o seu convênio?\"; plano não atendido não oferece particular, avisa e pergunta se quer falar com a recepção; sem nenhum plano ativo, avisa que a marcação é com a recepção."),
+                check("O caminho escolhido aceita convênios?", "Recurso Convênios ligado e algum plano ativo ligado ao profissional escolhido (exame: os planos e o \"Aceita particular\" marcados no cadastro dele, 10/11/2026). Profissional só particular: não pergunta (MC, 07/11/2026). Profissional só convênio (\"Atende particular\" desmarcado no cadastro, 08/11/2026): não pergunta e vai direto a \"Qual é o seu convênio?\"; plano não atendido não oferece particular, avisa e pergunta se quer falar com a recepção; sem nenhum plano ativo, avisa que a marcação é com a recepção."),
                 branch(
                   ["Não", [bot("Valor e formas de pagamento", "\"O valor da consulta (ou do exame) é R$ …\" e o texto de formas de pagamento das Configurações.")]],
                   [
@@ -384,6 +384,10 @@ export const JOURNEY: JourneySection[] = [
             bot(
               "Fora de um caminho: responde com os dados da clínica e mostra de novo o menu em que a pessoa estava",
               "No menu principal: \"Escolha uma opção abaixo ou faça uma pergunta.\"; nos submenus (Consultas, Exames, Informações gerais), o próprio submenu. Sem o \"Isso resolve sua dúvida?\" (cliente, 04/nov/2026). Nas Métricas, a dúvida conta como resolvida se o paciente não pedir a recepção nos 30 minutos seguintes.",
+            ),
+            bot(
+              "Convênio de um exame (\"a espirometria aceita Unimed?\"): responde pelo cadastro do exame",
+              "\"Sim, *Espirometria* aceita *Unimed*.\" ou \"não aceita…; pode ser feito particular\". Convênio que só algum exame aceita: \"Aceitamos *X* nos exames: …\" (10/11/2026).",
             ),
             bot("No meio de um caminho: responde e repete a pergunta em que a pessoa estava", "A marcação continua de onde estava. \"Quanto custa?\" depois de escolher o serviço: o valor dele."),
             bot("Pedido de marcar, remarcar, cancelar ou confirmar: abre esse caminho", "Marcar consulta ou exame abre o submenu Consultas ou Exames (marcar, retorno, remarcar, cancelar, encaixe). Remarcar e cancelar como no item 4; nada de data digitada. Encaixe, adiantar ou antecipar: o Encaixe ou antecipar (sem a Lista de espera, pergunta se quer falar com a recepção)."),

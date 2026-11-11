@@ -204,7 +204,7 @@ else if (!(agendaChoice === ANY || serviceAgendaIds.includes(agendaChoice))) age
 // (sem travar: a Recepção pode marcar como particular).
 const patientPlanId = insuranceOn ? (editing ? editing.insurancePlanId : (patient?.insurance?.planId ?? null)) : null;
 const patientPlan = patientPlanId ? (plans.find((p) => p.id === patientPlanId) ?? null) : null;
-const planAccepting = patientPlan && serviceAgendaIds.length ? await agendasAcceptingPlan(db, clinic.clinicId, serviceAgendaIds, patientPlan.id) : serviceAgendaIds;
+const planAccepting = patientPlan && serviceAgendaIds.length ? await agendasAcceptingPlan(db, clinic.clinicId, serviceAgendaIds, patientPlan.id, service!.id) : serviceAgendaIds;
 const planRefusing = serviceAgendaIds.filter((id) => !planAccepting.includes(id));
 const planNotice = !patientPlan || !planRefusing.length
   ? null

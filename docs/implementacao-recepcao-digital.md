@@ -951,6 +951,13 @@ convênio" ou "Só convênio" por exame. O servidor já só aceita plano da list
 do Particular (`20270111120000_convenios_do_exame_gatilho`: a permissão só é consultada no update pela tela; antes,
 scripts e testes com service_role recebiam "permission denied"). Teste `portal-exames` revisto. Conferido no local.
 
+**CE-4 feita (11/nov/2026):** bot. Marcar exame pelo chat (portal desligado): "particular ou convênio" e a lista de
+planos pelo exame (`activePlans`, `pathAcceptsPrivate`); `agendasAcceptingPlan` recebe o serviço e a agenda sem
+profissional aceita o plano só se o exame aceita (bot, página do link e aviso da Marcar). Pergunta livre: "a espirometria
+aceita Unimed?" responde pelo exame; convênio aceito só em exame entra na lista da clínica ("Aceitamos X nos exames:
+…"). Informações gerais › Convênios segue por profissional (os exames ficam fora dela desde 08/nov). Jornada do bot
+atualizada. Testes `bot-convenio` e `answers.test`.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

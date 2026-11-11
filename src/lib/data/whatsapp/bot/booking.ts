@@ -347,8 +347,9 @@ const MAX_PLANS_IN_LIST = t.MAX_LIST_ROWS - 2;
 
 /**
  * Planos ativos que o caminho escolhido atende (MC, 07/nov/2026): os ligados a
- * algum profissional das agendas do caminho; agenda sem profissional (exames)
- * atende todos. Sem nenhum (profissional só particular), o bot não pergunta.
+ * algum profissional das agendas do caminho; agenda sem profissional (exames),
+ * os marcados no exame (CE, cliente, 10/nov/2026). Sem nenhum (só particular),
+ * o bot não pergunta.
  */
 async function activePlans(b: Bot, ctx: BookingContext): Promise<Plan[]> {
   if (!b.features.includes("insurance")) return [];
@@ -357,7 +358,14 @@ async function activePlans(b: Bot, ctx: BookingContext): Promise<Plan[]> {
   if (!plans.length || !service) return plans;
   const ids = new Set(pathAgendas(service, ctx));
   const agendas = service.agendas.filter((a) => ids.has(a.id));
-  if (agendas.some((a) => !a.professionalId)) return plans;
+  if (agendas.some((a) => !a.professionalId)) {
+    const examLinks = unwrap(
+      await b.db.from("service_insurance_plans").select("insurance_plan_id").eq("clinic_id", b.clinicId).eq("service_id", service.id),
+      "Convênios do exame",
+    );
+    const examAccepted = new Set(examLinks.map((l) => l.insurance_plan_id));
+    return plans.filter((p) => examAccepted.has(p.id));
+  }
   const professionalIds = agendas.map((a) => a.professionalId!);
   if (!professionalIds.length) return [];
   const links = unwrap(
@@ -378,7 +386,7 @@ function pathAgendas(service: BotService, ctx: BookingContext): string[] {
 
 /**
  * Algum profissional do caminho atende particular (F1 da recepção digital, 08/nov/2026: "Atende particular" no
- * cadastro). Sem o item Convênios ou com agenda sem profissional (exames), sempre.
+ * cadastro); agenda sem profissional (exames), o "Aceita particular" do exame (CE). Sem o item Convênios, sempre.
  */
 async function pathAcceptsPrivate(b: Bot, ctx: BookingContext): Promise<boolean> {
   if (!b.features.includes("insurance")) return true;
@@ -386,7 +394,11 @@ async function pathAcceptsPrivate(b: Bot, ctx: BookingContext): Promise<boolean>
   if (!service) return true;
   const ids = new Set(pathAgendas(service, ctx));
   const agendas = service.agendas.filter((a) => ids.has(a.id));
-  if (!agendas.length || agendas.some((a) => !a.professionalId)) return true;
+  if (!agendas.length) return true;
+  if (agendas.some((a) => !a.professionalId)) {
+    const row = unwrap(await b.db.from("services").select("accepts_private").eq("clinic_id", b.clinicId).eq("id", service.id).maybeSingle(), "Aceita particular");
+    return row?.accepts_private ?? true;
+  }
   const rows = unwrap(
     await b.db.from("professionals").select("accepts_private").eq("clinic_id", b.clinicId).in("id", agendas.map((a) => a.professionalId!)),
     "Atende particular",
@@ -436,7 +448,7 @@ async function askPlan(b: Bot, ctx: BookingContext): Promise<void> {
 }
 
 async function acceptPlan(b: Bot, ctx: BookingContext, service: BotService, plan: Plan): Promise<void> {
-  const accepting = await agendasAcceptingPlan(b.db, b.clinicId, pathAgendas(service, ctx), plan.id);
+  const accepting = await agendasAcceptingPlan(b.db, b.clinicId, pathAgendas(service, ctx), plan.id, service.id);
   if (!accepting.length) return refusePlan(b, ctx, plan.name, true);
   await step(b, "insurance_accepted");
   await say(b, "bot_book_plan_accepted", t.planAccepted(plan.name));
