@@ -1124,5 +1124,12 @@ Pedido: a Semana (7 caixas com lista de cartões) destoava do Dia (grade em colu
 (<https://claude.ai/artifact/2heY2omCb9DUB52THeRphR>): A, grade de horários de um profissional (colunas = dias); B, grade
 da especialidade dividida por profissional; C, quadro de ocupação (linha = profissional agrupado por especialidade,
 coluna = dia, "N de M" marcados, livres e barra; tocar abre o Dia daquele profissional). **Decisão do cliente: só C**,
-com o cabeçalho, os filtros e a legenda do Dia. Detalhes (celular, filtro Situação, contagem de livres) a decidir antes
-de implementar.
+com o cabeçalho, os filtros e a legenda do Dia. Decisões do cliente (11/nov, desenhos no mesmo canvas):
+
+- **Celular:** um dia por vez: faixa dos 7 dias (com os livres de cada um) e, embaixo, a lista dos profissionais do dia
+  escolhido, agrupada por especialidade, com "N de M", livres e barra; tocar abre o Dia daquele profissional.
+- **Filtro Situação:** sai da Semana (fica no Dia). Ficam Especialidade e Profissional.
+- **Livres:** a mesma conta da Marcar e de "Próximos horários livres" (abertos − marcados − bloqueados − em reserva no
+  portal − já passados); cancelado libera; feriado aparece como "Feriado".
+- **Bordas (só nas telas da Agenda: Dia, Semana e Próximos horários livres):** largura toda ao lado do menu, sem o limite
+  de 1104 px, com 16 px nas laterais e 14 px no topo (12 px no celular). As outras telas seguem na largura única.
