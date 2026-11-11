@@ -311,8 +311,9 @@ Testes: unidade (`portalIdentity.test.ts`, env, templates), banco (`portal-ident
 progressivo, código, tentativas simultâneas, reserva, concorrência, recarregar, Trocar número; isolamento, suspensão e
 envio dos templates atualizados) e Playwright (celular inválido com o valor mantido, CAPTCHA de teste, código
 errado e certo, reserva com contador, outro paciente sem o horário reservado, Voltar soltando, sessão comprovada
-reservando direto). Fora do portal: `nao-atendimento-central.test.ts` (mensagens novas) falha às vezes conforme a
-hora; falha igual sem a F2b.
+reservando direto). Fora do portal: `nao-atendimento-central.test.ts` (mensagens novas) falhava às vezes: o teste gravava a hora
+das mensagens pelo relógio do Node e a marcação pelo do banco (VM do Docker adiantada); corrigido em 11/nov (a hora
+vem do banco; simulado com o Node 5 s atrasado: o antigo falha, o novo passa).
 
 ### 10.1 Roteiro de validação da F2b (staging, junto com a F2a)
 
@@ -713,6 +714,10 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   **Roteiro (staging):** link do profissional › Minhas consultas → o endereço com o profissional, o cartão dele e só as
   consultas dele → Remarcar/Cancelar ficam no endereço dele → Voltar leva ao início do profissional. Pelo link da
   clínica: as consultas em grupos com o nome e a especialidade de cada profissional.
+  **11/nov (cliente):** o "Minhas consultas" da tela "Consulta marcada!" segue a entrada: pelo link do profissional,
+  `/{clínica}/{profissional}/minhas-consultas`; pela clínica, a lista da clínica (`marcada.astro`, `view.entry`).
+  Roteiro: marcar pelo link do profissional → "Consulta marcada!" › Minhas consultas → o cartão dele e só as consultas
+  dele; marcar pelo link da clínica → a lista da clínica.
 - **Pergunta do cliente (10/nov), item 1: "Usar outro número".** Hoje o cadastro não muda: o portal identifica pelo
   celular comprovado; com um número sem cadastro, nasce um contato e uma ficha nova (a antiga segue com o número
   antigo). Para criança com pai e mãe marcando cada um pelo seu número, isso divide a ficha (histórico, lembretes,
@@ -929,6 +934,9 @@ consultas. Decisões do cliente:
 Testes: `horario-local-servico` (C5 revista), `horarios-de-servico-desativado`, ajustes em `acesso-configuracao` e
 `configuracoes-ii`; Playwright no local (portal em casa × consultório; Horários com filtro, troca de local, erro mantendo
 os campos e salvar). Captura `config-horarios` na fila. Migração aplicada no banco local (OK do cliente).
+
+**11/nov (cliente):** o local "Consulta Domiciliar" da Clínica Exemplo Saúde (staging) passou a "Atendimento
+domiciliar", como nas outras clínicas do staging (o serviço segue "Consulta Domiciliar"). Só o cadastro, sem código.
 
 #### 15.5.7 Convênios de cada exame (cliente, 10/nov/2026; planejado)
 
@@ -1150,3 +1158,23 @@ filtro de profissional (`ColumnPicker`), a especialidade que separa os grupos em
 agrupado por especialidade; conferir "N de M" e livres de um dia com o Dia daquele profissional. 2) Tocar num quadro:
 abre o Dia só daquele profissional. 3) Filtro Especialidade e Profissional. 4) Domingo 15/11: "Feriado". 5) Celular:
 tocar nos dias da faixa troca a lista. 6) Dia, Semana e Próximos horários livres na largura toda ao lado do menu.
+
+### 16.4 Relatório do dia › Resumo do dia por profissional (cliente, 11/nov/2026)
+
+Pedido: separar por profissional no computador e no celular; no celular a tela estava bagunçada (linhas quebrando em
+lugares diferentes). Canvas: <https://claude.ai/artifact/EHYw3YWjjmrfGNkDQ5agjJ>. Escolhas do cliente: computador como
+desenhado; celular na opção A (todos os profissionais em blocos que abrem e fecham; a B era um profissional por vez);
+blocos abertos no computador e **fechados no celular**.
+
+Feito (`ResumoDia.astro`, `ResumoLinha.astro`, `consultas/index.astro`):
+- Contadores (confirmados, não confirmados, compareceram, faltaram se houver, cancelados) que filtram a situação
+  (`situacao=` no endereço; tocar de novo tira o filtro). Substituem um filtro Situação separado.
+- Um bloco por profissional (`<details>`), agrupado por especialidade na ordem da Agenda (`buildColumns`); cabeçalho com
+  total, confirmados, não confirmados ("a confirmar" no celular) e "Ver na Agenda" (a agenda dele no dia). "Recolher
+  todos"/"Abrir todos". Com filtro de situação ou um só profissional, tudo aberto também no celular.
+- A partir de 8 agendas: filtros Especialidade e Profissional (os mesmos da Agenda, `ColumnPicker`); o filtro segue ao
+  trocar de dia. Clínica com uma agenda: lista direto, sem blocos.
+- Linha: 5 colunas alinhadas no computador (hora, paciente, serviço, quem marcou, situação); 2 linhas fixas no celular.
+- "Sem atendimentos: …" lista os profissionais ativos sem nada no dia.
+
+Validado pelo cliente no staging (11/nov/2026).

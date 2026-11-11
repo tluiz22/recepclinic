@@ -29,6 +29,11 @@ import { createUserClient } from "../../../lib/data/clients";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import { listAgendaAppointments, type AgendaAppointment } from "../../../lib/data/agenda/view";
 import { listAgendas } from "../../../lib/data/config/agendas";
+import { loadSpecialtiesByProfessional } from "../../../lib/data/agenda/grid";
+import { buildColumns, filterColumns, MANY_AGENDAS, specialtyOptions, type GridColumn } from "../../../lib/agendaGrid";
+import { type Situation } from "../../../components/admin/agenda/situationStyle";
+import ColumnPicker from "../../../components/admin/agenda/ColumnPicker.astro";
+import { logError } from "../../../lib/log";
 import { getResumoTabCounts, listPendingAttendance, listRemindersOfDay } from "../../../lib/data/daily";
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
 import { listServiceRefs } from "../../../lib/data/config/services";
@@ -74,10 +79,32 @@ let cards: AgendaAppointment[] = [];
 let reminders: Awaited<ReturnType<typeof listRemindersOfDay>> = [];
 let sends: { alerts: string[]; runs: Awaited<ReturnType<typeof listJobRuns>>; failed: Awaited<ReturnType<typeof listAppointmentsWithFailedSends>> } | null = null;
 
+// Resumo do dia por profissional (cliente, 11/nov/2026; seção 16.4): blocos por especialidade, como as colunas da
+// Agenda, com os filtros Especialidade ou Profissional (a partir de 8 agendas) e Situação pelos contadores.
+let allColumns: GridColumn[] = [];
+let columns: GridColumn[] = [];
+let filter: { specialty: string | null; agendaId: string | null } = { specialty: null, agendaId: null };
+const SITUATION_FILTERS: Situation[] = ["pending", "confirmed", "attended", "no_show", "canceled"];
+const situation = SITUATION_FILTERS.find((s) => s === params.get("situacao")) ?? null;
+const many = agendas.filter((a) => a.isActive).length >= MANY_AGENDAS;
+
 switch (tab) {
-  case "resumo":
-    dayAppointments = await listAgendaAppointments(db, clinic.clinicId, { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: agendas.map((a) => a.id) });
+  case "resumo": {
+    const [appointments, specialtiesOf] = await Promise.all([
+      listAgendaAppointments(db, clinic.clinicId, { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: agendas.map((a) => a.id) }),
+      loadSpecialtiesByProfessional(db, clinic.clinicId).catch((error: unknown) => {
+        logError("resumo: especialidades não carregaram", error, { clinica: clinic.clinicId });
+        return new Map<string, string[]>();
+      }),
+    ]);
+    allColumns = buildColumns(agendas, specialtiesOf);
+    const filtered = filterColumns(allColumns, { specialty: many ? params.get("esp") : null, agendaId: many ? params.get("agenda") : null });
+    columns = filtered.columns;
+    filter = filtered.filter;
+    const shown = new Set(columns.map((c) => c.id));
+    dayAppointments = appointments.filter((a) => shown.has(a.agendaId));
     break;
+  }
   case "lembretes":
     reminders = await listRemindersOfDay(db, clinic.clinicId, date, clinic.timezone);
     break;
@@ -108,7 +135,29 @@ const tabCount: Partial<Record<Tab, Pick<TabItem, "count" | "countTone" | "alert
   envios: { alert: counts.sendsAlert, countLabel: "Há envios que pedem atenção" },
 };
 const dated = isDatedTab(tab);
-const dayHref = (d: string) => `/admin/consultas?tab=${tab}&date=${d}`;
+// O filtro do Resumo segue ao trocar de dia (como na Agenda); sair da tela e voltar não o lembra.
+const resumoLink = (change: { date?: string; esp?: string | null; agenda?: string | null; situacao?: Situation | null }) => {
+  const q = new URLSearchParams({ tab: "resumo" });
+  const d = change.date ?? date;
+  if (d !== today) q.set("date", d);
+  const esp = "esp" in change ? change.esp : filter.specialty;
+  const agenda = "agenda" in change ? change.agenda : filter.agendaId;
+  const sit = "situacao" in change ? change.situacao : situation;
+  if (esp) q.set("esp", esp);
+  if (agenda) q.set("agenda", agenda);
+  if (sit) q.set("situacao", sit);
+  return `/admin/consultas?${q}`;
+};
+const dayHref = (d: string) => (tab === "resumo" ? resumoLink({ date: d }) : `/admin/consultas?tab=${tab}&date=${d}`);
+const pickerGroups = () => {
+  const groups: { name: string | null; options: { label: string; terms?: string; href: string; current: boolean }[] }[] = [];
+  for (const column of allColumns.filter((c) => c.isActive)) {
+    let group = groups.find((g) => g.name === column.group);
+    if (!group) groups.push((group = { name: column.group, options: [] }));
+    group.options.push({ label: column.name, terms: column.specialties.join(" "), href: resumoLink({ agenda: column.id, esp: null }), current: column.id === filter.agendaId });
+  }
+  return groups;
+};
 const activeOfDay = dayAppointments.filter((a) => a.status !== "canceled").length;
 const canceledOfDay = dayAppointments.length - activeOfDay;
 const dayTitle = `${formatCalendarDate(date, "EEEE").replace("-feira", "")}, ${formatCalendarDate(date, date.slice(0, 4) === today.slice(0, 4) ? "d 'de' MMMM" : "d 'de' MMMM 'de' yyyy")}`;
@@ -169,7 +218,29 @@ const tabClass = (on: boolean) =>
       {tab === "resumo" && <a href={`/admin/agenda?date=${date}`} class="text-[15px] font-semibold text-brand no-underline hover:underline sm:ml-auto">Abrir na Agenda</a>}
     </div>
   )}
-  {tab === "resumo" && <ResumoDia tags={tags} appointments={dayAppointments} actors={actors} date={date} timeZone={clinic.timezone} vocabulary={vocabulary} showAgenda={showAgenda} />}
+  {tab === "resumo" && many && (
+    <div class="mt-3 flex flex-wrap gap-2">
+      <ColumnPicker
+        id="filtro-especialidade"
+        label="Especialidade"
+        allText="todas"
+        allHref={resumoLink({ esp: null, agenda: null })}
+        groups={[{ name: null, options: specialtyOptions(allColumns).map((name) => ({ label: name, href: resumoLink({ esp: name, agenda: null }), current: name === filter.specialty })) }]}
+        currentText={filter.specialty}
+        searchPlaceholder="Buscar especialidade"
+      />
+      <ColumnPicker
+        id="filtro-profissional"
+        label="Profissional"
+        allText="todos"
+        allHref={resumoLink({ agenda: null, esp: null })}
+        groups={pickerGroups()}
+        currentText={filter.agendaId ? (allColumns.find((c) => c.id === filter.agendaId)?.name ?? null) : null}
+        searchPlaceholder="Nome ou especialidade"
+      />
+    </div>
+  )}
+  {tab === "resumo" && <ResumoDia tags={tags} appointments={dayAppointments} actors={actors} date={date} timeZone={clinic.timezone} vocabulary={vocabulary} showAgenda={showAgenda} columns={columns} situation={situation} situationHref={(s: Situation | null) => resumoLink({ situacao: s })} />}
   {tab === "lembretes" && <LembretesTab tags={tags} reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} openGroup={params.get("grupo")} />}
   {tab === "envios" && sends && <EnviosTab tags={tags} alerts={sends.alerts} runs={sends.runs} failed={sends.failed} timeZone={clinic.timezone} />}
 

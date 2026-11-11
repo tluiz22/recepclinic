@@ -16,7 +16,9 @@ import { chromium } from "playwright";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:4321";
 const OUT = new URL("../public/ajuda/", import.meta.url).pathname;
-const LOGIN = { email: "admin@exemplo-saude.local", password: "recepclinic-local" };
+// Staging (cliente, 11/nov/2026: imagens com dia cheio e o Portal ligado): BASE_URL, CAPTURAS_EMAIL e CAPTURAS_SENHA.
+const LOGIN = { email: process.env.CAPTURAS_EMAIL ?? "admin@exemplo-saude.local", password: process.env.CAPTURAS_SENHA ?? "recepclinic-local" };
+const LOCAL = BASE.startsWith("http://localhost");
 // A agenda do seed começa na segunda-feira da semana seguinte à de `supabase db reset`.
 const agendaDate = () => {
   const d = new Date();
@@ -27,13 +29,14 @@ const agendaDate = () => {
 // [nome do arquivo, caminho, textos a destacar (começam com…), seletores CSS a destacar]
 export const CAPTURAS = [
   ["inicio", "/admin/dashboard", ["Precisa de você"], []],
-  ["agenda-dia", "/admin/agenda", ["Marcar", "Bloquear"], []],
+  // Um dia com atendimentos: no local, o primeiro dia da agenda do seed; no staging, hoje (cliente, 11/nov/2026).
+  ["agenda-dia", `/admin/agenda${LOCAL ? `?date=${agendaDate()}` : ""}`, ["Marcar", "Bloquear"], []],
   ["marcar", "/admin/agenda/marcar", ["Paciente"], []],
   ["bloquear", "/admin/agenda/bloquear", ["Dia todo"], []],
   ["bloqueios", "/admin/agenda/bloqueios", [], []],
   ["pacientes", "/admin/pacientes", ["Novo paciente"], ["input[type=search],input[name=q]"]],
   ["paciente-novo", "/admin/pacientes/novo", [], ["button[type=submit]"]],
-  ["resumo-do-dia", "/admin/consultas", ["Lembretes", "A registrar"], []],
+  ["resumo-do-dia", `/admin/consultas${LOCAL ? `?tab=resumo&date=${agendaDate()}` : ""}`, ["Lembretes", "A registrar"], []],
   ["atendimento", "/admin/atendimento", [], []],
   // Conversa da Júlia aberta (criada num teste local, fora do seed; se faltar, usar outra só com mensagem do
   // paciente: a do Carlos, no seed, mostra "Não enviada"). Com a Central ligada, /admin/atendimento abre Conversas:
@@ -48,7 +51,8 @@ export const CAPTURAS = [
   ["config-agendas", "/admin/configuracoes/agendas", ["Nova agenda"], []],
   ["config-servicos", "/admin/configuracoes/servicos", ["Novo serviço"], []],
   // O id da agenda muda a cada seed: "?agenda=@Nome" escolhe o profissional pelo nome (ver abaixo).
-  ["config-horarios", "/admin/configuracoes/horarios?agenda=@Dra. Helena Costa", [], ["[data-agenda-owner]"]],
+  // No staging, a Dra. Ana Karina (consultório e atendimento domiciliar; cliente, 11/nov/2026).
+  ["config-horarios", `/admin/configuracoes/horarios?agenda=@${LOCAL ? "Dra. Helena Costa" : "Dra. Ana Karina"}`, [], ["[data-agenda-owner]"]],
   ["config-feriados", "/admin/configuracoes/feriados", ["Adicionar"], []],
   ["config-convenios", "/admin/configuracoes/convenios", ["Novo plano"], []],
   ["config-lembretes", "/admin/configuracoes/lembretes", [], []],
@@ -80,7 +84,10 @@ function highlight([texts, selectors]) {
 const QUEUE = new URL("../docs/capturas-pendentes.md", import.meta.url).pathname;
 const args = process.argv.slice(2);
 const fromQueue = args.includes("--pendentes");
-const queued = fromQueue ? [...readFileSync(QUEUE, "utf8").matchAll(/^- `([a-z-]+)`/gm)].map((m) => m[1]) : [];
+// Uma linha pode listar várias capturas antes do " — " (ex.: o menu de Configurações): todas entram.
+const queued = fromQueue
+  ? [...new Set([...readFileSync(QUEUE, "utf8").matchAll(/^- (`.+?) — /gm)].flatMap((m) => [...m[1].matchAll(/`([a-z-]+)`/g)].map((n) => n[1])))]
+  : [];
 if (fromQueue && queued.length === 0) {
   console.log("Nenhuma captura pendente em docs/capturas-pendentes.md.");
   process.exit(0);

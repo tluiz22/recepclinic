@@ -25,6 +25,8 @@ const location = professional && booked ? (professional.locations.find((l) => l.
 const when = booked ? capitalize(formatInstant(booked.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "";
 const canceled = booked?.status === "canceled";
 const calendar = professional && hold ? portalHref(`${view.base}/${professional.slug}/calendario`, { reserva: hold.id }) : "";
+// Minhas consultas: pelo link do profissional, só as dele (cliente, 11/nov); pela clínica, a lista da clínica.
+const mineHref = professional && view.entry === "professional_link" ? `${view.base}/${professional.slug}/minhas-consultas` : `${view.base}/minhas-consultas`;
 // Exame (F2d): "Exame marcado!" e o preparo.
 const words = visitWords(professional);
 const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0";
@@ -88,7 +90,7 @@ const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0"
             </div>
             <p class="text-[17px] text-gray-700">
               Precisa remarcar ou cancelar?{" "}
-              <a href={`${view.base}/minhas-consultas`} class="font-bold text-clinic-ink underline">
+              <a href={mineHref} class="font-bold text-clinic-ink underline">
                 Minhas consultas
               </a>
             </p>
