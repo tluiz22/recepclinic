@@ -80,7 +80,10 @@ function highlight([texts, selectors]) {
 const QUEUE = new URL("../docs/capturas-pendentes.md", import.meta.url).pathname;
 const args = process.argv.slice(2);
 const fromQueue = args.includes("--pendentes");
-const queued = fromQueue ? [...readFileSync(QUEUE, "utf8").matchAll(/^- `([a-z-]+)`/gm)].map((m) => m[1]) : [];
+// Uma linha pode listar várias capturas antes do " — " (ex.: o menu de Configurações): todas entram.
+const queued = fromQueue
+  ? [...new Set([...readFileSync(QUEUE, "utf8").matchAll(/^- (`.+?) — /gm)].flatMap((m) => [...m[1].matchAll(/`([a-z-]+)`/g)].map((n) => n[1])))]
+  : [];
 if (fromQueue && queued.length === 0) {
   console.log("Nenhuma captura pendente em docs/capturas-pendentes.md.");
   process.exit(0);
