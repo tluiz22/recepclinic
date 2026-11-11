@@ -937,7 +937,7 @@ da F2d, seção acima). **Decisões do cliente:**
 `service_insurance_plans` (com observação; só exame, pela `app.feature_rules`; item Convênios), `set_service_accepts_private`
 e o gatilho `services_guard_accepts_private` (pela tela, o Particular só muda com a permissão de convênios), trilha com
 `insurance_change_log.service_id`. Seed: Espirometria aceita Unimed. Teste `tests/db/convenios-do-exame.test.ts`. Aplicada
-só no banco local. Staging: com o OK do cliente.
+no banco local e no staging (11/nov, com o OK do cliente; conferido: 9 exames só particular, nenhuma ligação).
 
 **CE-2 feita (11/nov/2026):** bloco "Particular e convênios" no exame já criado (com o item Convênios): "Aceita
 particular", "Convênios aceitos" com observação; o mesmo componente do profissional (`CoverageForm.astro`), que ganhou a
