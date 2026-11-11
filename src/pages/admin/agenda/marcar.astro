@@ -3,7 +3,7 @@
 // serviço dele, data e horário. Serviços por profissional (MS, opção A;
 // cliente, 07/nov/2026): o "Com quem" vem antes do serviço, com busca por
 // nome ou especialidade, e o "Primeiro horário disponível" entre profissionais
-// deixa de existir (como no bot); com um só, ele já vem escolhido. Turma: escolhe a sessão com vaga. Cada escolha recarrega a
+// deixa de existir (como no bot); com um só, ele já vem escolhido. Turma: faixa de dias e turmas do dia, com as vagas (cliente, 11/nov/2026). Cada escolha recarrega a
 // tela (sem estado escondido no navegador); a marcação confere tudo de novo.
 //
 // Redesign R4 (cliente, 15/out/2026): passos numerados à esquerda e um resumo
@@ -277,29 +277,30 @@ const pastFrom = new Date(pastFromTime);
 const pastMin = localDateOf(pastFrom, clinic.timezone);
 if (patient && service && searchAgendas.length) {
   if (isGroup) {
+    // Turma na faixa de dias e nos horários do dia, como os outros serviços (cliente, 11/nov/2026); a equipe vê as vagas.
     const sessions = (
       await Promise.all(
-        searchAgendas.map(async (agendaId) => (await getGroupSessions(db, clinic.clinicId, { serviceId: service.id, agendaId })).map((s) => ({ ...s, agendaId }))),
+        searchAgendas.map(async (agendaId) =>
+          (await getGroupSessions(db, clinic.clinicId, { serviceId: service.id, agendaId, count: ALL_DATES })).map((s) => ({ ...s, agendaId })),
+        ),
       )
     )
       .flat()
       .sort((a, b) => a.start.getTime() - b.start.getTime());
-    slotOptions = sessions.map((s) => {
-      const label = formatInstant(s.start, clinic.timezone, "EEE dd/MM 'às' HH:mm");
-      return {
+    const wanted = state.date && state.date >= today ? state.date : null;
+    strip = buildDayStrip([...new Set(sessions.map((s) => s.date))].sort(), wanted, state.de || null);
+    const date = strip.selected;
+    slotOptions = sessions
+      .filter((s) => s.date === date)
+      .map((s) => ({
         value: slotValue({ agendaId: s.agendaId, start: s.start, locationId: s.locationId }),
-        label,
+        label: s.time,
         detail: `${describe(s.agendaId, s.locationId)} · ${s.remaining} de ${s.capacity} vagas`,
-        summary: capitalize(label),
-        confirm: slotConfirmText(
-          formatInstant(s.start, clinic.timezone, "EEEE, dd/MM 'às' HH:mm"),
-          agendaName.get(s.agendaId) ?? "",
-          location.get(s.locationId)?.name ?? "Local",
-        ),
+        summary: `${dayLabel(date)} às ${s.time}`,
+        confirm: slotConfirmText(`${dayLabel(date)} às ${s.time}`, agendaName.get(s.agendaId) ?? "", location.get(s.locationId)?.name ?? "Local"),
         isHome: location.get(s.locationId)?.type === "home_visit",
         ...slotData(s.agendaId, s.locationId, s.start),
-      };
-    });
+      }));
   } else {
     const dates = (
       agendaChoice === ANY
@@ -328,7 +329,7 @@ if (patient && service && searchAgendas.length) {
   }
 }
 // Horário pedido pela Agenda (RX8): vem marcado se estiver entre os livres do dia escolhido.
-const wantedSlot = !editing && !isGroup && state.hora && strip.selected === state.date ? slotOptions.find((option) => option.label === state.hora) : undefined;
+const wantedSlot = !editing && state.hora && strip.selected === state.date ? slotOptions.find((option) => option.label === state.hora) : undefined;
 // Outro horário (cliente, 28/out/2026): a equipe marca em qualquer dia e hora;
 // conferido aqui (os avisos aparecem antes) e de novo ao marcar.
 // Com atendimento futuro na agenda (duplicidade), o Outro horário continua
@@ -771,7 +772,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
                   {keepOption && <p class="text-sm text-ink-soft">Ou escolha outro dia e horário abaixo.</p>}
                 </div>
               )}
-              {!isGroup && strip.days.length > 0 && (
+              {strip.days.length > 0 && (
                 <DayStrip
                   strip={strip}
                   href={(date, start) => link({ date, de: start })}
@@ -780,10 +781,12 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
                   min={today}
                 />
               )}
-              {!isGroup && !strip.selected && !strip.unavailable && <p class="text-[15px] text-ink-soft">Sem horários livres nos próximos 60 dias.</p>}
-              {slotOptions.length > 0 && <SlotPicker options={slotOptions} form={FORM} byPeriod={!isGroup} checked={wantedSlot?.value} />}
-              {(isGroup || strip.selected) && slotOptions.length === 0 && (
-                <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma turma com vaga." : "Nenhum horário livre nesta data."}</p>
+              {!strip.selected && !strip.unavailable && (
+                <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma turma com vaga nos próximos 60 dias." : "Sem horários livres nos próximos 60 dias."}</p>
+              )}
+              {slotOptions.length > 0 && <SlotPicker options={slotOptions} form={FORM} byPeriod checked={wantedSlot?.value} />}
+              {strip.selected && slotOptions.length === 0 && (
+                <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma turma com vaga nesta data." : "Nenhum horário livre nesta data."}</p>
               )}
             </div>
           )

@@ -892,6 +892,11 @@ as vagas do horário; a primeira vale sempre (faixa mais curta que o exame, como
 (`freeSlots.ts`) na lista de turmas, no Marcar e na grade da Agenda; banco: migração `20270112120000_turmas_na_faixa`
 (`app.group_starts_at` em `book_group_session`, `reschedule_group_session` e `change_group_session`). Textos de Horários
 e da Ajuda. Teste `turmas-na-faixa`.
+Passos 5, 6 e 7 ok (11/nov/2026): roteiro concluído.
+Ajuste 4 (cliente, 11/nov/2026): na recepção (Agenda › Marcar e Remarcar), a turma aparecia em lista ("qua 25/11 às
+07:00", só as 10 primeiras); passa à faixa de dias e aos horários do dia por turno, como os outros serviços, **com** as
+vagas ("4 de 4 vagas"; decisão do cliente: a equipe vê, o paciente não). Busca todas as turmas da janela (60 dias).
+Texto do artigo "Marcar atendimento" da Ajuda. Playwright no local (Marcar e Remarcar com a Espirometria).
 
 #### 15.5.5 Exames repetidos na agenda de Exames (cliente, 10/nov/2026)
 

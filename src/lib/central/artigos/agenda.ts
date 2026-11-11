@@ -52,7 +52,7 @@ export const agendaArtigos = [
       "Paciente: busque o paciente pelo nome ou telefone. Se não existir, use o link \"Cadastrar … novo\" do próprio passo (o nome segue o vocabulário da clínica: paciente, cliente…).",
       "Com quem (só aparece com mais de um profissional): busque pelo nome ou pela especialidade e escolha o profissional, ou \"Equipe (exames)\". Com um só, a tela já o escolhe.",
       "Serviço: os serviços do profissional escolhido. Escolha o tipo (Consulta, Retorno ou Exame, conforme a clínica); se o tipo tem um só serviço, ele já fica escolhido; se tem mais de um, escolha o serviço nos cartões para ver as datas.",
-      "Data e horário: escolha na faixa de 7 dias com setas e nos horários por turno. Em exame em turma, escolha a sessão com vaga.",
+      "Data e horário: escolha na faixa de 7 dias com setas e nos horários por turno. Em exame em turma, é igual: o dia na faixa e a turma do dia, com as vagas que restam.",
       "Confira o resumo e toque em Marcar. No celular, o botão fica na barra fixa de baixo.",
     ],
     fields: [

@@ -56,29 +56,30 @@ const dayLabel = (d: string) => capitalize(formatCalendarDate(d, "EEEE, dd/MM"))
 
 let strip = buildDayStrip([], null, null);
 let options: SlotOption[] = [];
+const wantedParam = params.get("date");
+const deParam = params.get("de");
+const wantedDate = wantedParam && isCalendarDate(wantedParam) && wantedParam >= today ? wantedParam : null;
+const startDate = deParam && isCalendarDate(deParam) ? deParam : null;
 if (isGroup) {
-  options = (await getGroupSessions(db, clinic.clinicId, query))
-    .filter((s) => s.start.getTime() !== appointment.scheduledAt.getTime())
-    .map((s) => {
-      const label = formatInstant(s.start, clinic.timezone, "EEE dd/MM 'às' HH:mm");
-      return {
-        value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
-        label,
-        detail: `${locationName.get(s.locationId) ?? "Local"} · ${s.remaining} de ${s.capacity} vagas`,
-        summary: capitalize(label),
-        confirm: slotConfirmText(
-          formatInstant(s.start, clinic.timezone, "EEEE, dd/MM 'às' HH:mm"),
-          appointment.agendaName,
-          locationName.get(s.locationId) ?? "Local",
-        ),
-      };
-    });
+  // Turma na faixa de dias e nos horários do dia, como os outros serviços (cliente, 11/nov/2026); a equipe vê as vagas.
+  const sessions = (await getGroupSessions(db, clinic.clinicId, { ...query, count: 1000 })).filter(
+    (s) => s.start.getTime() !== appointment.scheduledAt.getTime(),
+  );
+  strip = buildDayStrip([...new Set(sessions.map((s) => s.date))], wantedDate, startDate);
+  const date = strip.selected;
+  options = sessions
+    .filter((s) => s.date === date)
+    .map((s) => ({
+      value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
+      label: s.time,
+      detail: `${locationName.get(s.locationId) ?? "Local"} · ${s.remaining} de ${s.capacity} vagas`,
+      summary: `${dayLabel(date)} às ${s.time}`,
+      confirm: slotConfirmText(`${dayLabel(date)} às ${s.time}`, appointment.agendaName, locationName.get(s.locationId) ?? "Local"),
+    }));
 } else {
   // Todos os dias livres da janela de busca (a faixa mostra 7 por vez).
   const dates = (await getNextAvailableDates(db, clinic.clinicId, { ...query, ignoreAppointmentId: appointment.id, count: 1000, holds: TEAM_HOLDS })).map((d) => d.date);
-  const wanted = params.get("date");
-  const de = params.get("de");
-  strip = buildDayStrip(dates, wanted && isCalendarDate(wanted) && wanted >= today ? wanted : null, de && isCalendarDate(de) ? de : null);
+  strip = buildDayStrip(dates, wantedDate, startDate);
   const date = strip.selected;
   if (date) {
     options = (await getFreeSlots(db, clinic.clinicId, { ...query, date, ignoreAppointmentId: appointment.id, holds: TEAM_HOLDS }))
@@ -180,7 +181,7 @@ const option =
           )
         }
         {
-          !isGroup && strip.days.length > 0 && (
+          strip.days.length > 0 && (
             <DayStrip
               strip={strip}
               href={link}
@@ -190,11 +191,11 @@ const option =
             />
           )
         }
-        {!isGroup && !strip.selected && !strip.unavailable && <p class="text-[15px] text-ink-soft">Sem horários livres nos próximos 60 dias.</p>}
-        {options.length > 0 && <SlotPicker options={options} form={FORM} byPeriod={!isGroup} />}
+        {!strip.selected && !strip.unavailable && <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma outra turma com vaga nos próximos 60 dias." : "Sem horários livres nos próximos 60 dias."}</p>}
+        {options.length > 0 && <SlotPicker options={options} form={FORM} byPeriod />}
         {
-          (isGroup || strip.selected) && options.length === 0 && (
-            <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma outra turma com vaga." : "Nenhum horário livre nesta data."}</p>
+          strip.selected && options.length === 0 && (
+            <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma outra turma com vaga nesta data." : "Nenhum horário livre nesta data."}</p>
           )
         }
         {
