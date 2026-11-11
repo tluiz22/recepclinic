@@ -6,6 +6,8 @@
 // `todos`) é o primeiro botão da fila dos tipos (decisão do cliente, 29/out)
 // e, escolhido, esconde os cartões. Nenhum tipo vem aberto; com o serviço já
 // definido (edição, "Cadastrar os horários" do serviço), abre no tipo dele.
+// Com `locationField` (cliente, 10/nov/2026): escolhido o local, só os serviços
+// atendidos nele; a contagem dos tipos acompanha, e a escolha de fora sai.
 import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
 import {
   anyChipClass,
@@ -18,20 +20,22 @@ import {
 } from "../../../lib/servicePicker";
 import { CONTROL } from "../ui/styles";
 
-type ChoiceService = { id: string; name: string; category: ServiceCategory; durationMinutes: number; schedulingMode: string; isActive: boolean };
+type ChoiceService = { id: string; name: string; category: ServiceCategory; durationMinutes: number; schedulingMode: string; isActive: boolean; locationIds?: string[] };
 
 interface Props {
   services: ChoiceService[];
   /** Serviço escolhido: o id, "todos" ou "" (nenhum). */
   selected: string;
+  /** Id do campo do local: com ele, só os serviços do local escolhido. */
+  locationField?: string;
 }
 
-const { services, selected } = Astro.props;
+const { services, selected, locationField } = Astro.props;
 const types = serviceTypes(services);
 const open = services.find((s) => s.id === selected)?.category ?? null;
 ---
 
-<fieldset class="flex min-w-0 flex-col gap-3" data-service-choice>
+<fieldset class="flex min-w-0 flex-col gap-3" data-service-choice data-location-field={locationField}>
   <legend class="text-[14.5px] font-semibold text-ink">Serviço</legend>
   <div role="group" aria-label="Tipo de atendimento" class="flex flex-wrap gap-2">
     <label class={anyChipClass}>
@@ -42,7 +46,7 @@ const open = services.find((s) => s.id === selected)?.category ?? null;
       types.map((t) => (
         <button type="button" class={typeChipToggleClass} aria-pressed={t.category === open ? "true" : "false"} data-type={t.category}>
           {CATEGORY_LABELS[t.category]}
-          <span class="font-medium opacity-80">· {t.count}</span>
+          <span class="font-medium opacity-80" data-type-count>· {t.count}</span>
         </button>
       ))
     }
@@ -64,7 +68,7 @@ const open = services.find((s) => s.id === selected)?.category ?? null;
           )}
           <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label={`Serviços: ${plural[t.category]}`}>
             {shown.map((s) => (
-              <li data-service-name={s.name.toLocaleLowerCase("pt-BR")}>
+              <li data-service-name={s.name.toLocaleLowerCase("pt-BR")} data-locations={s.locationIds?.join(" ")}>
                 <label class={serviceCardToggleClass}>
                   <input
                     type="radio"
@@ -86,6 +90,9 @@ const open = services.find((s) => s.id === selected)?.category ?? null;
           </ul>
           <p class="text-[15px] text-ink-soft" data-service-none hidden>
             Nenhum serviço com esse nome.
+          </p>
+          <p class="text-[15px] text-ink-soft" data-service-none-here hidden>
+            Nenhum serviço deste tipo é atendido neste local. Para usar o local, marque-o no cadastro do serviço.
           </p>
         </div>
       );
@@ -132,19 +139,43 @@ const open = services.find((s) => s.id === selected)?.category ?? null;
       });
     }
 
-    // Busca dentro do tipo: esconde os cartões que não têm o texto no nome.
-    for (const list of lists) {
-      const input = list.querySelector<HTMLInputElement>("[data-service-search]");
-      const none = list.querySelector<HTMLElement>("[data-service-none]");
-      input?.addEventListener("input", () => {
-        const term = input.value.trim().toLocaleLowerCase("pt-BR");
+    // Busca dentro do tipo e local escolhido: cada cartão aparece se tem o texto no nome e é atendido no local.
+    const locationSelect = choice.dataset.locationField ? document.querySelector<HTMLSelectElement>(`#${choice.dataset.locationField}`) : null;
+    const atLocation = (item: HTMLElement) => {
+      const here = locationSelect?.value;
+      return !here || (item.dataset.locations ?? "").split(" ").includes(here);
+    };
+    const filter = () => {
+      for (const list of lists) {
+        const term = (list.querySelector<HTMLInputElement>("[data-service-search]")?.value ?? "").trim().toLocaleLowerCase("pt-BR");
+        let here = 0;
         let visible = 0;
         list.querySelectorAll<HTMLElement>("[data-service-name]").forEach((item) => {
-          item.hidden = !!term && !(item.dataset.serviceName ?? "").includes(term);
+          const fits = atLocation(item);
+          if (fits) here += 1;
+          item.hidden = !fits || (!!term && !(item.dataset.serviceName ?? "").includes(term));
           if (!item.hidden) visible += 1;
+          // Escolhido e fora do local: a escolha sai.
+          const input = item.querySelector<HTMLInputElement>("input");
+          if (!fits && input?.checked) {
+            input.checked = false;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          }
         });
-        if (none) none.hidden = visible > 0;
-      });
-    }
+        const button = choice.querySelector<HTMLElement>(`[data-type="${list.dataset.typeList}"]`);
+        const count = button?.querySelector<HTMLElement>("[data-type-count]");
+        if (count) count.textContent = `· ${here}`;
+        // Tipo sem serviço no local: o botão sai (e a lista dele fecha, se estava aberta).
+        if (button) {
+          button.hidden = here === 0;
+          if (here === 0 && button.getAttribute("aria-pressed") === "true") openType(null);
+        }
+        list.querySelector<HTMLElement>("[data-service-none]")!.hidden = visible > 0 || here === 0;
+        list.querySelector<HTMLElement>("[data-service-none-here]")!.hidden = here > 0;
+      }
+    };
+    for (const list of lists) list.querySelector<HTMLInputElement>("[data-service-search]")?.addEventListener("input", filter);
+    locationSelect?.addEventListener("change", filter);
+    filter();
   });
 </script>

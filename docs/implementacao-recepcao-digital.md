@@ -893,6 +893,23 @@ Teste `tests/db/juntar-exames-repetidos.test.ts`. Aplicada no banco local e no s
 conferido: uma Espirometria ativa com os 8 atendimentos das duas, um Exame com Arquivo; nenhum repetido no staging).
 Na produção, vai junto com as migrações do bloco multiprofissional e a `20270101150000`, depois delas.
 
+#### 15.5.6 Local e serviço em Horários e no portal (cliente, 10/nov/2026)
+
+Pergunta do cliente na validação (staging, Dra. Ana Karina): local "Consulta Domiciliar" e serviços "Consulta",
+"Consulta Domiciliar" ativa (10/nov) e "Consulta Domiciliar" desativada (08/out) com horários ainda ligados; em
+Horários, todos os serviços aparecem em qualquer local; no portal, "No consultório" e "Em casa" ofereciam as duas
+consultas. Decisões do cliente:
+- **Portal:** a fileira "Tipo de consulta" e o valor de cada lugar seguem a escolha "No consultório"/"Em casa" (só as
+  consultas oferecidas lá; o botão mostra o valor do lugar). Trocar de lugar com uma consulta de fora volta à primeira de lá.
+- **Horários: só os serviços do local** (a C5 de 28/out muda): escolhido o local, só os serviços atendidos nele (os tipos
+  sem serviço ali somem; a escolha de fora sai); o servidor recusa serviço fora do local ("marque-o no cadastro do
+  serviço"), em vez de marcar o local no serviço.
+- **Sobras de antes da regra de 08/nov:** migração `20270110130000_horarios_de_servico_desativado` (só dados): horário
+  ligado de serviço desativado fica desativado e marcado como "saiu com o serviço" (volta se o serviço for reativado).
+Testes: `horario-local-servico` (C5 revista), `horarios-de-servico-desativado`, ajustes em `acesso-configuracao` e
+`configuracoes-ii`; Playwright no local (portal em casa × consultório; Horários com filtro, troca de local, erro mantendo
+os campos e salvar). Captura `config-horarios` na fila. Migração aplicada no banco local (OK do cliente).
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

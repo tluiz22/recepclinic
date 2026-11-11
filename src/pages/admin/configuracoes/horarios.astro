@@ -330,8 +330,8 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
                 </select>
               </div>
               <div>
-                <ServiceChoice services={serviceOptions} selected={preselectedService} />
-                <p class={HINT}>Escolha um serviço quando o horário for só dele (ex.: exame só na terça de manhã).</p>
+                <ServiceChoice services={serviceOptions.map((s) => ({ ...s, locationIds: s.locations.map((l) => l.locationId) }))} selected={preselectedService} locationField="location_id" />
+                <p class={HINT}>Escolha um serviço quando o horário for só dele (ex.: exame só na terça de manhã). Aparecem os serviços atendidos no local escolhido.</p>
               </div>
               <div data-capacity hidden>
                 <label for="capacity" class={LABEL}>

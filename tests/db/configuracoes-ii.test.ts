@@ -72,7 +72,6 @@ describe("horários em vários dias", () => {
   it("grava um horário por dia marcado", async () => {
     const created = await addAvailabilityWindows(db(admin), clinicId, window(), [1, 3, 5]);
     expect(created.windows.map((w) => w.weekday)).toEqual([1, 3, 5]);
-    expect(created.locationAdded).toBeNull();
   });
 
   it("conflito num dia: nenhum dia é gravado", async () => {
@@ -202,6 +201,7 @@ describe("item desligado depois de criado (ajuste da validação, 05/out)", () =
     const exam = await createService(db(admin), clinicId, { name: "Exame", category: "exam", durationMinutes: 30, priceCents: 10000, returnDeadlineDays: null, preparationInstructions: null, schedulingMode: "individual" }, { team: true });
     const { data: team } = await adminClient().from("agendas").select("id").eq("clinic_id", clinicId).eq("kind", "resource").single();
     await setServiceLocations(db(admin), clinicId, service.id, [{ locationId: home.id, priceCents: null }]);
+    await setServiceLocations(db(admin), clinicId, exam.id, [{ locationId: office.id, priceCents: null }]);
 
     const { data: all } = await adminClient().from("features").select("key");
     const keys = all!.map((row) => row.key as string).filter((key) => key !== "home_visit" && key !== "exams");

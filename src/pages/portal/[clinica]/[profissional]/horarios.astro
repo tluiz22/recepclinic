@@ -46,7 +46,10 @@ if (professional && options.length > 0 && !modality) {
   return Astro.redirect(portalHref(modalityPath, { ...flowParams(flow), erro: params.get("mod") ? "plano" : null }));
 }
 const single = page.kind === "open" && !!singleProfessional(page.portal);
-const consultation = professional ? (professional.consultations.find((c) => c.serviceId === params.get("tipo")) ?? professional.consultations[0]) : null;
+// Só as consultas do lugar escolhido (cliente, 10/nov): "No consultório" não oferece a consulta só de casa, e vice-versa.
+const offeredAt = (c: { prices: Partial<Record<"clinic" | "home_visit", number | null>> }, type: "clinic" | "home_visit") => Object.hasOwn(c.prices, type);
+const consultations = professional ? professional.consultations.filter((c) => !whereType || offeredAt(c, whereType)) : [];
+const consultation = consultations.find((c) => c.serviceId === params.get("tipo")) ?? consultations[0] ?? null;
 const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
 const dateParam = (name: string) => {
   const value = params.get(name);
@@ -126,7 +129,11 @@ const step = stepPosition(professionalSteps(flow, options.length > 1, viaBotLink
 // "No consultório R$ 350" / "Em casa R$ 550": o valor só no particular (no convênio, nenhum).
 const placeLabel: Record<PortalWhere, string> = { clinic: "No consultório", home: "Em casa" };
 const placePrice = (type: "clinic" | "home_visit") => {
-  const cents = modality?.value === "particular" ? consultation?.prices[type] : null;
+  if (modality?.value !== "particular" || !professional) return null;
+  // O valor da consulta escolhida, se ela é oferecida lá; senão, o menor das consultas de lá.
+  const there = consultation && offeredAt(consultation, type) ? [consultation] : professional.consultations.filter((c) => offeredAt(c, type));
+  const values = there.map((c) => c.prices[type]).filter((v): v is number => typeof v === "number" && v > 0);
+  const cents = values.length ? Math.min(...values) : null;
   return cents ? formatPrice(cents) : null;
 };
 const placeHref = (value: PortalWhere) => portalHref(timesPath, { ...keep, onde: WHERE_PARAM[value], date: null, start: null });
@@ -190,11 +197,11 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
           {!where && atHome && <p class="mt-2 rounded-[14px] border border-gray-200 bg-white px-4 py-3 text-base">Atendimento em casa: {shortName(professional.name)} vai até o endereço que você informar, pedido depois de escolher o paciente.</p>}
           <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">{isGroup ? "Escolha o dia" : "Escolha o dia e o horário"}</h1>
           {waitlist && <PortalWaitlistNotice />}
-          {professional.consultations.length > 1 && (
+          {consultations.length > 1 && (
             <nav aria-label="Tipo de consulta" class="flex flex-col gap-2">
               <p class="text-base font-semibold text-gray-700">Tipo de consulta</p>
               <ul class="flex flex-wrap gap-2">
-                {professional.consultations.map((c) => (
+                {consultations.map((c) => (
                   <li>
                     <a
                       href={portalHref(timesPath, { ...keep, tipo: c.serviceId })}
@@ -202,7 +209,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
                       class={`inline-flex min-h-12 flex-col justify-center rounded-xl border-[1.5px] px-4 py-1.5 leading-tight no-underline ${c.serviceId === consultation.serviceId ? "border-clinic-ink bg-clinic-tint font-bold text-clinic-ink" : "border-gray-300 bg-white text-gray-900 hover:border-clinic-ink"}`}
                     >
                       <span>{c.name}</span>
-                      <span class="text-[15px] font-normal text-gray-700">{c.durationMinutes} min{modality?.value === "particular" && c.priceCents ? ` · ${formatPrice(c.priceCents)}` : ""}</span>
+                      <span class="text-[15px] font-normal text-gray-700">{c.durationMinutes} min{modality?.value === "particular" && (whereType ? c.prices[whereType] : c.priceCents) ? ` · ${formatPrice((whereType ? c.prices[whereType] : c.priceCents)!)}` : ""}</span>
                     </a>
                   </li>
                 ))}

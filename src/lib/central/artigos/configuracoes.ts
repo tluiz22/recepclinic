@@ -145,7 +145,7 @@ export const configuracoesArtigos = [
     related: ["config-agendas", "config-servicos", "config-locais", "config-feriados"],
     order: 65,
     intro: "Cada horário é de uma agenda, com os dias da semana, o início e o fim, o local e o serviço (um só ou todos os da agenda).",
-    steps: ["Escolha o profissional em \"De qual profissional?\" (com mais de uma agenda, a escolha é obrigatória; busque pelo nome ou pela especialidade).", "No dia da semana, toque em adicionar (ou marque vários dias: o mesmo horário entra em cada um).", "Informe início, fim, local e, se for só de um serviço, o serviço (ex.: exame só na terça de manhã). Em exame em turma, as vagas.", "Salve."],
+    steps: ["Escolha o profissional em \"De qual profissional?\" (com mais de uma agenda, a escolha é obrigatória; busque pelo nome ou pela especialidade).", "No dia da semana, toque em adicionar (ou marque vários dias: o mesmo horário entra em cada um).", "Informe início, fim, local e, se for só de um serviço, o serviço (ex.: exame só na terça de manhã). Depois de escolher o local, só aparecem os serviços atendidos nele; para usar outro local, marque-o no cadastro do serviço. Em exame em turma, as vagas.", "Salve."],
     notes: [
       "O período é dividido do início em diante no tamanho da duração do serviço. Atendimentos e bloqueios ocupam o tempo, com o intervalo da agenda antes e depois.",
       "Feriados (nacionais e da clínica) e bloqueios tiram os horários do dia.",

@@ -368,6 +368,8 @@ describe("serviços", () => {
     groupExam = await exam("Teste da orelhinha (turma)", "group");
     examA = await exam("Exame A", "individual");
     examB = await exam("Exame B", "individual");
+    // Os exames atendem no consultório (o horário só aceita serviço atendido no local; cliente, 10/nov/2026).
+    for (const e of [groupExam, examA, examB]) await setServiceLocations(db(admin), clinicId, e.id, [{ locationId: office.id, priceCents: null }]);
   });
 
   it("agenda do dono e locais do serviço, com preço próprio por local", async () => {
