@@ -64,6 +64,7 @@ export const agendaArtigos = [
     notes: [
       "Se o dia pedido não tem vaga, a tela avisa e mostra o primeiro dia livre depois dele.",
       "O mesmo horário não aceita dois atendimentos na mesma agenda; \"Já tem atendimento marcado\" quer dizer que o paciente já tem um futuro com esse profissional.",
+      "Exame que não aceita o convênio do paciente: a tela avisa e o atendimento fica como particular. Se o exame também não aceita particular, não dá para marcar (veja os convênios do exame em Configurações › Serviços).",
     ],
     problems: [
       { problem: "O serviço não aparece na lista.", solution: "Ele está desativado, ou não tem agenda ou local ativos. Veja o selo em Configurações › Serviços." },
@@ -142,6 +143,7 @@ export const agendaArtigos = [
     result: "O paciente recebe mensagem no WhatsApp só se mudar data, hora, profissional ou local para uma data futura; aí o lembrete e a presença confirmada recomeçam. O valor segue o serviço e o local novos; pagamentos já registrados não mudam.",
     notes: [
       "Em sessão de série ainda por vir: \"Só esta sessão\" ou \"Esta e as próximas\".",
+      "No exame, a lista Convênio mostra só os convênios que ele aceita, e Particular só se ele aceita particular.",
       "Atendimento cancelado não se altera. Tudo fica no Histórico do atendimento.",
     ],
     problems: [

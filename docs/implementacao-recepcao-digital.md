@@ -966,6 +966,10 @@ de Exames segue sem convênios). Servidor: `examPlanFor` (`serviceInsurance.ts`)
 ele aceita. Série particular: as sessões não herdam mais o convênio do paciente pelo gatilho (valia para toda série com
 "Particular"). Teste `convenios-do-exame` (CE-5). Conferido no local (Carlos, Bradesco, Espirometria).
 
+**CE-6 feita (11/nov/2026):** Central de Ajuda: "Configurações › Serviços" (campo "Particular e convênios (exame)"),
+"Configurações › Convênios" (os exames têm lista própria), "Marcar" e "Alterar" (exame fora do convênio fica particular;
+lista Convênio só com os do exame). Sem captura nova: `config-servicos` mostra a lista, e `marcar`, o passo 1.
+
 ### 15.6 Bot enxuto: a F3f revista (cliente, 11/nov/2026; planejado) [Cliente]
 
 **Por quê:** desde 1/out/2026 a Meta cobra também as mensagens do bot dentro da janela de 24h (preço de "utilidade";
