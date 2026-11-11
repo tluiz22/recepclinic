@@ -29,6 +29,9 @@ export type ImportPatient = {
   birthdate: string;
   phone: string;
   guardianName: string;
+  /** 2º responsável (VR-7, opcional): nome e WhatsApp; o 1º telefone é o principal. */
+  secondName: string;
+  secondPhone: string;
   insurancePlanId: string;
   cardNumber: string;
   appointments: ImportAppointment[];
@@ -99,12 +102,14 @@ export function parseImportForm(form: FormData): ImportPatient[] {
         birthdate: get("birthdate"),
         phone: get("phone"),
         guardianName: get("guardianName"),
+        secondName: get("secondName"),
+        secondPhone: get("secondPhone"),
         insurancePlanId: get("insurancePlanId"),
         cardNumber: get("cardNumber"),
         appointments,
       };
     })
-    .filter((p) => p.name || p.birthdate || p.phone || p.guardianName || p.cardNumber || p.appointments.length > 0);
+    .filter((p) => p.name || p.birthdate || p.phone || p.guardianName || p.secondName || p.secondPhone || p.cardNumber || p.appointments.length > 0);
 }
 
 /** O rascunho guardado no banco (jsonb), lido sem confiar no formato. */
@@ -119,6 +124,8 @@ export function normalizeImportEntries(value: unknown): ImportPatient[] {
       birthdate: text(p.birthdate),
       phone: text(p.phone),
       guardianName: text(p.guardianName),
+      secondName: text(p.secondName),
+      secondPhone: text(p.secondPhone),
       insurancePlanId: text(p.insurancePlanId),
       cardNumber: text(p.cardNumber),
       appointments: (Array.isArray(p.appointments) ? p.appointments : [])
@@ -202,6 +209,24 @@ export function validateImport(
       }
       contact.patients.add(identity);
       if (!patient.guardianName) contact.selfKeys.push(patient.key);
+    }
+
+    // 2º responsável (VR-7): opcional, mas nome e WhatsApp juntos; outro número que o do 1º; o mesmo WhatsApp é sempre
+    // do mesmo responsável, também entre os cartões.
+    if (patient.secondName || patient.secondPhone) {
+      const second = patient.secondPhone ? normalizePhone(patient.secondPhone) : null;
+      if (!patient.secondName) add(f("secondName"), "Informe o nome do 2º responsável.");
+      if (!patient.secondPhone) add(f("secondPhone"), "Informe o WhatsApp do 2º responsável.");
+      else if (!second) add(f("secondPhone"), INVALID_PHONE_MESSAGE);
+      else if (second === phone) add(f("secondPhone"), "O 2º responsável precisa de outro WhatsApp, diferente do 1º.");
+      else if (patient.secondName) {
+        const name = patient.secondName.toLocaleLowerCase("pt-BR");
+        const contact = contacts.get(second) ?? { name, selfKeys: [], patients: new Set<string>() };
+        contacts.set(second, contact);
+        if (contact.name !== name) {
+          add(f("secondName"), "Esse WhatsApp já está em outro cartão com outro responsável. O mesmo WhatsApp é sempre do mesmo responsável.");
+        }
+      }
     }
 
     for (const appointment of patient.appointments) {

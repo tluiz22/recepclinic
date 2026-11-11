@@ -54,6 +54,8 @@ const patient = (over: Partial<ImportPatient> = {}): ImportPatient => ({
   birthdate: "1980-05-10",
   phone: "(84) 98188-0777",
   guardianName: "",
+  secondName: "",
+  secondPhone: "",
   insurancePlanId: "",
   cardNumber: "",
   appointments: [],
@@ -103,6 +105,8 @@ describe("importação da agenda: leitura do link", () => {
         birthdate: "",
         phone: "",
         guardianName: "",
+        secondName: "",
+        secondPhone: "",
         insurancePlanId: "",
         cardNumber: "",
         appointments: [{ key: "a1", date: "2026-10-21", time: "", serviceId: "", agendaId: "", locationId: "", homeAddress: "" }],
@@ -156,6 +160,21 @@ describe("importação da agenda: conferência", () => {
     // Mesmo nome de contato mas outra data: é outra pessoa sem responsável.
     const issues = check([patient({ key: "p1" }), patient({ key: "p2", birthdate: "1990-01-01" })]);
     expect(issues[patientField("p2", "guardianName")]).toBe("Esse WhatsApp já é de outro paciente: informe o responsável.");
+  });
+
+  it("2º responsável (VR-7): opcional, com nome e WhatsApp juntos, outro número e o mesmo nome em todos os cartões", () => {
+    const child = (over: Partial<ImportPatient> = {}) => patient({ name: "Pedro Souza", birthdate: "2018-03-01", guardianName: "Maria Souza", ...over });
+    expect(check([child({ secondName: "Carlos Souza", secondPhone: "(84) 98111-2233" })])).toEqual({});
+    expect(check([child({ secondName: "Carlos Souza" })])[patientField("p1", "secondPhone")]).toBe("Informe o WhatsApp do 2º responsável.");
+    expect(check([child({ secondPhone: "(84) 98111-2233" })])[patientField("p1", "secondName")]).toBe("Informe o nome do 2º responsável.");
+    expect(check([child({ secondName: "Carlos", secondPhone: "123" })])[patientField("p1", "secondPhone")]).toMatch(/DDD/);
+    expect(check([child({ secondName: "Carlos", secondPhone: patient().phone })])[patientField("p1", "secondPhone")]).toMatch(/outro WhatsApp/);
+    // O número do 2º responsável num cartão é o 1º de outro, com outro nome.
+    const other = patient({ key: "p2", name: "Lia Lima", birthdate: "1990-01-01", phone: "(84) 98111-2233" });
+    expect(check([child({ secondName: "Carlos Souza", secondPhone: "(84) 98111-2233" }), other])[patientField("p2", "phone")]).toMatch(/outro responsável/);
+    // O mesmo pai em dois irmãos: tudo certo.
+    const sibling = child({ key: "p2", name: "Rita Souza", secondName: "Carlos Souza", secondPhone: "84981112233" });
+    expect(check([child({ secondName: "Carlos Souza", secondPhone: "(84) 98111-2233" }), sibling])).toEqual({});
   });
 
   it("paciente repetido em dois cartões", () => {

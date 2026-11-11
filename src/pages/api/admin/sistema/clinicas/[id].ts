@@ -136,7 +136,7 @@ export const POST: APIRoute = async (context) => {
           const reactivated = loaded.reactivated ? `; ${n(loaded.reactivated, "cadastro inativo voltou", "cadastros inativos voltaram")} a ficar ${loaded.reactivated === 1 ? "ativo" : "ativos"}` : "";
           return {
             redirectTo: page,
-            message: `Agenda atual carregada: ${n(loaded.appointments, "consulta", "consultas")}, ${n(loaded.patients, "paciente novo", "pacientes novos")} e ${n(loaded.contacts, "contato novo", "contatos novos")}${reactivated}. Nenhum aviso de marcação foi enviado.`,
+            message: `Agenda atual carregada: ${n(loaded.appointments, "consulta", "consultas")}, ${n(loaded.patients, "paciente novo", "pacientes novos")} e ${n(loaded.contacts, "contato novo", "contatos novos")}${loaded.links ? `, ${n(loaded.links, "segundo responsável ligado", "segundos responsáveis ligados")}` : ""}${reactivated}. Nenhum aviso de marcação foi enviado.`,
           };
         }
         case "desfazer_carga": {
@@ -145,7 +145,7 @@ export const POST: APIRoute = async (context) => {
           const kept = undone.appointmentsKept.length + undone.patientsKept.length + undone.contactsKept.length;
           return {
             redirectTo: page,
-            message: `Carga desfeita: ${n(undone.appointmentsRemoved, "consulta removida", "consultas removidas")}, ${n(undone.patientsRemoved, "paciente", "pacientes")} e ${n(undone.contactsRemoved, "contato", "contatos")}.${kept ? ` Ficou: ${n(undone.appointmentsKept.length, "consulta já mexida", "consultas já mexidas")} e ${n(undone.patientsKept.length + undone.contactsKept.length, "cadastro em uso", "cadastros em uso")}, como a prévia mostrou.` : ""}`,
+            message: `Carga desfeita: ${n(undone.appointmentsRemoved, "consulta removida", "consultas removidas")}, ${n(undone.patientsRemoved, "paciente", "pacientes")} e ${n(undone.contactsRemoved, "contato", "contatos")}${undone.linksRemoved ? `; ${n(undone.linksRemoved, "segundo responsável desligado", "segundos responsáveis desligados")}` : ""}.${kept ? ` Ficou: ${n(undone.appointmentsKept.length, "consulta já mexida", "consultas já mexidas")} e ${n(undone.patientsKept.length + undone.contactsKept.length, "cadastro em uso", "cadastros em uso")}, como a prévia mostrou.` : ""}`,
           };
         }
         case "ativar_clinica": {

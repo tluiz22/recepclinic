@@ -261,7 +261,8 @@ export async function loadImportReview(db: DbClient, clinicId: string, patients:
     .flatMap((p) => p.appointments.map((a) => a.date))
     .filter(isCalendarDate)
     .sort();
-  const phones = [...new Set(patients.map((p) => (p.phone ? normalizePhone(p.phone) : null)).filter((p): p is string => !!p))];
+  // Os WhatsApps do link, do 1º e do 2º responsável (VR-7).
+  const phones = [...new Set(patients.flatMap((p) => [p.phone, p.secondPhone]).map((phone) => (phone ? normalizePhone(phone) : null)).filter((p): p is string => !!p))];
   const from = dates.length ? dayBounds(addDays(dates[0], -1), timeZone).start : null;
   const to = dates.length ? dayBounds(dates[dates.length - 1], timeZone).end : null;
 
@@ -404,7 +405,8 @@ export async function returnAgendaImport(
 // Carga (F10.1c)
 // ---------------------------------------------------------------------------
 
-export type LoadResult = { contacts: number; patients: number; appointments: number; reactivated: number };
+/** `links`: 2º responsáveis ligados (VR-7). */
+export type LoadResult = { contacts: number; patients: number; appointments: number; reactivated: number; links: number };
 
 /**
  * Suporte: autoriza a carga da agenda enviada. Confere de novo na hora (com
@@ -443,6 +445,8 @@ export type UndoResult = {
   appointmentsRemoved: number;
   patientsRemoved: number;
   contactsRemoved: number;
+  /** 2º responsáveis desligados (VR-7). */
+  linksRemoved: number;
   appointmentsKept: { patientName: string; serviceName: string; scheduledAt: Date; reasons: string[] }[];
   patientsKept: { name: string; reason: string }[];
   contactsKept: { name: string; reason: string }[];

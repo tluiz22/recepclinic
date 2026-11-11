@@ -16,9 +16,12 @@
 > - **VR3 sem o bot feita (11/nov, mesma branch, sem migração):** portal (UI-3, UI-4) e mensagens para quem marcou. A
 >   F3f ainda não está na `main`: o Remarcar/Cancelar do bot (UI-5) espera por ela (cliente, 11/nov: adiantar a VR3 sem
 >   o bot e a VR5). Detalhe na seção 8.
-> - **Próximo:** VR5 sem o bot (importação, Métricas, artigos da Central; recaptura só com autorização). Parar antes do
->   modelo da Meta (VR4). Depois da F3f: o Remarcar/Cancelar do bot (resto da VR3). Validação de tudo no staging, no
->   fim.
+> - **VR5 sem o bot feita (11/nov, mesma branch):** importação com o 2º responsável (migração
+>   `20270114120000_importacao_segundo_responsavel.sql`, aprovada pelo cliente e aplicada só no banco local), artigos e
+>   FAQ da Central; Métricas sem mudança; nenhuma captura da Central na fila. Detalhe na seção 8.
+> - **Próximo:** VR4 (modelo da Meta), **só depois de perguntar ao cliente**. Depois da F3f: Remarcar/Cancelar do bot
+>   (resto da VR3). No fim: `security-review`, `/code-review`, suíte inteira, staging (migrações `20270113120000` e
+>   `20270114120000` antes do código) e roteiro de validação.
 
 ## 1. O problema
 
@@ -262,3 +265,35 @@ não tem captura). Para testar, os limites do código do portal do celular do Ca
 
 **Para depois (anotado):** Remarcar e Cancelar do bot com todos os pacientes ligados (UI-5) esperam a F3f; a conversa do
 bot ainda acha os pacientes pelo principal (`bot/booking.ts`). Sessões novas de série seguem com o principal.
+
+### VR5 Importação e fechamento, sem o bot (11/nov/2026, branch `varios-responsaveis`)
+
+- **Importação (VR-7):** o cartão do link da agenda atual ganhou "Nome do 2º responsável" e "WhatsApp do 2º
+  responsável" (opcionais; o rótulo segue o "WhatsApp" do 1º, em vez de "Telefone"), com a dica "Opcional: outra pessoa
+  que também cuida do paciente…". A conferência pede os dois juntos, um número válido e diferente do 1º, e o mesmo
+  WhatsApp sempre com o mesmo nome entre os cartões (1º ou 2º). A revisão do Suporte mostra o 2º responsável e avisa
+  quando o número já é de um contato cadastrado ("Fica o cadastro"; inativo volta a ficar ativo).
+- **Migração `20270114120000_importacao_segundo_responsavel.sql`** (o cliente escolheu a migração em 11/nov; aplicada
+  só no banco local; staging pela validação, antes do código): `patient_contacts.agenda_import_id`; `load_agenda_import`
+  liga o 2º responsável (já cadastrado, criado antes na mesma carga ou novo) com o registro e devolve `links`;
+  `undo_agenda_import` desliga o que a carga ligou, menos quem virou o principal ou marcou consulta do paciente, não
+  apaga o contato que ainda cuida de alguém e devolve `linksRemoved`. Mensagens do Suporte dizem quantos segundos
+  responsáveis foram ligados ou desligados.
+- **Métricas:** sem mudança, como decidido (contam por paciente; o contato mostrado é o principal; o filtro por contato
+  segue pelo principal).
+- **Central de Ajuda:** "Responsável/contato" reescrito (vários responsáveis, Adicionar, ficha repetida, Tornar
+  principal, Desligar, para quem vão os avisos, portal e bot); "Ficha do paciente" (cartão Responsáveis, faixa do
+  portal, "Marcada por", trocar telefone pela página do responsável); "Cadastrar um paciente" (principal e ficha
+  repetida); "Anonimizar" (o que acontece com cada responsável); "Marcar atendimento" (campo "Confirmação e lembrete no
+  WhatsApp para"). FAQ: "duplicado" e "trocar telefone" revistas e a nova "O pai e a mãe querem receber as mensagens".
+- **Capturas:** nenhuma na fila. A ficha não tem captura; a do Marcar mostra o passo 1 vazio; o portal não tem
+  captura; o link da importação não está na Central.
+
+Testes: unidade da importação (2º responsável na conferência, revisão e plano); `tests/db/varios-responsaveis-importacao.test.ts`
+(novo: revisão sem erro com aviso, carga com 4 ligações e o registro, principal pelo 1º telefone, Desfazer com 3
+desligadas, o pai que marcou consulta fica, a avó sem paciente sai) e `importacao-agenda.test.ts` com `links: 0`.
+Playwright (script isolado) do link em 390 e 1280: erro só no 2º WhatsApp, `aria-invalid`, os outros campos mantidos,
+corrigido sem erro, número igual ao 1º recusado; sem erro no console. O link de teste foi apagado do banco local.
+
+**Fica para o fim da frente:** `security-review`, `/code-review` e a suíte inteira, antes do staging.
+

@@ -226,6 +226,7 @@ const ul = "flex flex-col gap-1 text-[15px] leading-snug";
               <p class="text-[15px] text-ink-soft">
                 {date(patient.birthdate, "dd/MM/yyyy")} · {phone(patient)}
                 {patient.guardianName ? ` · responsável: ${patient.guardianName}` : " · o próprio paciente é o contato"}
+                {patient.secondPhoneE164 ? ` · 2º responsável: ${patient.secondName}` : ""}
                 {` · ${patient.insuranceName || "convênio"}${patient.cardNumber ? `, carteirinha ${patient.cardNumber}` : ""}`}
               </p>
               {patient.errors.length > 0 && (

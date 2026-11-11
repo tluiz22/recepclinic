@@ -1401,16 +1401,22 @@ isOneToOne: false
                   ]
                 },"patient_contacts": {
                   Row: {
-                    "clinic_id": string,"contact_id": string,"created_at": string,"created_by": string | null,"id": string,"is_self": boolean,"kinship": string | null,"patient_id": string
+                    "agenda_import_id": string | null,"clinic_id": string,"contact_id": string,"created_at": string,"created_by": string | null,"id": string,"is_self": boolean,"kinship": string | null,"patient_id": string
                   }
                   Insert: {
-                    "clinic_id": string,"contact_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"is_self"?: boolean,"kinship"?: string | null,"patient_id": string
+                    "agenda_import_id"?: string | null,"clinic_id": string,"contact_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"is_self"?: boolean,"kinship"?: string | null,"patient_id": string
                   }
                   Update: {
-                    "clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"is_self"?: boolean,"kinship"?: string | null,"patient_id"?: string
+                    "agenda_import_id"?: string | null,"clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"is_self"?: boolean,"kinship"?: string | null,"patient_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "patient_contacts_agenda_import_id_fkey"
+      columns: ["agenda_import_id"]
+isOneToOne: false
+      referencedRelation: "agenda_import_requests"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "patient_contacts_clinic_id_contact_id_fkey"
       columns: ["clinic_id","contact_id"]
 isOneToOne: false

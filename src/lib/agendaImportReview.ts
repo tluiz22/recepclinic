@@ -76,6 +76,10 @@ export type ReviewedPatient = {
   /** Normalizado (+55…), ou null quando inválido. */
   phoneE164: string | null;
   guardianName: string;
+  /** 2º responsável (VR-7): nome, WhatsApp normalizado e o contato já cadastrado com esse número. */
+  secondName: string;
+  secondPhoneE164: string | null;
+  secondContactId: string | null;
   insuranceName: string;
   cardNumber: string;
   kind: PatientKind;
@@ -149,7 +153,7 @@ export function reviewImport(patients: ImportPatient[], catalog: ImportCatalog, 
     { timeZone: context.timeZone, today: context.today, now: context.now, busy: context.busy },
   );
   const patientIssues = (key: string) =>
-    (["name", "birthdate", "phone", "guardianName", "insurancePlanId"] as const).map((f) => issues[patientField(key, f)]).filter(Boolean);
+    (["name", "birthdate", "phone", "guardianName", "secondName", "secondPhone", "insurancePlanId"] as const).map((f) => issues[patientField(key, f)]).filter(Boolean);
   const appointmentIssues = (patientKey: string, key: string) =>
     (["date", "time", "serviceId", "agendaId", "locationId", "homeAddress"] as const).map((f) => issues[appointmentField(patientKey, key, f)]).filter(Boolean);
 
@@ -183,6 +187,18 @@ export function reviewImport(patients: ImportPatient[], catalog: ImportCatalog, 
       } else {
         kind = "existing_contact";
       }
+    }
+
+    // 2º responsável (VR-7): a revisão avisa se o número já é de um contato cadastrado (fica o cadastro).
+    const secondPhoneE164 = patient.secondName && patient.secondPhone ? normalizePhone(patient.secondPhone) : null;
+    const secondContact = secondPhoneE164 ? contactsByPhone.get(secondPhoneE164) : undefined;
+    if (secondContact) {
+      warnings.push(
+        same(secondContact.name, patient.secondName)
+          ? `2º responsável: ${secondContact.name} já é contato cadastrado; fica ligado também a este paciente.`
+          : `2º responsável: WhatsApp já cadastrado em nome de ${secondContact.name} (no link: ${patient.secondName}). Fica o cadastro.`,
+      );
+      if (!secondContact.isActive) warnings.push("O 2º responsável já cadastrado está inativo: volta a ficar ativo com a carga.");
     }
 
     const appointments = patient.appointments.map((appointment): ReviewedAppointment => {
@@ -227,6 +243,9 @@ export function reviewImport(patients: ImportPatient[], catalog: ImportCatalog, 
       phone: patient.phone,
       phoneE164,
       guardianName: patient.guardianName,
+      secondName: patient.secondName,
+      secondPhoneE164: secondPhoneE164 && secondPhoneE164 !== phoneE164 ? secondPhoneE164 : null,
+      secondContactId: secondContact?.id ?? null,
       insuranceName: patient.insurancePlanId ? (plans.get(patient.insurancePlanId) ?? "") : "Particular",
       cardNumber: patient.cardNumber,
       kind,
@@ -265,6 +284,10 @@ export type LoadPlanEntry = {
   birthdate: string;
   /** O paciente é o próprio contato (sem responsável e com o mesmo nome do contato). */
   isContactSelf: boolean;
+  /** 2º responsável (VR-7); null = sem. */
+  secondContactId: string | null;
+  secondPhone: string | null;
+  secondName: string | null;
   insurancePlanId: string | null;
   cardNumber: string | null;
   appointments: { serviceId: string; agendaId: string; locationId: string; scheduledAt: string; durationMinutes: number; homeAddress: string | null }[];
@@ -289,6 +312,9 @@ export function buildLoadPlan(review: ImportReview, patients: ImportPatient[], c
       name: patient.name,
       birthdate: patient.birthdate,
       isContactSelf: !patient.guardianName && same(registered?.name ?? contactName, patient.name),
+      secondContactId: reviewed.secondPhoneE164 ? reviewed.secondContactId : null,
+      secondPhone: reviewed.secondPhoneE164,
+      secondName: reviewed.secondPhoneE164 ? patient.secondName : null,
       insurancePlanId: patient.insurancePlanId || null,
       cardNumber: patient.insurancePlanId && patient.cardNumber ? patient.cardNumber : null,
       appointments: patient.appointments
