@@ -6,7 +6,7 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `64ec6b1` (08/nov). Fluxo: [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`) = `main` atual: portal F2, F3a–F3e, F5a (agenda em colunas), ajustes da
->   validação. Migrações até `20270110140000` (convênios do exame, CE-1, aplicada 11/nov com OK do cliente).
+>   validação. Migrações até `20270111120000` (convênios do exame, CE-1 e correção, aplicadas 11/nov com OK do cliente).
 >
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
