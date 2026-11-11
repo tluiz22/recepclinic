@@ -13,9 +13,9 @@
 > a validação). Banco local único: migração só avisando.
 > **Validação final (11/nov, `59049142`):** CI verde (tipos no formato da CLI 2.121; local atualizada para 3.1.0, mesmo formato),
 > 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
-> **Começar a próxima sessão por (cliente, 11/nov), com o OK dele em cada passo:** (1) ler na produção, só leitura, se
-> há exames repetidos (`juntar_exames_repetidos` apaga a cópia); (2) simular as 17 migrações na produção (`db push
-> --dry-run`; CLI local agora 3.1.0: conferir a saída); (3) mostrar o resultado e parar, antes de aplicar.
+> **Pré-implantação (11/nov, feita):** produção na migração `20270101150000`; leitura só leitura: 0 exames em duas
+> agendas e 0 nomes repetidos (a `juntar_exames_repetidos` não apaga nada lá); `db push --dry-run` (CLI 3.1.0) lista
+> as 17 de `20270102120000` a `20270112120000`, como esperado. **Próximo:** aplicar só com o OK do cliente.
 > **Próximo (cliente, 11/nov):** preparar a implantação da `main` em produção (`producao.md`: migrações desde
 > `64ec6b1`, portal na clínica piloto). Depois: F3f, o bot enxuto (seção 15.6), nas condições da F3-9. Roteiro 16.2 da
 > F5a e Resumo do dia por profissional (seção 16.4) validados em 11/nov. Clínica Exemplo Saúde do staging com 12 profissionais
