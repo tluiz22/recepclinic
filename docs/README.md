@@ -14,7 +14,8 @@
 > **Validação final (11/nov, `59049142`):** CI verde (tipos no formato da CLI 2.121; local atualizada para 3.1.0, mesmo formato),
 > 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
 > **Implantação da `main` na produção (11/nov, feita):** 17 migrações aplicadas e conferidas, código publicado, saúde
-> `ok` (registro em `producao.md`). **Próximo:** ligar o portal na clínica piloto (com o cliente). Depois: F3f, o bot
+> `ok` (registro em `producao.md`); portal ligado na clínica piloto pelo cliente. **Próxima sessão (cliente, 11/nov):** ajuste
+> na tela Configurações › Profissionais (o cliente detalha). Depois: F3f, o bot
 > enxuto (seção 15.6), nas condições da F3-9. Clínica Exemplo Saúde do staging com 12 profissionais
 > (`scripts/clinica-exemplo-grande.mjs`).
 > **Pendentes com o cliente:** vários responsáveis por paciente (planejado: VR-1 a VR-7, D14).
