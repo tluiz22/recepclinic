@@ -288,7 +288,7 @@ const LEGEND = [
 ];
 ---
 
-<AdminLayout title="Agenda" autoRefresh>
+<AdminLayout title="Agenda" autoRefresh edge>
   <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={chosenAgendaId} subtitle={title}>
     <div slot="nav" class="flex items-center gap-1.5">
       <Button href={link({ date: addDays(date, -1), ver: phoneColumn?.id ?? null })} aria-label="Dia anterior" class="w-9 px-0">
