@@ -264,7 +264,7 @@ export const configuracoes = {
       como: [
         "Cada horário é de uma agenda, com os dias da semana, o início e o fim, o local e o serviço (um só ou todos os da agenda).",
         "O período é dividido do início em diante, no tamanho da duração do serviço. Atendimentos e bloqueios ocupam o tempo, com o intervalo da agenda antes e depois.",
-        "Em turma: uma sessão por horário cadastrado, com o número de vagas.",
+        "Em turma: uma turma a cada duração do exame, do início ao fim do horário (08:00 às 12:00 com 60 min: 08:00, 09:00, 10:00 e 11:00), cada uma com o número de vagas.",
         "Feriados (nacionais e os da clínica) e bloqueios tiram os horários do dia.",
         "Mudar ou apagar um horário não mexe nos atendimentos já marcados.",
       ],

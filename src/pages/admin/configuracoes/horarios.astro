@@ -338,6 +338,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
                   Vagas da turma
                 </label>
                 <input id="capacity" name="capacity" type="number" min="1" value={editing?.capacity ?? undefined} class={`${INPUT_INLINE} mt-1.5 w-28`} />
+                <p class={HINT}>Abre uma turma a cada duração do exame, do início ao fim (ex.: 08:00 às 12:00 com exame de 60 min: turmas às 08:00, 09:00, 10:00 e 11:00), cada uma com essas vagas.</p>
               </div>
               {editing ? (
                 <div class="flex flex-wrap gap-2">

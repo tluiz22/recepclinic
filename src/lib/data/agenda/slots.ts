@@ -3,7 +3,7 @@ import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { unwrap, unwrapAll, unwrapOne } from "../errors";
-import { computeFreeGaps, computeFreeSlots, type BusyInterval, type FreeGap, type FreeSlot, type SlotWindow } from "./freeSlots";
+import { computeFreeGaps, computeFreeSlots, groupStartTimes, type BusyInterval, type FreeGap, type FreeSlot, type SlotWindow } from "./freeSlots";
 
 // Horários livres por agenda, serviço, local e dia (F3.6a), lidos com o login
 // (ou a credencial do bot) de quem pergunta: o RLS limita às agendas que ele
@@ -559,15 +559,20 @@ export async function getGroupSessions(
   for (let date = firstDate; date <= finalDate && sessions.length < count; date = addDays(date, 1)) {
     if (isNationalHoliday(date) || holidays.has(date)) continue;
     const windows = [...(plan.windowsByWeekday.get(weekdayOf(date)) ?? [])].sort((a, b) => a.startTime.localeCompare(b.startTime));
-    for (const window of windows) {
-      if (window.capacity === null || sessions.length >= count) continue;
-      const start = toInstant(date, window.startTime, plan.timeZone);
-      if (start <= now || localTimeOf(start, plan.timeZone) !== window.startTime) continue;
+    // Uma turma a cada duração do exame, dentro da faixa (cliente, 11/nov/2026).
+    const daySessions = windows
+      .filter((w) => w.capacity !== null)
+      .flatMap((w) => groupStartTimes(w.startTime, w.endTime, plan.durationMinutes).map((time) => ({ window: w, time })))
+      .sort((a, b) => a.time.localeCompare(b.time));
+    for (const { window, time } of daySessions) {
+      if (sessions.length >= count) break;
+      const start = toInstant(date, time, plan.timeZone);
+      if (start <= now || localTimeOf(start, plan.timeZone) !== time) continue;
       const end = new Date(start.getTime() + plan.durationMinutes * 60_000);
       if (blocks.some((b) => new Date(b.starts_at) < end && new Date(b.ends_at) > start)) continue;
-      const remaining = window.capacity - (bookedAt.get(start.getTime()) ?? 0);
+      const remaining = window.capacity! - (bookedAt.get(start.getTime()) ?? 0);
       if (remaining > 0) {
-        sessions.push({ date, time: window.startTime, start, locationId: window.locationId, capacity: window.capacity, remaining });
+        sessions.push({ date, time, start, locationId: window.locationId, capacity: window.capacity!, remaining });
       }
     }
   }
@@ -758,23 +763,26 @@ export async function listFreeGapsRange(
           const service = byId.get(w.service_id!);
           const capacity = w.capacity;
           if (!service || !capacity) continue;
-          const from = toInstant(date, w.start_time.slice(0, 5), timeZone);
-          if (from <= now || localTimeOf(from, timeZone) !== w.start_time.slice(0, 5)) continue;
-          const to = new Date(from.getTime() + service.duration_minutes * 60_000);
-          if (busyBlocksOnly.some((b) => b.start < to && b.end > from)) continue;
-          const booked = taken.filter((t) => t.service_id === service.id && new Date(t.scheduled_at).getTime() === from.getTime()).length;
-          if (booked > 0 || seen.has(from.getTime())) continue;
-          seen.add(from.getTime());
-          result.push({
-            start: from,
-            end: to,
-            time: w.start_time.slice(0, 5),
-            endTime: localTimeOf(to, timeZone),
-            agendaId: agenda.id,
-            date,
-            places: [w.locations?.type ?? "clinic"],
-            group: { serviceId: service.id, serviceName: service.name, spots: capacity },
-          });
+          // Uma turma a cada duração do exame, dentro da faixa (cliente, 11/nov/2026).
+          for (const time of groupStartTimes(w.start_time.slice(0, 5), w.end_time.slice(0, 5), service.duration_minutes)) {
+            const from = toInstant(date, time, timeZone);
+            if (from <= now || localTimeOf(from, timeZone) !== time) continue;
+            const to = new Date(from.getTime() + service.duration_minutes * 60_000);
+            if (busyBlocksOnly.some((b) => b.start < to && b.end > from)) continue;
+            const booked = taken.filter((t) => t.service_id === service.id && new Date(t.scheduled_at).getTime() === from.getTime()).length;
+            if (booked > 0 || seen.has(from.getTime())) continue;
+            seen.add(from.getTime());
+            result.push({
+              start: from,
+              end: to,
+              time,
+              endTime: localTimeOf(to, timeZone),
+              agendaId: agenda.id,
+              date,
+              places: [w.locations?.type ?? "clinic"],
+              group: { serviceId: service.id, serviceName: service.name, spots: capacity },
+            });
+          }
         }
         const today = own.filter((w) => w.weekday === weekday);
         for (const [isExam, busy] of [[false, busyAll], [true, busyBlocksOnly]] as const) {

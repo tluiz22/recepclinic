@@ -886,6 +886,12 @@ o menor valor de todos os lugares (o do consultório) também em "Em casa"; pass
 escolhido (`horarios.astro`).
 Ajuste 2: a turma no portal mostrava a lista de dias (TU2a), diferente dos outros serviços; passa à faixa de dias e aos
 horários do dia (cliente, 11/nov/2026), sem o número de vagas.
+Ajuste 3 (cliente, 11/nov/2026): **turmas na faixa**. O horário de um exame em turma abria uma turma só, no início
+(08:00–12:00 com 60 min: só 08:00); passa a abrir uma a cada duração do exame (08:00, 09:00, 10:00, 11:00), cada uma com
+as vagas do horário; a primeira vale sempre (faixa mais curta que o exame, como antes). Código: `groupStartTimes`
+(`freeSlots.ts`) na lista de turmas, no Marcar e na grade da Agenda; banco: migração `20270112120000_turmas_na_faixa`
+(`app.group_starts_at` em `book_group_session`, `reschedule_group_session` e `change_group_session`). Textos de Horários
+e da Ajuda. Teste `turmas-na-faixa`.
 
 #### 15.5.5 Exames repetidos na agenda de Exames (cliente, 10/nov/2026)
 

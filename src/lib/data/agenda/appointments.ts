@@ -4,6 +4,7 @@ import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
 import { checkFreeTime, getFreeSlots, loadSchedulingPlan, pastLimit, TEAM_HOLDS } from "./slots";
 import { BLOCKED_DAYS_SLACK, loadWholeBlockedDays } from "./blockedDays";
+import { groupStartTimes } from "./freeSlots";
 import { logError } from "../../log";
 
 // Marcar, remarcar, cancelar, presença e comparecimento (F3.6a), para a tela
@@ -482,7 +483,7 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
   let locationId: string;
   if (plan.isGroup) {
     const time = localTimeOf(input.start, plan.timeZone);
-    const window = (plan.windowsByWeekday.get(weekdayOf(date)) ?? []).find((w) => w.startTime === time && w.capacity !== null);
+    const window = (plan.windowsByWeekday.get(weekdayOf(date)) ?? []).find((w) => w.capacity !== null && groupStartTimes(w.startTime, w.endTime, plan.durationMinutes).includes(time));
     if (!window) throw new DataError("conflict", "Atendimento: não há turma neste horário", { start: "Não há turma neste horário" });
     locationId = window.locationId;
   } else {

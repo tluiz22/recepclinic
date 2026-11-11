@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFreeGaps, computeFreeSlots, type BusyInterval, type SlotStrategy, type SlotWindow } from "./freeSlots";
+import { computeFreeGaps, computeFreeSlots, groupStartTimes, type BusyInterval, type SlotStrategy, type SlotWindow } from "./freeSlots";
 
 // Mesmos casos de computeAvailableSlots (F1), no cálculo novo com fuso.
 // Quarta-feira, 14/10/2026; "agora" na véspera, salvo nos testes de horário passado.
@@ -184,5 +184,15 @@ describe("horários livres da Agenda › Dia (uma linha por horário)", () => {
       { locationId: "loc-a", startTime: "09:00", endTime: "10:00", stepMinutes: 30 },
     ];
     expect(rows({ windows })).toEqual(["08:00", "09:00", "09:30"]);
+  });
+});
+
+describe("groupStartTimes (turmas na faixa, cliente, 11/nov/2026)", () => {
+  it("uma turma a cada duração, do início ao fim", () => {
+    expect(groupStartTimes("08:00", "12:00", 60)).toEqual(["08:00", "09:00", "10:00", "11:00"]);
+    expect(groupStartTimes("08:00", "09:30", 40)).toEqual(["08:00", "08:40"]);
+  });
+  it("faixa mais curta que o exame: a turma do início, como antes", () => {
+    expect(groupStartTimes("10:00", "10:30", 60)).toEqual(["10:00"]);
   });
 });
