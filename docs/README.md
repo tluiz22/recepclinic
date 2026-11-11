@@ -11,6 +11,9 @@
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
+> **Validação final (11/nov, `59049142`):** CI verde (tipos no formato da CLI 2.121: atualizar a local, 2.119),
+> 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
+> Antes de aplicar: ler na produção se há exames repetidos (`juntar_exames_repetidos` apaga a cópia).
 > **Próximo (cliente, 11/nov):** preparar a implantação da `main` em produção (`producao.md`: migrações desde
 > `64ec6b1`, portal na clínica piloto). Depois: F3f, o bot enxuto (seção 15.6), nas condições da F3-9. Roteiro 16.2 da
 > F5a e Resumo do dia por profissional (seção 16.4) validados em 11/nov. Clínica Exemplo Saúde do staging com 12 profissionais
