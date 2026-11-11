@@ -30,7 +30,8 @@ interface Props {
   /** Nome da área cujas seções vêm no slot "side" (ex.: "Configurações"), no lugar do menu principal. */
   sideTitle?: string;
   /** Telas da Agenda (Dia, Semana e Próximos horários livres; cliente, 11/nov/2026): a largura toda ao lado do menu,
-   * sem o limite de 1104 px, com 16 px nas laterais e 14 px no topo (12 px no celular). */
+   * sem o limite de 1104 px, com 24 px nas laterais e 20 px no topo (16 px e 16 px no celular; cliente, 11/nov/2026:
+   * os 16/14 px da primeira versão ficaram apertados). */
   edge?: boolean;
 }
 
@@ -40,7 +41,7 @@ const { title, platform = false, autoRefresh = false, wide = false, fill = false
 // Seções de uma área na lateral (M5, Configurações; cliente, 30/out/2026): elas aparecem no lugar do menu
 // principal, que volta pelo "‹ Menu principal" sem sair da tela.
 const hasSide = Astro.slots.has("side");
-const frame = edge ? "px-4 pt-3 sm:pt-3.5" : `px-4 pt-6 sm:pt-8 lg:px-6 ${wide ? "max-w-[1760px]" : "max-w-6xl"}`;
+const frame = edge ? "px-4 pt-4 sm:px-6 sm:pt-5" : `px-4 pt-6 sm:pt-8 lg:px-6 ${wide ? "max-w-[1760px]" : "max-w-6xl"}`;
 
 // `match`: outras rotas que deixam o item marcado (o Atendimento é do Meu dia; o Relatório do dia, da Agenda; o
 // Relacionamento antigo, de Pacientes).

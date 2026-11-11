@@ -1142,6 +1142,8 @@ especialidade, quadro hachurado para sem atendimento e feriado; legenda da barra
 iguais aos do Dia (Especialidade e Profissional a partir de 8 agendas; senão Agenda) e "Próximos horários livres".
 Celular (abaixo de 768 px): faixa dos 7 dias e a lista do dia escolhido. Bordas: opção `edge` do `AdminLayout` no Dia,
 na Semana e nos Próximos horários livres. Captura `agenda-dia` anotada em `capturas-pendentes.md`.
+Ajustes do cliente (11/nov): bordas com mais espaço (24 px nas laterais e 20 px no topo; 16 e 16 px no celular) e, no
+filtro de profissional (`ColumnPicker`), a especialidade que separa os grupos em negrito.
 
 **Roteiro de validação (staging):** 1) Agenda › Semana na Clínica Exemplo Saúde: um quadro por profissional e dia,
 agrupado por especialidade; conferir "N de M" e livres de um dia com o Dia daquele profissional. 2) Tocar num quadro:
