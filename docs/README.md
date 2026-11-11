@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui, 10/nov).** Bloco enxuto: só ambientes e próximo passo. Histórico até 10/nov no
+> **Estado atual (retomar daqui, 11/nov).** Bloco enxuto: só ambientes e próximo passo. Histórico até 10/nov no
 > [`historico.md`](historico.md) ("Bloco de retomada do README até 10/nov/2026").
 >
 > **Ambientes**
@@ -11,11 +11,12 @@
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
-> **Próximo:** roteiro 15.5.4 (F3e, `clinica-teste`) → seção 16 (F5a) → F3f e produção (F3-9).
+> **Próximo:** CE-5 (Agenda: Marcar e Próximos horários livres só com os convênios do exame) e CE-6 (Ajuda), seção
+> 15.5.7; CE-1 a CE-4 feitas e validadas (11/nov). Depois, roteiro 15.5.4 a partir do passo 2 (marcar em casa pelo
+> portal) → seção 16 (F5a) → F3f e produção (F3-9).
 > **Pendentes com o cliente:** "Minhas consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o
 > local "Consulta Domiciliar" do staging; capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações,
-> `config-horarios`); vários responsáveis por paciente (planejado: VR-1 a VR-7, D14). Convênios de cada exame
->   (planejado: CE-1 a CE-6, seção 15.5.7). Teste
+> `config-horarios`); vários responsáveis por paciente (planejado: VR-1 a VR-7, D14). Teste
 > `nao-atendimento-central` às vezes falha (depende do horário).
 >
 > **Outras frentes paradas**
