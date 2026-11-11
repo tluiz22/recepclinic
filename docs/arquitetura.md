@@ -533,6 +533,29 @@ fiscal seguem domínios separados; a fatura só lê a contagem de notas.
 cada clínica com a chave cedida; tarifa paga pela clínica direto ao Asaas. Plano em
 [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md).
 
+## D14 — Vários responsáveis por paciente (10/nov/2026)
+
+**Decisão: um paciente pode ter mais de um responsável, cada um com o seu número. A ligação paciente ↔ contato passa
+a ser uma tabela (`patient_contacts`); `patients.contact_id` continua e é o responsável principal (trocável pela
+recepção, responsável financeiro e padrão das mensagens da recepção). Só a recepção liga, desliga e troca o principal;
+bot e portal reconhecem o paciente por qualquer número ligado, e ninguém se liga sozinho pelo portal. Cada consulta
+guarda quem marcou (`appointments.booked_by_contact_id`; quem remarca passa a ser quem marcou): lembretes, confirmações
+e avisos vão para ele, e os limites por telefone contam no número dele.** Revisa o modelo "contato → pacientes" da D4a
+(um contato continua cuidando de vários pacientes; agora um paciente também tem vários contatos).
+
+**Por quê:** decisão do cliente (validação da F3, 10/nov). Com um número só, o pai que marca pelo próprio celular cria
+uma segunda ficha da criança, e histórico, lembretes, Minhas consultas, retorno, a regra de uma consulta futura por
+médico, documentos e métricas ficam divididos.
+
+**Consequências:** todo "pacientes deste número" passa por uma função do banco (`contact_patient_ids`); anonimizar
+apaga junto só o responsável que fica sem paciente; fichas repetidas não são juntadas (a recepção desativa a
+repetida ao ligar o número); aviso ao responsável que marcou quando outro remarca ou cancela, por modelo próprio da
+Meta. Decisões VR-1 a VR-7, telas UI-1 a UI-6 e etapas em
+[`planejamento-varios-responsaveis.md`](planejamento-varios-responsaveis.md).
+
+**Descartado:** o portal ligar o número sozinho (risco de um estranho ver as consultas da criança); mensagens para
+todos os responsáveis (em dobro na Meta); juntar fichas movendo o histórico; somar os limites da família.
+
 ## Padrões assumidos (revisáveis)
 
 Pontos dos limites com caminho óbvio, que não precisaram de decisão. Qualquer um pode ser revisto.
