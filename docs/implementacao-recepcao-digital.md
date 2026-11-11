@@ -879,6 +879,10 @@ coluna `slot_holds.home_visit_address` e função `portal_hold_group_slot` no ba
 7. **Agenda de Exames:** enquanto alguém confirma a turma (reserva aberta), outro exame no mesmo horário continua
    aparecendo no portal.
 
+**Validação (11/nov/2026):** passos 2, 3 e 4 ok. Ajuste: em "Dia e horário", "Ver valores e convênios aceitos" mostrava
+o menor valor de todos os lugares (o do consultório) também em "Em casa"; passa a mostrar o particular do lugar
+escolhido (`horarios.astro`).
+
 #### 15.5.5 Exames repetidos na agenda de Exames (cliente, 10/nov/2026)
 
 Pergunta do cliente na validação: no staging, Espirometria e Exame com Arquivo apareciam em dobro na agenda de Exames.

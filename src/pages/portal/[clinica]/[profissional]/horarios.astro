@@ -136,6 +136,15 @@ const placePrice = (type: "clinic" | "home_visit") => {
   const cents = values.length ? Math.min(...values) : null;
   return cents ? formatPrice(cents) : null;
 };
+// "Ver valores e convênios aceitos" (cliente, 11/nov/2026): o particular do lugar escolhido (em casa, o valor de casa),
+// não o menor de todos os lugares.
+const priceType: "clinic" | "home_visit" | null = atHome ? "home_visit" : whereType;
+const pricedHere = priceType ? consultations.map((c) => c.prices[priceType]).filter((v): v is number => typeof v === "number" && v > 0) : [];
+const privateHere = professional
+  ? priceType && pricedHere.length
+    ? privateLabel({ ...professional, privatePriceCents: Math.min(...pricedHere), privatePriceVaries: new Set(pricedHere).size > 1 })
+    : privateLabel(professional)
+  : "";
 const placeHref = (value: PortalWhere) => portalHref(timesPath, { ...keep, onde: WHERE_PARAM[value], date: null, start: null });
 const taken = params.get("erro") === "horario";
 const unavailableNote = !strip?.unavailable
@@ -266,7 +275,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
             <details class="self-start rounded-[14px] border border-gray-200 bg-white px-4">
               <summary class="flex min-h-[52px] cursor-pointer items-center font-bold text-clinic-ink">Ver valores e convênios aceitos</summary>
               <p class="pb-3.5 text-base">
-                {professional.acceptsPrivate ? `${privateLabel(professional)}.` : professional.exam ? "Não aceita particular." : "Não atende particular."}
+                {professional.acceptsPrivate ? `${privateHere}.` : professional.exam ? "Não aceita particular." : "Não atende particular."}
                 {professional.plans.length > 0 && ` ${professional.plans.map((p) => p.name).join(", ")}.`}
               </p>
             </details>
