@@ -1092,6 +1092,12 @@ recebia "não está mais ativo". Teste de banco `varios-responsaveis-bot.test.ts
   da publicação na produção). Consequência: o paciente não entra mais sozinho na lista de espera (o Encaixe saiu do chat); entra
   pela recepção.
 
+**Retomar daqui (sessão de 11/nov encerrada pelo cliente):** branch `bot-enxuto` (só local) com E1 (`99fa86ec`) e E2+E3
+(`d167c099`); validação da E2+E3 pelo cliente **pendente**. Decisão do cliente (11/nov): **conversa parada no menu encerra em
+silêncio** (volta ao começo sem mandar o "encerramos este atendimento"), a fazer junto da próxima etapa liberada. Depois: E4
+(cortesia, BE-8), E5 (portal), E6 (confirmação, migração), E7 (lembrete novo), E8 (fechamento). Captura `config-mensagens` na
+fila, sem autorização ainda.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),
