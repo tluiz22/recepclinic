@@ -958,6 +958,47 @@ aceita Unimed?" responde pelo exame; convênio aceito só em exame entra na list
 …"). Informações gerais › Convênios segue por profissional (os exames ficam fora dela desde 08/nov). Jornada do bot
 atualizada. Testes `bot-convenio` e `answers.test`.
 
+### 15.6 Bot enxuto: a F3f revista (cliente, 11/nov/2026; planejado) [Cliente]
+
+**Por quê:** desde 1/out/2026 a Meta cobra também as mensagens do bot dentro da janela de 24h (preço de "utilidade";
+fontes de parceiros, conferir na página oficial da Meta). Hoje o paciente novo de clínica com vários médicos recebe ~5
+mensagens até o link; quem tem consulta, 4 a 6. Com o portal fazendo marcação, remarcação, cancelamento e informações,
+o WhatsApp vira porta de entrada. Canvas aprovado tela a tela: https://claude.ai/artifact/D2YoZHDD85NqkYXMnMeF23.
+
+- **BE-1 Quando (e):** **a F3f vira o bot enxuto**: uma limpeza só, nas condições da F3-9. A VR1 (banco) não depende
+  disso; a VR2 (bot) vem depois e fica menor.
+- **BE-2 Menu principal:** cabeçalho "Clínica [Nome]", "Olá! Seja bem-vindo(a). Como podemos ajudar?", botão "Ver
+  opções" e lista (título ≤24, descrição ≤72): **📅 Agendar** (Consulta ou exame, pelo portal) · **🗓 Minhas consultas**
+  (Consultar, remarcar ou cancelar) · **👥 Profissionais** (Especialidades, valores e convênios) · **🎧 Falar com a
+  recepção** (Atendimento com a nossa equipe). A lista do WhatsApp não aceita ícone: emoji é o único símbolo (cliente
+  escolheu emoji). Sai do bot: especialidade/profissional antes do menu, submenus Consultas/Exames, Informações gerais,
+  Encaixe no chat, "Identificamos um agendamento…" e a data de nascimento.
+- **BE-3 Link (1 mensagem, botão de link):** Agendar: "Para agendar sua consulta ou exame, toque no botão abaixo. Você
+  escolhe o profissional, o dia e o horário." [Agendar no portal]; Minhas consultas: "Para ver, remarcar ou cancelar
+  suas consultas, toque no botão abaixo." [Minhas consultas]; Profissionais: "Veja os profissionais, valores e convênios
+  aceitos. Se quiser, já agenda por lá." [Ver profissionais]. O link chega com o celular comprovado (sem código).
+- **BE-4 Recepção:** 1 mensagem ("Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor."), conversa
+  em Aguardando, bot calado até finalizar. **Fora do horário (d):** a mesma mensagem acrescenta o horário da recepção
+  ("…atende de seg. a sex., 8h às 18h, e responde assim que abrir").
+- **BE-5 Portal, início:** ícones Lucide iguais ao menu (calendar-plus em Agendar consulta, calendar-clock em Minhas
+  consultas, users, headset no botão Recepção); "Ver médicos, convênios e valores" deixa de ser link pequeno e vira a
+  opção "Profissionais e valores" (Especialidades, valores e convênios) junto das outras.
+- **BE-6 Portal, Profissionais, valores e convênios:** a página `/medicos` sem especialidade, com título próprio, ícone
+  users, "‹ Início", sem a barra de passos; **filtro de Especialidade** (novo) ao lado de "Atende meu convênio";
+  "Agendar ›" visível no rodapé do cartão. Lista compacta (6+) com os dois filtros.
+- **BE-7 Texto livre (a):** a IA responde a pergunta e depois manda o menu (como hoje; 2 mensagens + IA).
+- **BE-8 Cortesia (b):** depois do menu, de um link ou de uma orientação, mensagem só de confirmação, agradecimento ou
+  reação ("ok", "certo", "entendi", "perfeito", "obrigado/a", "valeu", 👍 👌 😊 e reações) **não tem resposta**, sem
+  prazo e sem encerrar a conversa. Com pedido junto ("ok, mas qual o valor?", "obrigado, quero remarcar") segue o
+  caminho normal; pedido de recepção transfere na hora; na dúvida, responde. Entra junto do bot enxuto.
+- **BE-9 Confirmação (c):** fica. Configurações › Lembretes ganha o quadro "Confirmação ao paciente" com duas caixas,
+  ligadas por padrão: **Marcadas pelo portal** e **Marcadas pela recepção**.
+- **BE-10 Lembrete (c):** endereço e mapa dentro do lembrete; botões **Confirmar presença** (resposta só "Presença
+  confirmada ✓") · **Remarcar ↗** · **Cancelar ↗** (links do portal, direto na ação). Modelo novo na Meta (Suporte).
+- **Junto (da F3f original):** sai a marcação no chat, `/agendar` e `api/agendar` (após vencerem os links), o pedido não
+  concluído, F3-5/F3-7 (sem link ou fora do portal → recepção), fim do "Primeiro horário". Jornada do bot refeita;
+  artigos da Central e capturas revistos (fila em `capturas-pendentes.md` na etapa de código).
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

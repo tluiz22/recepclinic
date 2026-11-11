@@ -7,7 +7,9 @@
 > - **Feito (10/nov):** levantamento do impacto no código (seção 3), modelo (seção 4), **decisões VR-1 a VR-7**
 >   (seção 5) e **telas UI-1 a UI-6** (seção 6, canvas aprovado tela a tela), **D14** em [`arquitetura.md`](arquitetura.md)
 >   e as etapas VR1 a VR5 (seção 7).
-> - **Próximo:** aprovação do cliente para começar a VR1, **depois da F3f**. Nenhum código, branch ou migração até lá.
+> - **Próximo:** VR1 (só banco) **liberada antes da F3f** (cliente, 11/nov: a F3f virou o bot enxuto,
+>   `implementacao-recepcao-digital.md` 15.6, BE-1); falta o OK para começar. A VR2 (bot) fica depois da F3f e menor
+>   (sem data de nascimento, Cancelar e Remarcar no chat).
 
 ## 1. O problema
 
