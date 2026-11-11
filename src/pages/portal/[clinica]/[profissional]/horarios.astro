@@ -18,7 +18,7 @@ import { capitalize } from "../../../../lib/vocabulary";
 import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../lib/clinicTime";
 import { slotChoiceValue } from "../../../../lib/data/agenda/publicBooking";
 import { openPortalPage, professionalOf, singleProfessional } from "../../../../lib/data/portal/page";
-import { groupSessions, isProfessionalDayOpen, locationsAt, placesOf, professionalDates, professionalSlots } from "../../../../lib/data/portal/portal";
+import { isProfessionalDayOpen, locationsAt, placesOf, professionalDates, professionalSlots } from "../../../../lib/data/portal/portal";
 import { hitLimits, readSession, releaseHold } from "../../../../lib/data/portal/identity";
 import { blockedText, ipPrefix, LIMITS } from "../../../../lib/portalIdentity";
 import { buildDayStrip, type DayStrip } from "../../../../lib/dayStrip";
@@ -63,12 +63,9 @@ let blockedUntil: Date | null = null;
 let sessionId: string | null = null;
 let viaBotLink = false;
 let waitlist = false;
-// Turma (F3e-2, D5 TU2a): lista de dias com vaga, sem o número de vagas, com "Ver mais dias".
-const GROUP_PAGE = 8;
+// Turma (F3e-2): a faixa de dias e os horários da turma, como nos outros serviços (cliente, 11/nov/2026; antes, D5
+// TU2a, a lista de dias), sem o número de vagas.
 const isGroup = !!professional?.exam?.isGroup;
-const GROUP_MAX = 60;
-const groupShown = Math.min(Math.max(Number.parseInt(params.get("mais") ?? "", 10) || GROUP_PAGE, GROUP_PAGE), GROUP_MAX);
-let groupMore = false;
 if (page.kind === "open" && professional && consultation && modality) {
   // Limite de consultas de horários (F2b; proposta 7.2): por IP e, com sessão, por sessão.
   const session = await readSession(page.db, page.portal.clinicId, Astro.cookies);
@@ -89,18 +86,7 @@ if (page.kind === "open" && professional && consultation && modality) {
   // Voltou da reserva: o horário é solto para todos.
   if (session && params.get("soltar")) await releaseHold(page.db, page.portal.clinicId, session.id);
 }
-if (page.kind === "open" && professional && consultation && modality && !blockedUntil && isGroup) {
-  const sessions = await groupSessions(page.db, page.portal.clinicId, professional, timeZone, { count: groupShown + 1, sessionId });
-  // No teto (60 dias), sem "Ver mais dias": o link não traria nada novo.
-  groupMore = sessions.length > groupShown && groupShown < GROUP_MAX;
-  const locationName = (id: string) => professional.locations.find((l) => l.id === id)?.name ?? "";
-  slotOptions = sessions.slice(0, groupShown).map((s) => ({
-    value: slotChoiceValue({ start: s.start, agendaId: professional.agendaId, locationId: s.locationId }),
-    label: capitalize(formatCalendarDate(s.date, "EEEE, d 'de' MMMM")),
-    detail: `às ${s.time}${professional.locations.length > 1 ? `, ${locationName(s.locationId)}` : ""}`,
-    summary: `${capitalize(formatInstant(s.start, timeZone, "EEE").slice(0, 3))}, ${formatInstant(s.start, timeZone, "dd/MM 'às' HH:mm")}`,
-  }));
-} else if (page.kind === "open" && professional && consultation && modality && !blockedUntil) {
+if (page.kind === "open" && professional && consultation && modality && !blockedUntil) {
   const dates = await professionalDates(page.db, page.portal.clinicId, professional, consultation.serviceId, timeZone, { sessionId, scope });
   strip = buildDayStrip(dates, dateParam("date"), dateParam("start"));
   if (strip.unavailable && !strip.selected && dates.length) strip = { ...buildDayStrip(dates, null, null), unavailable: strip.unavailable };
@@ -204,7 +190,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
             </nav>
           )}
           {!where && atHome && <p class="mt-2 rounded-[14px] border border-gray-200 bg-white px-4 py-3 text-base">Atendimento em casa: {shortName(professional.name)} vai até o endereço que você informar, pedido depois de escolher o paciente.</p>}
-          <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">{isGroup ? "Escolha o dia" : "Escolha o dia e o horário"}</h1>
+          <h1 class="mt-2 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Escolha o dia e o horário</h1>
           {waitlist && <PortalWaitlistNotice />}
           {consultations.length > 1 && (
             <nav aria-label="Tipo de consulta" class="flex flex-col gap-2">
@@ -235,20 +221,9 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
               <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">Esse horário acabou de ser ocupado por outra pessoa. Escolha outro.</p>
             )}
             {unavailableNote && <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="status">{unavailableNote}</p>}
-            {blockedUntil ? null : isGroup && slotOptions.length ? (
+            {blockedUntil ? null : strip && strip.selected ? (
               <>
-                <p class="text-base text-gray-600">O exame é feito em grupo, no horário marcado. Só aparecem os dias com vaga.</p>
-                {params.get("date") && <input type="hidden" name="date" value={params.get("date")!} />}
-                <PatientSlots options={slotOptions} sessions />
-                {groupMore && (
-                  <a href={portalHref(timesPath, { ...keep, mais: String(groupShown + GROUP_PAGE) })} class="flex min-h-[52px] items-center justify-center rounded-xl border-[1.5px] border-gray-300 bg-white font-bold text-clinic-ink no-underline hover:border-clinic-ink">
-                    Ver mais dias
-                  </a>
-                )}
-              </>
-            ) : strip && strip.selected ? (
-              <>
-                <p class="text-base text-gray-600">Só aparecem os dias com horário livre.</p>
+                <p class="text-base text-gray-600">{isGroup ? "O exame é feito em grupo, no horário marcado. Só aparecem os dias com vaga." : "Só aparecem os dias com horário livre."}</p>
                 <input type="hidden" name="date" value={strip.selected} />
                 <PatientDayStrip strip={strip} title="Dias com horário" href={dayHref} />
                 <p class="mt-1 font-display text-[21px] font-bold lg:text-[22px]">{capitalize(formatCalendarDate(strip.selected, "EEEE, d 'de' MMMM"))}</p>

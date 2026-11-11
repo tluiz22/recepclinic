@@ -767,6 +767,8 @@ e "Rodada 5 (D5): exame em turma"), revisada tela por tela e aprovada. Sem códi
 - **Turma, lista de exames (TU1):** etiqueta "Em grupo, horário fixo" e a linha que explica o termo.
 - **Turma, dia (TU2a):** lista de cartões (dia por extenso e hora) com "Ver mais dias", no lugar da faixa de dias;
   **sem número de vagas**, só as turmas com vaga no prazo. A reserva segura uma vaga. Recusada: faixa de dias (TU2b).
+  **Revista pelo cliente (11/nov/2026):** a turma passa à faixa de dias e aos horários do dia, como nos outros serviços
+  (TU2b); a lista de dias saiu.
 
 - **Exame em agenda de profissional (F3-8, 10/nov): sem efeito.** A pergunta foi feita e respondida (na lista de
   exames, EP1a/EP1b), mas o caso não existe: desde 08/nov (decisão do cliente, migração `20270101150000`) exame é
@@ -882,6 +884,8 @@ coluna `slot_holds.home_visit_address` e função `portal_hold_group_slot` no ba
 **Validação (11/nov/2026):** passos 2, 3 e 4 ok. Ajuste: em "Dia e horário", "Ver valores e convênios aceitos" mostrava
 o menor valor de todos os lugares (o do consultório) também em "Em casa"; passa a mostrar o particular do lugar
 escolhido (`horarios.astro`).
+Ajuste 2: a turma no portal mostrava a lista de dias (TU2a), diferente dos outros serviços; passa à faixa de dias e aos
+horários do dia (cliente, 11/nov/2026), sem o número de vagas.
 
 #### 15.5.5 Exames repetidos na agenda de Exames (cliente, 10/nov/2026)
 
