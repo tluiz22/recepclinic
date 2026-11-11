@@ -204,6 +204,9 @@ begin
     (c_a, p_ped, ip_unimed), (c_a, p_ped, ip_bradesco), (c_a, p_ped, ip_hapvida),
     (c_a, p_psi, ip_unimed), (c_a, p_psi, ip_bradesco), (c_a, p_psi, ip_hapvida),
     (c_a, p_fis, ip_unimed), (c_a, p_fis, ip_bradesco);
+  -- Convênios de cada exame (CE-1, 10/nov/2026): a Espirometria aceita Unimed, com observação.
+  insert into public.service_insurance_plans (clinic_id, service_id, insurance_plan_id, note) values
+    (c_a, s_espiro, ip_unimed, 'Com o pedido médico.');
 
   insert into public.contacts (clinic_id, full_name, phone, default_home_address)
     values (c_a, 'Maria Souza', '+5584988880001', 'Rua A, 10 – Nova Betânia') returning id into ct_maria;

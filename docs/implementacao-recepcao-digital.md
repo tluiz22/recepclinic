@@ -933,6 +933,12 @@ da F2d, seção acima). **Decisões do cliente:**
 | CE-5 Agenda | Marcar e Próximos horários livres: só os planos do exame; conferência no servidor |
 | CE-6 Ajuda | Artigo de Serviços e captura, se mudar a tela (capturas-pendentes) |
 
+**CE-1 feita (11/nov/2026):** migração `20270110140000_convenios_do_exame`: `services.accepts_private`,
+`service_insurance_plans` (com observação; só exame, pela `app.feature_rules`; item Convênios), `set_service_accepts_private`
+e o gatilho `services_guard_accepts_private` (pela tela, o Particular só muda com a permissão de convênios), trilha com
+`insurance_change_log.service_id`. Seed: Espirometria aceita Unimed. Teste `tests/db/convenios-do-exame.test.ts`. Aplicada
+só no banco local. Staging: com o OK do cliente.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),
