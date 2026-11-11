@@ -366,3 +366,39 @@ suíte inteira, `security-review` e `/code-review`, sem juntar na `main`.
 - **Fica para a F3f (ponto 1):** o bot ainda acha pacientes e consultas só pelo principal (`bot/manage.ts`,
   `bot/booking.ts`): o responsável que não é o principal recebe lembrete e aviso, mas no chat não vê as consultas e o
   bot oferece cadastrar de novo. Entra com o UI-5 (Remarcar e Cancelar do bot). **VR2 e VR3 não vão à produção antes.**
+
+## 9. Roteiro de validação no staging (11/nov/2026)
+
+Onde: `teste.recepclinic.com.br`, **Clínica Exemplo Saúde** (portal `clinica-teste`, chip de testes `+55 61 9903-3143`).
+Uma tela por vez; ajuste pedido entra direto na `main` (vai ao staging no push). **Não vai à produção antes da F3f.**
+
+**Preparo (antes da V1):**
+- Dois celulares reais com WhatsApp: **A** (principal) e **B** (2º responsável). Os pacientes fictícios têm DDD 00 e não
+  recebem nada; para ver mensagens, o paciente de teste usa A e B.
+- Paciente de teste novo: "Teste VR Filho", nascimento qualquer, responsável principal com o celular A (Pacientes ›
+  Novo). Uma consulta futura marcada para ele pelo painel.
+- Ficha repetida de propósito: outra ficha com o **mesmo nome e nascimento**, com o celular B como principal e uma
+  consulta futura (para a V2).
+
+| # | Tela | O que fazer | O que deve acontecer |
+|---|---|---|---|
+| V1 | Ficha (UI-1) | Abrir "Teste VR Filho" | Alto sem o contato (nome, selos, idade/plano, Marcar, Mais). Cartão **"Responsáveis (1)"** com nome, número em texto, WhatsApp e "+ Adicionar"; sem selo Principal (só com dois ou mais). Profissional só vê (sem Adicionar) |
+| V2 | Adicionar responsável (UI-2) | "+ Adicionar" → celular B | Aviso de **ficha parecida** com "Desativar a outra ficha" já marcado, dizendo que ela tem 1 consulta futura ("remarque nesta ficha antes") e "Abrir a outra ficha". Parentesco (sugestões mãe, pai…). "Ligar …" pede confirmação falando em desativar. Voltar/Cancelar → ficha. Também: número novo pede o nome; erro mantém o que foi digitado |
+| V3 | Ficha com dois | Voltar à ficha | "Responsáveis (2)", selo Principal no A; no B, "Mais" com **Tornar principal** e **Desligar** (com confirmação). Consulta diz "Marcada pela recepção · avisos para A". A ficha repetida aparece desativada. Página do contato B lista "outro responsável (parentesco)" |
+| V4 | Marcar (UI-6) | Agenda › Marcar para "Teste VR Filho"; buscar também pelo celular B | Busca acha o paciente pelo B. Campo **"Confirmação e lembrete no WhatsApp para"** com A e B, padrão A (pelo Atendimento, na conversa de B, padrão B). Marcar escolhendo B: a confirmação chega no **celular B**, não no A. Ficha: "Marcada pela recepção · avisos para B" |
+| V5 | Portal pelo B (UI-3) | No celular B, portal `clinica-teste` › Marcar | Código chega no B. "Para quem…" mostra "Teste VR Filho" com "também com (A)" e, embaixo de "Outra pessoa", "Falta alguém? Peça à recepção…". Marcar uma consulta: confirmação no B |
+| V6 | Minhas consultas pelo B (UI-4) | Portal › Minhas consultas no B | Todas as consultas do paciente, inclusive as que A marcou: "Marcada por você", "Marcada por A, que recebe os avisos" ou "Marcada pela recepção, com avisos para …". Remarcar e Cancelar em todas |
+| V7 | Avisos da VR4 | **Só com os modelos aprovados na Meta** (Configurações › WhatsApp: "Remarcada/Cancelada por outro responsável" aprovados). No B, remarcar uma consulta que A marcou; depois, cancelar outra que A marcou | A recebe "*Consulta remarcada* · B (parentesco) remarcou…" e "*Consulta cancelada*…". B recebe o aviso de quem remarcou/cancelou. Depois de remarcar, a consulta passa a ser "Marcada por você" no B. Sem modelo aprovado: nada sai para A (correto) |
+| V8 | Tornar principal e Desligar | Na ficha, tornar B principal; depois desligar A (com uma consulta futura que A marcou) | Selo passa para B; quem marcou não muda. Desligar A: as consultas futuras que A marcou passam para o principal (avisos vão para B) |
+| V9 | Portal bloqueado | Errar o código do portal no B até bloquear | Faixa da ficha diz qual responsável está bloqueado ("Celular … (parentesco)"); "Liberar agora" solta só ele |
+| V10 | Bloquear no bot | Página do contato B › Bloquear no bot (Administrador) | Texto da confirmação diz que cancela **só o que esse número marcou**; as consultas marcadas por A continuam |
+| V11 | Importação com 2º telefone | Sistema › Clínicas › Clínica Exemplo › Agenda atual: gerar o link; preencher um cartão com "Nome/WhatsApp do 2º responsável" | Conferência pede os dois juntos, número válido e diferente do 1º. Revisão do Suporte mostra o 2º e avisa se o número já é de um contato. Carregar: ficha com "Responsáveis (2)". Desfazer: desliga o 2º (se não marcou consulta) |
+| V12 | Anonimizar | Ficha › Mais › Anonimizar, num paciente com dois responsáveis, um deles cuidando de outro paciente | A prévia diz, por responsável, quem perde os dados e quem **continua, porque também cuida de …**. Depois: o que continua mantém nome e telefone |
+
+**O que ainda NÃO funciona (fica para a F3f, UI-5):**
+- **O bot só reconhece o responsável principal.** No WhatsApp, B (não principal) recebe lembrete, confirmação e aviso,
+  mas ao conversar com o bot não vê as consultas do paciente e o bot oferece cadastrar de novo.
+- Remarcar e Cancelar **pelo bot** não listam os pacientes ligados nem mandam o aviso da VR4 (só o portal manda).
+- Por isso a VR (VR2 e VR3) **não vai à produção antes da F3f**.
+
+Resultado de cada tela: anotar aqui (ok ou ajuste com o commit).
