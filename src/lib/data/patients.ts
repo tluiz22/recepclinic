@@ -7,6 +7,7 @@ import type { DbClient } from "./clients";
 import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "./errors";
 import { documentPaths, removeDocumentFiles } from "./patientDocuments";
 import { addPatientNote } from "./patientNotes";
+import { linkPatientContact, twinsOfOtherResponsibles, type OtherResponsibleTwin } from "./patientContacts";
 import { logError } from "../log";
 
 // Contatos e pacientes (D4a, D10). O contato é quem conversa no WhatsApp
@@ -259,6 +260,25 @@ async function contactForPhone(db: DbClient, clinicId: string, phone: string, fu
   throw fromDbError(error, "Contato");
 }
 
+/**
+ * Responsável novo da ficha (VR2, UI-2): o contato do celular, se já existe (reativado, se preciso); senão um contato
+ * novo com o nome informado. O nome só é pedido quando o número não tem cadastro.
+ */
+export async function contactForResponsible(db: DbClient, clinicId: string, input: { phone: string; fullName?: string | null }): Promise<Contact> {
+  const v = new Validation();
+  const phone = normalizePhone(input.phone ?? "");
+  v.check(phone !== null && !isAnonymizedPhone(phone), "phone", PATIENT_MESSAGES.invalidPhone);
+  v.throwIfInvalid("Responsável");
+  const existing = await findContactByPhone(db, clinicId, phone!);
+  if (existing?.anonymizedAt) throw new DataError("invalid", "Responsável: número anonimizado", { phone: "Este número foi anonimizado; use outro." });
+  const fullName = cleanText(input.fullName) ?? "";
+  if (!existing) {
+    v.check(fullName.length > 0, "fullName", "Informe o nome do responsável");
+    v.throwIfInvalid("Responsável");
+  }
+  return contactForPhone(db, clinicId, phone!, fullName);
+}
+
 // ---------------------------------------------------------------------------
 // Pacientes
 // ---------------------------------------------------------------------------
@@ -273,9 +293,15 @@ export async function listContactPatients(
   db: DbClient,
   clinicId: string,
   contactId: string,
-  { includeInactive = false }: { includeInactive?: boolean } = {},
+  /** `linked`: todos os pacientes de que o número é responsável (D14), não só aqueles em que é o principal. */
+  { includeInactive = false, linked = false }: { includeInactive?: boolean; linked?: boolean } = {},
 ): Promise<Patient[]> {
-  let query = db.from("patients").select(PATIENT_COLUMNS).eq("clinic_id", clinicId).eq("contact_id", contactId).order("full_name");
+  let query = db.from("patients").select(PATIENT_COLUMNS).eq("clinic_id", clinicId).order("full_name");
+  if (linked) {
+    const ids = unwrap(await db.from("patient_contacts").select("patient_id").eq("clinic_id", clinicId).eq("contact_id", contactId), "Pacientes do contato").map((r) => r.patient_id);
+    if (!ids.length) return [];
+    query = query.in("id", ids);
+  } else query = query.eq("contact_id", contactId);
   if (!includeInactive) query = query.eq("is_active", true);
   return unwrap(await query, "Pacientes do contato").map(toPatient);
 }
@@ -284,10 +310,9 @@ export async function listContactPatients(
 export async function searchPatients(db: DbClient, clinicId: string, query: string): Promise<PatientWithContact[]> {
   const term = parseSearch(query);
   if (!term || query.trim().length < 2) return [];
-  const byPhone = term.kind === "phone";
   let request = db
     .from("patients")
-    .select(`${PATIENT_COLUMNS}, contacts!${byPhone ? "inner" : "left"} ( ${CONTACT_COLUMNS} )`)
+    .select(`${PATIENT_COLUMNS}, contacts!left ( ${CONTACT_COLUMNS} )`)
     .eq("clinic_id", clinicId)
     .eq("is_active", true);
   let ids: string[] | null = null;
@@ -295,6 +320,11 @@ export async function searchPatients(db: DbClient, clinicId: string, query: stri
     ids = await idsByName(db, "patients", clinicId, term.text, false, 10);
     if (ids.length === 0) return [];
     request = request.in("id", ids);
+  } else if (term.kind === "phone") {
+    // Celular de qualquer responsável ligado (VR2, D14), não só o do principal.
+    const byPhone = await patientIdsByPhone(db, clinicId, term.digits);
+    if (byPhone.length === 0) return [];
+    request = request.in("id", byPhone);
   } else request = filterPatients(request, term);
   const found = unwrap(await request.order("full_name").limit(10), "Busca de pacientes") as unknown as (PatientRow & {
     contacts: ContactRow;
@@ -368,6 +398,10 @@ export async function listPatientsPage(
   } else if (term?.kind === "name") {
     // Sem o CPF de quem paga: os parecidos (até 150, para caber no endereço) pela função, em ordem de nome.
     const ids = await idsByName(db, "patients", clinicId, term.text, includeInactive, 150);
+    if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
+    request = request.in("id", ids);
+  } else if (term?.kind === "phone") {
+    const ids = await patientIdsByPhone(db, clinicId, term.digits, includeInactive);
     if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
     request = request.in("id", ids);
   } else if (term) request = filterPatients(request, term);
@@ -448,6 +482,11 @@ export type RegisterPatientInput = {
    * cadastrado com o WhatsApp novo ou cadastrar um novo responsável.
    */
   similarContact?: { action: "update_phone"; contactId: string } | { action: "new" };
+  /**
+   * Resposta à ficha de outro responsável (mesmo nome e nascimento; cliente, 11/nov/2026): ligar o número à ficha
+   * existente (2º responsável, com o parentesco) ou cadastrar mesmo assim.
+   */
+  otherResponsible?: { action: "link"; patientId: string; kinship?: string | null } | { action: "new" };
   /** Cadastro pelo bot: conta no limite de cadastros do contato (F9.6a). Padrão: a equipe. */
   createdVia?: "admin" | "whatsapp" | "portal";
 };
@@ -458,6 +497,10 @@ export type RegisterPatientResult =
   | { status: "confirm_same_person"; contact: Contact }
   /** O contato já tem paciente ativo com a mesma data de nascimento ou o nome parecido (C19). */
   | { status: "possible_duplicate"; contact: Contact; existingNames: string[]; existing: SimilarPatient[] }
+  /** O número foi ligado à ficha que já existia (outro responsável), sem criar paciente. */
+  | { status: "linked"; patientId: string; contact: Contact }
+  /** Há ficha com o mesmo nome e nascimento cuidada por outro responsável: ligar este número a ela? */
+  | { status: "other_responsible"; twins: OtherResponsibleTwin[] }
   /** Telefone novo, mas há responsável com o nome parecido (C19): mesma pessoa com outro WhatsApp? */
   | { status: "similar_contact"; phone: string; matches: SimilarContact[] };
 
@@ -493,6 +536,23 @@ export async function registerPatient(
   const checkSimilar = (input.createdVia ?? "admin") === "admin";
   let contact: Contact;
   let contactExisted: boolean;
+
+  // Ficha de outro responsável (cliente, 11/nov/2026): antes de criar o número, para não sobrar contato solto.
+  const choice = input.otherResponsible;
+  if (checkSimilar && input.contact.mode !== "self" && choice?.action !== "new") {
+    const known = input.contact.mode === "existing" ? await getContact(db, clinicId, input.contact.contactId) : await findContactByPhone(db, clinicId, phone!);
+    const twins = await twinsOfOtherResponsibles(db, clinicId, fullName, input.birthdate, known?.id ?? null);
+    if (choice?.action === "link") {
+      const target = twins.find((t) => t.id === choice.patientId);
+      if (!target) throw new DataError("invalid", "Paciente: a ficha mudou; confira os dados e tente de novo.");
+      if (known?.anonymizedAt) throw new DataError("invalid", "Responsável: número anonimizado", { phone: "Este número foi anonimizado; use outro." });
+      const linked = known ?? (await contactForPhone(db, clinicId, phone!, cleanText((input.contact as { fullName: string }).fullName)!));
+      if (!linked.isActive) await setContactActive(db, clinicId, linked.id, true);
+      await linkPatientContact(db, clinicId, target.id, linked.id, cleanText(choice.kinship)?.slice(0, 40) ?? null);
+      return { status: "linked", patientId: target.id, contact: { ...linked, isActive: true } };
+    }
+    if (twins.length) return { status: "other_responsible", twins };
+  }
 
   if (input.contact.mode === "existing") {
     contact = await getContact(db, clinicId, input.contact.contactId);
@@ -533,9 +593,16 @@ export async function registerPatient(
   }
 
   if (contactExisted && !input.confirmDuplicate) {
-    // Mesmo nascimento (F3.5) ou, pela equipe, nome parecido (C19), entre os pacientes do mesmo responsável.
+    // Mesmo nascimento (F3.5) ou, pela equipe, nome parecido (C19), entre os pacientes ligados ao número (D14: principal
+    // ou não).
     const [{ data: twins }, similarIds] = await Promise.all([
-      db.from("patients").select("id").eq("clinic_id", clinicId).eq("contact_id", contact.id).eq("is_active", true).eq("birthdate", input.birthdate),
+      db
+        .from("patient_contacts")
+        .select("id:patient_id, patients!inner ( is_active, birthdate )")
+        .eq("clinic_id", clinicId)
+        .eq("contact_id", contact.id)
+        .eq("patients.is_active", true)
+        .eq("patients.birthdate", input.birthdate),
       checkSimilar
         ? db.rpc("similar_patient_ids", { p_clinic_id: clinicId, p_name: fullName, p_contact_id: contact.id }).then((r) => unwrap(r, "Pacientes parecidos"))
         : Promise.resolve([] as string[]),
@@ -682,12 +749,24 @@ export async function setPatientActive(db: DbClient, clinicId: string, id: strin
 /** `%` e `_` digitados viram texto, não curinga, na busca por nome. */
 /** Filtro da busca de pacientes: nome, telefone do contato (embutido) ou data de nascimento. */
 /** Telefone do contato ou data de nascimento (o nome vai pela função do banco, C18). */
-function filterPatients<Q extends { ilike(column: string, pattern: string): Q; eq(column: string, value: string): Q }>(
-  request: Q,
-  term: Exclude<SearchTerm, { kind: "name" }>,
-): Q {
-  if (term.kind === "phone") return request.ilike("contacts.phone", `%${term.digits}%`);
+function filterPatients<Q extends { eq(column: string, value: string): Q }>(request: Q, term: Extract<SearchTerm, { kind: "birthdate" }>): Q {
   return request.eq("birthdate", term.date);
+}
+
+/**
+ * Pacientes de qualquer responsável com o número (VR2, D14: a busca pelo celular acha a ficha também pelo 2º
+ * responsável). Até 150 (cabe no endereço do filtro seguinte).
+ */
+async function patientIdsByPhone(db: DbClient, clinicId: string, digits: string, includeInactive = false): Promise<string[]> {
+  // Os desativados saem antes do limite (senão um pedaço curto do número enche os 150 com fichas antigas).
+  let request = db
+    .from("patient_contacts")
+    .select("patient_id, contacts!inner ( phone ), patients!inner ( is_active )")
+    .eq("clinic_id", clinicId)
+    .ilike("contacts.phone", `%${digits}%`);
+  if (!includeInactive) request = request.eq("patients.is_active", true);
+  const rows = unwrap(await request.limit(150), "Busca pelo celular");
+  return [...new Set(rows.map((row) => row.patient_id))];
 }
 
 /** Quantos nomes parecidos as listas com páginas consideram, no máximo. */
@@ -724,14 +803,17 @@ function inIdOrder<T extends { id: string }>(rows: T[], ids: string[]): T[] {
 export type AnonymizationPreview = {
   /** Atendimentos futuros (marcados ou confirmados) que serão cancelados, sem aviso. */
   futureAppointments: number;
-  /** Outros pacientes do mesmo contato: ficam sem telefone até a clínica cadastrar outro. */
-  otherPatients: { id: string; fullName: string }[];
+  /**
+   * Responsáveis do paciente, o principal primeiro (VR-6, cliente, 10/nov/2026): quem não cuida de mais ninguém é
+   * anonimizado junto; quem cuida de outro paciente continua (`otherPatients`, os nomes).
+   */
+  contacts: { id: string; fullName: string; anonymized: boolean; otherPatients: string[] }[];
 };
 
 /** O que a anonimização vai fazer, para a tela mostrar antes de confirmar. */
 export async function previewAnonymization(db: DbClient, clinicId: string, patientId: string, now: Date = new Date()): Promise<AnonymizationPreview> {
   const patient = await getPatient(db, clinicId, patientId);
-  const [{ count, error }, others] = await Promise.all([
+  const [{ count, error }, links] = await Promise.all([
     db
       .from("appointments")
       .select("id", { count: "exact", head: true })
@@ -739,22 +821,42 @@ export async function previewAnonymization(db: DbClient, clinicId: string, patie
       .eq("patient_id", patientId)
       .in("status", ["scheduled", "confirmed"])
       .gt("scheduled_at", now.toISOString()),
-    listContactPatients(db, clinicId, patient.contactId, { includeInactive: true }),
+    db.from("patient_contacts").select("contact_id, contacts ( full_name )").eq("clinic_id", clinicId).eq("patient_id", patientId),
   ]);
   if (error) throw fromDbError(error, "Atendimentos futuros");
+  const contactRows = unwrap(links, "Responsáveis do paciente") as unknown as { contact_id: string; contacts: { full_name: string } | null }[];
+  const contactIds = [...new Set([patient.contactId, ...contactRows.map((row) => row.contact_id)])];
+  const others = unwrap(
+    await db
+      .from("patient_contacts")
+      .select("contact_id, patients ( full_name )")
+      .eq("clinic_id", clinicId)
+      .in("contact_id", contactIds)
+      .neq("patient_id", patientId),
+    "Outros pacientes dos responsáveis",
+  ) as unknown as { contact_id: string; patients: { full_name: string } | null }[];
+  const names = new Map(contactRows.map((row) => [row.contact_id, row.contacts?.full_name ?? ""]));
+  if (!names.get(patient.contactId)) names.set(patient.contactId, (await getContact(db, clinicId, patient.contactId)).fullName);
   return {
     futureAppointments: count ?? 0,
-    otherPatients: others.filter((p) => p.id !== patientId && !p.anonymizedAt).map((p) => ({ id: p.id, fullName: p.fullName })),
+    contacts: contactIds.map((id) => {
+      const otherPatients = others.filter((row) => row.contact_id === id).map((row) => row.patients?.full_name ?? "");
+      return { id, fullName: names.get(id) ?? "", anonymized: otherPatients.length === 0, otherPatients };
+    }),
   };
 }
 
 /**
- * Anonimiza o paciente e o contato dele (função do banco; só Administrador e
+ * Anonimiza o paciente e os responsáveis que ficam sem paciente (função do banco; só Administrador e
  * Suporte). Irreversível. Os documentos (CRM P1): o banco apaga as linhas e
  * aqui saem os arquivos, com os caminhos lidos antes; arquivo que não sai vai
  * para Administração › Erros.
  */
-export async function anonymizePatient(db: DbClient, clinicId: string, patientId: string): Promise<{ canceled: number; otherPatients: number }> {
+export async function anonymizePatient(
+  db: DbClient,
+  clinicId: string,
+  patientId: string,
+): Promise<{ canceled: number; otherPatients: number; contactsAnonymized: number; contactsKept: number }> {
   const files = await documentPaths(db, clinicId, patientId);
   const { data, error } = await db.rpc("anonymize_patient", { p_clinic_id: clinicId, p_patient_id: patientId });
   if (error) {
@@ -766,7 +868,12 @@ export async function anonymizePatient(db: DbClient, clinicId: string, patientId
   if (!(await removeDocumentFiles(db, files))) {
     logError("anonimização: arquivos dos documentos não saíram", undefined, { clinica: clinicId, paciente: patientId });
   }
-  const result = (data ?? {}) as { canceled?: number; other_patients?: number };
-  return { canceled: result.canceled ?? 0, otherPatients: result.other_patients ?? 0 };
+  const result = (data ?? {}) as { canceled?: number; other_patients?: number; contacts_anonymized?: number; contacts_kept?: number };
+  return {
+    canceled: result.canceled ?? 0,
+    otherPatients: result.other_patients ?? 0,
+    contactsAnonymized: result.contacts_anonymized ?? 0,
+    contactsKept: result.contacts_kept ?? 0,
+  };
 }
 

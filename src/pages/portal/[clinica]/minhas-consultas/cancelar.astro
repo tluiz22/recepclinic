@@ -21,7 +21,7 @@ if (view.kind === "open") {
   const { page, item } = view;
   const { db, portal } = page;
   if (Astro.request.method === "POST") {
-    const outcome = await cancelMine(db, portal.clinicId, { item, leadHours: view.leadHours, sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null) });
+    const outcome = await cancelMine(db, portal.clinicId, { item, leadHours: view.leadHours, sender: await clinicSenderFor(portal.clinicId, Astro.url).catch(() => null), phone: view.session.phone });
     if (outcome.status === "done") return Astro.redirect(portalHref(view.listHref, { aviso: "cancelada" }));
     if (outcome.status === "lead") return Astro.redirect(portalHref(view.listHref, { aviso: "prazo" }));
     if (outcome.status === "gone") return Astro.redirect(portalHref(view.listHref, { aviso: "mudou" }));

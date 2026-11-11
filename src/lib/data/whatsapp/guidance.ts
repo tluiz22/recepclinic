@@ -6,6 +6,7 @@ import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { getGuidance } from "./customMessages";
 import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate, type SendOutcome } from "./messages";
 import { PREPARATION_TRIGGER_TYPES } from "./preparation";
+import { appointmentRecipient, BOOKER_COLUMNS, type RecipientContact } from "./recipient";
 
 // Orientações gerais da consulta (cliente, 08/out/2026), com as regras do
 // preparo do exame (preparation.ts): saem **uma única vez**, depois que a
@@ -51,14 +52,15 @@ type ConsultationRow = {
   home_visit_address: string | null;
   services: { category: string };
   locations: { type: string } | null;
-  patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
+  patients: { full_name: string; contacts: RecipientContact };
+  booker: RecipientContact | null;
 };
 
 async function loadConsultation(db: DbClient, clinicId: string, appointmentId: string, now: Date): Promise<ConsultationRow | null> {
   const row = unwrap(
     await db
       .from("appointments")
-      .select("id, status, scheduled_at, home_visit_address, services ( category ), locations ( type ), patients ( full_name, contacts ( id, full_name, phone ) )")
+      .select(`id, status, scheduled_at, home_visit_address, services ( category ), locations ( type ), patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS}`)
       .eq("clinic_id", clinicId)
       .eq("id", appointmentId)
       .maybeSingle(),
@@ -83,7 +85,7 @@ async function deliverGuidance(db: DbClient, clinicId: string, row: Consultation
   const connection = await getWhatsappConnection(db, clinicId);
   if (connection?.status !== "connected") return "not_connected";
 
-  const contact = row.patients.contacts;
+  const contact = appointmentRecipient(row);
   const windowOpen = await isCustomerServiceWindowOpen(db, clinicId, contact.phone, now);
   const template = windowOpen ? null : await getApprovedTemplate(db, clinicId, "consultation_guidance");
 

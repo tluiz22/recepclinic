@@ -154,6 +154,20 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: "Olá! Aqui é {{1}}.\nVi que a nossa conversa de {{2}} ficou pendente.\nQuer continuar de onde paramos?",
     examples: ["da Clínica Sorriso", "04/11"],
   },
+  {
+    // VR4 (D14; textos do cliente, 11/nov/2026): para quem marcou, quando outro responsável remarca ou cancela.
+    // {{3}} quem mexeu ("Ana (mãe)"); {{4}} o paciente; {{5}} serviço com o profissional; {{6}} data e hora.
+    key: "rescheduled_by_other",
+    name: "rc_remarcada_por_outro_v1",
+    body: `${GREETING}\n*Consulta remarcada*\n{{3}} remarcou o atendimento de {{4}} ({{5}}) para *{{6}}*.\n\nDúvidas? Responda aqui.`,
+    examples: ["Carlos", "da Clínica Sorriso", "Ana (mãe)", "João Pedro", "Consulta com Dra. Helena Rocha", "qui 20/11 às 10:00"],
+  },
+  {
+    key: "canceled_by_other",
+    name: "rc_cancelada_por_outro_v1",
+    body: `${GREETING}\n*Consulta cancelada*\n{{3}} cancelou o atendimento de {{4}} ({{5}}) de {{6}}.\n\nSe quiser marcar outro horário, é só responder esta mensagem.`,
+    examples: ["Carlos", "da Clínica Sorriso", "Ana (mãe)", "João Pedro", "Consulta com Dra. Helena Rocha", "ter 18/11 às 09:30"],
+  },
 ];
 
 /**
@@ -187,7 +201,9 @@ export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate
       (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
       (t.key !== "waitlist_offer" || has("waitlist")) &&
       (t.key !== "nfse_document" || has("finance")) &&
-      (t.key !== "conversation_resume" || has("central_attendance")),
+      (t.key !== "conversation_resume" || has("central_attendance")) &&
+      // VR4: por enquanto só o portal remarca e cancela por outro responsável (o bot, depois da F3f).
+      ((t.key !== "rescheduled_by_other" && t.key !== "canceled_by_other") || has("portal")),
   );
 }
 

@@ -59,6 +59,7 @@ export const agendaArtigos = [
       { name: "Outro horário", text: "Quando o horário não está na lista, use \"Outro horário\" para digitar data e hora." },
       { name: "Convênio", text: "Com o item Convênios, escolha o plano; carteirinha e validade são pedidas se a clínica ligou essa opção." },
       { name: "Endereço (domiciliar)", text: "Serviço domiciliar pede o endereço do atendimento." },
+      { name: "Confirmação e lembrete no WhatsApp para", text: "Só com 2 ou mais responsáveis na ficha: escolha quem recebe a confirmação, o lembrete e os avisos. Padrão: quem está na conversa aberta no Atendimento, senão o principal." },
     ],
     result: "O atendimento entra na Agenda. Se a clínica tem o WhatsApp conectado, o paciente recebe o aviso de marcação por mensagem aprovada pela Meta.",
     notes: [

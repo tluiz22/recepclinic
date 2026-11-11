@@ -11,7 +11,9 @@ import { leaveWaitlist } from "../waitlist/entries";
 // futuros deles são cancelados sem aviso (não gasta template; a vaga volta
 // para a lista de espera) e as séries terminam (o agendador não cria mais
 // sessões). Desbloquear não desfaz nada disso. A equipe marca pelo painel
-// normalmente.
+// normalmente. Vários responsáveis (D14; cliente, 11/nov/2026): vale só para
+// os atendimentos que o número marcou (`booked_by_contact_id`); os marcados
+// por outro responsável do mesmo paciente continuam.
 
 export type ContactBlock = { blockedAt: Date; blockedBy: string | null; reason: string | null };
 
@@ -23,26 +25,24 @@ export async function getContactBlock(db: DbClient, clinicId: string, contactId:
   return row.bot_blocked_at ? { blockedAt: new Date(row.bot_blocked_at), blockedBy: row.bot_blocked_by, reason: row.bot_blocked_reason } : null;
 }
 
-async function contactPatientIds(db: DbClient, clinicId: string, contactId: string): Promise<string[]> {
-  return unwrap(await db.from("patients").select("id").eq("clinic_id", clinicId).eq("contact_id", contactId), "Pacientes do contato").map((r) => r.id);
-}
-
-/** Atendimentos marcados ou confirmados, ainda por vir, de todos os pacientes do contato. */
-export async function listContactFutureAppointmentIds(db: DbClient, clinicId: string, contactId: string, now: Date = new Date()): Promise<string[]> {
-  const patientIds = await contactPatientIds(db, clinicId, contactId);
-  if (!patientIds.length) return [];
-  const rows = unwrap(
+/** Atendimentos marcados ou confirmados, ainda por vir, que o contato marcou (D14), com a série de cada um. */
+async function contactFutureAppointments(db: DbClient, clinicId: string, contactId: string, now: Date): Promise<{ id: string; series_id: string | null }[]> {
+  return unwrap(
     await db
       .from("appointments")
-      .select("id")
+      .select("id, series_id")
       .eq("clinic_id", clinicId)
-      .in("patient_id", patientIds)
+      .eq("booked_by_contact_id", contactId)
       .in("status", ["scheduled", "confirmed"])
       .gt("scheduled_at", now.toISOString())
       .order("scheduled_at"),
     "Atendimentos do contato",
   );
-  return rows.map((r) => r.id);
+}
+
+/** Atendimentos marcados ou confirmados, ainda por vir, que o contato marcou (D14). */
+export async function listContactFutureAppointmentIds(db: DbClient, clinicId: string, contactId: string, now: Date = new Date()): Promise<string[]> {
+  return (await contactFutureAppointments(db, clinicId, contactId, now)).map((r) => r.id);
 }
 
 export type BlockResult = { canceled: number; seriesEnded: number; leftWaitlist: number };
@@ -60,7 +60,8 @@ export async function blockContact(
     "Bloquear contato",
   );
 
-  const future = await listContactFutureAppointmentIds(db, clinicId, contactId, now);
+  const futureRows = await contactFutureAppointments(db, clinicId, contactId, now);
+  const future = futureRows.map((r) => r.id);
   let leftWaitlist = 0;
   if (future.length) {
     const entries = unwrap(
@@ -73,14 +74,30 @@ export async function blockContact(
   }
   if (!cancelFuture) return { canceled: 0, seriesEnded: 0, leftWaitlist };
 
-  const patientIds = await contactPatientIds(db, clinicId, contactId);
-  const ended = patientIds.length
+  // As séries com sessões futuras marcadas pelo número e, dos pacientes de que ele é o principal, as que ainda não têm
+  // sessão (as que forem criadas iriam para ele).
+  const principalOf = unwrap(await db.from("patients").select("id").eq("clinic_id", clinicId).eq("contact_id", contactId), "Pacientes do contato");
+  const empty = principalOf.length
+    ? (
+        unwrap(
+          await db
+            .from("appointment_series")
+            .select("id, appointments ( count )")
+            .eq("clinic_id", clinicId)
+            .in("patient_id", principalOf.map((p) => p.id))
+            .is("ended_at", null),
+          "Séries do contato",
+        ) as unknown as { id: string; appointments: { count: number }[] }[]
+      ).filter((row) => (row.appointments[0]?.count ?? 0) === 0)
+    : [];
+  const seriesIds = [...new Set([...futureRows.flatMap((r) => (r.series_id ? [r.series_id] : [])), ...empty.map((r) => r.id)])];
+  const ended = seriesIds.length
     ? unwrap(
         await db
           .from("appointment_series")
           .update({ ended_at: now.toISOString(), ended_by: actorId })
           .eq("clinic_id", clinicId)
-          .in("patient_id", patientIds)
+          .in("id", seriesIds)
           .is("ended_at", null)
           .select("id"),
         "Séries do contato",

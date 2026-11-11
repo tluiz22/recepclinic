@@ -296,7 +296,7 @@ export const JOURNEY: JourneySection[] = [
   {
     id: "depois",
     title: "7. Depois de marcar",
-    intro: "Mensagens que saem sozinhas, sem ninguém da equipe.",
+    intro: "Mensagens que saem sozinhas, sem ninguém da equipe. Com mais de um responsável na ficha, vão para quem marcou (ou para o escolhido pela recepção); quem remarca pelo portal passa a recebê-las (D14, 11/nov/2026).",
     flow: [
       auto("Confirmação, com preparo ou orientações quando houver", "Consulta em casa: sem as orientações gerais (cliente, 10/nov/2026)."),
       auto("Lembrete na véspera ou no dia (como a clínica escolher), com Confirmar presença · Remarcar · Cancelar"),
@@ -429,6 +429,7 @@ export const JOURNEY_RULES = [
   "\"voltar\" ou \"menu anterior\" digitado: no meio de um caminho, o submenu de onde veio (Consultas ou Exames); no preparo de exame, Informações gerais; nos menus, o menu principal.",
   "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo. Exceção: o cancelamento sem resposta ao \"Confirma o cancelamento?\" recebe a mensagem do pedido não concluído (item 10).",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
+  "Paciente com mais de um responsável (D14, 11/nov/2026): confirmação, lembrete, preparo, orientações, avisos da clínica e lista de espera vão para quem marcou; \"Confirmar presença\" do lembrete vale de qualquer responsável ligado; o aviso do cancelamento pelo portal vai para quem cancelou e, quando quem remarca ou cancela não é quem marcou, quem marcou recebe \"Consulta remarcada\" ou \"Consulta cancelada\" (modelo próprio da Meta, só com ele aprovado). No portal, cada número vê os pacientes de que é responsável.",
   "Mensagem que não sai por instabilidade da Meta (ex.: \"131000 Something went wrong\"): 3 tentativas. Do bot, 30 segundos e 2 minutos depois, só se a conversa não andou; as automáticas (confirmação, lembrete, avisos), 10 e 30 minutos depois (cliente, 05/nov/2026).",
   "Mensagem automática do app WhatsApp Business (saudação, ausência), até 5 segundos depois da do paciente ou do bot: não pausa o bot; aviso para desligar no app.",
   "Número marcado pela equipe como Pessoal ou Administrativo/outros (Conversas ou Atendimento, só Administrador e Recepção): o bot não responde, a resposta da equipe pelo app não abre atendimento e o número fica fora das métricas e dos pendentes. Os botões do lembrete e da oferta de vaga continuam valendo, com o caminho que abrem (confirmar, remarcar, cancelar). Ao marcar, o atendimento aberto sai sem mensagem; \"Voltar para atendimento\" devolve o número ao bot, também sem mensagem (cliente, 06/nov/2026).",

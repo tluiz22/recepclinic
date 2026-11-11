@@ -6,9 +6,12 @@ import { earliestDate, getFreeSlots, getNextAvailableDates, horizonLastDate } fr
 import { BOOKING_HORIZON_DEFAULT } from "../config/clinic";
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { sendAppointmentNotice } from "../whatsapp/notices";
+import { sendAppointmentNotice, sendOtherResponsibleNotice } from "../whatsapp/notices";
+import { recipientOfAppointment } from "../whatsapp/recipient";
 import type { ClinicSender } from "../whatsapp/send";
 import { phonePatients, saveContactHomeAddress } from "./booking";
+import { findContactByPhone } from "../patients";
+import { responsibleLabel, setAppointmentsBooker } from "../patientContacts";
 
 // Minhas consultas (F3c; especificação P12; RD10, I7, F3-3 e F3-4): com o celular comprovado (código ou link do bot),
 // as próximas consultas dos pacientes do celular, cada uma com Remarcar (mesmo profissional, serviço e tipo de local;
@@ -45,10 +48,15 @@ export type MyAppointment = {
   canReschedule: boolean;
   /** Em casa (F3e-1): o endereço gravado no atendimento. */
   homeVisitAddress: string | null;
+  /**
+   * Quem marcou e recebe os avisos (UI-4, D14): "Marcada por você", "Marcada por Carlos (pai), que recebe os
+   * avisos"… Só quando o paciente tem mais de um responsável (com um só, nada muda); null = não mostra.
+   */
+  bookedByText: string | null;
 };
 
 const COLUMNS =
-  "id, patient_id, scheduled_at, duration_minutes, status, agenda_id, service_id, location_id, origin_appointment_id, home_visit_address, patients ( full_name ), services ( name, category, scheduling_mode ), agendas ( professionals ( display_name ) ), locations ( name, type, address )";
+  "id, patient_id, scheduled_at, duration_minutes, status, agenda_id, service_id, location_id, origin_appointment_id, home_visit_address, booked_by_contact_id, booking_channel, patients ( full_name ), services ( name, category, scheduling_mode ), agendas ( professionals ( display_name ) ), locations ( name, type, address )";
 
 type Row = {
   id: string;
@@ -61,13 +69,57 @@ type Row = {
   location_id: string;
   origin_appointment_id: string | null;
   home_visit_address: string | null;
+  booked_by_contact_id: string | null;
+  booking_channel: string;
   patients: { full_name: string };
   services: { name: string; category: MyAppointment["category"]; scheduling_mode: string };
   agendas: { professionals: { display_name: string } | null } | null;
   locations: { name: string; type: string; address: string | null };
 };
 
-const toItem = (row: Row): MyAppointment => {
+/** O número é do próprio paciente: "com avisos para o próprio paciente", "Marcada pelo próprio paciente". */
+const SELF_LABEL = "o próprio paciente";
+
+/** Responsáveis dos pacientes do celular: o nome de cada um na tela ("Carlos (pai)"), por paciente. */
+type Bookers = { sessionContactId: string | null; labels: Map<string, Map<string, string>> };
+
+async function loadBookers(db: DbClient, clinicId: string, sessionContactId: string | null, patientIds: string[]): Promise<Bookers> {
+  const labels = new Map<string, Map<string, string>>();
+  if (!patientIds.length) return { sessionContactId, labels };
+  const rows = unwrap(
+    await db.from("patient_contacts").select("patient_id, contact_id, kinship, is_self, contacts ( full_name )").eq("clinic_id", clinicId).in("patient_id", patientIds),
+    "Responsáveis do paciente",
+  ) as unknown as { patient_id: string; contact_id: string; kinship: string | null; is_self: boolean; contacts: { full_name: string } | null }[];
+  for (const row of rows) {
+    const byContact = labels.get(row.patient_id) ?? new Map<string, string>();
+    byContact.set(row.contact_id, responsibleLabel({ fullName: row.contacts?.full_name ?? "", kinship: row.kinship, isSelf: row.is_self }, SELF_LABEL));
+    labels.set(row.patient_id, byContact);
+  }
+  return { sessionContactId, labels };
+}
+
+/** Como quem mexeu aparece no aviso ao outro responsável (VR4): "Ana (mãe)"; sem a ligação, o primeiro nome. */
+async function actorLabel(db: DbClient, clinicId: string, patientId: string, contact: { id: string; fullName: string }): Promise<string> {
+  const row = unwrap(
+    await db.from("patient_contacts").select("kinship").eq("clinic_id", clinicId).eq("patient_id", patientId).eq("contact_id", contact.id).maybeSingle(),
+    "Responsável do paciente",
+  );
+  return responsibleLabel({ fullName: contact.fullName, kinship: row?.kinship ?? null, isSelf: false }, "");
+}
+
+/** "Marcada por você" / "Marcada por Carlos (pai), que recebe os avisos" / "Marcada pela recepção, com avisos para …". */
+export function bookedByText(row: Pick<Row, "patient_id" | "booked_by_contact_id" | "booking_channel">, bookers: Bookers): string | null {
+  const byContact = bookers.labels.get(row.patient_id);
+  if (!byContact || byContact.size < 2 || !row.booked_by_contact_id) return null;
+  const you = row.booked_by_contact_id === bookers.sessionContactId;
+  const name = you ? "você" : byContact.get(row.booked_by_contact_id);
+  if (!name) return null;
+  if (row.booking_channel === "admin") return `Marcada pela recepção, com avisos para ${name}`;
+  if (you) return "Marcada por você";
+  return `Marcada ${name === SELF_LABEL ? "pelo próprio paciente" : `por ${name}`}, que recebe os avisos`;
+}
+
+const toItem = (row: Row, bookers?: Bookers): MyAppointment => {
   const isGroup = row.services.scheduling_mode === "group";
   return {
     id: row.id,
@@ -89,6 +141,7 @@ const toItem = (row: Row): MyAppointment => {
     originAppointmentId: row.origin_appointment_id,
     canReschedule: !isGroup,
     homeVisitAddress: row.home_visit_address,
+    bookedByText: bookers ? bookedByText(row, bookers) : null,
   };
 };
 
@@ -110,7 +163,7 @@ export const outsideLead = (start: Date, leadHours: number, now: Date = new Date
 
 /** Próximas consultas dos pacientes do celular, da mais próxima à mais distante. */
 export async function listMyAppointments(db: DbClient, clinicId: string, phone: string, now: Date = new Date()): Promise<MyAppointment[]> {
-  const { patients } = await phonePatients(db, clinicId, phone);
+  const { contact, patients } = await phonePatients(db, clinicId, phone);
   if (!patients.length) return [];
   const rows = unwrap(
     await db
@@ -127,7 +180,8 @@ export async function listMyAppointments(db: DbClient, clinicId: string, phone: 
       .limit(30),
     "Atendimentos",
   ) as unknown as Row[];
-  return rows.map(toItem);
+  const bookers = await loadBookers(db, clinicId, contact?.id ?? null, [...new Set(rows.map((r) => r.patient_id))]);
+  return rows.map((row) => toItem(row, bookers));
 }
 
 /**
@@ -142,12 +196,11 @@ export async function findMyAppointment(
   { now = new Date(), canceledByClinic = false }: { now?: Date; canceledByClinic?: boolean } = {},
 ): Promise<MyAppointment | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const { patients } = await phonePatients(db, clinicId, phone);
+  const { contact, patients } = await phonePatients(db, clinicId, phone);
   const row = unwrap(await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Atendimento") as unknown as Row | null;
   if (!row || !patients.some((p) => p.id === row.patient_id)) return null;
-  if (canceledByClinic) return row.status === "canceled" ? toItem(row) : null;
-  if (!(ACTIVE as string[]).includes(row.status) || new Date(row.scheduled_at) < now) return null;
-  return toItem(row);
+  if (canceledByClinic ? row.status !== "canceled" : !(ACTIVE as string[]).includes(row.status) || new Date(row.scheduled_at) < now) return null;
+  return toItem(row, await loadBookers(db, clinicId, contact?.id ?? null, [row.patient_id]));
 }
 
 /** Até quando oferecer horários: prazo do profissional e, no retorno, o fim do prazo do retorno (sem ele na remarcação da clínica). */
@@ -269,9 +322,16 @@ export async function rescheduleMine(
   const address = atHome ? input.homeVisitAddress?.trim() || item.homeVisitAddress : null;
   if (!input.scope.locations.some((l) => l.id === slot.locationId)) return { status: "taken" };
   if (!input.rebook && input.leadHours !== null && !outsideLead(item.start, input.leadHours, now)) return { status: "lead" };
+  // Quem remarca passa a ser quem marcou (UI-4, D14): a confirmação, o lembrete e os avisos seguintes vão para ele.
+  const sessionContact = input.phone ? await findContactByPhone(db, clinicId, input.phone) : null;
+  const sessionContactId = sessionContact?.id ?? null;
+  // Quem marcou antes (VR4: recebe o aviso se não foi ele que remarcou).
+  const previousBooker = input.rebook ? null : await recipientOfAppointment(db, clinicId, item.id).catch(() => null);
   let appointmentId: string;
   // O endereço novo só vira o padrão do contato se ficou gravado no atendimento.
   let addressSaved = true;
+  // Quem remarcou virou quem marcou (senão, o aviso ao outro responsável não cabe).
+  let bookerSaved = true;
   try {
     if (input.rebook) {
       const { appointment } = await bookAppointment(
@@ -279,6 +339,7 @@ export async function rescheduleMine(
         clinicId,
         {
           patientId: item.patientId,
+          bookedByContactId: sessionContactId,
           serviceId: item.serviceId,
           agendaId: item.agendaId,
           start: slot.start,
@@ -293,6 +354,13 @@ export async function rescheduleMine(
       appointmentId = appointment.id;
     } else {
       appointmentId = (await rescheduleAppointment(db, clinicId, item.id, { start: slot.start, locationId: slot.locationId, channel: "portal", actorId: null }, now)).id;
+      if (sessionContactId) {
+        await setAppointmentsBooker(db, clinicId, [appointmentId], sessionContactId).catch((error) => {
+          // Sem a troca, quem marcou continua o mesmo: o aviso "remarcada" já vai para ele, sem o aviso a mais da VR4.
+          bookerSaved = false;
+          logError("portal: quem remarcou não gravado", error, { clinica: clinicId, atendimento: appointmentId });
+        });
+      }
       if (atHome && address && address !== item.homeVisitAddress) {
         const saved = await db.from("appointments").update({ home_visit_address: address }).eq("clinic_id", clinicId).eq("id", appointmentId);
         if (saved.error) {
@@ -310,6 +378,10 @@ export async function rescheduleMine(
   }
   if (atHome && address && addressSaved && input.phone && address !== item.homeVisitAddress) await saveContactHomeAddress(db, clinicId, input.phone, address);
   await sendAppointmentNotice(db, clinicId, appointmentId, input.rebook ? "confirmation" : "reschedule", input.sender, now);
+  if (bookerSaved && previousBooker && sessionContact && previousBooker.id !== sessionContact.id) {
+    const actor = await actorLabel(db, clinicId, item.patientId, sessionContact).catch(() => firstNameOnly(sessionContact.fullName));
+    await sendOtherResponsibleNotice(db, clinicId, { appointmentId, kind: "rescheduled_by_other", booker: previousBooker, actor }, input.sender, now);
+  }
   return { status: "done", appointmentId };
 }
 
@@ -317,12 +389,28 @@ export async function rescheduleMine(
 export async function cancelMine(
   db: DbClient,
   clinicId: string,
-  input: { item: MyAppointment; leadHours: number | null; sender: ClinicSender | null },
+  input: {
+    item: MyAppointment;
+    leadHours: number | null;
+    sender: ClinicSender | null;
+    /** O celular comprovado: o aviso do cancelamento vai para quem cancelou (quem marcou recebe o dele na VR4). */
+    phone?: string;
+  },
   now: Date = new Date(),
 ): Promise<ChangeOutcome> {
   if (input.leadHours !== null && !outsideLead(input.item.start, input.leadHours, now)) return { status: "lead" };
+  const booker = await recipientOfAppointment(db, clinicId, input.item.id).catch(() => null);
   const canceled = await cancelAppointment(db, clinicId, input.item.id, { channel: "portal", actorId: null }, now);
   if (!canceled) return { status: "gone" };
-  await sendAppointmentNotice(db, clinicId, canceled.id, "cancellation", input.sender, now);
+  const actor = input.phone ? await findContactByPhone(db, clinicId, input.phone).catch(() => null) : null;
+  const to = actor ? { id: actor.id, full_name: actor.fullName, phone: actor.phone } : undefined;
+  await sendAppointmentNotice(db, clinicId, canceled.id, "cancellation", input.sender, now, undefined, to);
+  // VR4: quem marcou recebe o aviso quando outro responsável cancela.
+  if (booker && actor && booker.id !== actor.id) {
+    const label = await actorLabel(db, clinicId, input.item.patientId, actor).catch(() => firstNameOnly(actor.fullName));
+    await sendOtherResponsibleNotice(db, clinicId, { appointmentId: canceled.id, kind: "canceled_by_other", booker, actor: label }, input.sender, now);
+  }
   return { status: "done", appointmentId: canceled.id };
 }
+
+const firstNameOnly = (name: string) => name.trim().split(/\s+/)[0] ?? name;

@@ -162,7 +162,7 @@ const newPatientHref = withReturn(
                   Remarcar
                 </a>
               ) : (
-                <a href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} class={button}>
+                <a href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}${panel.contact ? `&responsavel=${panel.contact.id}` : ""}`, here)} class={button}>
                   Marcar consulta
                 </a>
               )}
@@ -207,7 +207,7 @@ const newPatientHref = withReturn(
                   Remarcar
                 </a>
               )}
-              <a href={withReturn(`/admin/agenda/marcar?patient_id=${single.patient.id}`, here)} class={button}>
+              <a href={withReturn(`/admin/agenda/marcar?patient_id=${single.patient.id}${panel.contact ? `&responsavel=${panel.contact.id}` : ""}`, here)} class={button}>
                 Marcar consulta
               </a>
             </div>

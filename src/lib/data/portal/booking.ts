@@ -5,7 +5,8 @@ import { cleanFullName } from "../../portalBooking";
 import { bookAppointment, findBlockingAppointment, listUpcomingAppointments } from "../agenda/appointments";
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { findContactByPhone, listContactPatients, registerPatient, type Contact } from "../patients";
+import { findContactByPhone, registerPatient, type Contact } from "../patients";
+import { responsibleLabel } from "../patientContacts";
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent, type BotLimitHit } from "../whatsapp/botLimits";
 import { dispatchNotice, enqueueNotice } from "../whatsapp/noticeQueue";
 import type { ClinicSender } from "../whatsapp/send";
@@ -19,7 +20,17 @@ import type { PortalProfessional } from "./portal";
 // reserva (o cadastro novo só é gravado na marcação); a marcação é tomada uma vez (duplo toque não marca duas vezes) e
 // a reserva guarda o atendimento marcado (recarregar mostra a mesma confirmação).
 
-export type PortalPatient = { id: string; fullName: string; birthdate: string; isContactSelf: boolean };
+export type PortalPatient = {
+  id: string;
+  fullName: string;
+  birthdate: string;
+  /** O número da sessão é do próprio paciente ("(você)"). */
+  isContactSelf: boolean;
+  /** Os outros responsáveis da ficha ("também com Ana (mãe)", UI-3); o próprio paciente fica de fora. */
+  others: string[];
+  /** O principal da ficha (para achar ficha parecida). */
+  primaryContactId: string;
+};
 
 export type NewPatientData = {
   /** Para mim (o paciente é quem tem o celular) ou outra pessoa (filho, dependente). */
@@ -103,18 +114,64 @@ async function readHold(db: DbClient, clinicId: string, sessionId: string | null
   };
 }
 
-/** O celular já tem o próprio paciente (ativo ou não): "Para mim" não cabe (um só por contato). */
+/** O celular já é o "próprio paciente" de uma ficha (ativa ou não): "Para mim" não cabe (um só por número). */
 export async function contactHasSelf(db: DbClient, clinicId: string, contactId: string): Promise<boolean> {
-  return (await listContactPatients(db, clinicId, contactId, { includeInactive: true })).some((p) => p.isContactSelf);
+  const rows = unwrap(
+    await db.from("patient_contacts").select("id").eq("clinic_id", clinicId).eq("contact_id", contactId).eq("is_self", true).limit(1),
+    "Responsáveis do paciente",
+  );
+  return rows.length > 0;
 }
 
-/** O contato do celular comprovado e os pacientes ativos dele (P8). */
+type LinkRow = {
+  patient_id: string;
+  contact_id: string;
+  kinship: string | null;
+  is_self: boolean;
+  contacts: { full_name: string } | null;
+  patients: { id: string; full_name: string; birthdate: string; is_active: boolean; anonymized_at: string | null; contact_id: string } | null;
+};
+
+/**
+ * O contato do celular comprovado e os pacientes ativos dele (P8). Pela ligação (D14, VR3): o número vê os pacientes
+ * de que é responsável, principal ou não; cada um diz os outros responsáveis.
+ */
 export async function phonePatients(db: DbClient, clinicId: string, phone: string): Promise<{ contact: Contact | null; patients: PortalPatient[] }> {
   const contact = await findContactByPhone(db, clinicId, phone);
   if (!contact || !contact.isActive || contact.anonymizedAt) return { contact: null, patients: [] };
-  const patients = (await listContactPatients(db, clinicId, contact.id))
-    .filter((p) => !p.anonymizedAt)
-    .map((p) => ({ id: p.id, fullName: p.fullName, birthdate: p.birthdate, isContactSelf: p.isContactSelf }))
+  const mine = (
+    unwrap(
+      await db
+        .from("patient_contacts")
+        .select("patient_id, contact_id, kinship, is_self, patients ( id, full_name, birthdate, is_active, anonymized_at, contact_id )")
+        .eq("clinic_id", clinicId)
+        .eq("contact_id", contact.id),
+      "Pacientes do contato",
+    ) as unknown as LinkRow[]
+  ).filter((row) => row.patients?.is_active && !row.patients.anonymized_at);
+  if (!mine.length) return { contact, patients: [] };
+  const others = unwrap(
+    await db
+      .from("patient_contacts")
+      .select("patient_id, contact_id, kinship, is_self, contacts ( full_name )")
+      .eq("clinic_id", clinicId)
+      .in("patient_id", mine.map((row) => row.patient_id))
+      .neq("contact_id", contact.id)
+      .eq("is_self", false)
+      .order("created_at"),
+    "Responsáveis do paciente",
+  ) as unknown as LinkRow[];
+  const patients = mine
+    .map((row) => ({
+      id: row.patients!.id,
+      fullName: row.patients!.full_name,
+      birthdate: row.patients!.birthdate,
+      isContactSelf: row.is_self,
+      others: others
+        .filter((o) => o.patient_id === row.patient_id && o.contacts)
+        .map((o) => responsibleLabel({ fullName: o.contacts!.full_name, kinship: o.kinship, isSelf: false }, "")),
+      primaryContactId: row.patients!.contact_id,
+    }))
     // "(você)" primeiro, depois em ordem alfabética.
     .sort((a, b) => Number(b.isContactSelf) - Number(a.isContactSelf) || a.fullName.localeCompare(b.fullName, "pt-BR"));
   return { contact, patients };
@@ -190,7 +247,11 @@ export async function findDuplicate(
   data: Pick<NewPatientData, "name" | "birthdate">,
   patients: PortalPatient[],
 ): Promise<DuplicateMatch | null> {
-  const ids = unwrap(await db.rpc("similar_patient_ids", { p_clinic_id: clinicId, p_name: data.name, p_contact_id: contactId }), "Pacientes parecidos") ?? [];
+  // A função do banco procura pelo principal: pergunta por cada principal das fichas deste número (D14).
+  const principals = [...new Set([contactId, ...patients.map((p) => p.primaryContactId)])];
+  const ids = (
+    await Promise.all(principals.map(async (id) => unwrap(await db.rpc("similar_patient_ids", { p_clinic_id: clinicId, p_name: data.name, p_contact_id: id }), "Pacientes parecidos") ?? []))
+  ).flat();
   const similar = patients.filter((p) => ids.includes(p.id));
   const match = similar.find((p) => p.birthdate === data.birthdate) ?? similar[0];
   return match ? { ...match, sameBirthdate: match.birthdate === data.birthdate } : null;
@@ -345,11 +406,14 @@ export async function confirmPortalBooking(
       return { status: "blocked", reason: block };
     }
 
+    // Quem marcou é o celular comprovado (D14): recebe a confirmação e os avisos.
+    const booker = await findContactByPhone(db, clinicId, hold.phone);
     const { appointment } = await bookAppointment(
       db,
       clinicId,
       {
         patientId,
+        bookedByContactId: booker?.id ?? null,
         serviceId: hold.serviceId,
         agendaId: hold.agendaId,
         start: hold.start,

@@ -85,7 +85,8 @@ export async function loadConversationPanel(
     conversation.contactId ? getContact(db, clinicId, conversation.contactId).catch(() => null) : Promise.resolve(null),
     listHandoffEvents(db, clinicId, conversation.phone),
   ]);
-  const patients = contact ? await listContactPatients(db, clinicId, contact.id) : [];
+  // Todos os pacientes de que o número é responsável (D14), não só os em que é o principal.
+  const patients = contact ? await listContactPatients(db, clinicId, contact.id, { linked: true }) : [];
   const [upcoming, plans, notes] = await Promise.all([
     listUpcomingByPatient(db, clinicId, patients.map((p) => p.id), now),
     options.insurance && patients.some((p) => p.insurance) ? listInsurancePlans(db, clinicId, { includeInactive: true }) : Promise.resolve([]),
@@ -97,7 +98,7 @@ export async function loadConversationPanel(
   return {
     contact,
     patients: patients.map((patient) => ({ patient, planName: options.insurance ? planName(patient) : null, next: upcoming.get(patient.id)?.[0] ?? null })),
-    selfPatient: patients.length === 1 && patients[0].isContactSelf,
+    selfPatient: patients.length === 1 && patients[0].isContactSelf && patients[0].contactId === contact?.id,
     notes: notes.slice(0, 3),
     events,
     names: new Map([...labels.entries()].map(([id, label]) => [id, label.isSupport ? "Suporte" : firstNameOf(label.name)])),

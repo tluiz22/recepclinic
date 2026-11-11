@@ -427,6 +427,8 @@ export const TEMPLATE_KEYS = [
   "connection_test",
   "conversation_resume",
   "portal_code",
+  "rescheduled_by_other",
+  "canceled_by_other",
 ] as const;
 
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];

@@ -1,6 +1,7 @@
 ---
 // P8 Quem será atendido (F2c; F2b reservou o horário depois do celular comprovado). "Para quem é a consulta?": os
-// pacientes do celular (nome completo, "(você)" no próprio) e "Outra pessoa" (P8b). Sem cadastro no celular, vai
+// pacientes do celular (nome completo, "(você)" no próprio; pela ligação, D14, com "também com Ana (mãe)" e o "Falta
+// alguém?", UI-3) e "Outra pessoa" (P8b). Sem cadastro no celular, vai
 // direto à P8b. Escolhido, confere a idade limite do médico, consulta já marcada com ele e os limites do telefone (os
 // do bot) e segue para a revisão. O contador da reserva fica visível; o Voltar solta a reserva (horários do dia).
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
@@ -29,6 +30,8 @@ let ageProblem = false;
 let alreadyProblem = false;
 let chosen: string | null = hold?.patientId ?? null;
 const today = todayIn(timeZone);
+/** "Ana (mãe)", "Ana (mãe) e Carlos (pai)", "Ana, Carlos e Rita". */
+const joinNames = (names: string[]) => (names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`);
 
 if (page.kind === "open" && professional && session && hold?.state === "active") {
   const { db, portal } = page;
@@ -105,6 +108,7 @@ const card =
                       {p.isContactSelf && <span class="font-normal text-gray-700"> (você)</span>}
                     </span>
                     <span class="text-[15px] text-gray-600">{formatAge(p.birthdate, today)}</span>
+                    {p.others.length > 0 && <span class="text-[15px] text-gray-600" data-others>também com {joinNames(p.others)}</span>}
                   </span>
                 </label>
               ))}
@@ -113,6 +117,9 @@ const card =
               <svg aria-hidden="true" class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
               Outra pessoa
             </a>
+            <p class="text-[15px] leading-snug text-gray-600" data-missing-hint>
+              Falta alguém? Peça à recepção para ligar o seu número à ficha. Assim não cria um cadastro repetido.
+            </p>
             <button type="submit" class={`${portalCta} mt-2`} data-sending-label="Conferindo…">
               Continuar
             </button>

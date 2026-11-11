@@ -409,6 +409,8 @@ export type BookInput = {
   actorId: string | null;
   /** Exame marcado como particular, apesar do convênio do paciente (CE-5, `examPlanFor`). */
   asPrivate?: boolean;
+  /** Quem marcou (D14): recebe a confirmação e os avisos; sem valor, o banco põe o principal. */
+  bookedByContactId?: string | null;
 } & AnyTimeInput;
 
 /**
@@ -530,9 +532,13 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       throw fromDbError(error, "Atendimento");
     }
     id = data as string;
-    if (input.actorId || homeVisitAddress) {
+    if (input.actorId || homeVisitAddress || input.bookedByContactId) {
       unwrap(
-        await db.from("appointments").update({ created_by: input.actorId, home_visit_address: homeVisitAddress }).eq("clinic_id", clinicId).eq("id", id),
+        await db
+          .from("appointments")
+          .update({ created_by: input.actorId, home_visit_address: homeVisitAddress, ...(input.bookedByContactId ? { booked_by_contact_id: input.bookedByContactId } : {}) })
+          .eq("clinic_id", clinicId)
+          .eq("id", id),
         "Atendimento",
       );
     }
@@ -552,6 +558,7 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       home_visit_address: isHomeVisit ? homeVisitAddress : null,
       created_by: input.actorId,
       trail_context: trailContext({ channel: input.trailChannel }),
+      ...(input.bookedByContactId ? { booked_by_contact_id: input.bookedByContactId } : {}),
     });
     if (error) {
       if ((error as { code?: string }).code === "23P01") {

@@ -44,7 +44,7 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
  * utilidade se falar do atendimento em andamento.
  */
 // O código do portal (F2b) é um template de autenticação: a Meta fixa o texto.
-export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file", "conversation_resume", "portal_code"];
+export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file", "conversation_resume", "portal_code", "rescheduled_by_other", "canceled_by_other"];
 
 export const MARKER_LABELS: Record<string, string> = {
   nome: "primeiro nome de quem recebe",

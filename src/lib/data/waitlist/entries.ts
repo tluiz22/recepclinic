@@ -1,6 +1,7 @@
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn } from "../errors";
 import { getAppointment, logTrail, type ActionChannel, type Appointment } from "../agenda/appointments";
+import { appointmentRecipientContact, BOOKER_COLUMNS, type RecipientContact } from "../whatsapp/recipient";
 
 // Lista de espera para antecipar (Fase 25 do piloto), F3.7a: entrar, sair e
 // consultar a fila. Quem já tem atendimento marcado entra pelo bot, ao
@@ -157,12 +158,13 @@ type EntryRow = {
     services: { name: string };
     agendas: { name: string };
     locations: { name: string; type: string };
-    patients: { id: string; full_name: string; contacts: { id: string; full_name: string; phone: string } };
+    patients: { id: string; full_name: string; contacts: RecipientContact };
+    booker: RecipientContact | null;
   };
 };
 
 const ENTRY_COLUMNS =
-  "id, created_at, created_via, appointments!inner ( id, scheduled_at, service_id, agenda_id, location_id, services ( name ), agendas ( name ), locations ( name, type ), patients ( id, full_name, contacts ( id, full_name, phone ) ) )";
+  `id, created_at, created_via, appointments!inner ( id, scheduled_at, service_id, agenda_id, location_id, services ( name ), agendas ( name ), locations ( name, type ), patients ( id, full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS} )`;
 
 /**
  * Quem está na fila, na ordem em que a vaga é oferecida (ordem de entrada),
@@ -208,11 +210,7 @@ export async function listWaitlist(db: DbClient, clinicId: string, { agendaIds }
         isHomeVisit: appointment.locations.type === "home_visit",
       },
       patient: { id: appointment.patients.id, fullName: appointment.patients.full_name },
-      contact: {
-        id: appointment.patients.contacts.id,
-        fullName: appointment.patients.contacts.full_name,
-        phone: appointment.patients.contacts.phone,
-      },
+      contact: appointmentRecipientContact(appointment),
       pendingOffer: pendingByEntry.get(row.id) ?? null,
     };
   });

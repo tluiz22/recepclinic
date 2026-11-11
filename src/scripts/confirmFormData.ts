@@ -33,7 +33,10 @@ document.querySelectorAll<HTMLFormElement>("form[data-confirm-data]").forEach((f
     (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button.js-confirm-delete");
       if (!button || button.form !== form) return;
-      const fields = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-confirm-label]")]
+      // Botões também têm `data-confirm-label` (o texto do botão do diálogo): não são campos. `data-confirm-no-details`
+      // (ligar à ficha de outro responsável): só o WhatsApp, os dados digitados não valem para a ficha existente.
+      const fields = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-confirm-label]:not(button)")]
+        .filter(() => button.dataset.confirmNoDetails === undefined)
         .map(readField)
         .filter((field): field is FieldReading => field !== null);
       button.dataset.confirmDetails = JSON.stringify(confirmDetails(fields, form.dataset.today ?? new Date().toISOString().slice(0, 10)));

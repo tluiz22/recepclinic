@@ -3,7 +3,7 @@ import { roleLabel } from "../../clinicAccess";
 import { unwrap, unwrapOne } from "../errors";
 
 // Proteção contra abuso no agendamento pelo bot (F9.6a; cliente, 09 e
-// 10/out/2026). Três limites por contato, somando todos os pacientes dele,
+// 10/out/2026). Três limites por contato (o número que marcou, VR-5),
 // só no bot (a equipe marca e cadastra sem limite pelo painel):
 //   - atendimentos futuros (marcados pelo bot ou pela equipe), mais os links
 //     de marcar ainda válidos: sem eles, quem pedisse vários links antes de
@@ -106,21 +106,18 @@ export async function getBotLimits(db: DbClient, clinicId: string): Promise<BotL
 
 const daysAgo = (now: Date, days: number) => new Date(now.getTime() - days * 24 * 60 * 60_000).toISOString();
 
-async function contactPatientIds(db: DbClient, clinicId: string, contactId: string): Promise<string[]> {
-  const rows = unwrap(await db.from("patients").select("id").eq("clinic_id", clinicId).eq("contact_id", contactId), "Pacientes do contato");
-  return rows.map((row) => row.id);
-}
+// Vários responsáveis (VR-5, cliente, 10/nov/2026): atendimentos futuros e faltas contam no número que marcou
+// (`booked_by_contact_id`; as consultas de antes da D14 ficaram com o principal). Cadastros novos seguem pelo
+// contato do paciente (quem cadastrou é o principal).
 
-/** Atendimentos futuros dos pacientes do contato, mais um por paciente com link de marcar ainda válido. */
+/** Atendimentos futuros marcados pelo contato, mais um por paciente com link de marcar ainda válido. */
 export async function countFutureAppointments(db: DbClient, clinicId: string, contactId: string, now: Date = new Date()): Promise<number> {
-  const patientIds = await contactPatientIds(db, clinicId, contactId);
-  if (!patientIds.length) return 0;
   const [appointments, links] = await Promise.all([
     db
       .from("appointments")
       .select("id", { count: "exact", head: true })
       .eq("clinic_id", clinicId)
-      .in("patient_id", patientIds)
+      .eq("booked_by_contact_id", contactId)
       .in("status", ["scheduled", "confirmed"])
       .gt("scheduled_at", now.toISOString()),
     db
@@ -138,13 +135,11 @@ export async function countFutureAppointments(db: DbClient, clinicId: string, co
 }
 
 export async function countNoShows(db: DbClient, clinicId: string, contactId: string, now: Date = new Date()): Promise<number> {
-  const patientIds = await contactPatientIds(db, clinicId, contactId);
-  if (!patientIds.length) return 0;
   const result = await db
     .from("appointments")
     .select("id", { count: "exact", head: true })
     .eq("clinic_id", clinicId)
-    .in("patient_id", patientIds)
+    .eq("booked_by_contact_id", contactId)
     .eq("status", "no_show")
     .gte("scheduled_at", daysAgo(now, NO_SHOWS_WINDOW_DAYS))
     .lte("scheduled_at", now.toISOString());
