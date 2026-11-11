@@ -311,8 +311,9 @@ Testes: unidade (`portalIdentity.test.ts`, env, templates), banco (`portal-ident
 progressivo, código, tentativas simultâneas, reserva, concorrência, recarregar, Trocar número; isolamento, suspensão e
 envio dos templates atualizados) e Playwright (celular inválido com o valor mantido, CAPTCHA de teste, código
 errado e certo, reserva com contador, outro paciente sem o horário reservado, Voltar soltando, sessão comprovada
-reservando direto). Fora do portal: `nao-atendimento-central.test.ts` (mensagens novas) falha às vezes conforme a
-hora; falha igual sem a F2b.
+reservando direto). Fora do portal: `nao-atendimento-central.test.ts` (mensagens novas) falhava às vezes: o teste gravava a hora
+das mensagens pelo relógio do Node e a marcação pelo do banco (VM do Docker adiantada); corrigido em 11/nov (a hora
+vem do banco; simulado com o Node 5 s atrasado: o antigo falha, o novo passa).
 
 ### 10.1 Roteiro de validação da F2b (staging, junto com a F2a)
 
