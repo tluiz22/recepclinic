@@ -144,7 +144,11 @@ for (const w of serviceWindows) {
       >
         {
           isNew ? (
-            <select id="category" name="category" class={INPUT} aria-describedby={describedBy("category", { hint: true })}>
+            <select id="category" name="category" required class={INPUT} aria-describedby={describedBy("category", { hint: true })}>
+              {/* Sem tipo pré-escolhido (cliente, 10/nov/2026): o usuário escolhe, para não cadastrar no tipo errado. */}
+              <option value="" disabled selected={!presetCategory}>
+                Escolha o tipo
+              </option>
               {categories.map((c) => (
                 <option value={c} selected={c === presetCategory}>
                   {CATEGORY_LABELS[c]}

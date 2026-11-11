@@ -115,7 +115,7 @@ export function validateService(input: ServiceInput) {
     scheduling_mode: input.schedulingMode ?? "individual",
   };
   v.check(row.name.length > 0, "name", "Informe o nome do serviço");
-  v.check(CATEGORIES.includes(row.category), "category", "Categoria inválida");
+  v.check(CATEGORIES.includes(row.category), "category", "Escolha o tipo do serviço");
   v.check(isPositiveInt(row.duration_minutes), "durationMinutes", "Duração em minutos inteiros, maior que 0");
   v.check(isNonNegativeInt(row.price_cents), "priceCents", "Valor inválido");
   v.check(
