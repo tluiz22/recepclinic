@@ -9,6 +9,5 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-- `resumo-do-dia` — Resumo do dia separado por profissional, com contadores e blocos que abrem e fecham (11/11/2026). Tentada em 11/11: o banco local não tinha atendimentos no dia e a imagem saiu vazia; falta dia com atendimentos no seed
-- `agenda-dia` — Agenda › Dia virou a grade por horário (uma coluna por agenda), com Situação e Próximos horários livres (F5a, 10/11/2026); Agenda na largura toda ao lado do menu (bordas, 11/11/2026). Tentada em 11/11: saiu vazia, pelo mesmo motivo
-- `config-agendas`, `config-clinica`, `config-convenios`, `config-feriados`, `config-horarios`, `config-lembretes`, `config-locais`, `config-mensagens`, `config-nota-fiscal`, `config-profissionais`, `config-servicos`, `config-whatsapp` — o menu lateral de Configurações ganhou "Portal" (F3d, 10/11/2026). Recapturadas em 11/11, mas a clínica do seed local não tem o Portal ligado e o item não aparece; refazer com o Portal ligado
+- `config-horarios` — o menu lateral de Configurações ganhou "Portal" e o texto de ajuda do Serviço, no Novo horário, diz que aparecem só os serviços do local escolhido (10/11/2026). Rodar no local (procura a Dra. Helena Costa do seed); no staging falha
+- `config-agendas`, `config-clinica`, `config-convenios`, `config-feriados`, `config-horarios`, `config-lembretes`, `config-locais`, `config-mensagens`, `config-nota-fiscal`, `config-profissionais`, `config-servicos`, `config-whatsapp` — o item "Portal" do menu só aparece com o módulo Portal ligado na clínica; refeitas do staging em 11/11 sem ele (a Clínica Exemplo Saúde do staging está sem o módulo). Refazer se o Portal for ligado nela (F3d, 10/11/2026)

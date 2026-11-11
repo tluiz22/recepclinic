@@ -37,7 +37,7 @@ interface Props {
 }
 
 const { appointments, actors, timeZone, tags, date, showAgenda, columns, situation, situationHref } = Astro.props;
-const VIA: Record<string, string> = { admin: "pelo painel", whatsapp_bot: "pelo WhatsApp", booking_link: "pelo link" };
+const VIA: Record<string, string> = { admin: "pelo painel", whatsapp_bot: "pelo WhatsApp", booking_link: "pelo link", portal: "pelo portal" };
 const bookedBy = (a: AgendaAppointment) => {
   if (a.imported) return "Importado na implantação";
   const who = a.createdBy ? actorText(actors.get(a.createdBy)) : null;
