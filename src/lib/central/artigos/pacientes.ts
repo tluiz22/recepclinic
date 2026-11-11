@@ -148,6 +148,9 @@ export const pacientesArtigos = [
       { name: "Liberar dos limites do bot (só o Administrador)", text: "O bot deixa de aplicar os limites de atendimentos, cadastros e faltas a este número, até alguém desfazer." },
       { name: "Bloquear no bot (só o Administrador)", text: "O bot para de atender o número e responde, uma vez por dia, que a conversa está com a recepção. Só os botões do lembrete seguem. A equipe continua marcando pelo painel." },
     ],
-    notes: ["Ao bloquear, dá para cancelar sem aviso os atendimentos futuros e encerrar as séries. Desbloquear não traz de volta o que foi cancelado."],
+    notes: [
+      "Ao bloquear, dá para cancelar sem aviso os atendimentos futuros que este número marcou e encerrar as séries. Desbloquear não traz de volta o que foi cancelado.",
+      "Paciente com mais de um responsável: os atendimentos marcados pelo outro responsável continuam.",
+    ],
   }),
 ];

@@ -10,6 +10,7 @@ import {
   unlinkPatientContact,
 } from "../../src/lib/data/patientContacts";
 import { countFutureAppointments, countNoShows } from "../../src/lib/data/whatsapp/botLimits";
+import { listContactFutureAppointmentIds } from "../../src/lib/data/whatsapp/contactBlock";
 import { addMember, clinicServiceClient, createUser, deleteUsers, withDatabase, type TestUser } from "./helpers";
 import { asDb, at, codeOf, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
@@ -231,6 +232,28 @@ describe("séries (VR-1): as sessões geradas depois seguem com quem recebe os a
     expect(new Set(await bookersOf(created.map((a) => a.id)))).toEqual(new Set([mom]));
     await sql("delete from public.appointments where series_id = $1", [series.id]);
     await sql("delete from public.appointment_series where id = $1", [series.id]);
+  });
+});
+
+describe("bloquear no bot (cliente, 11/nov): só o que o número marcou", () => {
+  it("o pai bloqueado leva as consultas que ele marcou; as da mãe continuam", async () => {
+    // Duas consultas futuras da criança (as dos testes acima): uma passa a ser do pai, a outra fica com a mãe.
+    const all = await sql<{ id: string; booked_by_contact_id: string }>(
+      "select id, booked_by_contact_id from public.appointments where patient_id = $1 and status in ('scheduled', 'confirmed') and scheduled_at > $2 order by scheduled_at",
+      [child, NOW.toISOString()],
+    );
+    expect(all.length).toBeGreaterThanOrEqual(2);
+    const [dadOne, momOne] = all.map((r) => r.id);
+    await sql("update public.appointments set booked_by_contact_id = $2 where id = $1", [dadOne, dad]);
+    await sql("update public.appointments set booked_by_contact_id = $2 where id = $1", [momOne, mom]);
+    try {
+      const forDad = await listContactFutureAppointmentIds(asDb(fixture.admin), clinicId, dad, NOW);
+      expect(forDad).toContain(dadOne);
+      expect(forDad).not.toContain(momOne);
+      expect(await listContactFutureAppointmentIds(asDb(fixture.admin), clinicId, mom, NOW)).toContain(momOne);
+    } finally {
+      for (const row of all) await sql("update public.appointments set booked_by_contact_id = $2 where id = $1", [row.id, row.booked_by_contact_id]);
+    }
   });
 });
 
