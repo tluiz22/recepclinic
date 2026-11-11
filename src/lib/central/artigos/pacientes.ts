@@ -32,7 +32,7 @@ export const pacientesArtigos = [
     category: "pacientes",
     module: "Pacientes › Novo",
     where: "Pacientes › Novo paciente",
-    keywords: ["cadastrar paciente", "novo paciente", "responsável", "whatsapp", "plano", "carteirinha", "anotação"],
+    keywords: ["cadastrar paciente", "novo paciente", "responsável", "whatsapp", "plano", "carteirinha", "anotação", "ficha repetida", "outro responsável"],
     synonyms: ["incluir paciente", "criar cadastro", "adicionar cliente"],
     related: ["responsavel-e-contato", "ficha-do-paciente", "marcar-atendimento"],
     order: 31,
@@ -44,6 +44,7 @@ export const pacientesArtigos = [
       "Com Convênios, escolha o plano; carteirinha e validade são opcionais.",
       "Toque em Cadastrar e confira os dados na janela que abre (o nascimento aparece com a idade). Toque em Confirmar e cadastrar.",
       "Se o contato já tem alguém com o nome parecido ou o mesmo nascimento, a tela pergunta se é a mesma pessoa: Sim abre a ficha que já existe; Não cadastra.",
+      "Se o paciente já tem ficha com outro responsável (mesmo nome e mesmo nascimento), a tela mostra a ficha e o responsável dela. Sim liga o WhatsApp digitado a essa ficha como outro responsável (com o parentesco, opcional), sem criar ficha nova; Não cadastra.",
       "Se já existe um contato com o nome parecido e outro WhatsApp, escolha atualizar o WhatsApp dele (o paciente entra junto dele) ou cadastrar um novo contato.",
     ],
     fields: [

@@ -38,6 +38,7 @@ import { formatCalendarDate } from "../../../lib/clinicTime";
 import { setFlash } from "../../../lib/flash";
 import { formChecked, formOptionalText, formText } from "../../../lib/forms";
 import { formatPhoneBR, normalizePhone } from "../../../lib/phone";
+import { KINSHIPS, type OtherResponsibleTwin } from "../../../lib/data/patientContacts";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -121,6 +122,11 @@ let similarPatients: SimilarPatient[] = [];
 /** Responsáveis com nome parecido e outro WhatsApp (C19). */
 let similarContacts: SimilarContact[] = [];
 let typedPhone = "";
+/** Fichas com o mesmo nome e nascimento cuidadas por outro responsável (cliente, 11/nov/2026). */
+let otherTwins: OtherResponsibleTwin[] = [];
+/** A equipe já disse que é outra pessoa: as etapas seguintes não perguntam de novo. */
+let otherIsNew = false;
+let typedKinship = "";
 /** O aviso do número já cadastrado fica junto do WhatsApp; o do repetido, junto da confirmação. */
 let samePerson = false;
 
@@ -135,6 +141,9 @@ if (Astro.request.method === "POST") {
         ? { mode: "self", phone: values.phone, confirmedContactId: formOptionalText(form, "confirmed_contact_id") ?? undefined }
         : { mode: "new", fullName: values.contact_name, phone: values.phone };
   const similarChoice = formText(form, "similar_contact");
+  const otherChoice = formText(form, "other_responsible");
+  otherIsNew = otherChoice === "new";
+  typedKinship = formText(form, "kinship").slice(0, 40);
   try {
     const result = await registerPatient(
       db,
@@ -146,6 +155,7 @@ if (Astro.request.method === "POST") {
         insurance: insuranceOn && values.plan_id ? { planId: values.plan_id, cardNumber: values.card_number, cardValidUntil: values.card_valid_until } : null,
         contact,
         confirmDuplicate: formChecked(form, "confirm_duplicate"),
+        otherResponsible: otherIsNew ? { action: "new" } : isUuid(otherChoice) ? { action: "link", patientId: otherChoice, kinship: typedKinship } : undefined,
         similarContact: similarChoice === "new" ? { action: "new" } : isUuid(similarChoice) ? { action: "update_phone", contactId: similarChoice } : undefined,
       },
       today,
@@ -156,7 +166,14 @@ if (Astro.request.method === "POST") {
       const to = backToBooking ? `${backToBooking}${backToBooking.includes("?") ? "&" : "?"}patient_id=${result.patient.id}` : withReturn(`/admin/pacientes/${result.patient.id}`, origin);
       return Astro.redirect(to, 303);
     }
-    if (result.status === "similar_contact") {
+    if (result.status === "linked") {
+      setFlash(Astro.cookies, { tone: "success", text: `WhatsApp ligado à ficha como outro responsável.` });
+      const to = backToBooking ? `${backToBooking}${backToBooking.includes("?") ? "&" : "?"}patient_id=${result.patientId}` : withReturn(`/admin/pacientes/${result.patientId}`, origin);
+      return Astro.redirect(to, 303);
+    }
+    if (result.status === "other_responsible") {
+      otherTwins = result.twins;
+    } else if (result.status === "similar_contact") {
       similarContacts = result.matches;
       typedPhone = result.phone;
     } else if (result.status === "confirm_same_person") {
@@ -197,6 +214,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
 
   <form method="POST" class="mt-4 flex max-w-[680px] flex-col gap-4" data-confirm-data data-today={today}>
     <input type="hidden" name="confirmed_contact_id" value={values.confirmed_contact_id} />
+    {otherIsNew && <input type="hidden" name="other_responsible" value="new" />}
     <section aria-labelledby="bloco-paciente" class={card}>
       <h2 id="bloco-paciente" class={blockTitle}><span class={number} aria-hidden="true">1</span>{capitalize(vocabulary.patient)}</h2>
       <div class={field}>
@@ -436,7 +454,61 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
       )
     }
     {
-      !(askDuplicate || similarContacts.length > 0) && (
+      otherTwins.length > 0 && (
+        <div class="flex flex-col gap-2.5" data-other-responsible>
+          <p role="alert" tabindex="-1" data-form-error class={alertBox}>
+            <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+            {otherTwins.length === 1
+              ? `${otherTwins[0].fullName} (${formatCalendarDate(otherTwins[0].birthdate, "dd/MM/yyyy")}) já tem ficha, com outro responsável. É a mesma pessoa?`
+              : `Já existem fichas com este nome e nascimento, com outro responsável. É a mesma pessoa?`}
+          </p>
+          <div class="flex flex-col gap-1.5">
+            <label for="kinship" class="text-[15px] font-semibold text-ink">
+              Parentesco de quem está cadastrando <span class="font-normal text-ink-soft">(opcional)</span>
+            </label>
+            <input id="kinship" name="kinship" list="kinships" maxlength="40" autocomplete="off" value={typedKinship} class={`${CONTROL} w-full sm:w-64`} aria-describedby="kinship-hint" />
+            <datalist id="kinships">
+              {KINSHIPS.map((k) => (
+                <option value={k} />
+              ))}
+            </datalist>
+            <p id="kinship-hint" class="text-[14px] text-ink-mid">Ex.: mãe, pai, avó. Aparece na ficha e no portal.</p>
+          </div>
+          {otherTwins.map((t) => (
+            <div class={optionCard}>
+              <p class="text-[15.5px] leading-snug font-bold text-ink">{t.fullName}</p>
+              <p class="text-[14.5px] text-ink-mid">{birthText(t.birthdate)}</p>
+              {t.primary && (
+                <p class="text-[14.5px] text-ink-mid">
+                  com {t.primary.fullName}
+                  {t.primary.kinship ? ` (${t.primary.kinship.toLowerCase()})` : ""} · {formatPhoneBR(t.primary.phone)}
+                </p>
+              )}
+              <Button
+                type="submit"
+                name="other_responsible"
+                value={t.id}
+                variant="primary"
+                class="js-confirm-delete self-start"
+                data-sending-label="Ligando…"
+                data-confirm-title="Ligar à ficha"
+                data-confirm-no-details
+                data-confirm-message={`O WhatsApp digitado passa a ser outro responsável de ${t.fullName}. Nenhuma ficha nova é criada.`}
+                data-confirm-label="Ligar"
+                data-confirm-tone="primary"
+              >
+                Sim: ligar este número à ficha
+              </Button>
+            </div>
+          ))}
+          <Button type="submit" name="other_responsible" value="new" class="self-start" data-sending-label="Cadastrando…">
+            Não, é outra pessoa: cadastrar
+          </Button>
+        </div>
+      )
+    }
+    {
+      !(askDuplicate || similarContacts.length > 0 || otherTwins.length > 0) && (
         <div>
           <Button
             type="submit"

@@ -103,6 +103,64 @@ export const comparableName = (name: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+/** Sugestões do campo Parentesco (Adicionar responsável e cadastro com a ficha de outro responsável). */
+export const KINSHIPS = ["Mãe", "Pai", "Avó", "Avô", "Filha", "Filho", "Tia", "Tio", "Irmã", "Irmão", "Cônjuge"];
+
+export type OtherResponsibleTwin = {
+  id: string;
+  fullName: string;
+  birthdate: string;
+  /** O responsável principal da ficha, para a recepção reconhecer. */
+  primary: { fullName: string; phone: string; kinship: string | null } | null;
+};
+
+/**
+ * Ficha de outro responsável (cliente, 11/nov/2026, validação da VR; muda a VR-4): no cadastro pela equipe, pacientes
+ * ativos da clínica com o mesmo nome (sem acento e caixa) e o mesmo nascimento, que o número digitado ainda não cuida.
+ * A recepção liga o número à ficha (2º responsável) em vez de criar uma repetida.
+ */
+export async function twinsOfOtherResponsibles(
+  db: DbClient,
+  clinicId: string,
+  fullName: string,
+  birthdate: string,
+  contactId: string | null,
+): Promise<OtherResponsibleTwin[]> {
+  const rows = unwrap(
+    await db
+      .from("patients")
+      .select("id, full_name, birthdate, contact_id")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .is("anonymized_at", null)
+      .eq("birthdate", birthdate),
+    "Fichas de outros responsáveis",
+  );
+  const name = comparableName(fullName);
+  const same = rows.filter((row) => comparableName(row.full_name) === name);
+  if (same.length === 0) return [];
+  const links = unwrap(
+    await db
+      .from("patient_contacts")
+      .select("patient_id, contact_id, kinship, contacts ( full_name, phone )")
+      .eq("clinic_id", clinicId)
+      .in("patient_id", same.map((row) => row.id)),
+    "Responsáveis das fichas",
+  ) as unknown as { patient_id: string; contact_id: string; kinship: string | null; contacts: { full_name: string; phone: string } | null }[];
+  return same
+    .filter((row) => !contactId || !links.some((l) => l.patient_id === row.id && l.contact_id === contactId))
+    .map((row) => {
+      const primary = links.find((l) => l.patient_id === row.id && l.contact_id === row.contact_id);
+      return {
+        id: row.id,
+        fullName: row.full_name,
+        birthdate: row.birthdate,
+        primary: primary?.contacts ? { fullName: primary.contacts.full_name, phone: primary.contacts.phone, kinship: primary.kinship } : null,
+      };
+    })
+    .sort((a, b) => a.fullName.localeCompare(b.fullName));
+}
+
 export type SimilarRecord = { id: string; fullName: string; birthdate: string; futureAppointments: number };
 
 /**
