@@ -5,8 +5,10 @@
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `be69117` (11/nov), migrações até `20270112120000`. Fluxo: [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`) = `main` atual: portal F2, F3a–F3e, F5a (agenda em colunas), ajustes da
->   validação. Migrações até `20270112120000` (turmas na faixa, aplicada 11/nov com OK do cliente).
+> - **Staging** (`teste.recepclinic.com.br`) = `main` atual (`5034a30`, 11/nov): produção + **vários responsáveis (VR1–VR5)**.
+>   Migrações até `20270116120000` (VR, aplicadas e conferidas 11/nov). Modelos "Remarcada/Cancelada por outro
+>   responsável" enviados à Meta pelo cliente (11/nov). **Não publicar na produção antes da F3f** (o bot ainda só
+>   reconhece o responsável principal).
 >
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
@@ -15,10 +17,13 @@
 > 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
 > **Implantação da `main` na produção (11/nov, feita):** 17 migrações aplicadas e conferidas, código publicado, saúde
 > `ok` (registro em `producao.md`); portal ligado na clínica piloto pelo cliente. Foto como primeiro item em
-> Configurações › Profissionais e Equipe (`be69117`, validada no staging e na produção, 11/nov). **Próximo:** F3f, o bot
-> enxuto (seção 15.6), nas condições da F3-9. Clínica Exemplo Saúde do staging com 12 profissionais
+> Configurações › Profissionais e Equipe (`be69117`, validada no staging e na produção, 11/nov). **Próximo:** validação da VR no staging (roteiro
+> a escrever pela sessão de validação) e, em paralelo, a F3f (bot enxuto, seção 15.6, BE-1 a BE-10) numa branch curta,
+> com o bot pela ligação e o Remarcar/Cancelar do bot (UI-5, aviso da VR4). Clínica Exemplo Saúde do staging com 12 profissionais
 > (`scripts/clinica-exemplo-grande.mjs`).
-> **Pendentes com o cliente:** vários responsáveis por paciente (planejado: VR-1 a VR-7, D14).
+> **VR na `main` (11/nov):** branch `varios-responsaveis` juntada (suíte verde: unidade 1223, banco 1218); detalhe na seção
+> 8 do [`planejamento-varios-responsaveis.md`](planejamento-varios-responsaveis.md). Pergunta aberta: atualizar a
+> `nota-fiscal` com a `main`.
 >
 > **Outras frentes paradas**
 > - **Biomedical** ([proposta](propostas/clinica-12-profissionais/README.md)): implantação depende do portal, F3, F5 e F6 no ar.
