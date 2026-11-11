@@ -148,6 +148,17 @@ export function privateLabel(price: PriceInfo, separator = ", "): string {
   return `Particular${separator}${price.privatePriceVaries ? "a partir de " : ""}${formatPrice(price.privatePriceCents)}`;
 }
 
+/**
+ * "Ver valores e convênios aceitos" da lista de exames (cliente, 11/nov/2026): o texto de um exame, como na tela de
+ * dias e horários ("Particular, R$ 250. Unimed, Bradesco.").
+ */
+export function examValuesText(exam: { priceCents: number | null; priceVaries: boolean; acceptsPrivate: boolean; plans: readonly { name: string }[] }): string {
+  const own = exam.acceptsPrivate
+    ? `${privateLabel({ acceptsPrivate: true, privatePriceCents: exam.priceCents, privatePriceVaries: exam.priceVaries })}.`
+    : "Não aceita particular.";
+  return exam.plans.length ? `${own} ${exam.plans.map((p) => p.name).join(", ")}.` : own;
+}
+
 /** Opções da P5: particular (se atende) e os convênios atendidos, com a observação de cada um. */
 export function modalityOptions(professional: PriceInfo & { plans: readonly PortalPlan[] }): ModalityOption[] {
   return [
