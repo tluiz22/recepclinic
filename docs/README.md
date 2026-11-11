@@ -6,13 +6,13 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `64ec6b1` (08/nov). Fluxo: [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`) = `main` atual: portal F2, F3a–F3e, F5a (agenda em colunas), ajustes da
->   validação. Migrações até `20270110120000`; **`20270110130000` só no local, esperando OK do cliente** (desliga 2
->   horários da Consulta Domiciliar antiga).
+>   validação. Migrações até `20270110130000` (aplicada 10/nov com OK do cliente: desligou 3 horários de serviços
+>   desativados).
 >
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
-> **Próximo:** OK da migração no staging → roteiro 15.5.4 (F3e, `clinica-teste`) → seção 16 (F5a) → F3f e produção (F3-9).
+> **Próximo:** roteiro 15.5.4 (F3e, `clinica-teste`) → seção 16 (F5a) → F3f e produção (F3-9).
 > **Pendentes com o cliente:** "Minhas consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o
 > local "Consulta Domiciliar" do staging; capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações,
 > `config-horarios`); vários responsáveis por paciente (planejado: VR-1 a VR-7, D14). Teste
