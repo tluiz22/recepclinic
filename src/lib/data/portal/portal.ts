@@ -6,6 +6,7 @@ import { listAgendas } from "../config/agendas";
 import type { ClinicProfile } from "../config/clinic";
 import { getPublicClinicBrand, type PublicClinicBrand } from "../config/brand";
 import { listInsurancePlans } from "../config/insurance";
+import { listServiceInsuranceLinks } from "../config/serviceInsurance";
 import { listLocations, type LocationType } from "../config/locations";
 import { listProfessionalBotInfo } from "../config/professionalBotInfo";
 import { professionalRegistry, listProfessionals } from "../config/professionals";
@@ -99,6 +100,9 @@ export type PortalExam = {
   hasPreparationFile: boolean;
   /** Em turma (F3e-2): horário fixo, várias pessoas juntas; o paciente escolhe o dia numa lista, sem o número de vagas. */
   isGroup: boolean;
+  /** Particular e convênios do exame (CE-3, cliente, 10/nov/2026): o que a clínica marcou no cadastro dele. */
+  acceptsPrivate: boolean;
+  plans: PortalPlan[];
 };
 
 export const EXAM_SLUG_PREFIX = "exame-";
@@ -135,7 +139,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
   const [brand, features] = await Promise.all([getPublicClinicBrand(db, clinicId), getClinicFeatures(db, clinicId)]);
   if (brand.suspended || !features.includes("portal")) return { status: "unavailable", brand };
 
-  const [settings, professionals, agendas, services, locations, plans, links, botInfo, photos, windows, hours] = await Promise.all([
+  const [settings, professionals, agendas, services, locations, plans, links, examLinks, botInfo, photos, windows, hours] = await Promise.all([
     db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
     listProfessionals(db, clinicId),
     listAgendas(db, clinicId),
@@ -147,6 +151,7 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
       .select("professional_id, insurance_plan_id, note")
       .eq("clinic_id", clinicId)
       .then((r) => unwrap(r, "Convênios do profissional")),
+    listServiceInsuranceLinks(db, clinicId),
     listProfessionalBotInfo(db, clinicId),
     db.from("professionals").select("id, photo_path").eq("clinic_id", clinicId).then((r) => unwrap(r, "Fotos dos profissionais")),
     db
@@ -258,6 +263,15 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
       for (const w of here) examLocations.add(w.location_id);
       const locationIds = [...new Set(here.map((w) => w.location_id))];
       const prices = locationIds.map((id) => servicePriceAt(service, id)).filter((p): p is number => p !== null);
+      // Convênios do exame (CE-3): os ativos marcados no cadastro dele; sem o item Convênios, só particular.
+      const examPlans = features.includes("insurance")
+        ? examLinks
+            .filter((link) => link.serviceId === service.id && planById.has(link.planId))
+            .map((link) => ({ id: link.planId, name: planById.get(link.planId)!.name, note: link.note?.trim() || null }))
+            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+        : [];
+      // Sem particular e sem convênio ativo não há como marcar: fica fora do portal (como o profissional).
+      if (!service.acceptsPrivate && !examPlans.length) continue;
       exams.push({
         serviceId: service.id,
         slug: examSlug(service.id),
@@ -270,6 +284,8 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
         preparation: service.preparationInstructions?.trim() || null,
         hasPreparationFile: !!service.preparationFile,
         isGroup: service.schedulingMode === "group",
+        acceptsPrivate: service.acceptsPrivate,
+        plans: examPlans,
       });
     }
     exams.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
@@ -278,10 +294,9 @@ export async function loadPortal(db: DbClient, clinicId: string, slug: string): 
         registry: "",
         specialties: [],
         photoUrl: null,
-        acceptsPrivate: true,
-        plans: features.includes("insurance")
-          ? plans.filter((p) => p.isActive).map((p) => ({ id: p.id, name: p.name, note: null })).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
-          : [],
+        // Cada exame tem os seus (examProfessional); aqui, a soma deles (há convênio em algum exame?).
+        acceptsPrivate: exams.some((e) => e.acceptsPrivate),
+        plans: [...new Map(exams.flatMap((e) => e.plans).map((p) => [p.id, { ...p, note: null }])).values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
         agendaId: team.id,
         horizonDays: team.bookingHorizonDays,
         locations: [...examLocations].map((id) => toPortalLocation(clinicLocations.get(id)!)),
@@ -322,6 +337,8 @@ export function examProfessional(portal: Pick<PortalClinic, "examBase">, exam: P
     name: exam.name,
     privatePriceCents: price,
     privatePriceVaries: exam.priceVaries,
+    acceptsPrivate: exam.acceptsPrivate,
+    plans: exam.plans,
     // Só os locais deste exame (o cartão e os horários não mostram onde ele não é feito).
     locations: portal.examBase.locations.filter((l) => exam.locationIds.includes(l.id)),
     consultations: [{ serviceId: exam.serviceId, name: exam.name, durationMinutes: exam.durationMinutes, priceCents: exam.priceCents, prices: { clinic: exam.priceCents }, pricesByLocation: exam.pricesByLocation }],

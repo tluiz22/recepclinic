@@ -20,15 +20,18 @@ const examPros = portal ? portal.exams.map((e) => examProfessional(portal, e)).f
 const next = portal && page.kind === "open" && examPros.length ? await nextFreeSlots(page.db, portal.clinicId, examPros, portal.timeZone) : new Map<string, Date | null>();
 const exams = portal ? portal.exams.filter((e) => next.get(e.serviceId)) : [];
 if (portal && !exams.length) return Astro.redirect(base || "/");
+// Algum exame com convênio: a etapa "Particular ou convênio" conta no passo (CE-3: cada exame com os seus).
 const withPlans = (portal?.examBase?.plans.length ?? 0) > 0;
 const step = stepPosition(portalSteps({ specialty: false, professional: true, modality: withPlans }), "professional");
-const priceLine = (cents: number | null) => {
+const priceLine = (exam: { priceCents: number | null; acceptsPrivate: boolean; plans: readonly unknown[] }) => {
+  const cents = exam.priceCents;
   const price = cents && cents > 0 ? formatPrice(cents) : null;
-  if (withPlans) return price ? `Particular ${price} ou convênio.` : "Particular ou convênio.";
+  if (!exam.acceptsPrivate) return "Só convênio.";
+  if (exam.plans.length) return price ? `Particular ${price} ou convênio.` : "Particular ou convênio.";
   return price ? `Só particular, ${price}.` : "Só particular.";
 };
-const priceOf = (exam: { priceCents: number | null; priceVaries: boolean }) => {
-  const line = priceLine(exam.priceCents);
+const priceOf = (exam: { priceCents: number | null; priceVaries: boolean; acceptsPrivate: boolean; plans: readonly unknown[] }) => {
+  const line = priceLine(exam);
   // Valor que muda com o local: "a partir de".
   return exam.priceVaries ? line.replace(/R\$/, "a partir de R$") : line;
 };

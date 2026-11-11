@@ -944,6 +944,13 @@ particular", "Convênios aceitos" com observação; o mesmo componente do profis
 busca pelo nome com mais de 8 convênios. Gravação `setServiceCoverage` (`serviceInsurance.ts`), ação `convenios` da API
 do serviço. Conferido no local (390 e 1280 px). O paciente ainda vê todos os convênios até a CE-3/CE-4.
 
+**CE-3 feita (11/nov/2026):** o portal lê os convênios de cada exame (`PortalExam.acceptsPrivate` e `plans`, com a
+observação; `examProfessional` os passa ao "profissional" do exame): a P5 mostra só o que o exame aceita, com uma opção
+só a etapa é pulada; exame sem particular e sem convênio ativo fica fora; a lista diz "Só particular", "Particular ou
+convênio" ou "Só convênio" por exame. O servidor já só aceita plano da lista do exame (`holdPage`). Correção do gatilho
+do Particular (`20270111120000_convenios_do_exame_gatilho`: a permissão só é consultada no update pela tela; antes,
+scripts e testes com service_role recebiam "permission denied"). Teste `portal-exames` revisto. Conferido no local.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

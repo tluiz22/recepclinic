@@ -10,7 +10,7 @@ import { adminClient, clinicServiceClient } from "./helpers";
 import { setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // F2d da recepção digital, parte 2: exames pelo portal. O exame passa pelas telas da consulta como um "profissional"
-// (agenda da equipe, todos os convênios ativos, sem idade limite); a turma tem testes próprios (portal-turma.test.ts); o mesmo exame já
+// (agenda da equipe, os convênios marcados no exame (CE-3, 10/nov/2026), sem idade limite); a turma tem testes próprios (portal-turma.test.ts); o mesmo exame já
 // marcado impede outro, como no bot. Datas reais (a reserva vence pelo relógio do banco).
 
 const TZ = "America/Fortaleza";
@@ -68,6 +68,9 @@ beforeAll(async () => {
   const { data: plan, error } = await adminClient().from("insurance_plans").insert({ clinic_id: fixture.clinicId, name: "Plano dos Exames" }).select("id").single();
   if (error) throw error;
   planId = plan.id;
+  // Convênios do exame (CE-3): o "Exame" aceita o plano, com observação; a "Turma", só particular.
+  const link = await adminClient().from("service_insurance_plans").insert({ clinic_id: fixture.clinicId, service_id: fixture.ids.exame, insurance_plan_id: planId, note: "Com pedido médico" });
+  if (link.error) throw link.error;
   // Preparo do exame (com a formatação do WhatsApp).
   await adminClient().from("services").update({ preparation_instructions: "Jejum de *8 horas*." }).eq("id", fixture.ids.exame);
   const loaded = await loadPortal(service, fixture.clinicId, "x");
@@ -86,10 +89,25 @@ describe("exames pelo portal", () => {
     expect(portal.exams.map((e) => e.name)).toEqual(["Exame", "Turma"]);
     expect(portal.exams[0]).toMatchObject({ serviceId: fixture.ids.exame, slug: examSlug(fixture.ids.exame), preparation: "Jejum de *8 horas*.", hasPreparationFile: false, isGroup: false });
     expect(exam).toMatchObject({ agendaId: fixture.ids.agendaExams, acceptsPrivate: true, ageLimitYears: null, privatePriceCents: 15000, name: "Exame" });
-    // Todos os convênios ativos (agenda sem profissional, como o bot).
-    expect(exam.plans.map((p) => p.id)).toContain(planId);
+    // Os convênios marcados no exame (CE-3), com a observação; a Turma, só particular.
+    expect(exam.plans).toEqual([{ id: planId, name: "Plano dos Exames", note: "Com pedido médico" }]);
+    expect(examProfessional(portal, portal.exams[1])!).toMatchObject({ acceptsPrivate: true, plans: [] });
+    expect(portal.examBase?.plans.map((p) => p.id)).toEqual([planId]);
     expect(professionalOf(portal, examSlug(fixture.ids.exame).toUpperCase())?.exam?.serviceId).toBe(fixture.ids.exame);
     expect(professionalOf(portal, "exame-00000000")).toBeNull();
+  });
+
+  it("exame sem particular e sem convênio ativo fica fora; só convênio, sem a opção particular (CE-3)", async () => {
+    const off = await adminClient().from("services").update({ accepts_private: false }).in("id", [fixture.ids.turma, fixture.ids.exame]).select("id");
+    expect(off.error, JSON.stringify(off.error)).toBeNull();
+    try {
+      const loaded = await loadPortal(service, fixture.clinicId, "x");
+      if (loaded.status !== "open") throw new Error("portal indisponível");
+      expect(loaded.exams.map((e) => e.name)).toEqual(["Exame"]);
+      expect(examProfessional(loaded, loaded.exams[0])).toMatchObject({ acceptsPrivate: false, plans: [{ id: planId }] });
+    } finally {
+      await adminClient().from("services").update({ accepts_private: true }).in("id", [fixture.ids.turma, fixture.ids.exame]);
+    }
   });
 
   it("sem o item Exames e procedimentos, o portal não mostra exames", async () => {

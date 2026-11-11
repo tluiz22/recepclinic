@@ -266,7 +266,7 @@ const modalityText = modality ? (modality.value === "particular" ? "Particular" 
             <details class="self-start rounded-[14px] border border-gray-200 bg-white px-4">
               <summary class="flex min-h-[52px] cursor-pointer items-center font-bold text-clinic-ink">Ver valores e convênios aceitos</summary>
               <p class="pb-3.5 text-base">
-                {professional.acceptsPrivate ? `${privateLabel(professional)}.` : "Não atende particular."}
+                {professional.acceptsPrivate ? `${privateLabel(professional)}.` : professional.exam ? "Não aceita particular." : "Não atende particular."}
                 {professional.plans.length > 0 && ` ${professional.plans.map((p) => p.name).join(", ")}.`}
               </p>
             </details>
