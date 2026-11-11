@@ -11,7 +11,7 @@
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
-> **Próximo:** roteiro 15.5.4: passos 2 a 5 ok (11/nov); seguir no passo 6 (turma, agora uma a cada duração do exame) e 7.
+> **Próximo:** roteiro 15.5.4: passos 2 a 6 ok (11/nov); falta o passo 7 (dois exames no mesmo horário, com reserva aberta).
 > Depois: seção 16 (F5a) → F3f e produção (F3-9). Convênios de cada exame (CE-1 a CE-6, seção 15.5.7) feitos (11/nov).
 > **Pendentes com o cliente:** "Minhas consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o
 > local "Consulta Domiciliar" do staging; capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações,
