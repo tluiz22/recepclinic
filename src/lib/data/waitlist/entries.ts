@@ -1,7 +1,7 @@
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn } from "../errors";
 import { getAppointment, logTrail, type ActionChannel, type Appointment } from "../agenda/appointments";
-import { appointmentRecipient, BOOKER_COLUMNS, type RecipientContact } from "../whatsapp/recipient";
+import { appointmentRecipientContact, BOOKER_COLUMNS, type RecipientContact } from "../whatsapp/recipient";
 
 // Lista de espera para antecipar (Fase 25 do piloto), F3.7a: entrar, sair e
 // consultar a fila. Quem já tem atendimento marcado entra pelo bot, ao
@@ -210,11 +210,7 @@ export async function listWaitlist(db: DbClient, clinicId: string, { agendaIds }
         isHomeVisit: appointment.locations.type === "home_visit",
       },
       patient: { id: appointment.patients.id, fullName: appointment.patients.full_name },
-      contact: {
-        id: appointmentRecipient(appointment).id,
-        fullName: appointmentRecipient(appointment).full_name,
-        phone: appointmentRecipient(appointment).phone,
-      },
+      contact: appointmentRecipientContact(appointment),
       pendingOffer: pendingByEntry.get(row.id) ?? null,
     };
   });

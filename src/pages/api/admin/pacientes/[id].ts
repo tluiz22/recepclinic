@@ -4,6 +4,7 @@ import { receivedReturn, withReturn } from "../../../../lib/returnPath";
 import { todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
+import { logError } from "../../../../lib/log";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { anonymizePatient, contactForResponsible, getContact, getPatient, setPatientActive, setPatientInsurance, updatePatient } from "../../../../lib/data/patients";
 import { linkPatientContact, listPatientContacts, setPrimaryContact, similarRecordsOfContact, unlinkPatientContact } from "../../../../lib/data/patientContacts";
@@ -88,21 +89,35 @@ export const POST: APIRoute = async (context) => {
           const kinship = formOptionalText(form, "kinship");
           if (kinship && kinship.length > 40) throw new DataError("invalid", "Parentesco longo", { kinship: "Parentesco: até 40 letras." });
           const contactId = formOptionalText(form, "contact_id");
+          // O paciente antes do número: um número novo só é criado se a ligação tem como dar certo.
+          const patient = await getPatient(db, clinic.clinicId, id);
+          if (patient.anonymizedAt) throw new DataError("invalid", "Ligar responsável: Paciente anonimizado");
           const contact = contactId
             ? await getContact(db, clinic.clinicId, contactId)
             : await contactForResponsible(db, clinic.clinicId, { phone: formText(form, "phone"), fullName: formOptionalText(form, "full_name") });
-          const patient = await getPatient(db, clinic.clinicId, id);
           // A ficha parecida só sai se ainda for parecida agora (outra pessoa pode ter mudado no meio).
           const toDeactivate = new Set(form?.getAll("desativar").map(String) ?? []);
           const similar = toDeactivate.size ? await similarRecordsOfContact(db, clinic.clinicId, contact.id, patient) : [];
           await linkPatientContact(db, clinic.clinicId, id, contact.id, kinship);
-          const off = similar.filter((r) => toDeactivate.has(r.id));
-          for (const record of off) await setPatientActive(db, clinic.clinicId, record.id, false);
+          // A ligação já valeu: se desativar a outra ficha falhar, avisa em vez de esconder o que deu certo.
+          let off = 0;
+          let offFailed = false;
+          for (const record of similar.filter((r) => toDeactivate.has(r.id))) {
+            try {
+              await setPatientActive(db, clinic.clinicId, record.id, false);
+              off++;
+            } catch (error) {
+              offFailed = true;
+              logError("ligar responsável: outra ficha não desativada", error, { clinica: clinic.clinicId, paciente: record.id });
+            }
+          }
           const label = kinship ? `${contact.fullName} (${kinship.toLowerCase()})` : contact.fullName;
-          return {
-            redirectTo: page,
-            message: `${label} ligado a ${patient.fullName}.${off.length ? ` A outra ficha foi desativada.` : ""}`,
-          };
+          const offText = offFailed
+            ? " A outra ficha não foi desativada: desative pela ficha dela."
+            : off
+              ? " A outra ficha foi desativada."
+              : "";
+          return { redirectTo: page, message: `${label} ligado a ${patient.fullName}.${offText}` };
         }
         case "desligar_responsavel": {
           const contactId = formText(form, "contact_id");

@@ -10,7 +10,7 @@ export type { SendOutcome };
 import { rescheduleAppointment } from "../agenda/appointments";
 import { getFreeSlots, getGroupSessions, getNextAvailableDates, loadSchedulingPlan, type SchedulingPlan } from "../agenda/slots";
 import { logError } from "../../log";
-import { appointmentRecipient, BOOKER_COLUMNS, type RecipientContact } from "../whatsapp/recipient";
+import { appointmentRecipientContact, BOOKER_COLUMNS, type RecipientContact } from "../whatsapp/recipient";
 
 // Motor de ofertas da lista de espera (Fase 25 do piloto, etapa 3), F3.7b.
 // Roda com a credencial da clínica (clinic_service): vagas e ofertas só são
@@ -500,11 +500,7 @@ async function loadQueue(db: DbClient, clinicId: string, opening: Opening): Prom
     patientName: row.appointments.patients.full_name,
     serviceName: row.appointments.services.name,
     serviceCategory: row.appointments.services.category,
-    contact: {
-      id: appointmentRecipient(row.appointments).id,
-      fullName: appointmentRecipient(row.appointments).full_name,
-      phone: appointmentRecipient(row.appointments).phone,
-    },
+    contact: appointmentRecipientContact(row.appointments),
   }));
 }
 

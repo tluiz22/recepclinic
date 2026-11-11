@@ -15,6 +15,12 @@ export function appointmentRecipient(row: { booker?: RecipientContact | null; pa
   return row.booker?.phone ? row.booker : row.patients.contacts;
 }
 
+/** O mesmo, no formato das telas (`fullName`). */
+export function appointmentRecipientContact(row: Parameters<typeof appointmentRecipient>[0]): { id: string; fullName: string; phone: string } {
+  const { id, full_name: fullName, phone } = appointmentRecipient(row);
+  return { id, fullName, phone };
+}
+
 /**
  * O celular é de um responsável ligado ao paciente (principal ou não)? Vale para o toque "Confirmar" do lembrete
  * (UI-5: qualquer responsável ligado confirma).

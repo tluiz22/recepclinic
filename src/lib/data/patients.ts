@@ -400,7 +400,7 @@ export async function listPatientsPage(
     if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
     request = request.in("id", ids);
   } else if (term?.kind === "phone") {
-    const ids = await patientIdsByPhone(db, clinicId, term.digits);
+    const ids = await patientIdsByPhone(db, clinicId, term.digits, includeInactive);
     if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
     request = request.in("id", ids);
   } else if (term) request = filterPatients(request, term);
@@ -723,11 +723,15 @@ function filterPatients<Q extends { eq(column: string, value: string): Q }>(requ
  * Pacientes de qualquer responsável com o número (VR2, D14: a busca pelo celular acha a ficha também pelo 2º
  * responsável). Até 150 (cabe no endereço do filtro seguinte).
  */
-async function patientIdsByPhone(db: DbClient, clinicId: string, digits: string): Promise<string[]> {
-  const rows = unwrap(
-    await db.from("patient_contacts").select("patient_id, contacts!inner ( phone )").eq("clinic_id", clinicId).ilike("contacts.phone", `%${digits}%`).limit(150),
-    "Busca pelo celular",
-  );
+async function patientIdsByPhone(db: DbClient, clinicId: string, digits: string, includeInactive = false): Promise<string[]> {
+  // Os desativados saem antes do limite (senão um pedaço curto do número enche os 150 com fichas antigas).
+  let request = db
+    .from("patient_contacts")
+    .select("patient_id, contacts!inner ( phone ), patients!inner ( is_active )")
+    .eq("clinic_id", clinicId)
+    .ilike("contacts.phone", `%${digits}%`);
+  if (!includeInactive) request = request.eq("patients.is_active", true);
+  const rows = unwrap(await request.limit(150), "Busca pelo celular");
   return [...new Set(rows.map((row) => row.patient_id))];
 }
 

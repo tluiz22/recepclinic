@@ -90,6 +90,29 @@ describe("busca pelo celular de qualquer responsável", () => {
     expect(page.items.map((p) => p.id)).toEqual(expect.arrayContaining([child, duplicate]));
     expect(page.total).toBe(2);
   });
+
+  it("muitas fichas desativadas com o mesmo pedaço do número não escondem a ativa", async () => {
+    // 160 fichas desativadas cujo celular termina em "0077" (como o do pai, e só ele na clínica).
+    await sql(
+      `with c as (
+         insert into public.contacts (clinic_id, full_name, phone)
+         select $1, 'Antigo ' || i, '+55619' || lpad(i::text, 4, '0') || '0077' from generate_series(1, 160) i
+         returning id, full_name
+       )
+       insert into public.patients (clinic_id, contact_id, full_name, birthdate, is_active)
+       select $1, id, 'Ficha antiga ' || full_name, '2000-01-01', false from c`,
+      [clinicId],
+    );
+    try {
+      const found = await searchPatients(asDb(fixture.reception), clinicId, "0077");
+      expect(found.map((p) => p.id)).toEqual(expect.arrayContaining([child]));
+      const page = await listPatientsPage(asDb(fixture.reception), clinicId, { query: "0077" });
+      expect(page.items.map((p) => p.id)).toEqual(expect.arrayContaining([child]));
+    } finally {
+      await sql("delete from public.patients where clinic_id = $1 and full_name like 'Ficha antiga %'", [clinicId]);
+      await sql("delete from public.contacts where clinic_id = $1 and full_name like 'Antigo %'", [clinicId]);
+    }
+  });
 });
 
 describe("Marcar: confirmação e lembrete para (UI-6)", () => {
