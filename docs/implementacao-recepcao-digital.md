@@ -1133,3 +1133,17 @@ com o cabeçalho, os filtros e a legenda do Dia. Decisões do cliente (11/nov, d
   portal − já passados); cancelado libera; feriado aparece como "Feriado".
 - **Bordas (só nas telas da Agenda: Dia, Semana e Próximos horários livres):** largura toda ao lado do menu, sem o limite
   de 1104 px, com 16 px nas laterais e 14 px no topo (12 px no celular). As outras telas seguem na largura única.
+
+**Feito (11/nov/2026, direto na `main`):** regra pura em `src/lib/weekOccupancy.ts` (com testes): N = atendimentos não
+cancelados; M = N + horários livres do dia contados desde o começo da semana (o dia que passou mantém o total); livres =
+os de M ainda por vir e sem reserva do portal ("Cheio" quando tudo marcado; dia passado sem livres). Tela
+`src/pages/admin/agenda/semana.astro`: quadro com cabeçalho de cada dia (livres somados; tocar abre o Dia), linhas por
+especialidade, quadro hachurado para sem atendimento e feriado; legenda da barra (marcados, 75% ou mais, cheio). Filtros
+iguais aos do Dia (Especialidade e Profissional a partir de 8 agendas; senão Agenda) e "Próximos horários livres".
+Celular (abaixo de 768 px): faixa dos 7 dias e a lista do dia escolhido. Bordas: opção `edge` do `AdminLayout` no Dia,
+na Semana e nos Próximos horários livres. Captura `agenda-dia` anotada em `capturas-pendentes.md`.
+
+**Roteiro de validação (staging):** 1) Agenda › Semana na Clínica Exemplo Saúde: um quadro por profissional e dia,
+agrupado por especialidade; conferir "N de M" e livres de um dia com o Dia daquele profissional. 2) Tocar num quadro:
+abre o Dia só daquele profissional. 3) Filtro Especialidade e Profissional. 4) Domingo 15/11: "Feriado". 5) Celular:
+tocar nos dias da faixa troca a lista. 6) Dia, Semana e Próximos horários livres na largura toda ao lado do menu.

@@ -11,9 +11,9 @@
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
-> **Próximo:** implementar a Semana da Agenda como quadro de ocupação e as bordas menores da Agenda (decidido em 11/nov,
-> seção 16.3 do plano da frente; canvas <https://claude.ai/artifact/2heY2omCb9DUB52THeRphR>), depois o roteiro 16.2 (F5a). Clínica Exemplo
-> Saúde do staging com 12 profissionais (`scripts/clinica-exemplo-grande.mjs`, 11/nov). Depois: F3f → F3f e produção (F3-9). Convênios de cada exame (CE-1 a CE-6, seção 15.5.7) feitos (11/nov).
+> **Próximo:** cliente valida no staging a Semana da Agenda (quadro de ocupação) e as bordas (feitas 11/nov, roteiro no
+> fim da seção 16.3 do plano da frente), depois o roteiro 16.2 (F5a). Clínica Exemplo Saúde do staging com 12
+> profissionais (`scripts/clinica-exemplo-grande.mjs`). Depois: F3f → F3f e produção (F3-9).
 > **Pendentes com o cliente:** "Minhas consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o
 > local "Consulta Domiciliar" do staging; capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações,
 > `config-horarios`); vários responsáveis por paciente (planejado: VR-1 a VR-7, D14). Teste
