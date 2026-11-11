@@ -1168,3 +1168,5 @@ Feito (`ResumoDia.astro`, `ResumoLinha.astro`, `consultas/index.astro`):
   trocar de dia. Clínica com uma agenda: lista direto, sem blocos.
 - Linha: 5 colunas alinhadas no computador (hora, paciente, serviço, quem marcou, situação); 2 linhas fixas no celular.
 - "Sem atendimentos: …" lista os profissionais ativos sem nada no dia.
+
+Validado pelo cliente no staging (11/nov/2026).
