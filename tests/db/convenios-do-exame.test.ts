@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createInsurancePlan, setInsurancePlanActive } from "../../src/lib/data/config/insurance";
-import { listServicePlans, setServiceCoverage } from "../../src/lib/data/config/serviceInsurance";
+import { bookAppointment } from "../../src/lib/data/agenda/appointments";
+import { examPlanFor, listServicePlans, setServiceCoverage } from "../../src/lib/data/config/serviceInsurance";
 import { listServices } from "../../src/lib/data/config/services";
 import { adminClient } from "./helpers";
-import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, codeOf, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // Convênios de cada exame (CE-1; cliente, 10/nov/2026; docs/implementacao-recepcao-digital.md, 15.5.7):
 // "Particular" no serviço e a associação positiva service_insurance_plans, só para exame, mantida por quem
@@ -109,5 +110,31 @@ describe("convênios do exame (CE-1)", () => {
     expect((await listServices(db, f.clinicId)).find((s) => s.id === f.ids.turma)?.acceptsPrivate).toBe(true);
 
     expect(await codeOf(() => setServiceCoverage(asDb(f.reception), f.clinicId, f.ids.turma, { acceptsPrivate: true, plans: [{ planId: unimed, note: null }] }))).not.toBe("ok");
+  });
+
+  it("CE-5: a Marcar grava o exame como particular quando ele não aceita o convênio do paciente; sem particular, recusa", async () => {
+    const db = asDb(f.reception);
+    const adm = asDb(f.admin);
+    const bradesco = (await createInsurancePlan(adm, f.clinicId, { name: "Bradesco", alternativeNames: [], ansCode: null })).id;
+    await setServiceCoverage(adm, f.clinicId, f.ids.exame, { acceptsPrivate: true, plans: [{ planId: unimed, note: null }] });
+    expect(await examPlanFor(db, f.clinicId, f.ids.exame, unimed)).toEqual({ planId: unimed, asPrivate: false });
+    expect(await examPlanFor(db, f.clinicId, f.ids.exame, bradesco)).toEqual({ planId: null, asPrivate: true });
+    expect(await examPlanFor(db, f.clinicId, f.ids.exame, null)).toEqual({ planId: null, asPrivate: false });
+    // Consulta: segue o convênio do paciente (profissional: só o aviso, MC).
+    expect(await examPlanFor(db, f.clinicId, f.ids.consulta, bradesco)).toEqual({ planId: bradesco, asPrivate: false });
+
+    // Paciente Bradesco: o gatilho põe o convênio dele; com asPrivate, o atendimento fica particular.
+    expect((await adminClient().from("patients").update({ insurance_plan_id: bradesco }).eq("id", f.ids.p2)).error).toBeNull();
+    const { appointment } = await bookAppointment(
+      db,
+      f.clinicId,
+      { patientId: f.ids.p2, serviceId: f.ids.exame, agendaId: f.ids.agendaExams, start: at(MON2, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null, asPrivate: true },
+      NOW,
+    );
+    expect(appointment.insurancePlanId).toBeNull();
+
+    await setServiceCoverage(adm, f.clinicId, f.ids.exame, { acceptsPrivate: false, plans: [{ planId: unimed, note: null }] });
+    expect(await codeOf(() => examPlanFor(db, f.clinicId, f.ids.exame, bradesco))).toBe("invalid");
+    expect(await codeOf(() => examPlanFor(db, f.clinicId, f.ids.exame, null))).toBe("invalid");
   });
 });

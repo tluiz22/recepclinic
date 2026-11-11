@@ -67,6 +67,7 @@ import { listLocations } from "../../../lib/data/config/locations";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../lib/data/config/professionals";
 import { agendasAcceptingPlan } from "../../../lib/data/agenda/publicBooking";
+import { listServicePlans } from "../../../lib/data/config/serviceInsurance";
 import Notice from "../../../components/admin/ui/Notice.astro";
 import { listAppointmentPayments } from "../../../lib/data/payments";
 import { listServices, servicePriceAt, TEAM_OWNER } from "../../../lib/data/config/services";
@@ -206,7 +207,22 @@ const patientPlanId = insuranceOn ? (editing ? editing.insurancePlanId : (patien
 const patientPlan = patientPlanId ? (plans.find((p) => p.id === patientPlanId) ?? null) : null;
 const planAccepting = patientPlan && serviceAgendaIds.length ? await agendasAcceptingPlan(db, clinic.clinicId, serviceAgendaIds, patientPlan.id, service!.id) : serviceAgendaIds;
 const planRefusing = serviceAgendaIds.filter((id) => !planAccepting.includes(id));
-const planNotice = !patientPlan || !planRefusing.length
+// Exame (CE-5, cliente, 11/nov/2026): só os convênios dele; fora deles, fica particular (ou não marca, se o exame
+// não aceita particular). A mesma regra no servidor (`examPlanFor`).
+const isExam = service?.category === "exam";
+const examPlanIds = isExam && insuranceOn ? (await listServicePlans(db, clinic.clinicId, service!.id)).map((p) => p.planId) : [];
+const examAcceptsPlan = !!patientPlan && examPlanIds.includes(patientPlan.id);
+const examAsPrivate = isExam && !!patientPlan && !examAcceptsPlan && service!.acceptsPrivate;
+const examRefuses = isExam && !examAcceptsPlan && !service!.acceptsPrivate;
+const planNotice = isExam
+  ? examRefuses
+    ? patientPlan
+      ? `${service!.name} não aceita ${patientPlan.name}, o convênio do paciente, nem particular: não dá para marcar.`
+      : `${service!.name} não aceita particular: não dá para marcar sem um convênio que o exame aceita.`
+    : examAsPrivate
+      ? `${service!.name} não aceita ${patientPlan!.name}, o convênio do paciente: o atendimento fica como particular.`
+      : null
+  : !patientPlan || !planRefusing.length
   ? null
   : agendaChoice !== ANY
     ? planRefusing.includes(agendaChoice)
@@ -471,7 +487,7 @@ const confirmBase = JSON.stringify(
     : [],
 );
 const planName = patient?.insurance ? (plans.find((p) => p.id === patient.insurance!.planId)?.name ?? "Convênio") : null;
-const confirmInsurance = insuranceOn ? (planName ?? "Particular") : "";
+const confirmInsurance = insuranceOn ? (examAsPrivate ? "Particular" : (planName ?? "Particular")) : "";
 // Aviso do WhatsApp (cliente, 28/out/2026): só quando a mensagem sai de verdade
 // (fora da implantação e com o WhatsApp conectado).
 const recipient = patient?.isContactSelf ? (vocabulary.patient === "criança" ? "a criança" : `o ${vocabulary.patient}`) : `o ${vocabulary.contact}`;
@@ -511,7 +527,9 @@ const paidCents =
 const seriesChoice = !!editing?.seriesId && (editing.status === "scheduled" || editing.status === "confirmed") && editing.scheduledAt > new Date();
 const radio =
   "flex cursor-pointer items-start gap-2.5 rounded-[9px] border border-line-strong px-3 py-2.5 text-[15px] leading-snug has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:bg-[#e7f4ef] has-[:checked]:px-[11px] has-[:checked]:py-[9px]";
-const planOptions = plans.filter((p) => p.isActive || p.id === editing?.insurancePlanId);
+// Exame: só os convênios dele, e "Particular" só se o exame aceita (CE-5).
+const planOptions = plans.filter((p) => (!isExam || examPlanIds.includes(p.id)) && (p.isActive || p.id === editing?.insurancePlanId));
+const privateOption = !isExam || service!.acceptsPrivate;
 const homeAddress = editing?.homeVisitAddress ?? contact?.defaultHomeAddress ?? "";
 const verb = editing ? "Alterar" : "Marcar";
 const formAction = editing ? `/api/admin/agenda/atendimentos/${editing.id}` : "/api/admin/agenda/atendimentos/novo";
@@ -834,7 +852,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             <div class="flex flex-col gap-1">
               <label for="insurance_plan_id" class="text-[15px] font-semibold text-ink">Convênio</label>
               <select id="insurance_plan_id" name="insurance_plan_id" class={CONTROL}>
-                <option value="" selected={!editing.insurancePlanId}>Particular</option>
+                {privateOption && <option value="" selected={!editing.insurancePlanId || !planOptions.some((p) => p.id === editing.insurancePlanId)}>Particular</option>}
                 {planOptions.map((p) => (
                   <option value={p.id} selected={p.id === editing.insurancePlanId}>{p.name}</option>
                 ))}

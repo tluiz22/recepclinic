@@ -243,6 +243,10 @@ async function generateSessions(
         reason = "conflict";
       } else {
         count += 1;
+        // Série particular (CE-5): o gatilho app.appointment_defaults põe o convênio do paciente quando vem vazio.
+        if (series.insurancePlanId === null) {
+          unwrap(await db.from("appointments").update({ insurance_plan_id: null }).eq("clinic_id", clinicId).eq("id", id).not("insurance_plan_id", "is", null), "Sessão da série");
+        }
         result.created.push(await getAppointment(db, clinicId, id));
       }
     }

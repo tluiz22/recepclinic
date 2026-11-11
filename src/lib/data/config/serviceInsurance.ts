@@ -78,3 +78,23 @@ export async function setServiceCoverage(
     );
   }
 }
+
+/** Como o exame fica marcado pela equipe com o convênio do paciente (CE-5, cliente, 11/nov/2026). */
+export type ExamPlanChoice = { planId: string | null; asPrivate: boolean };
+
+/**
+ * Agenda › Marcar e Alterar (CE-5, cliente, 11/nov/2026): exame com convênio que ele não aceita fica como
+ * particular, se o exame aceita particular; se não aceita, a marcação é recusada (o mesmo para o paciente
+ * particular num exame "só convênio"). Serviço que não é exame não muda (profissional: só o aviso, MC).
+ */
+export async function examPlanFor(db: DbClient, clinicId: string, serviceId: string, planId: string | null): Promise<ExamPlanChoice> {
+  const service = unwrapOne(
+    await db.from("services").select("name, category, accepts_private").eq("clinic_id", clinicId).eq("id", serviceId).maybeSingle(),
+    "Serviço",
+  );
+  if (service.category !== "exam") return { planId, asPrivate: false };
+  if (planId && (await listServicePlans(db, clinicId, serviceId)).some((p) => p.planId === planId)) return { planId, asPrivate: false };
+  if (service.accepts_private) return { planId: null, asPrivate: planId !== null };
+  const reason = planId ? `${service.name} não aceita o convênio do paciente nem particular` : `${service.name} não aceita particular`;
+  throw new DataError("invalid", `Atendimento: ${reason}`, { insurancePlanId: `${reason}.` });
+}

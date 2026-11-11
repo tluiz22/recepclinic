@@ -406,6 +406,8 @@ export type BookInput = {
   /** Origem na trilha, se diferente do canal (ex.: link de agendamento). */
   trailChannel?: TrailChannel;
   actorId: string | null;
+  /** Exame marcado como particular, apesar do convênio do paciente (CE-5, `examPlanFor`). */
+  asPrivate?: boolean;
 } & AnyTimeInput;
 
 /**
@@ -556,6 +558,11 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       }
       throw fromDbError(error, "Atendimento");
     }
+  }
+
+  // O gatilho app.appointment_defaults põe o convênio do paciente; o exame que não o aceita fica particular (CE-5).
+  if (input.asPrivate) {
+    unwrap(await db.from("appointments").update({ insurance_plan_id: null }).eq("clinic_id", clinicId).eq("id", id), "Atendimento");
   }
 
   // Links de agendamento pendentes do mesmo serviço perdem a validade (piloto, Fase 12). Serviços por profissional

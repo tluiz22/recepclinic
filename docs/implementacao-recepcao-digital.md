@@ -958,6 +958,14 @@ aceita Unimed?" responde pelo exame; convênio aceito só em exame entra na list
 …"). Informações gerais › Convênios segue por profissional (os exames ficam fora dela desde 08/nov). Jornada do bot
 atualizada. Testes `bot-convenio` e `answers.test`.
 
+**CE-5 feita (11/nov/2026):** Agenda. Decisões do cliente (11/nov): exame com o convênio do paciente que ele não aceita
+**fica particular** ao salvar (aviso na Marcar e "Particular" na confirmação); exame que também não aceita particular
+(ou paciente particular num exame "só convênio"): a marcação é recusada. Próximos horários livres **não muda** (o cartão
+de Exames segue sem convênios). Servidor: `examPlanFor` (`serviceInsurance.ts`) no Marcar (avulso e série) e no Alterar;
+`bookAppointment` com `asPrivate`. Alterar de exame: a lista "Convênio" só com os convênios do exame e "Particular" só se
+ele aceita. Série particular: as sessões não herdam mais o convênio do paciente pelo gatilho (valia para toda série com
+"Particular"). Teste `convenios-do-exame` (CE-5). Conferido no local (Carlos, Bradesco, Espirometria).
+
 ### 15.6 Bot enxuto: a F3f revista (cliente, 11/nov/2026; planejado) [Cliente]
 
 **Por quê:** desde 1/out/2026 a Meta cobra também as mensagens do bot dentro da janela de 24h (preço de "utilidade";
