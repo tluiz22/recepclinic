@@ -6,12 +6,13 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `64ec6b1` (08/nov). Fluxo: [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`) = `main` atual: portal F2, F3a–F3e, F5a (agenda em colunas), ajustes da
->   validação. Migrações até `20270111120000` (convênios do exame, CE-1 e correção, aplicadas 11/nov com OK do cliente).
+>   validação. Migrações até `20270112120000` (turmas na faixa, aplicada 11/nov com OK do cliente).
 >
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
-> **Próximo:** roteiro 15.5.4 a partir do passo 2 (marcar em casa pelo portal) → seção 16 (F5a) → F3f e produção
+> **Próximo:** roteiro 15.5.4: passos 2 a 5 ok (11/nov); seguir no passo 6 (turma, agora uma a cada duração do exame) e 7.
+> Antes: (marcar em casa pelo portal) → seção 16 (F5a) → F3f e produção
 > (F3-9). Convênios de cada exame (CE-1 a CE-6, seção 15.5.7) feitos (11/nov).
 > **Pendentes com o cliente:** "Minhas consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o
 > local "Consulta Domiciliar" do staging; capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações,
