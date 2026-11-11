@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createInsurancePlan } from "../../src/lib/data/config/insurance";
+import { createInsurancePlan, setInsurancePlanActive } from "../../src/lib/data/config/insurance";
+import { listServicePlans, setServiceCoverage } from "../../src/lib/data/config/serviceInsurance";
+import { listServices } from "../../src/lib/data/config/services";
 import { adminClient } from "./helpers";
-import { asDb, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // Convênios de cada exame (CE-1; cliente, 10/nov/2026; docs/implementacao-recepcao-digital.md, 15.5.7):
 // "Particular" no serviço e a associação positiva service_insurance_plans, só para exame, mantida por quem
@@ -87,5 +89,25 @@ describe("convênios do exame (CE-1)", () => {
     } finally {
       await adminClient().from("clinic_features").insert({ clinic_id: f.clinicId, feature_key: "insurance" });
     }
+  });
+
+  it("CE-2: a tela grava particular, convênios e observações; exige um dos dois; plano desativado fica", async () => {
+    const db = asDb(f.admin);
+    const amil = (await createInsurancePlan(db, f.clinicId, { name: "Amil", alternativeNames: [], ansCode: null })).id;
+    await setServiceCoverage(db, f.clinicId, f.ids.turma, { acceptsPrivate: false, plans: [{ planId: unimed, note: " Com pedido " }, { planId: amil, note: null }] });
+    expect(await listServicePlans(db, f.clinicId, f.ids.turma)).toEqual(
+      [{ planId: unimed, note: "Com pedido" }, { planId: amil, note: null }].sort((a, b) => a.planId.localeCompare(b.planId)),
+    );
+    expect((await listServices(db, f.clinicId)).find((s) => s.id === f.ids.turma)?.acceptsPrivate).toBe(false);
+
+    expect(await codeOf(() => setServiceCoverage(db, f.clinicId, f.ids.turma, { acceptsPrivate: false, plans: [] }))).toBe("invalid");
+
+    // Amil desativado: a ligação fica (keepPlanIds), a Unimed sai, a observação muda.
+    await setInsurancePlanActive(db, f.clinicId, amil, false);
+    await setServiceCoverage(db, f.clinicId, f.ids.turma, { acceptsPrivate: true, plans: [], keepPlanIds: [amil] });
+    expect(await listServicePlans(db, f.clinicId, f.ids.turma)).toEqual([{ planId: amil, note: null }]);
+    expect((await listServices(db, f.clinicId)).find((s) => s.id === f.ids.turma)?.acceptsPrivate).toBe(true);
+
+    expect(await codeOf(() => setServiceCoverage(asDb(f.reception), f.clinicId, f.ids.turma, { acceptsPrivate: true, plans: [{ planId: unimed, note: null }] }))).not.toBe("ok");
   });
 });

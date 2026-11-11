@@ -939,6 +939,11 @@ e o gatilho `services_guard_accepts_private` (pela tela, o Particular só muda c
 `insurance_change_log.service_id`. Seed: Espirometria aceita Unimed. Teste `tests/db/convenios-do-exame.test.ts`. Aplicada
 só no banco local. Staging: com o OK do cliente.
 
+**CE-2 feita (11/nov/2026):** bloco "Particular e convênios" no exame já criado (com o item Convênios): "Aceita
+particular", "Convênios aceitos" com observação; o mesmo componente do profissional (`CoverageForm.astro`), que ganhou a
+busca pelo nome com mais de 8 convênios. Gravação `setServiceCoverage` (`serviceInsurance.ts`), ação `convenios` da API
+do serviço. Conferido no local (390 e 1280 px). O paciente ainda vê todos os convênios até a CE-3/CE-4.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

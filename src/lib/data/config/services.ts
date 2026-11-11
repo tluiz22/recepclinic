@@ -33,6 +33,8 @@ export type Service = {
   /** Dono (MS): o profissional; null com isTeam = serviço da equipe; os dois vazios = sem dono (desativado). */
   professionalId: string | null;
   isTeam: boolean;
+  /** Só Exame (CE, cliente, 10/nov/2026): aceita particular; os convênios ficam em service_insurance_plans. */
+  acceptsPrivate: boolean;
   agendaIds: string[];
   locations: ServiceLocationPrice[];
 };
@@ -40,7 +42,7 @@ export type Service = {
 /** Dono do serviço (MS): um profissional ou a equipe (só exame). */
 export type ServiceOwner = { professionalId: string } | { team: true };
 
-export type ServiceInput = Omit<Service, "id" | "isActive" | "agendaIds" | "locations" | "preparationFile" | "professionalId" | "isTeam">;
+export type ServiceInput = Omit<Service, "id" | "isActive" | "agendaIds" | "locations" | "preparationFile" | "professionalId" | "isTeam" | "acceptsPrivate">;
 
 export const hasOwner = (s: Pick<Service, "professionalId" | "isTeam">) => s.isTeam || s.professionalId !== null;
 
@@ -54,7 +56,7 @@ const ownerColumns = (owner: ServiceOwner) =>
   "team" in owner ? { professional_id: null, is_team: true } : { professional_id: owner.professionalId, is_team: false };
 
 const COLUMNS =
-  "id, name, category, duration_minutes, price_cents, return_deadline_days, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type, preparation_file_size, scheduling_mode, is_active, professional_id, is_team, service_agendas ( agenda_id ), service_locations ( location_id, price_cents )";
+  "id, name, category, duration_minutes, price_cents, return_deadline_days, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type, preparation_file_size, scheduling_mode, is_active, professional_id, is_team, accepts_private, service_agendas ( agenda_id ), service_locations ( location_id, price_cents )";
 const CATEGORIES: ServiceCategory[] = ["consultation", "return_visit", "exam"];
 
 type Row = {
@@ -73,6 +75,7 @@ type Row = {
   is_active: boolean;
   professional_id: string | null;
   is_team: boolean;
+  accepts_private: boolean;
   service_agendas: { agenda_id: string }[];
   service_locations: { location_id: string; price_cents: number | null }[];
 };
@@ -93,6 +96,7 @@ const toService = (row: Row): Service => ({
   isActive: row.is_active,
   professionalId: row.professional_id,
   isTeam: row.is_team,
+  acceptsPrivate: row.accepts_private,
   agendaIds: row.service_agendas.map((link) => link.agenda_id).sort(),
   locations: row.service_locations
     .map((link) => ({ locationId: link.location_id, priceCents: link.price_cents }))

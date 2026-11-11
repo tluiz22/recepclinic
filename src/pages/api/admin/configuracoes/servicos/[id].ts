@@ -14,6 +14,8 @@ import { listLocations } from "../../../../../lib/data/config/locations";
 import { deactivateServiceWindowsOutside, deactivateWindowsWithService, reactivateWindowsWithService } from "../../../../../lib/data/config/availability";
 import { receivedPreparationFile, setPreparationFile, type PreparationFile } from "../../../../../lib/data/config/preparationFile";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { listInsurancePlans } from "../../../../../lib/data/config/insurance";
+import { listServicePlans, setServiceCoverage } from "../../../../../lib/data/config/serviceInsurance";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formChecked, formInt, formMoneyCents, formOptionalInt, formOptionalMoneyCents, formText } from "../../../../../lib/forms";
 
@@ -34,6 +36,21 @@ export const POST: APIRoute = async (context) => {
   return runFormAction(
     context,
     async () => {
+      if (acao === "convenios") {
+        // Particular e convênios do exame (CE-2, cliente, 10/nov/2026), como os do profissional: os planos ativos
+        // marcados e a observação de cada um; a ligação a planos desativados fica.
+        const [active, current] = await Promise.all([listInsurancePlans(db, clinicId), listServicePlans(db, clinicId, id)]);
+        const activeIds = new Set(active.map((p) => p.id));
+        const marked = formAll(form, "plan_id").filter((pid) => activeIds.has(pid));
+        const acceptsPrivate = form?.get("accepts_private") === "1";
+        await setServiceCoverage(db, clinicId, id, {
+          acceptsPrivate,
+          plans: marked.map((pid) => ({ planId: pid, note: formText(form, `note_${pid}`) || null })),
+          keepPlanIds: current.map((p) => p.planId).filter((pid) => !activeIds.has(pid)),
+        });
+        const message = !marked.length ? "Salvo: só particular." : acceptsPrivate ? "Salvo: particular e convênios." : "Salvo: só convênios.";
+        return { redirectTo: page(), message };
+      }
       if (acao === "desativar" || acao === "reativar") {
         // Os horários só deste serviço saem e voltam com ele (cliente, 08/nov/2026).
         const plural = (n: number) => (n === 1 ? "1 horário" : `${n} horários`);
