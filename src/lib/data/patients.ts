@@ -724,14 +724,17 @@ function inIdOrder<T extends { id: string }>(rows: T[], ids: string[]): T[] {
 export type AnonymizationPreview = {
   /** Atendimentos futuros (marcados ou confirmados) que serão cancelados, sem aviso. */
   futureAppointments: number;
-  /** Outros pacientes do mesmo contato: ficam sem telefone até a clínica cadastrar outro. */
-  otherPatients: { id: string; fullName: string }[];
+  /**
+   * Responsáveis do paciente, o principal primeiro (VR-6, cliente, 10/nov/2026): quem não cuida de mais ninguém é
+   * anonimizado junto; quem cuida de outro paciente continua (`otherPatients`, os nomes).
+   */
+  contacts: { id: string; fullName: string; anonymized: boolean; otherPatients: string[] }[];
 };
 
 /** O que a anonimização vai fazer, para a tela mostrar antes de confirmar. */
 export async function previewAnonymization(db: DbClient, clinicId: string, patientId: string, now: Date = new Date()): Promise<AnonymizationPreview> {
   const patient = await getPatient(db, clinicId, patientId);
-  const [{ count, error }, others] = await Promise.all([
+  const [{ count, error }, links] = await Promise.all([
     db
       .from("appointments")
       .select("id", { count: "exact", head: true })
@@ -739,22 +742,42 @@ export async function previewAnonymization(db: DbClient, clinicId: string, patie
       .eq("patient_id", patientId)
       .in("status", ["scheduled", "confirmed"])
       .gt("scheduled_at", now.toISOString()),
-    listContactPatients(db, clinicId, patient.contactId, { includeInactive: true }),
+    db.from("patient_contacts").select("contact_id, contacts ( full_name )").eq("clinic_id", clinicId).eq("patient_id", patientId),
   ]);
   if (error) throw fromDbError(error, "Atendimentos futuros");
+  const contactRows = unwrap(links, "Responsáveis do paciente") as unknown as { contact_id: string; contacts: { full_name: string } | null }[];
+  const contactIds = [...new Set([patient.contactId, ...contactRows.map((row) => row.contact_id)])];
+  const others = unwrap(
+    await db
+      .from("patient_contacts")
+      .select("contact_id, patients ( full_name )")
+      .eq("clinic_id", clinicId)
+      .in("contact_id", contactIds)
+      .neq("patient_id", patientId),
+    "Outros pacientes dos responsáveis",
+  ) as unknown as { contact_id: string; patients: { full_name: string } | null }[];
+  const names = new Map(contactRows.map((row) => [row.contact_id, row.contacts?.full_name ?? ""]));
+  if (!names.get(patient.contactId)) names.set(patient.contactId, (await getContact(db, clinicId, patient.contactId)).fullName);
   return {
     futureAppointments: count ?? 0,
-    otherPatients: others.filter((p) => p.id !== patientId && !p.anonymizedAt).map((p) => ({ id: p.id, fullName: p.fullName })),
+    contacts: contactIds.map((id) => {
+      const otherPatients = others.filter((row) => row.contact_id === id).map((row) => row.patients?.full_name ?? "");
+      return { id, fullName: names.get(id) ?? "", anonymized: otherPatients.length === 0, otherPatients };
+    }),
   };
 }
 
 /**
- * Anonimiza o paciente e o contato dele (função do banco; só Administrador e
+ * Anonimiza o paciente e os responsáveis que ficam sem paciente (função do banco; só Administrador e
  * Suporte). Irreversível. Os documentos (CRM P1): o banco apaga as linhas e
  * aqui saem os arquivos, com os caminhos lidos antes; arquivo que não sai vai
  * para Administração › Erros.
  */
-export async function anonymizePatient(db: DbClient, clinicId: string, patientId: string): Promise<{ canceled: number; otherPatients: number }> {
+export async function anonymizePatient(
+  db: DbClient,
+  clinicId: string,
+  patientId: string,
+): Promise<{ canceled: number; otherPatients: number; contactsAnonymized: number; contactsKept: number }> {
   const files = await documentPaths(db, clinicId, patientId);
   const { data, error } = await db.rpc("anonymize_patient", { p_clinic_id: clinicId, p_patient_id: patientId });
   if (error) {
@@ -766,7 +789,12 @@ export async function anonymizePatient(db: DbClient, clinicId: string, patientId
   if (!(await removeDocumentFiles(db, files))) {
     logError("anonimização: arquivos dos documentos não saíram", undefined, { clinica: clinicId, paciente: patientId });
   }
-  const result = (data ?? {}) as { canceled?: number; other_patients?: number };
-  return { canceled: result.canceled ?? 0, otherPatients: result.other_patients ?? 0 };
+  const result = (data ?? {}) as { canceled?: number; other_patients?: number; contacts_anonymized?: number; contacts_kept?: number };
+  return {
+    canceled: result.canceled ?? 0,
+    otherPatients: result.other_patients ?? 0,
+    contactsAnonymized: result.contacts_anonymized ?? 0,
+    contactsKept: result.contacts_kept ?? 0,
+  };
 }
 

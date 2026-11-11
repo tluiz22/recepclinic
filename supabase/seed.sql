@@ -224,6 +224,10 @@ begin
     values (c_a, ct_carlos, 'Carlos Pereira', '1985-04-12', true, ip_bradesco) returning id into pt_carlos;
   insert into public.patients (clinic_id, contact_id, full_name, birthdate, is_contact_self)
     values (c_a, ct_julia, 'Júlia Ramos', '1992-09-30', true) returning id into pt_julia;
+  -- Vários responsáveis (D14): o principal de cada paciente entra pelo gatilho; Carlos é o 2º responsável de Ana (pai).
+  insert into public.patient_contacts (clinic_id, patient_id, contact_id, kinship) values (c_a, pt_ana, ct_carlos, 'Pai');
+  insert into public.patient_contact_events (clinic_id, patient_id, contact_id, event, kinship)
+    values (c_a, pt_ana, ct_carlos, 'linked', 'Pai');
 
   -- Módulo financeiro (F11.1): o CPF de Maria (paga pelos filhos, o padrão) e,
   -- para Ana, o pai como outra pessoa. CPFs fictícios, com dígitos válidos.

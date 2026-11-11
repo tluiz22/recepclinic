@@ -7,9 +7,11 @@
 > - **Feito (10/nov):** levantamento do impacto no código (seção 3), modelo (seção 4), **decisões VR-1 a VR-7**
 >   (seção 5) e **telas UI-1 a UI-6** (seção 6, canvas aprovado tela a tela), **D14** em [`arquitetura.md`](arquitetura.md)
 >   e as etapas VR1 a VR5 (seção 7).
-> - **Próximo:** VR1 (só banco) **liberada antes da F3f** (cliente, 11/nov: a F3f virou o bot enxuto,
->   `implementacao-recepcao-digital.md` 15.6, BE-1); falta o OK para começar. A VR2 (bot) fica depois da F3f e menor
->   (sem data de nascimento, Cancelar e Remarcar no chat).
+> - **VR1 (banco) feita (11/nov, sessão de implementação, branch `varios-responsaveis`):** migração
+>   `20270113120000_varios_responsaveis.sql` aplicada no banco local (com o OK do cliente), **não no staging**; detalhe
+>   na seção 8. Branch pronta para a validação juntar (VR1 sozinha não muda tela, só o texto da anonimização).
+> - **Próximo:** VR2 e VR3 depois da F3f (bot enxuto, `implementacao-recepcao-digital.md` 15.6, BE-1); a parte do bot
+>   fica menor (sem data de nascimento, Cancelar e Remarcar no chat).
 
 ## 1. O problema
 
@@ -115,3 +117,50 @@ aprovação do cliente. Branch curta da `main` por etapa; testes por etapa; Play
 
 **Atenção:** a VR1 sozinha não muda nada para o usuário (só prepara). VR2 e VR3 vão juntas ao staging: ligar um
 responsável na ficha sem o portal e o bot reconhecerem confunde a recepção.
+
+## 8. Andamento
+
+### VR1 Banco (11/nov/2026, branch `varios-responsaveis`)
+
+Migração `20270113120000_varios_responsaveis.sql` (aplicada no banco local com o OK do cliente; staging pela validação,
+antes do código que a lê):
+
+- **`patient_contacts`** (clínica, paciente, contato, `kinship` = parentesco opcional até 40 letras, `is_self`, quem
+  ligou e quando), única por paciente + contato, RLS padrão; a equipe e o bot leem, **só as funções gravam**. Preenchida
+  com o contato de cada paciente não anonimizado. Gatilho no paciente: cadastro novo e troca de `contact_id` ligam o
+  principal. `is_self` guarda "o número é do próprio paciente": ao tornar principal, `patients.is_contact_self` passa a
+  ser o `is_self` do novo principal (voltar ao número do próprio paciente devolve o selo).
+- **`patient_contact_events`**: registro de `linked`, `unlinked` e `made_primary` (quem, quando, parentesco).
+- **`contact_patient_ids(clínica, contato)`**: pacientes do número, com o RLS de quem chama (equipe e bot).
+- **`link_patient_contact`**, **`unlink_patient_contact`** e **`set_patient_primary_contact`**: Administrador,
+  Recepção e Suporte (o Profissional e o bot não). Recusas com dica: já ligado, desativado, não ligado, principal não se
+  desliga (antes, tornar outro principal), paciente anonimizado. **Desligar** devolve ao principal as consultas
+  futuras que o desligado marcou (lembretes e avisos não vão para quem saiu); as passadas continuam com ele.
+- **`appointments.booked_by_contact_id`** (VR-1): as consultas que já existiam ficaram com o principal de hoje (sem
+  mexer em `updated_at` e sem evento na trilha); sem valor, a marcação nova pega o principal; com valor, precisa ser um
+  responsável ligado ao paciente; paciente trocado na consulta volta ao principal do novo, se quem marcou não cuida dele.
+  Tornar principal **não** muda quem marcou.
+- **`anonymize_patient`** (VR-6): o paciente sai de todos os responsáveis; quem fica sem paciente é anonimizado como
+  antes (nome, telefone, endereço, mensagens, conversa, funil, links e registro do Suporte); quem cuida de outro
+  paciente continua, e só as mensagens das consultas do paciente perdem o texto. Devolve também `contacts_anonymized`
+  e `contacts_kept`. **Muda a regra de 09/out** (antes o contato ia sempre junto e os irmãos ficavam sem telefone).
+
+Código:
+
+- `src/lib/data/patientContacts.ts` (novo, para a VR2): `listPatientContacts`, `contactPatientIds`,
+  `linkPatientContact`, `unlinkPatientContact`, `setPrimaryContact`.
+- **Limites do bot (VR-5)** em `whatsapp/botLimits.ts`: atendimentos futuros e faltas contam por
+  `booked_by_contact_id`. Cadastros novos seguem por `patients.contact_id` (o principal; quem cadastrou, salvo troca de
+  principal). Os limites do portal já contavam pelo celular da sessão (quem marcou): sem mudança.
+- **Prévia da anonimização** (`previewAnonymization` e a ficha): diz, por responsável, quem perde os dados e quem
+  continua ("…continua, porque também cuida de …"). Era o único texto que ficaria errado com a VR1 sozinha. O artigo
+  "Anonimizar um paciente" da Central fica para a VR5 (o texto geral continua certo).
+- Bot (`bot/`) sem mudança, como pedido. `seed.sql`: Carlos é o 2º responsável de Ana (pai), com o registro.
+
+Testes: `tests/db/varios-responsaveis.test.ts` (novo: ligar, permissões, outra clínica, `contact_patient_ids`, quem
+marcou, limites, tornar principal, desligar, anonimização com quem continua e quem vai) e `anonimizacao.test.ts`
+revisto (sem o irmão; o caso do irmão passou para o teste novo).
+
+**Para a VR2/VR3 (anotado):** o cadastro "o próprio paciente" de um número que já é "próprio" de outra ficha (depois
+de tornar outro principal) recusa pela unicidade de `is_self`; a VR2 precisa de mensagem para isso. Bot, portal e
+mensagens ainda leem `patients.contact_id` (só o principal) até a VR3.

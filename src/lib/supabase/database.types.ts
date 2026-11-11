@@ -150,13 +150,13 @@ isOneToOne: false
                   ]
                 },"appointments": {
                   Row: {
-                    "agenda_id": string,"agenda_import_id": string | null,"booking_channel": Database["public"]['Enums']["action_channel"],"canceled_at": string | null,"canceled_by": string | null,"canceled_via": Database["public"]['Enums']["action_channel"] | null,"clinic_id": string,"confirmed_at": string | null,"created_at": string,"created_by": string | null,"duration_minutes": number,"home_visit_address": string | null,"id": string,"insurance_plan_id": string | null,"is_exam": boolean,"is_group_session": boolean,"location_id": string,"mass_canceled": boolean,"origin_appointment_id": string | null,"patient_confirmed_at": string | null,"patient_confirmed_by": string | null,"patient_id": string,"portal_entry": string | null,"portal_place": string | null,"price_cents": number | null,"rebooking_dismissed_at": string | null,"reminder_response": string | null,"reminder_response_at": string | null,"reminder_sent_at": string | null,"rescheduled_at": string | null,"rescheduled_by": string | null,"rescheduled_via": Database["public"]['Enums']["action_channel"] | null,"scheduled_at": string,"series_id": string | null,"service_id": string,"status": Database["public"]['Enums']["appointment_status"],"trail_context": Json | null,"updated_at": string
+                    "agenda_id": string,"agenda_import_id": string | null,"booked_by_contact_id": string | null,"booking_channel": Database["public"]['Enums']["action_channel"],"canceled_at": string | null,"canceled_by": string | null,"canceled_via": Database["public"]['Enums']["action_channel"] | null,"clinic_id": string,"confirmed_at": string | null,"created_at": string,"created_by": string | null,"duration_minutes": number,"home_visit_address": string | null,"id": string,"insurance_plan_id": string | null,"is_exam": boolean,"is_group_session": boolean,"location_id": string,"mass_canceled": boolean,"origin_appointment_id": string | null,"patient_confirmed_at": string | null,"patient_confirmed_by": string | null,"patient_id": string,"portal_entry": string | null,"portal_place": string | null,"price_cents": number | null,"rebooking_dismissed_at": string | null,"reminder_response": string | null,"reminder_response_at": string | null,"reminder_sent_at": string | null,"rescheduled_at": string | null,"rescheduled_by": string | null,"rescheduled_via": Database["public"]['Enums']["action_channel"] | null,"scheduled_at": string,"series_id": string | null,"service_id": string,"status": Database["public"]['Enums']["appointment_status"],"trail_context": Json | null,"updated_at": string
                   }
                   Insert: {
-                    "agenda_id": string,"agenda_import_id"?: string | null,"booking_channel": Database["public"]['Enums']["action_channel"],"canceled_at"?: string | null,"canceled_by"?: string | null,"canceled_via"?: Database["public"]['Enums']["action_channel"] | null,"clinic_id": string,"confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"duration_minutes": number,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"is_exam"?: boolean,"is_group_session"?: boolean,"location_id": string,"mass_canceled"?: boolean,"origin_appointment_id"?: string | null,"patient_confirmed_at"?: string | null,"patient_confirmed_by"?: string | null,"patient_id": string,"portal_entry"?: string | null,"portal_place"?: string | null,"price_cents"?: number | null,"rebooking_dismissed_at"?: string | null,"reminder_response"?: string | null,"reminder_response_at"?: string | null,"reminder_sent_at"?: string | null,"rescheduled_at"?: string | null,"rescheduled_by"?: string | null,"rescheduled_via"?: Database["public"]['Enums']["action_channel"] | null,"scheduled_at": string,"series_id"?: string | null,"service_id": string,"status"?: Database["public"]['Enums']["appointment_status"],"trail_context"?: Json | null,"updated_at"?: string
+                    "agenda_id": string,"agenda_import_id"?: string | null,"booked_by_contact_id"?: string | null,"booking_channel": Database["public"]['Enums']["action_channel"],"canceled_at"?: string | null,"canceled_by"?: string | null,"canceled_via"?: Database["public"]['Enums']["action_channel"] | null,"clinic_id": string,"confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"duration_minutes": number,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"is_exam"?: boolean,"is_group_session"?: boolean,"location_id": string,"mass_canceled"?: boolean,"origin_appointment_id"?: string | null,"patient_confirmed_at"?: string | null,"patient_confirmed_by"?: string | null,"patient_id": string,"portal_entry"?: string | null,"portal_place"?: string | null,"price_cents"?: number | null,"rebooking_dismissed_at"?: string | null,"reminder_response"?: string | null,"reminder_response_at"?: string | null,"reminder_sent_at"?: string | null,"rescheduled_at"?: string | null,"rescheduled_by"?: string | null,"rescheduled_via"?: Database["public"]['Enums']["action_channel"] | null,"scheduled_at": string,"series_id"?: string | null,"service_id": string,"status"?: Database["public"]['Enums']["appointment_status"],"trail_context"?: Json | null,"updated_at"?: string
                   }
                   Update: {
-                    "agenda_id"?: string,"agenda_import_id"?: string | null,"booking_channel"?: Database["public"]['Enums']["action_channel"],"canceled_at"?: string | null,"canceled_by"?: string | null,"canceled_via"?: Database["public"]['Enums']["action_channel"] | null,"clinic_id"?: string,"confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"duration_minutes"?: number,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"is_exam"?: boolean,"is_group_session"?: boolean,"location_id"?: string,"mass_canceled"?: boolean,"origin_appointment_id"?: string | null,"patient_confirmed_at"?: string | null,"patient_confirmed_by"?: string | null,"patient_id"?: string,"portal_entry"?: string | null,"portal_place"?: string | null,"price_cents"?: number | null,"rebooking_dismissed_at"?: string | null,"reminder_response"?: string | null,"reminder_response_at"?: string | null,"reminder_sent_at"?: string | null,"rescheduled_at"?: string | null,"rescheduled_by"?: string | null,"rescheduled_via"?: Database["public"]['Enums']["action_channel"] | null,"scheduled_at"?: string,"series_id"?: string | null,"service_id"?: string,"status"?: Database["public"]['Enums']["appointment_status"],"trail_context"?: Json | null,"updated_at"?: string
+                    "agenda_id"?: string,"agenda_import_id"?: string | null,"booked_by_contact_id"?: string | null,"booking_channel"?: Database["public"]['Enums']["action_channel"],"canceled_at"?: string | null,"canceled_by"?: string | null,"canceled_via"?: Database["public"]['Enums']["action_channel"] | null,"clinic_id"?: string,"confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"duration_minutes"?: number,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"is_exam"?: boolean,"is_group_session"?: boolean,"location_id"?: string,"mass_canceled"?: boolean,"origin_appointment_id"?: string | null,"patient_confirmed_at"?: string | null,"patient_confirmed_by"?: string | null,"patient_id"?: string,"portal_entry"?: string | null,"portal_place"?: string | null,"price_cents"?: number | null,"rebooking_dismissed_at"?: string | null,"reminder_response"?: string | null,"reminder_response_at"?: string | null,"reminder_sent_at"?: string | null,"rescheduled_at"?: string | null,"rescheduled_by"?: string | null,"rescheduled_via"?: Database["public"]['Enums']["action_channel"] | null,"scheduled_at"?: string,"series_id"?: string | null,"service_id"?: string,"status"?: Database["public"]['Enums']["appointment_status"],"trail_context"?: Json | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -165,6 +165,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "agenda_import_requests"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "appointments_booked_by_contact_fkey"
+      columns: ["clinic_id","booked_by_contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["clinic_id","id"]
     },{
       foreignKeyName: "appointments_clinic_id_agenda_id_fkey"
       columns: ["clinic_id","agenda_id"]
@@ -1360,6 +1366,68 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "clinics"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"patient_contact_events": {
+                  Row: {
+                    "actor_id": string | null,"clinic_id": string,"contact_id": string,"created_at": string,"event": string,"id": string,"kinship": string | null,"patient_id": string
+                  }
+                  Insert: {
+                    "actor_id"?: string | null,"clinic_id": string,"contact_id": string,"created_at"?: string,"event": string,"id"?: string,"kinship"?: string | null,"patient_id": string
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"event"?: string,"id"?: string,"kinship"?: string | null,"patient_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "patient_contact_events_clinic_id_contact_id_fkey"
+      columns: ["clinic_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "patient_contact_events_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "patient_contact_events_clinic_id_patient_id_fkey"
+      columns: ["clinic_id","patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
+                },"patient_contacts": {
+                  Row: {
+                    "clinic_id": string,"contact_id": string,"created_at": string,"created_by": string | null,"id": string,"is_self": boolean,"kinship": string | null,"patient_id": string
+                  }
+                  Insert: {
+                    "clinic_id": string,"contact_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"is_self"?: boolean,"kinship"?: string | null,"patient_id": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"is_self"?: boolean,"kinship"?: string | null,"patient_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "patient_contacts_clinic_id_contact_id_fkey"
+      columns: ["clinic_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "patient_contacts_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "patient_contacts_clinic_id_patient_id_fkey"
+      columns: ["clinic_id","patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
     }
                   ]
                 },"patient_documents": {
@@ -2641,6 +2709,9 @@ isOneToOne: false
 "connect_whatsapp":
 { Args: { "p_clinic_id": string,"p_coexistence": boolean,"p_contacts_synced"?: boolean,"p_display_phone": string,"p_history_synced"?: boolean,"p_phone_number_id": string,"p_pin"?: string,"p_token": string,"p_waba_id": string }; Returns: undefined
                            },
+"contact_patient_ids":
+{ Args: { "p_clinic_id": string,"p_contact_id": string }; Returns: string[]
+                           },
 "discard_billing_contract_draft":
 { Args: { "p_clinic_id": string }; Returns: undefined
                            },
@@ -2697,6 +2768,9 @@ isOneToOne: false
                            },
 "get_whatsapp_access_token":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"link_patient_contact":
+{ Args: { "p_clinic_id": string,"p_contact_id": string,"p_kinship"?: string,"p_patient_id": string }; Returns: string
                            },
 "list_active_clinics":
 { Args: Record<PropertyKey, never>; Returns: string[]
@@ -2921,6 +2995,9 @@ isOneToOne: false
 "set_fiscal_certificate":
 { Args: { "p_clinic_id": string,"p_password": string,"p_pfx_base64": string,"p_subject_cnpj": string,"p_subject_name": string,"p_terms_version": string,"p_valid_from": string,"p_valid_until": string }; Returns: undefined
                            },
+"set_patient_primary_contact":
+{ Args: { "p_clinic_id": string,"p_contact_id": string,"p_patient_id": string }; Returns: undefined
+                           },
 "set_professional_accepts_private":
 { Args: { "p_accepts": boolean,"p_clinic_id": string,"p_professional_id": string }; Returns: undefined
                            },
@@ -2955,6 +3032,9 @@ isOneToOne: false
                            },
 "undo_agenda_import":
 { Args: { "p_apply": boolean,"p_request_id": string }; Returns: Json
+                           },
+"unlink_patient_contact":
+{ Args: { "p_clinic_id": string,"p_contact_id": string,"p_patient_id": string }; Returns: number
                            }
           }
           Enums: {

@@ -5,15 +5,15 @@ import { createUser, deleteUsers, makePlatformStaff, withDatabase, type TestUser
 import { asDb, at, codeOf, MON1, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // F9.4 — anonimização a pedido (LGPD): o histórico fica sem identificação; o
-// contato vai junto; futuros cancelados sem aviso; registro do Suporte limpo;
-// só Administrador e Suporte; irreversível.
+// contato sem outro paciente vai junto (VR-6; o caso com irmão e 2º responsável
+// está em varios-responsaveis.test.ts); futuros cancelados sem aviso; registro
+// do Suporte limpo; só Administrador e Suporte; irreversível.
 let fixture: AgendaFixture;
 let clinicId: string;
 let support: TestUser;
 let p1: string;
 let contactId: string;
 let phone: string;
-let sibling: string;
 let future: string;
 let past: string;
 
@@ -30,12 +30,6 @@ beforeAll(async () => {
   const patient = await getPatient(asDb(fixture.admin), clinicId, p1);
   contactId = patient.contactId;
   phone = (await getContact(asDb(fixture.admin), clinicId, contactId)).phone;
-
-  // Irmão: outro paciente do mesmo contato.
-  [{ id: sibling }] = await sql<{ id: string }>(
-    "insert into public.patients (clinic_id, contact_id, full_name, birthdate) values ($1, $2, 'Irmão do Um', '2021-02-02') returning id",
-    [clinicId, contactId],
-  );
 
   // Futuro, domiciliar (com endereço), e um passado já realizado.
   future = (
@@ -83,14 +77,14 @@ describe("anonimizar paciente", () => {
     expect(await codeOf(() => anonymizePatient(asDb(fixture.reception), clinicId, p1))).toBe("forbidden");
   });
 
-  it("a prévia mostra o futuro a cancelar e o irmão que fica sem telefone", async () => {
+  it("a prévia mostra o futuro a cancelar e o contato que vai junto", async () => {
     const preview = await previewAnonymization(asDb(fixture.admin), clinicId, p1, at("2026-10-09", "12:00"));
     expect(preview.futureAppointments).toBe(1);
-    expect(preview.otherPatients.map((p) => p.fullName)).toEqual(["Irmão do Um"]);
+    expect(preview.contacts).toEqual([{ id: contactId, fullName: expect.any(String), anonymized: true, otherPatients: [] }]);
   });
 
   it("o Administrador anonimiza: paciente, contato, futuro, histórico, mensagens, bot e registro do Suporte", async () => {
-    expect(await anonymizePatient(asDb(fixture.admin), clinicId, p1)).toEqual({ canceled: 1, otherPatients: 1 });
+    expect(await anonymizePatient(asDb(fixture.admin), clinicId, p1)).toEqual({ canceled: 1, otherPatients: 0, contactsAnonymized: 1, contactsKept: 0 });
 
     const [patient] = await sql("select full_name, birthdate::text, notes, is_active, anonymized_at from public.patients where id = $1", [p1]);
     expect(patient).toMatchObject({ full_name: "Paciente anonimizado", birthdate: "1900-01-01", notes: null, is_active: false });
@@ -120,10 +114,7 @@ describe("anonimizar paciente", () => {
     expect(audit).not.toContain("anotação secreta");
     expect(audit).not.toContain("Paciente Um");
     expect(audit).not.toContain(phone);
-
-    // O irmão continua, ligado ao contato (agora sem telefone).
-    const [brother] = await sql("select full_name, is_active, contact_id from public.patients where id = $1", [sibling]);
-    expect(brother).toEqual({ full_name: "Irmão do Um", is_active: true, contact_id: contactId });
+    expect(await sql("select 1 from public.patient_contacts where patient_id = $1", [p1])).toEqual([]);
   });
 
   it("não volta: anonimizar de novo, editar ou reativar é recusado", async () => {
@@ -133,12 +124,12 @@ describe("anonimizar paciente", () => {
     expect(error).not.toBeNull();
   });
 
-  it("o contato recebe um telefone novo e volta a valer para o irmão; o número anonimizado não serve", async () => {
+  it("o contato anonimizado recebe um telefone novo; o número anonimizado não serve", async () => {
     const [{ phone: fake }] = await sql<{ phone: string }>("select phone from public.contacts where id = $1", [contactId]);
     expect(await codeOf(() => updateContact(asDb(fixture.admin), clinicId, contactId, { fullName: "Mãe", phone: fake }))).toBe("invalid");
 
-    const updated = await updateContact(asDb(fixture.admin), clinicId, contactId, { fullName: "Mãe do Irmão", phone: "+5561987700099" });
-    expect(updated).toMatchObject({ fullName: "Mãe do Irmão", phone: "+5561987700099", isActive: true, anonymizedAt: null });
+    const updated = await updateContact(asDb(fixture.admin), clinicId, contactId, { fullName: "Mãe do Um", phone: "+5561987700099" });
+    expect(updated).toMatchObject({ fullName: "Mãe do Um", phone: "+5561987700099", isActive: true, anonymizedAt: null });
   });
 
   it("o Suporte também anonimiza", async () => {
