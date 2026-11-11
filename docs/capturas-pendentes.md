@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-- `config-whatsapp`, `config-mensagens` — a lista de modelos ganhou "Remarcada por outro responsável" e "Cancelada por outro responsável" (clínica com o Portal; VR4, branch `varios-responsaveis`, 11/11/2026)
+(nenhuma)
