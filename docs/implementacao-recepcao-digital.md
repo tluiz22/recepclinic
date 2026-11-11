@@ -910,6 +910,29 @@ Testes: `horario-local-servico` (C5 revista), `horarios-de-servico-desativado`, 
 `configuracoes-ii`; Playwright no local (portal em casa × consultório; Horários com filtro, troca de local, erro mantendo
 os campos e salvar). Captura `config-horarios` na fila. Migração aplicada no banco local (OK do cliente).
 
+#### 15.5.7 Convênios de cada exame (cliente, 10/nov/2026; planejado)
+
+Pergunta do cliente na validação: no portal, todo exame aparece com Particular e convênio. Hoje não há vínculo: o
+portal (e o bot) oferecem a todo exame Particular e todos os convênios ativos (`portal.ts`, `examBase.plans`; decisão
+da F2d, seção acima). **Decisões do cliente:**
+- **Onde:** no cadastro do exame (Configurações › Serviços › exame): "Particular" e os convênios aceitos, como os
+  "Convênios atendidos" do profissional (MC: associação positiva, observação por convênio, busca para muitos planos).
+- **Exames já existentes:** começam **só particular** (a produção tem uma clínica, só particular). A clínica marca os
+  convênios exame por exame.
+- **Convênio novo** não entra sozinho nos exames (como no profissional). Quem mantém: o Administrador ou quem tem a
+  permissão de convênios (`can_manage_insurance`), com a trilha `insurance_change_log`.
+
+**Partes:**
+
+| Parte | O que entrega |
+|---|---|
+| CE-1 Banco | `services.accepts_private` (padrão true) e `service_insurance_plans` (serviço, plano, observação), RLS como `professional_insurance_plans`, trilha; só exame; exames existentes só particular |
+| CE-2 Cadastro | Bloco "Particular e convênios" no exame (com o item Convênios da Matriz); exige Particular ou um convênio |
+| CE-3 Portal | Particular/convênio do exame pelo vínculo (P5); só particular: sem a pergunta; servidor recusa plano fora |
+| CE-4 Bot | Marcar exame e Informações gerais › Convênios do exame pelo vínculo; Jornada do bot |
+| CE-5 Agenda | Marcar e Próximos horários livres: só os planos do exame; conferência no servidor |
+| CE-6 Ajuda | Artigo de Serviços e captura, se mudar a tela (capturas-pendentes) |
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

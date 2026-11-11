@@ -15,7 +15,8 @@
 > **Próximo:** roteiro 15.5.4 (F3e, `clinica-teste`) → seção 16 (F5a) → F3f e produção (F3-9).
 > **Pendentes com o cliente:** "Minhas consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o
 > local "Consulta Domiciliar" do staging; capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações,
-> `config-horarios`); vários responsáveis por paciente (planejado: VR-1 a VR-7, D14). Teste
+> `config-horarios`); vários responsáveis por paciente (planejado: VR-1 a VR-7, D14). Convênios de cada exame
+>   (planejado: CE-1 a CE-6, seção 15.5.7). Teste
 > `nao-atendimento-central` às vezes falha (depende do horário).
 >
 > **Outras frentes paradas**
