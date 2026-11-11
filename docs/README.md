@@ -37,10 +37,15 @@
 > no bot), registro na 15.3.2. **Desbloqueio do portal na ficha (faixa no alto, opção A) em `8a6e737`, migração
 > `20270109130000` no staging** (roteiro na 15.3.2). **Os 4 achados e o desbloqueio validados (10/nov).**
 > **F5a (Agenda em colunas, seção 16) juntada na `main` e no staging (10/nov, `cd08925`)**; a `agenda-colunas` fica igual
-> à `main`. **Validação (sessão de 10/nov, noite):** **roteiro 15.3.1 da F3 validado inteiro**; o achado do item 9 (Minhas
-> consultas pelo link do profissional) foi corrigido em `692b13d` e `f542bf9` (sem migração). Agora: 15.5.4 (F3e); depois,
-> a seção 16 (F5a). Exames repetidos na agenda de Exames juntados (migração `20270110120000`, local e staging; 15.5.5).
-> Teste de Conversas "mensagens novas por pessoa" (`nao-atendimento-central`) já falhava antes desta sessão: ver à parte.
+> à `main`. **Validação (sessão de 10/nov, noite), parou aqui:** roteiro 15.3.1 da F3 **validado inteiro** (achado do
+> item 9 corrigido, `692b13d`/`f542bf9`). Exames repetidos juntados (`20270110120000`, local e staging; 15.5.5). Local e
+> serviço em Horários e no portal (`8f37a46`, 15.5.6): migração `20270110130000` **aplicada no local; no staging falta,
+> esperando o OK do cliente** (desliga 2 horários da Consulta Domiciliar antiga). **Próximo:** OK da migração no
+> staging → roteiro 15.5.4 (F3e; mostrado ao cliente, sem resultados ainda) → seção 16 (F5a) → F3f e produção (F3-9).
+> Pendentes com o cliente: levar as correções à branch da outra sessão (não achada; `recepcao-impl` antiga); "Minhas
+> consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o local "Consulta Domiciliar" do staging;
+> capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações, `config-horarios`). Teste de Conversas
+> `nao-atendimento-central` às vezes falha (depende do horário; já falhava antes).
 > **Vários responsáveis por paciente** (decisão do cliente, 10/nov; 15.3.2): planejar em outra sessão.
 > Próximo: cliente segue a validação no staging (resto do 15.3.1, o 15.5.4 da F3e e a F5a).
 >
