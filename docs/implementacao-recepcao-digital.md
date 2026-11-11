@@ -713,6 +713,10 @@ Testes: banco (`portal-links.test.ts`), unidade (`portal.test.ts`), Playwright l
   **Roteiro (staging):** link do profissional › Minhas consultas → o endereço com o profissional, o cartão dele e só as
   consultas dele → Remarcar/Cancelar ficam no endereço dele → Voltar leva ao início do profissional. Pelo link da
   clínica: as consultas em grupos com o nome e a especialidade de cada profissional.
+  **11/nov (cliente):** o "Minhas consultas" da tela "Consulta marcada!" segue a entrada: pelo link do profissional,
+  `/{clínica}/{profissional}/minhas-consultas`; pela clínica, a lista da clínica (`marcada.astro`, `view.entry`).
+  Roteiro: marcar pelo link do profissional → "Consulta marcada!" › Minhas consultas → o cartão dele e só as consultas
+  dele; marcar pelo link da clínica → a lista da clínica.
 - **Pergunta do cliente (10/nov), item 1: "Usar outro número".** Hoje o cadastro não muda: o portal identifica pelo
   celular comprovado; com um número sem cadastro, nasce um contato e uma ficha nova (a antiga segue com o número
   antigo). Para criança com pai e mãe marcando cada um pelo seu número, isso divide a ficha (histórico, lembretes,
