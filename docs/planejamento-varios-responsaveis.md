@@ -13,9 +13,12 @@
 >   pronta (VR1 a VR5); antes, a `main` vai para a produção.
 > - **VR2 (ficha e recepção) feita (11/nov, mesma branch, sem migração):** detalhe na seção 8. Validação pelo cliente
 >   pendente.
-> - **Próximo:** VR3 (portal e bot) na mesma branch (`varios-responsaveis`, worktree `../recepclinic-impl`), depois da
->   F3f (bot enxuto, `implementacao-recepcao-digital.md` 15.6, BE-1); a parte do bot fica menor (sem data de nascimento,
->   Cancelar e Remarcar no chat). VR2 e VR3 vão juntas ao staging.
+> - **VR3 sem o bot feita (11/nov, mesma branch, sem migração):** portal (UI-3, UI-4) e mensagens para quem marcou. A
+>   F3f ainda não está na `main`: o Remarcar/Cancelar do bot (UI-5) espera por ela (cliente, 11/nov: adiantar a VR3 sem
+>   o bot e a VR5). Detalhe na seção 8.
+> - **Próximo:** VR5 sem o bot (importação, Métricas, artigos da Central; recaptura só com autorização). Parar antes do
+>   modelo da Meta (VR4). Depois da F3f: o Remarcar/Cancelar do bot (resto da VR3). Validação de tudo no staging, no
+>   fim.
 
 ## 1. O problema
 
@@ -216,3 +219,46 @@ principal (a série não guarda quem marcou). A conversa do Atendimento ainda li
 principal. Sem mensagem própria ainda para o "próprio paciente" repetido (anotado na VR1): não aparece pela ficha,
 porque ligar não marca `is_self`.
 
+
+### VR3 Portal e mensagens, sem o bot (11/nov/2026, branch `varios-responsaveis`, sem migração)
+
+Antes: a branch já tinha a `main` (nada a trazer), migração `20270113120000` conferida no banco local, testes verdes
+(unidade 1217, banco 1199). **A F3f não está na `main`:** a pedido do cliente (11/nov), a VR3 saiu sem o bot (o
+Remarcar e o Cancelar do chat mudam com a F3f; ficam para depois dela).
+
+- **Mensagens para quem marcou** (`whatsapp/recipient.ts`, novo): confirmação, aviso de remarcação e de cancelamento,
+  cancelamento pela clínica (e o link de remarcação dele, do portal e o antigo), lembrete, preparo, orientações e
+  oferta da lista de espera vão para `booked_by_contact_id`; sem ele (ou sem celular), para o principal, como antes. A
+  Lista de espera da Agenda mostra quem recebe a oferta.
+- **"Confirmar presença" do lembrete:** vale do número que recebeu ou de qualquer responsável ligado ao paciente;
+  número de fora continua sem efeito.
+- **Portal pela ligação:** `phonePatients` lê `patient_contacts` (principal ou não); "(você)" vem do `is_self` da
+  ligação; "Para mim" é recusado quando o número já é o "próprio paciente" de uma ficha (anotado na VR1); a ficha
+  parecida (P8b) procura também pelos principais das fichas do número (a função do banco procura só pelo principal;
+  sem migração).
+- **"Para quem…" (UI-3, opção B):** cada paciente com "também com Maria" / "também com Ana (mãe) e Carlos (pai)" e,
+  abaixo de "Outra pessoa", "Falta alguém? Peça à recepção para ligar o seu número à ficha. Assim não cria um cadastro
+  repetido."
+- **Marcação pelo portal** (consulta e retorno): quem marcou = o celular comprovado (`bookAppointment` aceita
+  `bookedByContactId`). Os limites do portal já contavam por ele.
+- **Minhas consultas (UI-4):** com mais de um responsável na ficha, cada consulta diz "Marcada por você", "Marcada por
+  Carlos (pai), que recebe os avisos" ou "Marcada pela recepção, com avisos para …"; com um só, nada muda. Remarcar e
+  Cancelar para todos. **Quem remarca passa a ser quem marcou** (e recebe o aviso da remarcação); a remarcação depois do
+  cancelamento pela clínica marca com quem remarcou. **O aviso do cancelamento pelo portal vai para quem cancelou**;
+  quem marcou recebe o aviso dele na VR4 (modelo novo da Meta).
+- **Atendimento (Central):** a conversa lista todos os pacientes de que o número é responsável (antes, só aqueles em
+  que é o principal); a faixa "Portal bloqueado" da ficha lista os pacientes do número pela ligação.
+- Jornada do bot (`botJourney.ts`): item 7 e regra geral dos vários responsáveis.
+
+Testes: `tests/db/varios-responsaveis-portal.test.ts` (novo: "Para quem" do pai e da mãe, número de fora, ficha
+parecida pelo 2º responsável, confirmação para quem marcou, principal sem quem marcou, toque "Confirmar" da mãe e de um
+estranho, "Marcada por" com um e com dois responsáveis e pela recepção, remarcar troca quem marcou, aviso do
+cancelamento para quem cancelou). Unidade 1217; banco (portal, lembretes, lista de espera, preparo, Central,
+anonimização e vários responsáveis) 231; `astro check` sem erros. Playwright (script isolado; o MCP estava com a outra
+sessão) em 390 e 1280 com o celular do Carlos (2º responsável de Ana no `seed.sql`): Minhas consultas com "Marcada por
+Maria, que recebe os avisos" nas consultas de Ana; "Para quem…" com "também com Maria" e a dica; Voltar volta aos
+horários e solta a reserva; sem erro no console e sem rolagem horizontal. Nenhuma captura da Central afetada (o portal
+não tem captura). Para testar, os limites do código do portal do celular do Carlos foram soltos no banco local.
+
+**Para depois (anotado):** Remarcar e Cancelar do bot com todos os pacientes ligados (UI-5) esperam a F3f; a conversa do
+bot ainda acha os pacientes pelo principal (`bot/booking.ts`). Sessões novas de série seguem com o principal.

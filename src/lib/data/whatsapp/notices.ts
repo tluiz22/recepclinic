@@ -9,6 +9,7 @@ import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName
 import { logError } from "../../log";
 import { bookingPath, shortId } from "../../publicId";
 import { portalLinkUrl } from "../../portal";
+import { appointmentRecipient, BOOKER_COLUMNS, type RecipientContact } from "./recipient";
 
 // Avisos ao paciente (F6.2), como no piloto: marcado, remarcado e cancelado,
 // pela Agenda do painel e pela página /agendar. Sempre por template (podem
@@ -43,11 +44,11 @@ type NoticeRow = {
   services: { name: string; category: Enums<"service_category"> };
   agendas: { professionals: { display_name: string } | null };
   locations: { name: string; type: Enums<"location_type">; address: string | null };
-  patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
+  patients: { full_name: string; contacts: RecipientContact };
+  booker: RecipientContact | null;
 };
 
-const NOTICE_COLUMNS =
-  "id, scheduled_at, home_visit_address, services ( name, category ), agendas ( professionals ( display_name ) ), locations ( name, type, address ), patients ( full_name, contacts ( id, full_name, phone ) )";
+const NOTICE_COLUMNS = `id, scheduled_at, home_visit_address, services ( name, category ), agendas ( professionals ( display_name ) ), locations ( name, type, address ), patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS}`;
 
 /** Envia o aviso de um atendimento e registra. Nunca lança: erro vira "failed" no log. */
 export async function sendAppointmentNotice(
@@ -59,6 +60,8 @@ export async function sendAppointmentNotice(
   now: Date = new Date(),
   /** Só no `clinic_cancellation`: o endereço do link de remarcação. */
   rebookingUrl?: string,
+  /** Outro destinatário (quem cancelou pelo portal); sem ele, quem marcou (D14). */
+  to?: RecipientContact,
 ): Promise<NoticeStatus> {
   if (!sender) return "not_connected";
   try {
@@ -78,7 +81,7 @@ export async function sendAppointmentNotice(
         .maybeSingle()
         .then((r) => unwrapOne(r, "Configuração da clínica")),
     ]);
-    const contact = row.patients.contacts;
+    const contact = to ?? appointmentRecipient(row);
     const appointmentData = {
       contactName: contact.full_name,
       patientName: row.patients.full_name,

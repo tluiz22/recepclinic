@@ -210,11 +210,14 @@ export async function confirmPortalReturn(
       await unclaimHold(db, clinicId, hold.id);
       return { status: "blocked", reason: block };
     }
+    // Quem marcou é o celular comprovado (D14).
+    const booker = await findContactByPhone(db, clinicId, hold.phone);
     const { appointment } = await bookAppointment(
       db,
       clinicId,
       {
         patientId: card.patient.id,
+        bookedByContactId: booker?.id ?? null,
         serviceId: hold.serviceId,
         agendaId: hold.agendaId,
         start: hold.start,

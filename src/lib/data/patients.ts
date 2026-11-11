@@ -292,9 +292,15 @@ export async function listContactPatients(
   db: DbClient,
   clinicId: string,
   contactId: string,
-  { includeInactive = false }: { includeInactive?: boolean } = {},
+  /** `linked`: todos os pacientes de que o número é responsável (D14), não só aqueles em que é o principal. */
+  { includeInactive = false, linked = false }: { includeInactive?: boolean; linked?: boolean } = {},
 ): Promise<Patient[]> {
-  let query = db.from("patients").select(PATIENT_COLUMNS).eq("clinic_id", clinicId).eq("contact_id", contactId).order("full_name");
+  let query = db.from("patients").select(PATIENT_COLUMNS).eq("clinic_id", clinicId).order("full_name");
+  if (linked) {
+    const ids = unwrap(await db.from("patient_contacts").select("patient_id").eq("clinic_id", clinicId).eq("contact_id", contactId), "Pacientes do contato").map((r) => r.patient_id);
+    if (!ids.length) return [];
+    query = query.in("id", ids);
+  } else query = query.eq("contact_id", contactId);
   if (!includeInactive) query = query.eq("is_active", true);
   return unwrap(await query, "Pacientes do contato").map(toPatient);
 }

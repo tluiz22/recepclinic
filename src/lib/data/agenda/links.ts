@@ -3,6 +3,7 @@ import type { DbClient } from "../clients";
 import { DataError, unwrap, unwrapOne } from "../errors";
 import type { Appointment } from "./appointments";
 import { findReturnOrigin } from "./appointments";
+import { recipientOfAppointment } from "../whatsapp/recipient";
 
 // Links de agendar/remarcar (página pública /agendar/[token]; o token é o id,
 // em 22 caracteres no endereço: `bookingPath` em `src/lib/publicId.ts`).
@@ -189,11 +190,9 @@ export async function createRebookingLink(
   appointment: Appointment,
   now: Date = new Date(),
 ): Promise<BookingLink | null> {
-  const patient = unwrapOne(
-    await db.from("patients").select("contact_id, contacts ( phone )").eq("clinic_id", clinicId).eq("id", appointment.patientId).maybeSingle(),
-    "Paciente",
-  ) as unknown as { contact_id: string; contacts: { phone: string } | null };
-  if (!patient.contacts?.phone) return null;
+  // O link vai no aviso de cancelamento, para quem marcou (D14, VR3).
+  const recipient = await recipientOfAppointment(db, clinicId, appointment.id);
+  if (!recipient) return null;
   const location = unwrapOne(
     await db.from("locations").select("type").eq("clinic_id", clinicId).eq("id", appointment.locationId).maybeSingle(),
     "Local",
@@ -204,7 +203,7 @@ export async function createRebookingLink(
     clinicId,
     {
       mode: "create",
-      contactId: patient.contact_id,
+      contactId: recipient.id,
       patientId: appointment.patientId,
       serviceId: appointment.serviceId,
       agendaId: appointment.agendaId,
@@ -213,7 +212,7 @@ export async function createRebookingLink(
       appointmentId: null,
       originAppointmentId: appointment.originAppointmentId,
       returnDeadlineWaived: isReturnWithOrigin,
-      contactPhone: patient.contacts.phone,
+      contactPhone: recipient.phone,
       homeVisitAddress: location.type === "home_visit" ? appointment.homeVisitAddress : null,
       canceledAppointmentId: appointment.id,
       ttlMs: REBOOKING_LINK_TTL_MS,

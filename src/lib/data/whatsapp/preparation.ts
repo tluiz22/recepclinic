@@ -6,6 +6,7 @@ import { preparationPath } from "../../publicId";
 import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { SERVICE_FILES_BUCKET } from "../config/preparationFile";
 import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate, type SendOutcome } from "./messages";
+import { appointmentRecipient, BOOKER_COLUMNS, type RecipientContact } from "./recipient";
 
 // Preparo do exame (Fase 18 do piloto), F3.9b. Regra do cliente (piloto,
 // 03/out/2026): as orientações saem **uma única vez**, depois que a
@@ -77,11 +78,12 @@ type ExamRow = {
     preparation_file_name: string | null;
     preparation_file_type: string | null;
   };
-  patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
+  patients: { full_name: string; contacts: RecipientContact };
+  booker: RecipientContact | null;
 };
 
 const EXAM_COLUMNS =
-  "id, status, scheduled_at, service_id, services ( name, category, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type ), patients ( full_name, contacts ( id, full_name, phone ) )";
+  `id, status, scheduled_at, service_id, services ( name, category, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type ), patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS}`;
 
 async function loadExam(db: DbClient, clinicId: string, appointmentId: string, now: Date): Promise<ExamRow | null> {
   const row = unwrap(
@@ -109,7 +111,7 @@ async function deliverPreparation(
   const connection = await getWhatsappConnection(db, clinicId);
   if (connection?.status !== "connected") return "not_connected";
 
-  const contact = row.patients.contacts;
+  const contact = appointmentRecipient(row);
   const windowOpen = await isCustomerServiceWindowOpen(db, clinicId, contact.phone, now);
   const template = windowOpen ? null : await getApprovedTemplate(db, clinicId, file ? "exam_preparation_file" : "exam_preparation");
 

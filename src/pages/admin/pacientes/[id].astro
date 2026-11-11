@@ -232,7 +232,7 @@ const portalBlocks = canReleasePortal
 const portalBlock = portalBlocks[0]?.block ?? null;
 const blockedResponsible = portalBlocks[0]?.responsible ?? null;
 const blockedPhone = blockedResponsible?.phone ?? contact.phone;
-const portalBlockPatients = blockedResponsible ? await listContactPatients(db, clinic.clinicId, blockedResponsible.contactId).catch(() => [patient]) : [];
+const portalBlockPatients = blockedResponsible ? await listContactPatients(db, clinic.clinicId, blockedResponsible.contactId, { linked: true }).catch(() => [patient]) : [];
 // "às 15:40" hoje; "amanhã às 09:10"; senão "dd/MM às HH:mm".
 const whenFree = (date: Date) => {
   const day = localDateOf(date, clinic.timezone);

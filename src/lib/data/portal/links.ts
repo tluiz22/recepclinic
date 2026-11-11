@@ -7,6 +7,7 @@ import { joinWaitlist } from "../waitlist/entries";
 import { logWebFunnelEvent } from "../whatsapp/funnel";
 import { hasFeature } from "../features";
 import { examSlug, type PortalClinic } from "./portal";
+import { recipientOfAppointment } from "../whatsapp/recipient";
 
 // Link do portal mandado pelo bot (F3a; proposta 3.4; plano, seção 15). O token é o id (em 22 caracteres no endereço
 // /s/{token}); no banco ficam o celular da conversa, a finalidade e o escopo. Regras:
@@ -318,21 +319,22 @@ export async function createPortalRebookingLink(
   appointment: { id: string; patientId: string; serviceId: string; locationId: string; originAppointmentId: string | null },
   now: Date = new Date(),
 ): Promise<PortalLink | null> {
-  const [clinic, portalOn, location, service, patient] = await Promise.all([
+  const [clinic, portalOn, location, service, recipient] = await Promise.all([
     db.from("clinics").select("portal_slug").eq("id", clinicId).maybeSingle().then((r) => unwrap(r, "Clínica")),
     hasFeature(db, clinicId, "portal"),
     db.from("locations").select("type").eq("clinic_id", clinicId).eq("id", appointment.locationId).maybeSingle().then((r) => unwrap(r, "Local")),
     db.from("services").select("scheduling_mode").eq("clinic_id", clinicId).eq("id", appointment.serviceId).maybeSingle().then((r) => unwrap(r, "Serviço")),
-    db.from("patients").select("contact_id, contacts ( phone )").eq("clinic_id", clinicId).eq("id", appointment.patientId).maybeSingle().then((r) => unwrap(r, "Paciente")),
+    // O link vai no aviso de cancelamento, para quem marcou (D14, VR3).
+    recipientOfAppointment(db, clinicId, appointment.id),
   ]);
-  const phone = (patient as unknown as { contacts: { phone: string } | null } | null)?.contacts?.phone ?? null;
+  const phone = recipient?.phone ?? null;
   if (!clinic?.portal_slug || !portalOn || (location?.type !== "clinic" && location?.type !== "home_visit") || service?.scheduling_mode === "group" || !phone) return null;
   return createPortalLink(
     db,
     clinicId,
     {
       phone,
-      contactId: patient!.contact_id,
+      contactId: recipient!.id,
       purpose: "reschedule",
       appointmentId: appointment.id,
       canceledAppointmentId: appointment.id,

@@ -156,6 +156,7 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
                         </>
                       )}
                     </span>
+                    {item.bookedByText && <span class="mt-1 text-[15px] text-gray-600" data-booked-by>{item.bookedByText}</span>}
                   </div>
                   <div class="mt-auto flex flex-col gap-2.5 border-t border-gray-100 px-4 py-3 lg:px-[18px]">
                     {free ? (
