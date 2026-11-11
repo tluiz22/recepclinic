@@ -1433,6 +1433,7 @@ isOneToOne: false
                   Row: {
                     "actor_id": string | null,"clinic_id": string,"contact_id": string,"created_at": string,"event": string,"id": string,"kinship": string | null,"patient_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "actor_id"?: string | null,"clinic_id": string,"contact_id": string,"created_at"?: string,"event": string,"id"?: string,"kinship"?: string | null,"patient_id": string
                   }
@@ -1464,6 +1465,7 @@ isOneToOne: false
                   Row: {
                     "agenda_import_id": string | null,"clinic_id": string,"contact_id": string,"created_at": string,"created_by": string | null,"id": string,"is_self": boolean,"kinship": string | null,"patient_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "agenda_import_id"?: string | null,"clinic_id": string,"contact_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"is_self"?: boolean,"kinship"?: string | null,"patient_id": string
                   }
