@@ -70,6 +70,7 @@ const status = async (id: string) => (await adminClient().from("appointments").s
 beforeAll(async () => {
   f = await setupAgendaClinic("Clínica VR Bot", PREFIX, { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "vr-bot-waba", status: "connected" });
+  await adminClient().from("clinics").update({ portal_slug: `vr-bot-${Date.now()}` }).eq("id", f.clinicId);
   dad = (await contactForResponsible(asDb(f.admin), f.clinicId, { phone: DAD, fullName: "Carlos Souza" })).id;
   stranger = (await contactForResponsible(asDb(f.admin), f.clinicId, { phone: STRANGER, fullName: "Outra Pessoa" })).id;
   await linkPatientContact(asDb(f.reception), f.clinicId, f.ids.p1, dad, "Pai");
@@ -88,9 +89,11 @@ beforeAll(async () => {
 afterAll(async () => f.cleanup());
 
 describe("botões do lembrete pelo responsável que não é o principal", () => {
-  it("Cancelar: o pai vê a consulta do filho e recebe a confirmação do cancelamento", async () => {
+  it("Cancelar: o pai acha a consulta do filho e recebe o portal já no cancelamento (F3f)", async () => {
     const reply = await tap(DAD, reminderButtonPayload("cancel", consult));
-    expect(reply[0].body).toContain("Confirma o cancelamento da consulta de *Paciente Um*");
+    expect(reply[0].body).toContain("Para cancelar a consulta de *Paciente Um*, toque no botão abaixo.");
+    const { data: link } = await adminClient().from("portal_links").select("purpose, appointment_id, contact_id").eq("phone", DAD).single();
+    expect(link).toEqual({ purpose: "cancel", appointment_id: consult, contact_id: dad });
     expect((await status(consult)).status).toBe("scheduled");
   });
 

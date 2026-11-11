@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { bookAppointment, getAppointment } from "../../src/lib/data/agenda/appointments";
 import { createBlock } from "../../src/lib/data/agenda/blocks";
-import { createBookingLink, listValidRebookingLinks, type BookingLinkInput } from "../../src/lib/data/agenda/links";
+import { createBookingLink, type BookingLinkInput } from "../../src/lib/data/agenda/links";
+import { listValidPortalRebookingLinks } from "../../src/lib/data/portal/links";
 import {
   confirmBookingLink,
   isLinkDayOpen,
@@ -282,6 +283,7 @@ describe("página pública do preparo (F5.3)", () => {
 
 describe("link de remarcação na mensagem da tela Avisar (F5.4)", () => {
   it("o bloqueio que cancela liga o link ao atendimento; usado ou vencido, não aparece mais", async () => {
+    await adminClient().from("clinics").update({ portal_slug: `agendar-${Date.now()}` }).eq("id", fixture.clinicId);
     const { appointment } = await bookAppointment(asDb(fixture.admin), fixture.clinicId, {
       patientId: fixture.ids.p1, serviceId: fixture.ids.consulta2, agendaId: fixture.ids.agendaDra2, start: at(MON4, "08:00"), channel: "admin", actorId: fixture.admin.id,
     }, NOW);
@@ -289,13 +291,15 @@ describe("link de remarcação na mensagem da tela Avisar (F5.4)", () => {
       agendaId: fixture.ids.agendaDra2, startsAt: at(MON4, "08:00"), endsAt: at(MON4, "09:00"), reason: "Congresso",
       cancelAppointmentIds: [appointment.id], actorId: fixture.admin.id,
     }, NOW);
-    const linkId = canceled[0].rebookingLink!.id;
+    // Bot enxuto (F3f): o link de remarcação é o do portal (o /agendar não é mais criado).
+    expect(canceled[0].rebookingLink).toBeNull();
+    const linkId = canceled[0].portalLink!.id;
 
-    const found = await listValidRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], NOW);
-    expect(found.get(appointment.id)).toMatchObject({ id: linkId, agendaId: fixture.ids.agendaDra2, patientId: fixture.ids.p1 });
+    const found = await listValidPortalRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], NOW);
+    expect(found.get(appointment.id)).toMatchObject({ id: linkId, purpose: "reschedule", canceledAppointmentId: appointment.id });
     // Vence em 2 dias.
-    expect((await listValidRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], new Date(NOW.getTime() + 3 * 86_400_000))).size).toBe(0);
-    await adminClient().from("booking_links").update({ used_at: NOW.toISOString() }).eq("id", linkId);
-    expect((await listValidRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], NOW)).size).toBe(0);
+    expect((await listValidPortalRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], new Date(NOW.getTime() + 3 * 86_400_000))).size).toBe(0);
+    await adminClient().from("portal_links").update({ used_at: NOW.toISOString() }).eq("id", linkId);
+    expect((await listValidPortalRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], NOW)).size).toBe(0);
   });
 });

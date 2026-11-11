@@ -4,12 +4,10 @@ import { matchQuestion, type CompiledKb, type DetectedTerms, type KbEntry } from
 import { publishedKnowledge } from "../../../knowledge/published";
 import { logAbandonment, WELCOME, type HandoffOrigin } from "../../conversations";
 import { logFunnelEvent } from "../../funnel";
-import { BOOKING_STATES, startBooking, startReturn, type BookingContext } from "../booking";
-import { applyProfessionalChoice, EXAMS_CHOICE, go, KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, tick, type Bot, type KnowledgeHook } from "../engine";
-import { startIdentification } from "../entry";
+import { go, KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, tick, type Bot, type KnowledgeHook } from "../engine";
 import { asksForReception, pick, withoutReceptionWords, yesNo, type Selection } from "../input";
-import { askWaitlistType, handoff, startManage } from "../manage";
-import { showMenu, showPreparationChoice, showSubmenu } from "../menus";
+import { handoff } from "../manage";
+import { portalShortcut, showMenu, showPreparationChoice } from "../menus";
 import * as t from "../texts";
 import { CLINICAL_NOTICE, clinicTermsOf, composeAnswer, type KbAnswer, type KbClinicData, type KbContext } from "./answers";
 import type { ServiceCategory } from "../../../config/services";
@@ -90,10 +88,9 @@ async function dataOf(b: Bot, session: Session): Promise<KbClinicData> {
   return session.data;
 }
 
-function contextOf(b: Bot): KbContext {
-  if (!BOOKING_STATES.has(b.convo.state)) return {};
-  const ctx = b.convo.context as BookingContext;
-  return { serviceId: ctx.serviceId, locationType: ctx.locationCategory ?? undefined };
+/** Sem a marcação no chat (bot enxuto), a base não tem o serviço do passo. */
+function contextOf(_b: Bot): KbContext {
+  return {};
 }
 
 /** Tipo dito na mensagem (exame, retorno ou consulta, ou o serviço citado); undefined = não disse. */
@@ -210,17 +207,9 @@ async function bookTypes(b: Bot): Promise<(typeof BOOK_TYPES)[number][]> {
   return BOOK_TYPES.filter((category) => services.some((s) => s.category === category));
 }
 
-async function startBookingOf(b: Bot, category: (typeof BOOK_TYPES)[number], serviceId?: string): Promise<void> {
-  if (category === "return_visit") return startReturn(b);
-  return startBooking(b, category, { serviceId });
-}
-
-/** "Agendar Atendimento": um tipo só vai direto; mais de um, Consulta · Retorno · Exame (só os que a clínica tem). */
-async function askBookType(b: Bot): Promise<void> {
-  const types = await bookTypes(b);
-  if (types.length === 1) return startBookingOf(b, types[0]);
-  if (!types.length) return showMenu(b);
-  await sendButtons(b, "bot_kb_book_type", t.KB_BOOK_TYPE_QUESTION, types.map((category) => t.button(bookId({ category }), t.KB_BOOK_TYPE_LABELS[category])));
+/** "Marcar" depois de uma resposta (bot enxuto): o Agendar do portal, onde se escolhe o tipo e o profissional. */
+async function startBookingOf(b: Bot): Promise<void> {
+  return portalShortcut(b, "book");
 }
 
 /** Botões do "Conseguiu resolver…?" (pedido de recepção): Resolvido, a recepção e "Marcar" quando a resposta leva a uma marcação. */
@@ -399,23 +388,12 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
   switch (takeover.kind) {
     case "flow": {
       await leaveFlow(b);
-      const { flow, group, typed } = takeover;
-      // Marcar pela base: o submenu, com marcar, retorno, remarcar, cancelar e encaixe (cliente, 31/out/2026).
-      if (flow === "book_consultation") return showSubmenu(b, "CONSULTAS_MENU");
-      if (flow === "book_exam") {
-        // Exame só na agenda de Exames (cliente, 08/nov/2026): com um profissional escolhido, passa para "Exames".
-        if (b.scope.multi && b.scope.choice && b.scope.choice !== EXAMS_CHOICE && b.scope.examsOption) await applyProfessionalChoice(b, EXAMS_CHOICE);
-        return showSubmenu(b, "EXAMES_MENU");
-      }
-      if (flow === "book_return") return startReturn(b);
-      if (flow === "reschedule" || flow === "cancel") return startManage(b, flow, group);
-      // Encaixe (cliente, 31/out/2026): o "Encaixe ou antecipar"; sem o item Lista de espera, é com a recepção.
-      if (flow === "waitlist") {
-        // Sem o tipo na mensagem, pergunta consulta, retorno ou exame (cliente, 01/nov/2026).
-        if (b.features.includes("waitlist")) return typed ? startManage(b, "waitlist", typed === "exam" ? "exam" : "consultation", typed) : askWaitlistType(b);
-        return performTakeover(b, { kind: "reception", text: t.KB_WAITLIST_RECEPTION } satisfies Takeover);
-      }
-      return startIdentification(b);
+      const { flow } = takeover;
+      // Bot enxuto (F3f): marcar vai ao Agendar do portal; remarcar, cancelar e "minha consulta" a Minhas consultas;
+      // o Encaixe no chat saiu, então é com a recepção.
+      if (flow === "book_consultation" || flow === "book_exam" || flow === "book_return") return portalShortcut(b, "book");
+      if (flow === "waitlist") return performTakeover(b, { kind: "reception", text: t.KB_WAITLIST_RECEPTION } satisfies Takeover);
+      return portalShortcut(b, "my_appointments");
     }
     case "reception":
       if (b.receptionAvailable) return askReception(b, "bot_kb_reception", takeover.text);
@@ -455,9 +433,7 @@ export async function handleKnowledgeReply(b: Bot, selection: Selection): Promis
   const book = selection.id?.match(BOOK_ID);
   if (book) {
     // "return_visit" tem "_": o id é lido inteiro (antes, o retorno abria a consulta).
-    const [, category, serviceId] = book;
-    if (category === "any") await askBookType(b);
-    else await startBookingOf(b, category as (typeof BOOK_TYPES)[number], serviceId);
+    await startBookingOf(b);
     return "handled";
   }
   const context = (b.convo.context ?? {}) as Record<string, unknown>;

@@ -285,7 +285,7 @@ export const configuracoes = {
       como: [
         "Os limites contam por número de WhatsApp, somando todos os pacientes dele.",
         "Atendimentos futuros contam os marcados pelo bot ou pela equipe e os links de marcar ainda válidos.",
-        "Atingido um limite, o bot não marca e passa a conversa para a recepção. Cancelar, remarcar e confirmar seguem pelo bot; a equipe marca sem limite pelo painel.",
+        "Atingido um limite, o portal não marca e orienta o paciente a falar com a recepção. Cancelar, remarcar e confirmar seguem valendo; a equipe marca sem limite pelo painel.",
         "O contato aparece no Meu dia, em \"Contatos para revisar\", por 7 dias. \"Revisado\" tira o aviso; na tela do contato, \"Liberar dos limites do bot\" (só o Administrador) desliga os três para aquele número.",
       ],
     },

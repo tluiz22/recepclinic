@@ -191,19 +191,6 @@ describe("NA1: marcar a conversa como não atendimento", () => {
     expect(added).toEqual([expect.objectContaining({ kind: "classified", from_status: "in_progress", to_status: "bot", classification_to: "personal" })]);
   });
 
-  it("marcar no meio de um fluxo do bot fecha a tentativa do funil como classified", async () => {
-    await setConversationClassification(reception(), f.clinicId, Q, "patient");
-    await say(Q, "Oi");
-    await say(Q, "1"); // Consultas: abre uma tentativa
-    await say(Q, "1");
-    const session = (await conversation(Q)).funnel_session_id;
-    expect(session).not.toBeNull();
-    await setConversationClassification(reception(), f.clinicId, Q, "administrative");
-    expect((await conversation(Q)).funnel_session_id).toBeNull();
-    const { data } = await adminClient().from("bot_funnel_events").select("step, metadata").eq("clinic_id", f.clinicId).eq("session_id", session!).order("id");
-    expect(data!.at(-1)).toMatchObject({ step: "abandoned", metadata: expect.objectContaining({ reason: "classified" }) });
-  });
-
   it("conversa que não existe: erro, nada criado", async () => {
     expect(await codeOf(() => setConversationClassification(reception(), f.clinicId, "+5584991244099", "personal"))).not.toBe("ok");
     const { count } = await adminClient().from("conversation_state").select("id", { count: "exact", head: true }).eq("clinic_id", f.clinicId).eq("contact_phone", "+5584991244099");
@@ -269,13 +256,10 @@ describe("NA2: bot e webhook no número marcado", () => {
     await setConversationClassification(reception(), f.clinicId, R, "administrative");
     let reply = await say(R, { payload: reminderButtonPayload("confirm", consult) });
     expect(reply[0]).toContain("Presença confirmada ✓");
-    await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consult);
+    // Bot enxuto (F3f): Cancelar manda o portal já no cancelamento.
+    await adminClient().from("clinics").update({ portal_slug: `na-${Date.now()}` }).eq("id", f.clinicId);
     reply = await say(R, { payload: reminderButtonPayload("cancel", consult) });
-    expect(reply[0]).toContain("Confirma o cancelamento da consulta de *Paciente Um*");
-    reply = await say(R, "não");
-    expect(reply[0]).toBe("Ok, mantivemos sua consulta marcada.\n\nDeseja confirmar sua presença?");
-    reply = await say(R, { id: "yes" });
-    expect(reply[0]).toContain("Presença confirmada ✓");
+    expect(reply[0]).toContain("Para cancelar a consulta de *Paciente Um*, toque no botão abaixo.");
     // Fim do caminho do lembrete: o resto volta a ficar sem bot.
     expect(await say(R, "Oi")).toEqual([]);
     expect(await conversation(R)).toMatchObject({ human_handoff: false, classification: "administrative" });
@@ -293,7 +277,7 @@ describe("NA2: bot e webhook no número marcado", () => {
     await setConversationClassification(reception(), f.clinicId, P, "patient");
     expect(sent).toEqual([]);
     const reply = await say(P, "Oi");
-    expect(reply[0]).toMatch(/^Olá(, [^!]+)?! 👋/);
+    expect(reply[0]).toMatch(/^Olá(, [^!]+)?! Seja bem-vindo\(a\)/);
     await say(P, "4");
     expect(await conversation(P)).toMatchObject({ human_handoff: true, handoff_status: "waiting_clinic" });
     // E o eco volta a pausar como sempre.

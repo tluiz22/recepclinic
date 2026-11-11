@@ -5,13 +5,11 @@ import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import { reminderButtonPayload } from "../../src/lib/data/whatsapp/reminders";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
-import { bookingPath } from "../../src/lib/publicId";
 
-// F6.4 — Bot II: cancelar, remarcar, botões do lembrete, encaixe (lista de
-// espera), recepção e pausa pelo eco. Conversas pelo webhook com a Meta
-// simulada, no relógio real (a conversa guarda a hora com now()).
+// F6.4 — Bot II: botões do lembrete, recepção e pausa pelo eco. Bot enxuto (F3f): cancelar, remarcar e o encaixe
+// saíram do chat (portal; bot-enxuto.test.ts). Conversas pelo webhook com a Meta simulada, no relógio real.
 
 const env = () => ({
   supabaseUrl: process.env.SUPABASE_LOCAL_API_URL!,
@@ -75,19 +73,7 @@ async function hello(phone: string): Promise<Sent[]> {
   return reply.at(-1)?.options.some((o) => o.id === "entry_no") ? say(phone, { id: "entry_no" }) : reply;
 }
 
-const ASK_BIRTHDATE = "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
-
-/** Cancelar, Remarcar ou Encaixe no submenu: com atendimento, responde a data de nascimento (cliente, 24/out/2026). */
-async function choose(phone: string, id: string, birthdate = "01/01/2020"): Promise<Sent[]> {
-  const reply = await say(phone, { id });
-  return reply.at(-1)?.body === ASK_BIRTHDATE ? say(phone, birthdate) : reply;
-}
-
-const bodies = (reply: Sent[]) => reply.map((m) => m.body).join("\n");
 const titles = (reply: Sent[]) => reply.at(-1)!.options.map((o) => o.title);
-/** "1. seg, 10/03 às 08:00" (linha da lista) → "segunda, 10/03 às 08:00" (texto). */
-const full = (title: string) => title.slice(3).replace(/^seg,/, "segunda,");
-
 async function appointment(id: string) {
   const { data } = await adminClient().from("appointments").select("status, canceled_via, patient_confirmed_at, reminder_response").eq("id", id).single();
   return data!;
@@ -95,11 +81,9 @@ async function appointment(id: string) {
 
 const P1 = "+5584991226401"; // contato do Paciente Um
 const P2 = "+5584991226402"; // contato do Paciente Dois
-const P3 = "+5584991226403"; // contato do Paciente Três
 
 let consultP1: string;
 let consultP2: string;
-let examP3: string;
 
 beforeAll(async () => {
   f = await setupAgendaClinic("Clínica Bot F64", "+55849912264", { oneBotProfessional: true });
@@ -115,67 +99,11 @@ beforeAll(async () => {
     ).appointment.id;
   consultP1 = await book(f.ids.p1, f.ids.consulta, f.ids.agendaDra, MON1, "08:00");
   consultP2 = await book(f.ids.p2, f.ids.consulta2, f.ids.agendaDra2, MON1, "08:00");
-  examP3 = await book(f.ids.p3, f.ids.exame, f.ids.agendaExams, MON2, "08:00");
   // Lembrete já enviado (os botões só valem com ele).
   await adminClient().from("appointments").update({ reminder_sent_at: new Date().toISOString() }).in("id", [consultP1, consultP2]);
 });
 
 afterAll(async () => f.cleanup());
-
-describe("cancelar pelo menu", () => {
-  it("um atendimento só: a data de nascimento antes de qualquer detalhe; pede confirmação, \"não\" mantém, \"sim\" cancela", async () => {
-    await hello(P2);
-    await say(P2, "1");
-    let reply = await say(P2, { id: "manage_cancel" });
-    expect(reply.map((m) => m.body)).toEqual([ASK_BIRTHDATE]);
-    reply = await say(P2, "01/01/2020");
-    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00?");
-    reply = await say(P2, "não");
-    expect(reply[0].body).toBe("Ok, mantivemos sua consulta marcada.");
-    expect((await appointment(consultP2)).status).toBe("scheduled");
-
-    await hello(P2);
-    await say(P2, "1");
-    await choose(P2, "manage_cancel");
-    reply = await say(P2, "sim");
-    expect(reply[0].body).toBe(
-      "Prontinho, cancelamos a consulta de Paciente Dois que estava marcada para segunda, 10/03 às 08:00. Se precisar marcar uma nova consulta, é só me chamar de novo.",
-    );
-    expect(await appointment(consultP2)).toMatchObject({ status: "canceled", canceled_via: "whatsapp_bot" });
-  });
-
-  it("nunca mistura consulta e exame; número sem cadastro é avisado", async () => {
-    await hello(P3);
-    await say(P3, "1");
-    const reply = await choose(P3, "manage_cancel");
-    // Sem recepção no número (sem coexistência): escrever pelo outro número; e o menu inicial de novo (cliente, 11/out/2026).
-    expect(reply[0].body).toBe(
-      "Não encontramos nenhuma consulta futura para cancelar neste número. Se o agendamento foi feito por outro número, escreva por aquele número.",
-    );
-    expect(reply[1].body).toBe("Escolha uma opção abaixo ou faça uma pergunta.");
-
-    const stranger = "+5584991226499";
-    await hello(stranger);
-    await say(stranger, "2");
-    const strangerReply = await say(stranger, { id: "manage_cancel" });
-    expect(strangerReply[0].body).toBe(
-      "Não encontramos agendamento marcado para esse número de telefone. Se o agendamento foi feito por outro número, escreva por aquele número.",
-    );
-    expect(strangerReply[1].body).toBe("Escolha uma opção abaixo ou faça uma pergunta.");
-  });
-});
-
-describe("remarcar pelo menu", () => {
-  it("exame único: depois da data de nascimento, o link de remarcação com o mesmo serviço e agenda", async () => {
-    await hello(P3);
-    await say(P3, "2");
-    const reply = await choose(P3, "manage_reschedule");
-    expect(reply[0].body).toMatch(/^Prontinho! Escolha o novo dia e horário para o exame Exame de Paciente Três neste link:\nhttps:\/\/app\.exemplo\.test\/agendar\/[A-Za-z0-9_-]{22}/);
-    const { data: link } = await adminClient().from("booking_links").select("id, mode, appointment_id, service_id, agenda_id").eq("contact_phone", P3).eq("mode", "reschedule").single();
-    expect(link).toEqual({ id: expect.any(String), mode: "reschedule", appointment_id: examP3, service_id: f.ids.exame, agenda_id: f.ids.agendaExams });
-    expect(reply[0].body).toContain(bookingPath(link!.id));
-  });
-});
 
 describe("botões do lembrete", () => {
   it("Confirmar presença confirma em qualquer ponto da conversa", async () => {
@@ -190,158 +118,33 @@ describe("botões do lembrete", () => {
     );
   });
 
-  it("Cancelar pelo lembrete: \"não\" sem presença confirmada pergunta se confirma", async () => {
-    await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consultP1);
-    let reply = await say(P1, { payload: reminderButtonPayload("cancel", consultP1) });
-    expect(reply[0].body).toContain("Confirma o cancelamento da consulta de *Paciente Um*");
-    reply = await say(P1, "não");
-    expect(reply[0]).toMatchObject({ kind: "buttons", body: "Ok, mantivemos sua consulta marcada.\n\nDeseja confirmar sua presença?" });
-    reply = await say(P1, { id: "yes" });
-    expect(reply[0].body).toContain("Presença confirmada ✓");
-    expect(await appointment(consultP1)).toMatchObject({ status: "scheduled", reminder_response: "confirmed" });
-  });
-
   it("toque de atendimento cancelado: não está mais ativo", async () => {
+    await adminClient().from("appointments").update({ status: "canceled", canceled_at: new Date().toISOString() }).eq("id", consultP2);
     const reply = await say(P2, { payload: reminderButtonPayload("reschedule", consultP2) });
     expect(reply[0].body).toBe("Esse agendamento não está mais ativo.");
-  });
-});
-
-describe("encaixe ou antecipar", () => {
-  it("com horário livre antes: mostra até 3; \"Nenhum desses\" pergunta da lista; já na lista, pergunta se continua ou sai", async () => {
-    await hello(P1);
-    await say(P1, "1");
-    let reply = await choose(P1, "manage_waitlist");
-    expect(reply[0]).toMatchObject({
-      kind: "list",
-      body: "Encontramos horários livres antes da consulta de *Paciente Um*, marcada para segunda, 10/03 às 08:00. Quer antecipar para um destes?",
-    });
-    // Horários da agenda da Dra. às segundas, no consultório, a partir de hoje.
-    expect(titles(reply)).toEqual([
-      expect.stringMatching(/^1\. seg, \d\d\/\d\d às \d\d:\d\d$/),
-      expect.stringMatching(/^2\. seg, /),
-      expect.stringMatching(/^3\. seg, /),
-      "4. Nenhum desses",
-      "5. Voltar ao menu",
-    ]);
-
-    reply = await say(P1, { id: "waitlist_none" });
-    expect(reply[0]).toMatchObject({ kind: "buttons", body: "Quer entrar na lista de espera? Se abrir outra vaga antes de segunda, 10/03 às 08:00, eu aviso por aqui." });
-    reply = await say(P1, "não");
-    expect(reply[0].body).toBe("Ok, mantivemos o horário de *Paciente Um* (segunda, 10/03 às 08:00).");
-
-    await hello(P1);
-    await say(P1, "1");
-    await choose(P1, "manage_waitlist");
-    await say(P1, "4");
-    reply = await say(P1, { id: "yes" });
-    expect(reply[0].body).toBe("Pronto! *Paciente Um* está na lista de espera para antecipar a consulta marcada para segunda, 10/03 às 08:00.");
-
-    // Já na lista: os horários livres vêm antes; sem escolha, continua ou sai.
-    await hello(P1);
-    await say(P1, "1");
-    reply = await choose(P1, "manage_waitlist");
-    expect(reply[0].kind).toBe("list");
-    reply = await say(P1, { id: "waitlist_none" });
-    expect(reply[0].kind).toBe("buttons");
-    expect(titles(reply)).toEqual(["Sair da lista", "Continuar na lista"]);
-    reply = await say(P1, { id: "waitlist_leave" });
-    expect(reply[0].body).toBe("Pronto, *Paciente Um* saiu da lista de espera. A consulta continua marcada para segunda, 10/03 às 08:00.");
-  });
-
-  it("escolhe um horário: \"Não\" volta à lista; ocupado no meio procura de novo; \"Sim\" antecipa e tira da fila", async () => {
-    await adminClient().from("waitlist_entries").insert({ clinic_id: f.clinicId, appointment_id: consultP1, created_via: "whatsapp_bot" });
-    await hello(P1);
-    await say(P1, "1");
-    let reply = await choose(P1, "manage_waitlist");
-    const [first] = reply[0].options;
-    reply = await say(P1, { id: first.id });
-    expect(reply[0]).toMatchObject({ kind: "buttons" });
-    expect(reply[0].body).toBe(`Confirma antecipar a consulta de *Paciente Um* de segunda, 10/03 às 08:00 para ${full(first.title)}?`);
-    reply = await say(P1, "não");
-    expect(reply[0].kind).toBe("list");
-    expect(reply[0].options[0].id).toBe(first.id);
-
-    // Outra pessoa marca o horário antes do "Sim".
-    await say(P1, { id: first.id });
-    const start = new Date(first.id.split("_")[1]);
-    await bookAppointment(
-      asDb(f.reception),
-      f.clinicId,
-      { patientId: f.ids.p3, serviceId: f.ids.consulta, agendaId: f.ids.agendaDra, start, locationId: f.ids.office, channel: "admin", actorId: null },
-      new Date(),
-    );
-    reply = await say(P1, "sim");
-    expect(reply[0].body).toBe("Que pena, esse horário acabou de ser ocupado.");
-    expect(reply[1].kind).toBe("list");
-    const next = reply[1].options[0];
-    expect(next.id).not.toBe(first.id);
-
-    reply = await say(P1, "1");
-    reply = await say(P1, { id: "yes" });
-    expect(reply[0].body).toBe(`Pronto! ✓ O atendimento de *Paciente Um* foi antecipado para ${full(next.title)}. Os detalhes seguem na mensagem de remarcação.`);
-    const { data } = await adminClient().from("appointments").select("scheduled_at, rescheduled_via").eq("id", consultP1).single();
-    expect(new Date(data!.scheduled_at).toISOString()).toBe(new Date(next.id.split("_")[1]).toISOString());
-    expect(data!.rescheduled_via).toBe("whatsapp_bot");
-    const { data: entries } = await adminClient().from("waitlist_entries").select("status").eq("appointment_id", consultP1).order("created_at");
-    expect(entries!.at(-1)!.status).toBe("advanced");
-  });
-
-  it("sem horário livre antes: entra direto na lista", async () => {
-    await adminClient()
-      .from("schedule_blocks")
-      .insert({ clinic_id: f.clinicId, agenda_id: f.ids.agendaExams, starts_at: new Date().toISOString(), ends_at: at(MON2, "08:00").toISOString(), reason: "Teste" });
-    await hello(P3);
-    await say(P3, "2");
-    const reply = await choose(P3, "manage_waitlist");
-    expect(reply[0].body).toBe("Pronto! *Paciente Três* está na lista de espera para antecipar o exame Exame marcado para segunda, 17/03 às 08:00.");
-  });
-
-  it("mais de um serviço do paciente: lista os serviços antes dos atendimentos (cliente, 01/nov/2026)", async () => {
-    const returnId = (
-      await bookAppointment(asDb(f.reception), f.clinicId, { patientId: f.ids.p1, serviceId: f.ids.retorno, agendaId: f.ids.agendaDra, start: at(MON2, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null }, NOW)
-    ).appointment.id;
-    try {
-      await hello(P1);
-      await say(P1, "1");
-      let reply = await choose(P1, "manage_waitlist");
-      expect(reply[0]).toMatchObject({ kind: "list", body: "Para qual serviço é o encaixe?" });
-      expect(titles(reply)).toEqual(["1. Consulta", "2. Retorno", "3. Voltar ao menu"]);
-      reply = await say(P1, { id: `service_${f.ids.retorno}` });
-      expect(bodies(reply)).toContain("Paciente Um");
-    } finally {
-      await adminClient().from("appointments").update({ status: "canceled" }).eq("id", returnId);
-    }
-  });
-
-  it("sem nada marcado: oferece marcar; o link leva o pedido de entrar na lista", async () => {
-    await hello(P2);
-    await say(P2, "1");
-    let reply = await choose(P2, "manage_waitlist");
-    expect(titles(reply)).toEqual(["Marcar consulta", "Marcar retorno", "Voltar ao menu"]);
-    reply = await say(P2, { id: "waitlist_book_consultation" });
-    expect(reply.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
   });
 });
 
 describe("recepção e pausa", () => {
   it("\"Falar com a recepção\" só com coexistência; pausa o bot até o eco \"#bot\"", async () => {
     const phone = "+5584991226404";
-    expect(titles(await hello(phone))).not.toContain("4. Falar com a recepção");
+    expect(titles(await hello(phone))).not.toContain("🎧 Falar com a recepção");
 
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
+    // Recepção aberta o dia todo (fora do horário, o aviso leva o horário: bot-enxuto.test.ts).
+    await adminClient().from("clinic_settings").update({ reception_hours: Array.from({ length: 7 }, () => ({ open: "00:00", close: "23:59" })) as never }).eq("clinic_id", f.clinicId);
     let reply = await hello(phone);
-    expect(titles(reply)).toContain("4. Falar com a recepção");
-    // Com a base: transfere direto, sem perguntar o motivo (cliente, 06/nov/2026).
+    expect(titles(reply)).toContain("🎧 Falar com a recepção");
+    // Bot enxuto (BE-4): uma mensagem, que já pede a dúvida.
     reply = await say(phone, "4");
-    expect(reply[0].body).toContain("Vou te transferir para a recepção");
+    expect(reply.map((m) => m.body)).toEqual(["Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor."]);
     // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
       expect((await say(phone, "alô?")).map((m) => m.body)).toEqual([]);
       expect(await say(phone, "tem alguém aí?")).toEqual([]);
 
     // A recepção devolve ao bot pelo app.
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: phone.slice(1), type: "text", text: { body: "#bot" } }] });
-    expect(titles(await hello(phone))).toContain("1. Consultas");
+    expect(titles(await hello(phone))).toContain("📅 Agendar");
     await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
   });
 
@@ -365,7 +168,6 @@ describe("recepção e pausa", () => {
   it("a recepção responde pelo app: o bot fica em silêncio, mas o Confirmar do lembrete responde", async () => {
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: P1.slice(1), type: "text", text: { body: "Oi, aqui é a recepção" } }] });
     expect(await hello(P1)).toEqual([]);
-    // Antecipado no encaixe: o lembrete da data nova também foi enviado.
     await adminClient().from("appointments").update({ patient_confirmed_at: null, reminder_sent_at: new Date().toISOString() }).eq("id", consultP1);
     const reply = await say(P1, { payload: reminderButtonPayload("confirm", consultP1) });
     expect(reply[0].body).toContain("Presença confirmada ✓");
@@ -373,68 +175,3 @@ describe("recepção e pausa", () => {
   });
 });
 
-describe("não achou neste número (cliente, 11/out/2026)", () => {
-  const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
-  const fresh = (phone: string) =>
-    adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
-
-  const NOT_FOUND = "Não encontramos agendamentos para essa data de nascimento.";
-
-  it("data de nascimento sem atendimento: sem bloqueio; \"Tentar outra data\" pede de novo e \"Voltar ao menu\" mostra o menu", async () => {
-    await fresh(P1);
-    await hello(P1);
-    await say(P1, "1");
-    let reply = await say(P1, { id: "manage_reschedule" });
-    expect(reply.map((m) => m.body)).toEqual([ASK_BIRTHDATE]);
-    // Sem coexistência: sem a recepção.
-    for (const date of ["02/02/2002", "03/03/2003", "04/04/2004", "05/05/2005", "06/06/2006"]) {
-      reply = await say(P1, date);
-      expect(reply).toEqual([expect.objectContaining({ kind: "buttons", body: NOT_FOUND })]);
-      expect(titles(reply)).toEqual(["Tentar outra data", "Voltar ao menu"]);
-      if (date !== "06/06/2006") {
-        reply = await say(P1, { id: "identity_retry" });
-        expect(reply.map((m) => m.body)).toEqual(["Qual a data de nascimento do paciente? (formato dd/mm/aaaa)"]);
-      }
-    }
-    // A data digitada no lugar do botão vale como nova tentativa: a certa leva ao link.
-    reply = await say(P1, "01/01/2020");
-    expect(reply[0].body).toMatch(/^Prontinho! Escolha o novo dia e horário para a consulta de Paciente Um neste link:/);
-
-    await hello(P1);
-    await say(P1, "1");
-    await say(P1, { id: "manage_cancel" });
-    await say(P1, "02/02/2002");
-    reply = await say(P1, "xyz");
-    expect(reply.map((m) => m.body)).toEqual(["Não entendi sua resposta 🙏 Escolha uma das opções abaixo (ou digite 0 para voltar ao menu principal).", NOT_FOUND]);
-    reply = await say(P1, "2");
-    expect(reply.map((m) => m.body)).toEqual([MENU]);
-    const { data: funnel } = await adminClient()
-      .from("bot_funnel_events")
-      .select("step, metadata")
-      .eq("clinic_id", f.clinicId)
-      .eq("contact_phone", P1)
-      .order("occurred_at", { ascending: false })
-      .limit(1)
-      .single();
-    expect(funnel).toMatchObject({ step: "blocked", metadata: { reason: "no_match" } });
-  });
-
-  it("com coexistência: sem \"Falar com a recepção\" na data sem atendimento (cliente, 31/out/2026)", async () => {
-    await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
-    try {
-      await fresh(P3);
-      await hello(P3);
-      await say(P3, "2");
-      await say(P3, { id: "manage_cancel" });
-      let reply = await say(P3, "02/02/2002");
-      expect(reply[0]).toMatchObject({ kind: "buttons", body: NOT_FOUND });
-      expect(titles(reply)).toEqual(["Tentar outra data", "Voltar ao menu"]);
-      expect(bodies(reply)).not.toMatch(/Paciente|17\/03/);
-      reply = await say(P3, { id: "identity_menu" });
-      expect(reply.at(-1)!.options.map((o) => o.title)).toContain("4. Falar com a recepção");
-    } finally {
-      await fresh(P3);
-      await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
-    }
-  });
-});

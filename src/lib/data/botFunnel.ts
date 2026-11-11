@@ -559,6 +559,7 @@ const HANDOFF_ORIGINS: Record<string, string> = {
   typed: "Digitaram (ex.: \"atendente\")",
   kb_answer: "Depois de uma resposta da base",
   not_completed: "Pedido não concluído (link vencido ou cancelamento sem resposta)",
+  no_portal: "Sem o portal (Agendar, Minhas consultas ou botão do lembrete)",
 };
 
 const reached = (s: Session, steps: string[]) => s.events.some((e) => steps.includes(e.step));

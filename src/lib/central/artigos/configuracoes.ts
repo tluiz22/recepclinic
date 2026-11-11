@@ -49,7 +49,7 @@ export const configuracoesArtigos = [
       { name: "Atendimento", text: "Perfil (as palavras do bot e do link de agendar: criança/responsável ou paciente/contato), prazo para oferecer horários (até quantos dias à frente o bot e o link mostram horários livres; o painel não tem esse limite) e idade limite da consulta (quem passou da idade não marca Consulta com ele pelo bot; no Marcar, só aviso). Ficam na agenda dele: sem agenda, o cartão pede para criar. O profissional com login também muda os dele." },
       { name: "Especialidades", text: "Marque uma ou mais da lista (com mais de uma, escolha a principal). No WhatsApp, numa clínica com mais de um profissional, o paciente escolhe a especialidade e depois o profissional. Falta alguma na lista? Peça ao Suporte." },
       { name: "Convênios atendidos", text: "Os planos que ele atende; nenhum marcado: só particular. Com o item Convênios." },
-      { name: "Informações que o bot responde", text: "Formas de pagamento, o texto sobre convênios e observações dele, mostrados em Informações gerais depois que o paciente o escolhe. Vazio: a opção não aparece." },
+      { name: "Informações que o bot responde", text: "Formas de pagamento, o texto sobre convênios e observações dele, usados nas respostas das Perguntas frequentes no bot." },
       { name: "RQE", text: "Registro de Qualificação de Especialista. Preencha só se tiver; o registro aparece só no painel." },
       { name: "WhatsApp", text: "Para ele receber, pelo WhatsApp da clínica, a lista dos atendimentos das agendas dele, como definido em Lembretes." },
       { name: "Limite de profissionais ativos", text: "A tela mostra \"X de Y ativos\". Atingido o limite, é preciso desativar um ou falar com o suporte." },
@@ -74,7 +74,7 @@ export const configuracoesArtigos = [
       { name: "Consultório", text: "O paciente vai até a clínica. O endereço vai no lembrete e na confirmação, com o link do mapa. Consultório sem endereço aparece com o selo \"sem endereço\"." },
       { name: "Domiciliar", text: "A equipe vai até o paciente; o endereço é pedido ao marcar. Precisa do item Atendimento domiciliar liberado para a clínica (senão o selo \"não liberado\" aparece)." },
     ],
-    notes: ["O tipo do local não muda depois de criado.", "O endereço também alimenta a opção Endereço de Informações gerais no bot."],
+    notes: ["O tipo do local não muda depois de criado.", "O endereço também alimenta a resposta do bot a \"qual o endereço?\" (Perguntas frequentes no bot) e o mapa depois do Confirmar presença."],
     contextual: ["/admin/configuracoes/locais"],
   }),
   article({

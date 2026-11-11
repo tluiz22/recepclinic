@@ -21,6 +21,7 @@ const env = () => ({
 });
 
 const NUMBER = "e4-numero";
+const LEAN_HANDOFF = "Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor.";
 const QUESTION = "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?";
 type Sent = { kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string }[] };
 
@@ -95,17 +96,16 @@ async function askReception(phone: string): Promise<string[]> {
 beforeAll(async () => {
   f = await setupAgendaClinic("Clínica Assunto E4", "+55849912290", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "e4-waba", status: "connected", coexistence: true });
+  await adminClient().from("clinic_settings").update({ reception_hours: Array.from({ length: 7 }, () => ({ open: "00:00", close: "23:59" })) as never }).eq("clinic_id", f.clinicId);
 });
 
 afterAll(async () => f.cleanup());
 
 describe("assunto da transferência", () => {
-  it("avisa a transferência, pergunta o assunto e pausa o bot", async () => {
+  it("avisa a transferência pedindo a dúvida numa mensagem só (BE-4) e pausa o bot", async () => {
     const phone = "+5584991229099";
     const reply = await askReception(phone);
-    expect(reply).toHaveLength(2);
-    expect(reply[0]).toContain("Vou te transferir para a recepção");
-    expect(reply[1]).toBe(QUESTION);
+    expect(reply).toEqual([LEAN_HANDOFF]);
     expect(await state(phone)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true, handoff_reason: "requested", handoff_subject: null });
     expect((await state(phone)).handoff_subject_asked_at).not.toBeNull();
   });
@@ -131,8 +131,8 @@ describe("assunto da transferência", () => {
     const phone = "+5584991229099";
     await agentReply(phone, "#bot");
     expect(await state(phone)).toMatchObject({ human_handoff: false, handoff_subject: null, handoff_subject_asked_at: null });
-    // Nova pausa: pergunta de novo.
-    expect((await askReception(phone)).at(-1)).toBe(QUESTION);
+    // Nova pausa: pede a dúvida de novo.
+    expect((await askReception(phone)).at(-1)).toBe(LEAN_HANDOFF);
     await agentReply(phone, "#bot");
   });
 
@@ -164,23 +164,5 @@ describe("assunto da transferência", () => {
     expect(reply.at(-1)).toBe(QUESTION);
     expect(await say(phone, "Resultado de exame")).toEqual([]);
     expect(await state(phone)).toMatchObject({ handoff_reason: "not_understood", handoff_subject: "Resultado de exame" });
-  });
-
-  it("pedido no meio de uma marcação: a etapa fica no registro da transferência", async () => {
-    const phone = "+5584991229095";
-    await say(phone, "Oi");
-    await say(phone, "1"); // Consultas
-    await say(phone, "1"); // Marcar consulta (consulta única): "Com qual profissional?"
-    await say(phone, "quero falar com atendente"); // "Você quer falar com a recepção?" (cliente, 06/nov/2026)
-    const reply = await say(phone, "sim");
-    expect(reply.at(-1)).toBe(QUESTION);
-    const { data } = await adminClient()
-      .from("bot_funnel_events")
-      .select("metadata")
-      .eq("clinic_id", f.clinicId)
-      .eq("contact_phone", phone)
-      .eq("flow", "handoff")
-      .single();
-    expect(data!.metadata).toMatchObject({ mid_journey: true, journey_flow: "booking", journey_state: "BOOK_AGENDA" });
   });
 });

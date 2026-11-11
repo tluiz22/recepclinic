@@ -1,36 +1,25 @@
 import type { Enums } from "../../../supabase/database.types";
-import { bookingPath } from "../../../publicId";
-import { cancelAppointment, findReturnOrigin, logTrail, rescheduleAppointment } from "../../agenda/appointments";
 import { activeRecessMessage } from "../../agenda/blocks";
-import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
-import { getFreeSlotsBefore, loadClinicHolidays } from "../../agenda/slots";
 import { getReceptionHours } from "../../config/receptionHours";
+import { loadClinicHolidays } from "../../agenda/slots";
 import { addDays } from "../../../clinicTime";
-import { describeOpening, isReceptionOpen, nextReceptionOpening } from "../../../receptionHours";
-import { DataError, unwrap } from "../../errors";
+import { describeOpening, describeReceptionHoursForPatient, isReceptionOpen, nextReceptionOpening } from "../../../receptionHours";
+import { unwrap } from "../../errors";
 import { contactPatientIds } from "../../patientContacts";
-import { activeWaitlistAppointmentIds, endAsAdvanced, joinBlockReason, joinWaitlist, leaveWaitlist } from "../../waitlist/entries";
-import { acceptOffer, declineOffer, MIN_LEAD_MS, type OfferReplyResult, type OfferSender } from "../../waitlist/offers";
-import { pauseForHuman, setHandoffSubject, startFunnel, type HandoffOrigin } from "../conversations";
+import { acceptOffer, declineOffer, type OfferReplyResult, type OfferSender } from "../../waitlist/offers";
+import { markHandoffSubjectAsked, pauseForHuman, setHandoffSubject, startFunnel, type HandoffOrigin } from "../conversations";
 import type { WaMessage } from "../meta";
 import { sendAppointmentNotice } from "../notices";
 import { parseReminderTap, recordReminderTap } from "../reminders";
 import { formatAppointmentWhen } from "../templates";
-import { startBooking, startReturn } from "./booking";
-import { servicesOf } from "./catalog";
-import { askHandoffSubject, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, yesNoButtonsFor, type Bot } from "./engine";
-import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
-import { showMenu } from "./menus";
+import { askHandoffSubject, end, say, textFor, type Bot } from "./engine";
 import * as t from "./texts";
-import { offerPortalReschedule } from "./portalLink";
+import { sendReminderPortalLink } from "./portalLink";
 import { logError } from "../../../log";
 
-// Bot II (F6.4), com as regras do piloto (Fases 3b, 16, 17, 19, 25):
-// cancelar e remarcar pelo menu, botões do lembrete, Encaixe ou antecipar
-// (lista de espera; antes, os horários livres antes do atendimento, cliente
-// 08/out), resposta à oferta de vaga e "Falar com a recepção".
-// Sessão de série: cancela ou remarca só ela (D9). Textos aprovados pelo
-// cliente em 07/out.
+// Bot enxuto (F3f, seção 15.6; cliente, 11/nov/2026): cancelar, remarcar e o Encaixe ou antecipar saíram do chat (vão
+// pelo portal). Ficam os botões do lembrete (Confirmar presença responde aqui; Remarcar e Cancelar mandam o portal já
+// na ação), a resposta à oferta de vaga da lista de espera e "Falar com a recepção".
 
 type Category = Enums<"service_category">;
 
@@ -88,35 +77,6 @@ const toManaged = (row: Row): ManagedAppointment => ({
   status: row.status,
 });
 
-const inGroup = (group: t.Group, category: Category) => (group === "exam" ? category === "exam" : category !== "exam");
-
-/** Atendimentos ativos e futuros dos pacientes do contato, só do grupo (nunca mistura consulta e exame). */
-async function loadUpcoming(b: Bot, group: t.Group, category?: Category): Promise<ManagedAppointment[]> {
-  return (await upcomingOfContact(b)).filter((a) => (category ? a.category === category : inGroup(group, a.category)));
-}
-
-/**
- * Atendimentos ativos (marcados ou confirmados) e futuros dos pacientes do contato, consultas e exames: todos os
- * pacientes ligados ao número, principal ou não (VR, F3f; `contact_patient_ids`).
- */
-export async function upcomingOfContact(b: Bot): Promise<ManagedAppointment[]> {
-  if (!b.convo.contactId) return [];
-  const patientIds = await contactPatientIds(b.db, b.clinicId, b.convo.contactId);
-  if (!patientIds.length) return [];
-  const rows = unwrap(
-    await b.db
-      .from("appointments")
-      .select(COLUMNS)
-      .eq("clinic_id", b.clinicId)
-      .in("patient_id", patientIds)
-      .in("status", ["scheduled", "confirmed"])
-      .gt("scheduled_at", b.now.toISOString())
-      .order("scheduled_at"),
-    "Atendimentos",
-  ) as unknown as Row[];
-  return rows.map(toManaged);
-}
-
 /**
  * O atendimento, se ainda é do contato, ativo e futuro (revalida a cada passo). Do contato = ele marcou (recebe o
  * lembrete) ou é responsável ligado ao paciente (VR, F3f).
@@ -131,326 +91,9 @@ export async function loadActive(b: Bot, id: string): Promise<ManagedAppointment
   return ["scheduled", "confirmed"].includes(appointment.status) && appointment.scheduledAt > b.now ? appointment : null;
 }
 
-const when = (b: Bot, a: { scheduledAt: Date }) => formatAppointmentWhen(a.scheduledAt, b.clinic.timeZone);
-const words = (a: ManagedAppointment) => t.appointmentWords(a.category, a.serviceName);
-const groupOf = (a: ManagedAppointment): t.Group => (a.category === "exam" ? "exam" : "consultation");
-
 // ---------------------------------------------------------------------------
-// Identificação do atendimento (comum a cancelar, remarcar e encaixe)
+// Confirmar presença
 // ---------------------------------------------------------------------------
-
-type Action = "cancel" | "reschedule" | "waitlist";
-
-/** Lista no contexto (só o que a escolha precisa; o resto é relido do banco). */
-type Candidate = { id: string; patientName: string; birthdate: string; scheduledAt: string; serviceId?: string; serviceName?: string };
-
-export type ManageContext = {
-  action: Action;
-  group: t.Group;
-  awaiting?: "appointment_choice" | "birthdate_search" | "identity_choice" | "address_current" | "address_input" | "address_new" | "book_choice" | "type_choice" | "service_choice";
-  /** Encaixe: tipo escolhido (consulta, retorno ou exame); sem ele, vale o grupo. */
-  category?: Category;
-  candidates?: Candidate[];
-  pendingId?: string;
-  pendingAddress?: string;
-  fromReminder?: boolean;
-};
-
-export const MANAGE_STATES = new Set([
-  "CANCEL_SELECT",
-  "CANCEL_CONFIRM",
-  "RESCHEDULE_SELECT",
-  "RESCHEDULE_HOME_ADDRESS",
-  "WAITLIST_SELECT",
-  "WAITLIST_EARLIER",
-  "WAITLIST_LEAVE_CONFIRM",
-  "PRESENCE_CONFIRM",
-]);
-
-const SELECT_STATE: Record<Action, string> = { cancel: "CANCEL_SELECT", reschedule: "RESCHEDULE_SELECT", waitlist: "WAITLIST_SELECT" };
-const VERB: Record<Action, "cancelar" | "remarcar" | "antecipar"> = { cancel: "cancelar", reschedule: "remarcar", waitlist: "antecipar" };
-
-const ctxOf = (b: Bot) => b.convo.context as ManageContext;
-const toCandidate = (a: ManagedAppointment): Candidate => ({ id: a.id, patientName: a.patientName, birthdate: a.birthdate, scheduledAt: a.scheduledAt.toISOString(), serviceId: a.serviceId, serviceName: a.serviceName });
-
-async function openFunnel(b: Bot, flow: "cancel" | "reschedule", metadata: Record<string, unknown>): Promise<void> {
-  b.now = new Date(b.now.getTime() + 1);
-  const sessionId = await startFunnel(b.db, b.clinicId, b.phone, flow, metadata, b.now);
-  b.convo = { ...b.convo, funnelSessionId: sessionId, funnelFlow: flow };
-}
-
-async function sendChoice(b: Bot, ctx: ManageContext, candidates: Candidate[]): Promise<void> {
-  await sendList(
-    b,
-    `bot_${ctx.action}_choice`,
-    t.chooseAppointment(VERB[ctx.action], ctx.group),
-    t.numberedList(candidates.map((c) => ({ id: `appointment_${c.id}`, label: c.patientName, description: formatAppointmentWhen(new Date(c.scheduledAt), b.clinic.timeZone) }))),
-  );
-}
-
-/** Menu › Cancelar / Remarcar / Encaixe: acha os atendimentos e segue. */
-/**
- * Encaixe pedido pela base sem dizer o tipo (cliente, 01/nov/2026): pergunta consulta, retorno ou exame (só o que a
- * clínica oferece); com um só tipo, segue direto.
- */
-export async function askWaitlistType(b: Bot): Promise<void> {
-  const catalog = await b.catalog();
-  const types = (["consultation", "return_visit", "exam"] as const).filter((c) => servicesOf(catalog, c).length > 0);
-  if (types.length === 1) return startManage(b, "waitlist", types[0] === "exam" ? "exam" : "consultation", types[0]);
-  if (types.length === 0) return startManage(b, "waitlist", "consultation");
-  await sendButtons(b, "bot_waitlist_type", t.WAITLIST_TYPE_QUESTION, types.map((c) => t.button(t.WAITLIST_TYPE_IDS[c], t.WAITLIST_TYPE_LABELS[c])));
-  await go(b, "WAITLIST_SELECT", { action: "waitlist", group: "consultation", awaiting: "type_choice" } satisfies ManageContext);
-}
-
-async function handleTypeChoice(b: Bot, selection: Selection): Promise<void> {
-  const types = ["consultation", "return_visit", "exam"] as const;
-  const choice = pick(selection, [...types], (c) => t.WAITLIST_TYPE_IDS[c]);
-  if (!choice) {
-    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-    return askWaitlistType(b);
-  }
-  return startManage(b, "waitlist", choice === "exam" ? "exam" : "consultation", choice);
-}
-
-export async function startManage(b: Bot, action: Action, group: t.Group, category?: Category): Promise<void> {
-  if (action !== "waitlist") await openFunnel(b, action, { category: group });
-  if (!b.convo.contactId && action !== "waitlist") {
-    await say(b, `bot_${action}_no_contact`, t.noRegistration(b.receptionAvailable));
-    await end(b, "blocked", { reason: "no_contact" });
-    return showMenu(b);
-  }
-  let appointments = await loadUpcoming(b, group, category);
-  if (action === "waitlist") appointments = appointments.filter((a) => joinBlockReason(a, b.now) === null);
-  const ctx: ManageContext = { action, group, ...(category ? { category } : {}) };
-  if (!appointments.length) {
-    if (action === "waitlist") return offerBooking(b, ctx);
-    await say(b, `bot_${action}_no_appointments`, t.noAppointments(VERB[action] as "cancelar" | "remarcar", group, b.receptionAvailable));
-    await end(b, "blocked", { reason: "no_appointments" });
-    return showMenu(b);
-  }
-  // Data de nascimento antes de qualquer detalhe, com um ou mais atendimentos, como na entrada (cliente, 24/out/2026).
-  await say(b, "bot_ask_birthdate", t.ENTRY_ASK_BIRTHDATE);
-  await go(b, SELECT_STATE[action], { ...ctx, awaiting: "birthdate_search", candidates: appointments.map(toCandidate) });
-}
-
-const serviceChoices = (candidates: Candidate[]) => {
-  const seen = new Map<string, string>();
-  for (const c of candidates) if (c.serviceId && !seen.has(c.serviceId)) seen.set(c.serviceId, c.serviceName ?? "Serviço");
-  return [...seen].map(([id, name]) => ({ id, name }));
-};
-
-async function sendServiceChoice(b: Bot, services: { id: string; name: string }[]): Promise<void> {
-  await sendList(b, "bot_waitlist_service", t.WAITLIST_SERVICE_QUESTION, t.numberedList(services.map((s) => ({ id: `service_${s.id}`, label: s.name }))));
-}
-
-/** Identidade confirmada pela data de nascimento: encaixe com mais de um serviço lista os serviços primeiro. */
-async function afterIdentity(b: Bot, ctx: ManageContext, matches: Candidate[], serviceDone = false): Promise<void> {
-  if (matches.length === 1) return proceed(b, ctx, matches[0].id);
-  if (ctx.action === "waitlist" && !serviceDone) {
-    const services = serviceChoices(matches);
-    if (services.length > 1) {
-      await sendServiceChoice(b, services);
-      return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "service_choice", candidates: matches });
-    }
-  }
-  await sendChoice(b, ctx, matches);
-  return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "appointment_choice", candidates: matches });
-}
-
-/** Data de nascimento sem atendimento (entrada e menu): outra data ou o menu. */
-export async function sendIdentityNotFound(b: Bot): Promise<void> {
-  await sendButtons(b, "bot_identity_not_found", t.IDENTITY_NOT_FOUND, t.IDENTITY_NOT_FOUND_BUTTONS);
-}
-
-export const identityChoiceOf = (_b: Bot, selection: Selection): t.IdentityChoice | null =>
-  pick(selection, t.IDENTITY_CHOICES, (k) => t.IDENTITY_IDS[k]);
-
-async function handleSelect(b: Bot, selection: Selection): Promise<void> {
-  const ctx = ctxOf(b);
-  if (ctx.awaiting === "book_choice") return handleBookChoice(b, selection);
-  if (ctx.awaiting === "type_choice") return handleTypeChoice(b, selection);
-  const candidates = ctx.candidates ?? [];
-
-  if (ctx.awaiting === "identity_choice") {
-    // Uma data digitada vale como nova tentativa.
-    const choice = parseBirthdate(selection.text, b.clinic.today) ? "date" : identityChoiceOf(b, selection);
-    if (choice === "retry") {
-      await say(b, "bot_ask_birthdate", t.askBirthdate(b.words));
-      return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "birthdate_search" });
-    }
-    if (choice === "menu") {
-      if (ctx.action !== "waitlist") await end(b, "blocked", { reason: "no_match" });
-      else await go(b, "WELCOME");
-      return showMenu(b);
-    }
-    if (!choice) {
-      await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-      return sendIdentityNotFound(b);
-    }
-  }
-
-  if (ctx.awaiting === "birthdate_search" || ctx.awaiting === "identity_choice") {
-    const birthdate = parseBirthdate(selection.text, b.clinic.today);
-    if (!birthdate) return sayInvalidBirthdate(b);
-    const matches = candidates.filter((c) => c.birthdate === birthdate);
-    if (!matches.length) {
-      // Sem bloqueio por data errada (cliente, 24/out/2026).
-      await sendIdentityNotFound(b);
-      return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "identity_choice" });
-    }
-    return afterIdentity(b, ctx, matches);
-  }
-
-  if (ctx.awaiting === "service_choice") {
-    const services = serviceChoices(candidates);
-    const service = pick(selection, services, (s) => `service_${s.id}`);
-    if (!service) {
-      await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-      return sendServiceChoice(b, services);
-    }
-    return afterIdentity(b, ctx, candidates.filter((c) => c.serviceId === service.id), true);
-  }
-
-  const choice = pick(selection, candidates, (c) => `appointment_${c.id}`);
-  if (!choice) {
-    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-    return sendChoice(b, ctx, candidates);
-  }
-  await proceed(b, ctx, choice.id);
-}
-
-/** Atendimento escolhido: relê do banco (pode ter mudado) e segue a ação. */
-async function proceed(b: Bot, ctx: ManageContext, id: string): Promise<void> {
-  const appointment = await loadActive(b, id);
-  if (!appointment) {
-    await say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-    return ctx.action === "waitlist" ? go(b, "WELCOME") : end(b, "blocked", { reason: "inactive" });
-  }
-  await chosen(b, ctx, appointment);
-}
-
-async function chosen(b: Bot, ctx: ManageContext, appointment: ManagedAppointment): Promise<void> {
-  if (ctx.action === "cancel") return askCancel(b, ctx, appointment);
-  if (ctx.action === "waitlist") return handleWaitlistAppointment(b, appointment);
-  await rescheduleLink(b, ctx, appointment);
-}
-
-/**
- * Ação escolhida na entrada do bot (atendimento já identificado pela data de
- * nascimento): segue o fluxo de sempre, sem perguntar de novo qual é.
- */
-export async function manageIdentified(b: Bot, action: Action | "confirm", appointment: ManagedAppointment): Promise<void> {
-  const group = groupOf(appointment);
-  if (action === "confirm") {
-    await go(b, "WELCOME");
-    return confirmFromEntry(b, appointment);
-  }
-  if (action === "waitlist") return handleWaitlistAppointment(b, appointment);
-  await openFunnel(b, action, { category: group });
-  const ctx: ManageContext = { action, group };
-  if (action === "cancel") return askCancel(b, ctx, appointment);
-  await rescheduleLink(b, ctx, appointment);
-}
-
-/**
- * Confirmar presença pela entrada: vale sem lembrete enviado e não conta como
- * resposta ao lembrete (Métricas); o mesmo texto do botão do lembrete.
- */
-async function confirmFromEntry(b: Bot, appointment: ManagedAppointment): Promise<void> {
-  const rows = unwrap(
-    await b.db
-      .from("appointments")
-      .update({ patient_confirmed_at: b.now.toISOString(), patient_confirmed_by: null })
-      .eq("clinic_id", b.clinicId)
-      .eq("id", appointment.id)
-      .in("status", ["scheduled", "confirmed"])
-      .gt("scheduled_at", b.now.toISOString())
-      .is("patient_confirmed_at", null)
-      .select("id"),
-    "Atendimento",
-  );
-  const whenLabel = when(b, appointment);
-  if (!rows.length) {
-    // Já confirmada (ou mudou entre a lista e o toque).
-    const current = await loadActive(b, appointment.id);
-    if (!current) return say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-    return say(b, "bot_presence_already_confirmed", t.presenceAlreadyConfirmed(appointment.patientName, whenLabel));
-  }
-  await logTrail(b.db, b.clinicId, appointment.id, "presence_confirmed", "whatsapp_bot", null);
-  const isExam = appointment.category === "exam";
-  const custom = textFor(b, "presence_confirmed", "", { paciente: appointment.patientName, data: whenLabel });
-  const body = custom
-    ? `${custom}${isExam ? "\n\nLembre-se de seguir as orientações de preparo do exame que enviamos anteriormente." : ""}`
-    : t.presenceConfirmed(appointment.patientName, whenLabel, isExam);
-  await say(b, "bot_presence_confirmed", body);
-  await sendLocationAfterConfirm(b, appointment.id);
-}
-
-// ---------------------------------------------------------------------------
-// Cancelar
-// ---------------------------------------------------------------------------
-
-export async function askCancel(b: Bot, ctx: ManageContext, appointment: ManagedAppointment): Promise<void> {
-  await sendButtons(b, "bot_cancel_confirm", t.confirmCancel(words(appointment).phrase, appointment.patientName, when(b, appointment)), t.YES_NO_BUTTONS);
-  await go(b, "CANCEL_CONFIRM", { ...ctx, action: "cancel", group: groupOf(appointment), pendingId: appointment.id, candidates: undefined });
-}
-
-async function handleCancelConfirm(b: Bot, selection: Selection): Promise<void> {
-  const ctx = ctxOf(b);
-  const appointment = ctx.pendingId ? await loadActive(b, ctx.pendingId) : null;
-  if (!appointment) {
-    await say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-    return end(b, "blocked", { reason: "inactive" });
-  }
-  const answer = yesNo(selection);
-  const { phrase, end: ending } = words(appointment);
-  if (answer === null) {
-    return repeatYesNo(b, "bot_cancel_confirm", t.confirmCancel(phrase, appointment.patientName, when(b, appointment)));
-  }
-  if (answer) {
-    const canceled = await cancelAppointment(b.db, b.clinicId, appointment.id, { channel: "whatsapp_bot", actorId: null }, b.now);
-    if (!canceled) {
-      await say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-      return end(b, "blocked", { reason: "inactive" });
-    }
-    await say(
-      b,
-      "bot_cancel_done",
-      textFor(b, "cancel_done", t.cancelDone(phrase, ending, appointment.patientName, when(b, appointment), groupOf(appointment)), {
-        atendimento: phrase,
-        paciente: appointment.patientName,
-        data: when(b, appointment),
-      }),
-    );
-    return end(b, "canceled", { appointment_id: appointment.id });
-  }
-  // "Não" pelo lembrete, sem presença confirmada: pergunta se confirma (presença é um ato explícito).
-  const confirmed = await presenceConfirmed(b, appointment.id);
-  if (ctx.fromReminder && !confirmed) {
-    await sendButtons(b, "bot_cancel_kept", t.keptAskPresence(phrase, ending), t.YES_NO_BUTTONS);
-    await step(b, "declined");
-    return go(b, "PRESENCE_CONFIRM", { action: "cancel", group: ctx.group, pendingId: appointment.id } satisfies ManageContext);
-  }
-  await say(b, "bot_cancel_kept", t.cancelKept(phrase, ending));
-  await end(b, "declined");
-}
-
-export async function presenceConfirmed(b: Bot, id: string): Promise<boolean> {
-  const row = unwrap(await b.db.from("appointments").select("patient_confirmed_at").eq("clinic_id", b.clinicId).eq("id", id).maybeSingle(), "Atendimento");
-  return !!row?.patient_confirmed_at;
-}
-
-async function handlePresenceConfirm(b: Bot, selection: Selection): Promise<void> {
-  const ctx = ctxOf(b);
-  const answer = yesNo(selection, t.YES_NO_IDS);
-  if (answer === null) {
-    await sendButtons(b, "bot_not_understood", t.PRESENCE_NOT_UNDERSTOOD, t.YES_NO_BUTTONS);
-    return;
-  }
-  await go(b, "WELCOME");
-  if (!answer) return say(b, "bot_kept_presence_declined", t.KEPT_PRESENCE_DECLINED);
-  await confirmPresence(b, ctx.pendingId ?? "");
-}
 
 /**
  * Depois da presença confirmada: o local (nome, endereço e link do Maps) numa mensagem à parte, para o link abrir
@@ -489,342 +132,30 @@ async function confirmPresence(b: Bot, appointmentId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Remarcar
-// ---------------------------------------------------------------------------
-
-async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAppointment, homeAddress?: string): Promise<void> {
-  // Retorno: o prazo é o da consulta de origem; vencido, a página não teria datas (piloto, Fase 17).
-  if (appointment.category === "return_visit" && appointment.originAppointmentId) {
-    const origin = await findReturnOrigin(
-      b.db,
-      b.clinicId,
-      { patientId: appointment.patientId, agendaId: appointment.agendaId, returnServiceId: appointment.serviceId, originAppointmentId: appointment.originAppointmentId },
-      b.now,
-    );
-    if (origin?.lastDate && b.clinic.today > origin.lastDate) {
-      await say(
-        b,
-        "bot_reschedule_return_deadline_passed",
-        t.returnDeadlinePassed(appointment.patientName, formatBirthdate(origin.lastDate), b.receptionAvailable, b.clinic.designation),
-      );
-      await end(b, "blocked", { reason: "return_deadline_passed" });
-      return showMenu(b);
-    }
-  }
-  // Uma jornada só (F3c; I7): os dias e horários no portal (em casa também, F3e-1); turma segue aqui (portalLink.ts).
-  if (await offerPortalReschedule(b, appointment)) return;
-  // Domiciliar: sempre reconfirma o endereço (piloto, Fase 16).
-  if (appointment.locationType === "home_visit" && homeAddress === undefined) {
-    const current = appointment.homeVisitAddress;
-    const next: ManageContext = { ...ctx, action: "reschedule", pendingId: appointment.id, candidates: undefined };
-    if (current) {
-      await sendButtons(b, "bot_reschedule_home_address_confirm_current", t.homeAddressConfirmCurrent(current), t.YES_NO_BUTTONS);
-      return go(b, "RESCHEDULE_HOME_ADDRESS", { ...next, awaiting: "address_current", pendingAddress: current });
-    }
-    await say(b, "bot_reschedule_home_address_ask", t.HOME_ADDRESS_ASK);
-    return go(b, "RESCHEDULE_HOME_ADDRESS", { ...next, awaiting: "address_input" });
-  }
-  try {
-    const link = await createBookingLink(
-      b.db,
-      b.clinicId,
-      {
-        mode: "reschedule",
-        contactId: b.convo.contactId!,
-        patientId: appointment.patientId,
-        serviceId: appointment.serviceId,
-        agendaId: appointment.agendaId,
-        locationId: null,
-        locationCategory: appointment.locationType,
-        appointmentId: appointment.id,
-        originAppointmentId: appointment.originAppointmentId,
-        contactPhone: b.phone,
-        homeVisitAddress: homeAddress ?? null,
-        funnelSessionId: b.convo.funnelSessionId,
-        ttlMs: BOT_LINK_TTL_MS,
-      },
-      b.now,
-    );
-    await say(b, "bot_reschedule_link", t.rescheduleLink(words(appointment).phrase, appointment.patientName, `${b.sender.baseUrl}${bookingPath(link.id)}`));
-    await end(b, "link_sent", { booking_link_id: link.id, service_id: appointment.serviceId, agenda_id: appointment.agendaId });
-  } catch (error) {
-    logError("bot: link de remarcação", error, { clinica: b.clinicId });
-    await say(b, "bot_reschedule_link_error", t.linkError(b.clinic.designation));
-    await end(b, "error", { reason: "link_error" });
-  }
-}
-
-async function handleRescheduleAddress(b: Bot, selection: Selection): Promise<void> {
-  const ctx = ctxOf(b);
-  const appointment = ctx.pendingId ? await loadActive(b, ctx.pendingId) : null;
-  if (!appointment) {
-    await say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-    return end(b, "blocked", { reason: "inactive" });
-  }
-  if (ctx.awaiting === "address_input") {
-    const address = selection.text.trim();
-    if (!address) return say(b, "bot_reschedule_home_address_ask", t.HOME_ADDRESS_ASK);
-    await sendButtons(b, "bot_reschedule_home_address_confirm_new", t.homeAddressConfirmNew(address), t.YES_NO_BUTTONS);
-    return go(b, "RESCHEDULE_HOME_ADDRESS", { ...ctx, awaiting: "address_new", pendingAddress: address });
-  }
-  const answer = yesNo(selection);
-  const address = ctx.pendingAddress ?? "";
-  if (answer === null) {
-    return repeatYesNo(b, "bot_reschedule_home_address_confirm", ctx.awaiting === "address_current" ? t.homeAddressConfirmCurrent(address) : t.homeAddressConfirmNew(address));
-  }
-  if (!answer) {
-    await say(b, "bot_reschedule_home_address_ask", t.HOME_ADDRESS_ASK);
-    return go(b, "RESCHEDULE_HOME_ADDRESS", { ...ctx, awaiting: "address_input", pendingAddress: undefined });
-  }
-  // Endereço novo vira o padrão do contato (piloto).
-  if (ctx.awaiting === "address_new" && b.convo.contactId) {
-    unwrap(await b.db.from("contacts").update({ default_home_address: address }).eq("clinic_id", b.clinicId).eq("id", b.convo.contactId), "Contato");
-  }
-  await rescheduleLink(b, ctx, appointment, address);
-}
-
-// ---------------------------------------------------------------------------
 // Botões do lembrete (Fase 19)
 // ---------------------------------------------------------------------------
 
 export const reminderTapOf = (msg: WaMessage) => parseReminderTap(msg.button?.payload ?? msg.interactive?.button_reply?.id);
 
 /**
- * Toque num botão do lembrete, em qualquer ponto da conversa. Confirmar vale
- * até com o bot pausado; Remarcar e Cancelar respeitam a pausa (a recepção
- * vê o toque no app).
+ * Toque num botão do lembrete, em qualquer ponto da conversa. Confirmar vale até com o bot pausado; Remarcar e
+ * Cancelar respeitam a pausa (a recepção vê o toque no app) e mandam o portal já na ação (o portal mostra os pacientes
+ * ligados ao número e avisa quem marcou, VR4). Sem o portal (F3-5/F3-7): a recepção.
  */
 export async function handleReminderTap(b: Bot, tap: NonNullable<ReturnType<typeof reminderTapOf>>, paused: boolean): Promise<void> {
   if (tap.button === "confirm") return confirmPresence(b, tap.appointmentId);
   const result = await recordReminderTap(b.db, b.clinicId, { button: tap.button, appointmentId: tap.appointmentId, phone: b.phone, waMessageId: b.incomingId }, b.now);
   if (paused) return;
-  if (result.result === "inactive") {
-    await say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-    return showMenu(b);
-  }
-  const appointment = await loadActive(b, tap.appointmentId);
-  if (!appointment) {
-    await say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-    return showMenu(b);
-  }
-  const group = groupOf(appointment);
-  const flow = tap.button === "cancel" ? "cancel" : "reschedule";
-  await openFunnel(b, flow, { category: group, source: "reminder" });
-  const ctx: ManageContext = { action: flow, group, fromReminder: true };
-  if (flow === "cancel") return askCancel(b, ctx, appointment);
-  await rescheduleLink(b, ctx, appointment);
-}
-
-// ---------------------------------------------------------------------------
-// Encaixe ou antecipar (lista de espera, Fase 25)
-// ---------------------------------------------------------------------------
-
-async function handleWaitlistAppointment(b: Bot, appointment: ManagedAppointment): Promise<void> {
-  const { phrase, end: ending } = words(appointment);
-  try {
-    // Sempre oferece antes o horário livre, mesmo para quem já está na lista;
-    // a lista (entrar, ou continuar/sair) é só sem escolha (cliente, 08/out).
-    const inList = (await activeWaitlistAppointmentIds(b.db, b.clinicId, [appointment.id])).has(appointment.id);
-    const slots = await earlierSlots(b, appointment);
-    if (slots.length) return showEarlier(b, appointment, slots, inList);
-    if (inList) return askLeave(b, appointment);
-    await joinAndSay(b, appointment);
-  } catch (error) {
-    logError("bot: lista de espera", error, { clinica: b.clinicId });
-    await say(b, "bot_waitlist_error", t.WAITLIST_ERROR);
-  }
-  await go(b, "WELCOME");
-}
-
-async function askLeave(b: Bot, appointment: ManagedAppointment): Promise<void> {
-  const { phrase, end: ending } = words(appointment);
-  await sendButtons(b, "bot_waitlist_already_in", t.waitlistAlreadyIn(appointment.patientName, phrase, ending, when(b, appointment)), t.WAITLIST_ALREADY_BUTTONS);
-  await go(b, "WAITLIST_LEAVE_CONFIRM", { action: "waitlist", group: groupOf(appointment), pendingId: appointment.id } satisfies ManageContext);
-}
-
-async function joinAndSay(b: Bot, appointment: ManagedAppointment): Promise<void> {
-  const { phrase, end: ending } = words(appointment);
-  await joinWaitlist(b.db, b.clinicId, appointment.id, { via: "whatsapp_bot", actorId: null }, b.now);
-  await say(b, "bot_waitlist_joined", t.waitlistJoined(appointment.patientName, phrase, ending, when(b, appointment)));
-}
-
-// ---------------------------------------------------------------------------
-// Antecipar para um horário livre (antes de entrar na lista)
-// ---------------------------------------------------------------------------
-
-const EARLIER_SLOTS = 3;
-
-/** Horário livre oferecido; `place` só quando há mais de um local do mesmo tipo. */
-type EarlierSlot = { start: string; locationId: string; place: string | null };
-
-type EarlierContext = ManageContext & {
-  slots: EarlierSlot[];
-  /** Já estava na lista: sem escolha, pergunta se continua ou sai. */
-  inList: boolean;
-  chosen?: EarlierSlot;
-  step: "slot_choice" | "slot_confirm" | "join_confirm";
-};
-
-/**
- * Até 3 horários livres antes do atendimento, do mais cedo: mesma agenda,
- * mesmo serviço e mesmo tipo de local, com a folga mínima da lista de espera.
- */
-async function earlierSlots(b: Bot, appointment: ManagedAppointment): Promise<EarlierSlot[]> {
-  const locations = unwrap(await b.db.from("locations").select("id, name, type").eq("clinic_id", b.clinicId).eq("is_active", true), "Locais");
-  const sameKind = new Map(locations.filter((l) => l.type === appointment.locationType).map((l) => [l.id, l.name]));
-  const slots = await getFreeSlotsBefore(
-    b.db,
-    b.clinicId,
-    {
-      serviceId: appointment.serviceId,
-      agendaId: appointment.agendaId,
-      ignoreAppointmentId: appointment.id,
-      from: new Date(b.now.getTime() + MIN_LEAD_MS),
-      before: appointment.scheduledAt,
-      limit: EARLIER_SLOTS,
-      accept: (slot) => sameKind.has(slot.locationId),
-    },
-    b.now,
-  );
-  const showPlace = appointment.locationType !== "home_visit" && sameKind.size > 1;
-  return slots.map((slot) => ({ start: slot.start.toISOString(), locationId: slot.locationId, place: showPlace ? (sameKind.get(slot.locationId) ?? null) : null }));
-}
-
-const slotWhen = (b: Bot, slot: EarlierSlot) => formatAppointmentWhen(new Date(slot.start), b.clinic.timeZone);
-/** "seg, 19/10 às 08:00": cabe no título da linha da lista (24 caracteres). */
-const slotLabel = (b: Bot, slot: EarlierSlot) => slotWhen(b, slot).replace(/^([^,]{3})[^,]*,/u, "$1,");
-const slotId = (slot: EarlierSlot) => `slot_${slot.start}_${slot.locationId}`;
-
-async function showEarlier(b: Bot, appointment: ManagedAppointment, slots: EarlierSlot[], inList: boolean): Promise<void> {
-  const { phrase, end: ending } = words(appointment);
-  await sendList(
-    b,
-    "bot_waitlist_earlier",
-    t.waitlistEarlier(appointment.patientName, phrase, ending, when(b, appointment)),
-    t.numberedList([
-      ...slots.map((slot) => ({ id: slotId(slot), label: slotLabel(b, slot), description: slot.place })),
-      { id: t.WAITLIST_IDS.noneOfThese, label: t.NONE_OF_THESE },
-    ]),
-  );
-  await go(b, "WAITLIST_EARLIER", { action: "waitlist", group: groupOf(appointment), pendingId: appointment.id, slots, inList, step: "slot_choice" } satisfies EarlierContext);
-}
-
-async function askJoin(b: Bot, ctx: EarlierContext, appointment: ManagedAppointment): Promise<void> {
-  await sendButtons(b, "bot_waitlist_ask_join", t.askJoinWaitlist(when(b, appointment)), yesNoButtonsFor(b));
-  await go(b, "WAITLIST_EARLIER", { ...ctx, chosen: undefined, step: "join_confirm" } satisfies EarlierContext);
-}
-
-const askAdvance = (b: Bot, appointment: ManagedAppointment, slot: EarlierSlot) =>
-  sendButtons(b, "bot_waitlist_confirm_advance", t.confirmAdvance(words(appointment).phrase, appointment.patientName, when(b, appointment), slotWhen(b, slot)), yesNoButtonsFor(b));
-
-async function handleEarlier(b: Bot, selection: Selection): Promise<void> {
-  const ctx = b.convo.context as EarlierContext;
-  const appointment = ctx.pendingId ? await loadActive(b, ctx.pendingId) : null;
-  if (!appointment) {
-    await go(b, "WELCOME");
-    return say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-  }
-
-  if (ctx.step === "slot_choice") {
-    const none = { id: t.WAITLIST_IDS.noneOfThese } as const;
-    const choice = pick<EarlierSlot | typeof none>(selection, [...ctx.slots, none], (item) => ("start" in item ? slotId(item) : item.id));
-    if (!choice) {
-      await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-      return showEarlier(b, appointment, ctx.slots, ctx.inList);
-    }
-    if (!("start" in choice)) return ctx.inList ? askLeave(b, appointment) : askJoin(b, ctx, appointment);
-    await askAdvance(b, appointment, choice);
-    return go(b, "WAITLIST_EARLIER", { ...ctx, chosen: choice, step: "slot_confirm" } satisfies EarlierContext);
-  }
-
-  const answer = yesNo(selection, t.YES_NO_IDS);
-  if (answer === null) {
-    await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-    if (ctx.step === "join_confirm") return askJoin(b, ctx, appointment);
-    return ctx.chosen ? askAdvance(b, appointment, ctx.chosen) : showEarlier(b, appointment, ctx.slots, ctx.inList);
-  }
-
-  if (ctx.step === "join_confirm") {
-    await go(b, "WELCOME");
-    if (!answer) return say(b, "bot_waitlist_join_declined", t.offerDeclined(appointment.patientName, when(b, appointment), false));
-    try {
-      await joinAndSay(b, appointment);
-    } catch (error) {
-      logError("bot: lista de espera", error, { clinica: b.clinicId });
-      await say(b, "bot_waitlist_error", t.WAITLIST_ERROR);
-    }
-    return;
-  }
-
-  if (!answer || !ctx.chosen) return showEarlier(b, appointment, ctx.slots, ctx.inList);
-  const to = new Date(ctx.chosen.start);
-  try {
-    await rescheduleAppointment(
-      b.db,
-      b.clinicId,
-      appointment.id,
-      { start: to, locationId: ctx.chosen.locationId, channel: "whatsapp_bot", trailEvent: ctx.inList ? "waitlist_advanced" : undefined, actorId: null },
-      b.now,
-    );
-  } catch (error) {
-    if (!(error instanceof DataError) || error.code === "unexpected") throw error;
-    // Ocupado entre a escolha e o "Sim": procura de novo (cliente, 08/out).
-    await say(b, "bot_waitlist_slot_taken", t.SLOT_TAKEN);
-    const slots = await earlierSlots(b, appointment);
-    if (slots.length) return showEarlier(b, appointment, slots, ctx.inList);
-    return ctx.inList ? askLeave(b, appointment) : askJoin(b, { ...ctx, slots: [] }, appointment);
-  }
-  // Antecipou: sai da lista (cliente, 08/out).
-  if (ctx.inList) await endAsAdvanced(b.db, b.clinicId, appointment.id, b.now);
-  await go(b, "WELCOME");
-  await say(b, "bot_waitlist_advanced", t.offerAccepted(appointment.patientName, formatAppointmentWhen(to, b.clinic.timeZone)));
-  // Como na resposta à oferta de vaga: o aviso de remarcação sai pelo template.
-  await sendAppointmentNotice(b.db, b.clinicId, appointment.id, "reschedule", b.sender, b.now);
-}
-
-async function handleWaitlistLeave(b: Bot, selection: Selection): Promise<void> {
-  const ctx = ctxOf(b);
-  const text = selection.text.toLowerCase();
-  const leave = selection.id === t.WAITLIST_IDS.leave || text === "1" || text.startsWith("sair");
-  const stay = selection.id === t.WAITLIST_IDS.stay || text === "2" || text.startsWith("continuar");
-  if (!leave && !stay) {
-    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-    return;
-  }
-  const appointment = ctx.pendingId ? await loadActive(b, ctx.pendingId) : null;
-  await go(b, "WELCOME");
+  const appointment = result.result === "inactive" ? null : await loadActive(b, tap.appointmentId);
   if (!appointment) return say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
-  if (stay) return say(b, "bot_waitlist_stay", t.waitlistStay(appointment.patientName));
-  await leaveWaitlist(b.db, b.clinicId, appointment.id, { channel: "whatsapp_bot", actorId: null }, b.now);
-  const { phrase, end: ending } = words(appointment);
-  await say(b, "bot_waitlist_left", t.waitlistLeft(appointment.patientName, phrase, ending, when(b, appointment)));
-}
-
-/** Sem nada marcado: oferece marcar; ao confirmar pela página, entra na lista sozinho. */
-async function offerBooking(b: Bot, ctx: ManageContext): Promise<void> {
-  const catalog = await b.catalog();
-  const buttons =
-    ctx.category === "return_visit"
-      ? [t.button(t.WAITLIST_IDS.bookReturn, "Marcar retorno")]
-      : ctx.category === "consultation"
-        ? [t.button(t.WAITLIST_IDS.bookConsultation, "Marcar consulta")]
-        : ctx.group === "exam"
-          ? [t.button(t.WAITLIST_IDS.bookExam, "Marcar exame")]
-          : [
-          ...(servicesOf(catalog, "consultation").length ? [t.button(t.WAITLIST_IDS.bookConsultation, "Marcar consulta")] : []),
-          ...(servicesOf(catalog, "return_visit").length ? [t.button(t.WAITLIST_IDS.bookReturn, "Marcar retorno")] : []),
-        ];
-  await sendButtons(b, "bot_waitlist_no_appointment", t.waitlistNoAppointment(ctx.group, ctx.category), [...buttons, t.button("back_to_menu", "Voltar ao menu")]);
-  await go(b, "WAITLIST_SELECT", { ...ctx, awaiting: "book_choice" });
-}
-
-async function handleBookChoice(b: Bot, selection: Selection): Promise<void> {
-  const ctx = ctxOf(b);
-  if (selection.id === t.WAITLIST_IDS.bookConsultation) return startBooking(b, "consultation", { joinWaitlist: true });
-  if (selection.id === t.WAITLIST_IDS.bookReturn) return startReturn(b, { joinWaitlist: true });
-  if (selection.id === t.WAITLIST_IDS.bookExam) return startBooking(b, "exam", { joinWaitlist: true });
-  await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-  await offerBooking(b, ctx);
+  const flow = tap.button === "cancel" ? "cancel" : "reschedule";
+  b.now = new Date(b.now.getTime() + 1);
+  const sessionId = await startFunnel(b.db, b.clinicId, b.phone, flow, { category: appointment.category === "exam" ? "exam" : "consultation", source: "reminder" }, b.now);
+  b.convo = { ...b.convo, funnelSessionId: sessionId, funnelFlow: flow };
+  if (await sendReminderPortalLink(b, flow, appointment)) return;
+  await end(b, "blocked", { reason: "no_portal" });
+  if (b.receptionAvailable) return handoff(b, "no_portal");
+  await say(b, "bot_kb_will_reply", t.willReply(b.clinic.designation));
 }
 
 // ---------------------------------------------------------------------------
@@ -872,11 +203,9 @@ export async function handleOfferTap(b: Bot, tap: NonNullable<ReturnType<typeof 
 }
 
 // ---------------------------------------------------------------------------
-// Falar com a recepção (só com coexistência, até a F8)
+// Falar com a recepção (só com coexistência)
 // ---------------------------------------------------------------------------
 
-/** Pedido de recepção: o aviso e a pausa, com a origem do pedido e a etapa em que a pessoa estava (Métricas). */
-/** Quando a recepção responde: null = aberta agora; undefined = sem abertura nos próximos dias; texto = próxima abertura. */
 export async function receptionReplyWhen(b: Bot): Promise<string | null | undefined> {
   const { hours } = await getReceptionHours(b.db, b.clinicId);
   const holidays = await loadClinicHolidays(b.db, b.clinicId, b.clinic.today, addDays(b.clinic.today, 15));
@@ -890,9 +219,12 @@ export async function handoffText(b: Bot, lead?: string): Promise<string> {
   // Recesso da clínica (cliente, 01/nov/2026): a mensagem de recesso substitui o aviso comum.
   const recess = await activeRecessMessage(b.db, b.clinicId, b.now, b.clinic.timeZone);
   if (recess) return recess;
-  const base = lead ?? textFor(b, "handoff", t.HANDOFF);
-  const when = await receptionReplyWhen(b);
-  return when === null ? base : `${base} ${t.outsideHoursNotice(when)}`;
+  const base = lead ?? textFor(b, "handoff", t.LEAN_HANDOFF);
+  // Fora do horário (BE-4, d): o horário da recepção na mesma mensagem.
+  const { hours } = await getReceptionHours(b.db, b.clinicId);
+  if ((await receptionReplyWhen(b)) === null) return base;
+  const described = describeReceptionHoursForPatient(hours);
+  return `${base}\n\n${described ? t.leanOutsideHours(described) : t.LEAN_OUTSIDE_HOURS_NO_HOURS}`;
 }
 
 /**
@@ -907,6 +239,8 @@ export async function handoff(
   await say(b, "bot_handoff", await handoffText(b, lead));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested", origin, infoSessionId }, b.now);
   if (subject?.trim()) await setHandoffSubject(b.db, b.clinicId, b.phone, subject, b.now);
+  // BE-4: o aviso já pede a dúvida; a primeira resposta vira o assunto, sem a pergunta à parte.
+  else if (!lead) await markHandoffSubjectAsked(b.db, b.clinicId, b.phone, b.now);
   else await askHandoffSubject(b);
 }
 
@@ -922,25 +256,3 @@ export async function handoffNotUnderstood(b: Bot): Promise<void> {
   await askHandoffSubject(b);
 }
 
-// ---------------------------------------------------------------------------
-// Despacho
-// ---------------------------------------------------------------------------
-
-export async function handleManageState(b: Bot, state: string, selection: Selection): Promise<void> {
-  switch (state) {
-    case "CANCEL_SELECT":
-    case "RESCHEDULE_SELECT":
-    case "WAITLIST_SELECT":
-      return handleSelect(b, selection);
-    case "CANCEL_CONFIRM":
-      return handleCancelConfirm(b, selection);
-    case "PRESENCE_CONFIRM":
-      return handlePresenceConfirm(b, selection);
-    case "RESCHEDULE_HOME_ADDRESS":
-      return handleRescheduleAddress(b, selection);
-    case "WAITLIST_EARLIER":
-      return handleEarlier(b, selection);
-    case "WAITLIST_LEAVE_CONFIRM":
-      return handleWaitlistLeave(b, selection);
-  }
-}

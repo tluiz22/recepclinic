@@ -10,13 +10,13 @@ export const relacionamento = {
       serve: "Mostrar quem tentou marcar pelo WhatsApp e foi barrado por um limite de segurança do bot. A equipe confere se é um caso normal ou um abuso.",
       como: [
         "O bot tem três limites por número de WhatsApp, somando todos os pacientes do número: atendimentos futuros marcados, pacientes cadastrados pelo bot em 30 dias e faltas em 90 dias (padrão: 5 cada). Os valores ficam em Configurações › Clínica › Limites do bot por contato.",
-        "Quando um limite é atingido, o bot não marca e passa a conversa para a recepção. Cancelar, remarcar e confirmar presença continuam funcionando pelo bot.",
+        "Quando um limite é atingido, o portal não marca e orienta o paciente a falar com a recepção. Cancelar, remarcar e confirmar presença continuam funcionando.",
         "A equipe marca normalmente pelo painel, sem limite.",
         "\"Revisado\" tira o contato desta lista. Se ele atingir um limite de novo, volta.",
         "Para um número que deve marcar sem limite (ex.: uma empresa com acordo), o Administrador usa \"Liberar dos limites do bot\" na tela do contato.",
       ],
       exemplo:
-        "Maria já tem 5 consultas marcadas para os filhos e pede a 6ª pelo WhatsApp. O bot não marca, passa a conversa para a recepção, e Maria aparece aqui com \"Limite de atendimentos futuros\". A recepção confere, marca pelo painel se fizer sentido e toca em \"Revisado\".",
+        "Maria já tem 5 consultas marcadas para os filhos e tenta a 6ª pelo portal. O portal não marca, orienta Maria a falar com a recepção, e ela aparece aqui com \"Limite de atendimentos futuros\". A recepção confere, marca pelo painel se fizer sentido e toca em \"Revisado\".",
     },
     // listHumanAttention e classifyAttention em src/lib/data/whatsapp/attention.ts; pauseForHuman, checkHandoff e
     // handleAgentEcho em whatsapp/conversations.ts; volta em 12 h em whatsapp/handoffReturn.ts (C20, cliente, 03/nov/2026).

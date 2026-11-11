@@ -1,9 +1,7 @@
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, unwrap, unwrapOne } from "../errors";
-import type { Appointment } from "./appointments";
 import { findReturnOrigin } from "./appointments";
-import { recipientOfAppointment } from "../whatsapp/recipient";
 
 // Links de agendar/remarcar (página pública /agendar/[token]; o token é o id,
 // em 22 caracteres no endereço: `bookingPath` em `src/lib/publicId.ts`).
@@ -15,7 +13,6 @@ import { recipientOfAppointment } from "../whatsapp/recipient";
 //     consulta de origem, sem o limite do prazo (Fase 17, decisão do cliente).
 
 export const BOT_LINK_TTL_MS = 30 * 60_000;
-export const REBOOKING_LINK_TTL_MS = 2 * 24 * 60 * 60_000;
 
 export type BookingLinkMode = Enums<"booking_link_mode">;
 export type LocationCategory = Enums<"location_type">;
@@ -177,48 +174,6 @@ export async function bookingLinkLastDate(db: DbClient, clinicId: string, link: 
     now,
   );
   return found?.lastDate ?? null;
-}
-
-/**
- * Link de remarcação para um atendimento cancelado pela clínica: mesmo
- * paciente, serviço, agenda e tipo de local, com o endereço do domiciliar;
- * retorno mantém a consulta de origem, sem prazo. null = paciente sem contato.
- */
-export async function createRebookingLink(
-  db: DbClient,
-  clinicId: string,
-  appointment: Appointment,
-  now: Date = new Date(),
-): Promise<BookingLink | null> {
-  // O link vai no aviso de cancelamento, para quem marcou (D14, VR3).
-  const recipient = await recipientOfAppointment(db, clinicId, appointment.id);
-  if (!recipient) return null;
-  const location = unwrapOne(
-    await db.from("locations").select("type").eq("clinic_id", clinicId).eq("id", appointment.locationId).maybeSingle(),
-    "Local",
-  );
-  const isReturnWithOrigin = appointment.originAppointmentId !== null;
-  return createBookingLink(
-    db,
-    clinicId,
-    {
-      mode: "create",
-      contactId: recipient.id,
-      patientId: appointment.patientId,
-      serviceId: appointment.serviceId,
-      agendaId: appointment.agendaId,
-      locationId: null,
-      locationCategory: location.type,
-      appointmentId: null,
-      originAppointmentId: appointment.originAppointmentId,
-      returnDeadlineWaived: isReturnWithOrigin,
-      contactPhone: recipient.phone,
-      homeVisitAddress: location.type === "home_visit" ? appointment.homeVisitAddress : null,
-      canceledAppointmentId: appointment.id,
-      ttlMs: REBOOKING_LINK_TTL_MS,
-    },
-    now,
-  );
 }
 
 /**

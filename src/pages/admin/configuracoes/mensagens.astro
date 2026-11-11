@@ -68,7 +68,7 @@ const office = locations.find((l) => l.type === "clinic") ?? null;
 let monday = addDays(todayIn(settings.timezone), 1);
 while (weekdayOf(monday) !== 1) monday = addDays(monday, 1);
 const when = formatAppointmentWhen(toInstant(monday, "08:00", settings.timezone), settings.timezone);
-const link = `${Astro.url.origin}/agendar/exemplo`;
+const link = `${Astro.url.origin}/s/exemplo`;
 const example: Record<string, string> = {
   nome: "Maria",
   clinica: label,
@@ -153,12 +153,10 @@ const rows = visibleTemplates.map((standard) => {
 });
 
 const botDefaults: Record<string, string> = {
-  welcome: bot.welcome(label, true, example.nome),
+  welcome: bot.leanWelcome(example.nome),
   menu: clinic.features.includes("knowledge_base") ? bot.MENU_BODY_ASK : bot.MENU_BODY,
   not_understood: bot.notUnderstood(),
-  handoff: bot.HANDOFF,
-  booking_link: bot.bookingLink(example.servico, example.paciente, link),
-  cancel_done: bot.cancelDone("a consulta", "a", example.paciente, when, "consultation"),
+  handoff: bot.LEAN_HANDOFF,
   presence_confirmed: bot.presenceConfirmed(example.paciente, when, false),
   idle_closed: bot.IDLE_CLOSED,
 };
@@ -168,7 +166,8 @@ const botRows = BOT_MESSAGES.map((def) => {
     ...def,
     custom,
     preview: custom ? renderMarkers(custom, example) : botDefaults[def.key],
-    buttons: def.key === "menu" ? ["1. Consultas", "2. Exames", "3. Informações gerais"] : [],
+    // O menu do bot enxuto (BE-2); "Falar com a recepção" só com a recepção no app.
+    buttons: def.key === "menu" || def.key === "welcome" ? bot.LEAN_MENU.slice(0, 3).map((item) => item.label) : [],
   };
 });
 const guidance = customTexts.get(GUIDANCE_KEY as never) ?? null;

@@ -76,12 +76,12 @@ async function say(phone: string, input: string | { id: string }): Promise<Sent[
 const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 const optionId = (reply: Sent[], title: string) => reply.at(-1)!.options.find((o) => o.title.includes(title))!.id;
 const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
-// 1º menu da conversa: a apresentação do que dá para resolver (cliente, 04/nov/2026); sem coexistência, sem a recepção.
-const MENU_INTRO =
-  "Estamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar ou remarcar consultas e exames.\n\n🔄 Solicitar cancelamentos ou entrar na fila de espera.\n\nℹ️ Consultar informações sobre atendimentos.\n\nComo podemos ajudar?\nEscolha uma das opções abaixo ou escreva sua pergunta.";
-const WELCOME = "Olá! 👋 Aqui é da Clínica Base.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
-/** Número cadastrado: com o primeiro nome do contato (cliente, 08/nov/2026). */
-const WELCOME_KNOWN = WELCOME.replace("Olá! 👋", "Olá, Resp.! 👋");
+// Bot enxuto (F3f, BE-2): o 1º menu da conversa é uma mensagem só, com as boas-vindas.
+const LEAN = "Olá! Seja bem-vindo(a). Como podemos ajudar?";
+const LEAN_KNOWN = "Olá, Resp.! Seja bem-vindo(a). Como podemos ajudar?";
+const LEAN_HANDOFF = "Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor.";
+const BOOK_LINK = /^Para agendar sua consulta ou exame, toque no botão abaixo\./;
+const MINE_LINK = /^Para ver, remarcar ou cancelar suas consultas, toque no botão abaixo\./;
 const titles = (reply: Sent[]) => reply.at(-1)!.options.map((o) => o.title);
 
 async function reset(phone: string, state = "MENU") {
@@ -100,6 +100,7 @@ async function setCoexistence(on: boolean) {
 beforeAll(async () => {
   f = await setupAgendaClinic("Clínica Base", "+55849913370", { oneBotProfessional: true });
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "bc-waba", status: "connected" });
+  await adminClient().from("clinics").update({ portal_slug: `bc-${Date.now()}` }).eq("id", f.clinicId);
   await setBotInfoForAll(f.clinicId, { payment_info: "PIX ou cartão." });
   const { data: unimed } = await adminClient().from("insurance_plans").insert({ clinic_id: f.clinicId, name: "Unimed" }).select("id").single();
   await linkPlanToAllProfessionals(f.clinicId, unimed!.id);
@@ -121,37 +122,35 @@ afterAll(async () => {
 describe("primeira mensagem", () => {
   it("pergunta da base: boas-vindas, a resposta e o menu, sem \"Isso resolve sua dúvida?\" (cliente, 04/nov/2026)", async () => {
     const reply = await say("+5584991337001", "Oi, vocês aceitam Unimed?");
-    expect(bodies(reply)).toEqual([WELCOME_KNOWN, "Sim, atendemos *Unimed*.", MENU_INTRO]);
+    expect(bodies(reply)).toEqual(["Sim, atendemos *Unimed*.", LEAN_KNOWN]);
     expect((await convo("+5584991337001")).state).toBe("MENU");
   });
 
-  it("só \"oi\": boas-vindas (convidando a escrever) e o menu", async () => {
+  it("só \"oi\": o menu com as boas-vindas, numa mensagem", async () => {
     const reply = await say("+5584991337002", "Oi");
-    expect(bodies(reply)).toEqual([WELCOME_KNOWN, MENU_INTRO]);
+    expect(bodies(reply)).toEqual([LEAN_KNOWN]);
   });
 
-  it("1º menu: opções com descrição e \"Ver opções\"; nas outras vezes, o menu curto (cliente, 04/nov/2026)", async () => {
+  it("1º menu: opções com descrição e \"Ver opções\"; nas outras vezes, o menu curto (BE-2)", async () => {
     const phone = "+5584991337099";
     const first = await say(phone, "Oi");
     expect(first.at(-1)!.button).toBe("Ver opções");
     expect(first.at(-1)!.options).toEqual([
-      { id: "menu_consultations", title: "1. Consultas", description: "Agendamentos, retornos, remarcações e cancelamentos." },
-      { id: "menu_exams", title: "2. Exames", description: "Agendamentos, retornos, remarcações e cancelamentos." },
-      { id: "menu_info", title: "3. Informações gerais", description: "Dúvidas sobre consultas e exames." },
+      { id: "menu_book", title: "📅 Agendar", description: "Consulta ou exame, pelo portal" },
+      { id: "menu_mine", title: "🗓 Minhas consultas", description: "Consultar, remarcar ou cancelar" },
+      { id: "menu_professionals", title: "👥 Profissionais", description: "Especialidades, valores e convênios" },
     ]);
-    // Os destinos de sempre.
-    await say(phone, { id: "menu_consultations" });
-    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
-    const again = await say(phone, "menu");
+    const again = await say(phone, "voltar");
     expect(bodies(again)).toEqual([MENU]);
-    expect(again.at(-1)!.options.map((o) => o.id)).toEqual(["menu_consultations", "menu_exams", "menu_info"]);
-    await say(phone, "2");
-    expect((await convo(phone)).state).toBe("EXAMES_MENU");
+    // O número digitado vale como o toque.
+    expect(bodies(await say(phone, "2"))[0]).toMatch(MINE_LINK);
+    expect((await convo(phone)).state).toBe("WELCOME");
   });
 
-  it("pedido claro na 1ª mensagem: abre o fluxo, sem o menu", async () => {
+  it("pedido claro na 1ª mensagem: o link do Agendar, sem o menu", async () => {
     const reply = await say("+5584991337003", "quero marcar uma consulta");
-    expect(bodies(reply)).toEqual([WELCOME_KNOWN, "O que você precisa sobre consultas?"]);
+    expect(reply).toHaveLength(1);
+    expect(reply[0].body).toMatch(BOOK_LINK);
   });
 });
 
@@ -193,15 +192,11 @@ describe("no menu", () => {
     expect(bodies(await say(phone, "obrigado!"))).toEqual(["Por nada! Se precisar, é só mandar mensagem por aqui.", MENU]);
   });
 
-  it("pedido de marcação abre o submenu, com marcar, retorno, remarcar e cancelar (cliente, 31/out/2026)", async () => {
+  it("pedido de marcação (consulta ou exame): o link do Agendar (bot enxuto)", async () => {
     await reset(phone);
-    const reply = await say(phone, "quero marcar uma consulta");
-    expect(bodies(reply)).toEqual(["O que você precisa sobre consultas?"]);
-    expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(expect.arrayContaining(["1. Marcar consulta", "3. Remarcar", "4. Cancelar"]));
-    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
-    const exam = await say(phone, "quero marcar um exame");
-    expect(bodies(exam)).toEqual(["O que você precisa sobre exames?"]);
-    expect((await convo(phone)).state).toBe("EXAMES_MENU");
+    expect(bodies(await say(phone, "quero marcar uma consulta"))[0]).toMatch(BOOK_LINK);
+    await reset(phone);
+    expect(bodies(await say(phone, "quero marcar um exame"))[0]).toMatch(BOOK_LINK);
   });
 
   it("serviço citado: a resposta e o menu, de onde a marcação segue", async () => {
@@ -210,46 +205,13 @@ describe("no menu", () => {
     expect(bodies(reply)).toEqual(["Sim, fazemos *Exame*.", MENU]);
   });
 
-  it("no submenu: a resposta e o próprio submenu de novo (cliente, 04/nov/2026)", async () => {
-    await reset(phone);
-    await say(phone, "1"); // Consultas
-    const reply = await say(phone, "qual o endereço?");
-    expect(reply).toHaveLength(2);
-    expect(reply[0].body).toContain("Rua A, 1");
-    expect(reply.at(-1)!.body).toBe("O que você precisa sobre consultas?");
-    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
-  });
-});
-
-describe("no meio da marcação", () => {
-  const phone = "+5584991337020";
-
-  it("valor do serviço escolhido e o mesmo passo de novo; depois a marcação segue", async () => {
-    await say(phone, "Oi");
-    await say(phone, "1"); // Consultas
-    const agendas = await say(phone, "1"); // Marcar consulta
-    expect(agendas.at(-1)!.body).toBe("Com qual profissional?");
-    const reply = await say(phone, "quanto custa?");
-    expect(reply[0].body).toContain("*Consulta*\nConsultório: R$ 300,00");
-    expect(reply[0].body).not.toContain("Exame");
-    expect(reply.at(-1)!.body).toBe("Com qual profissional?");
-    expect((await convo(phone)).state).toBe("BOOK_AGENDA");
-    const next = await say(phone, { id: optionId(reply, "Dr. Segundo") });
-    // Com convênio cadastrado, o passo seguinte de hoje: particular ou convênio.
-    expect(next.at(-1)!.body).toContain("particular");
-  });
 });
 
 describe("\"voltar\" digitado (cliente, 31/out/2026)", () => {
   const phone = "+5584991337025";
 
-  it("na marcação, o submenu de onde veio; no submenu, o menu; nunca o retorno", async () => {
+  it("sempre o menu (bot enxuto, sem submenus); nunca o retorno", async () => {
     await say(phone, "Oi");
-    await say(phone, "1"); // Consultas
-    await say(phone, "1"); // Marcar consulta
-    const back = await say(phone, "voltar");
-    expect(bodies(back)).toEqual(["O que você precisa sobre consultas?"]);
-    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
     const menu = await say(phone, "Voltar ao menu anterior");
     expect(bodies(menu)).toEqual([MENU]);
     const again = await say(phone, "voltar");
@@ -267,8 +229,8 @@ describe("\"Você quis dizer…?\"", () => {
     expect(reply.at(-1)).toMatchObject({ kind: "list", body: "Você quis dizer…?" });
     expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(["1. Quero cancelar", "2. Quero remarcar", "3. Nenhuma destas"]);
     const chosen = await say(phone, { id: optionId(reply, "remarcar") });
-    // Número sem cadastro: a resposta do fluxo de remarcar de hoje e o menu.
-    expect(chosen.at(-1)!.body).toBe(MENU);
+    // Bot enxuto: remarcar vai a Minhas consultas, no portal.
+    expect(chosen.at(-1)!.body).toMatch(MINE_LINK);
   });
 
   it("\"Nenhuma destas\": o \"não entendi\" de hoje e o passo de novo", async () => {
@@ -304,23 +266,6 @@ describe("pergunta clínica", () => {
 describe("encaixe (cliente, 31/out/2026)", () => {
   const phone = "+5584991337045";
 
-  it("com a Lista de espera: pergunta o tipo (consulta, retorno ou exame) e abre o \"Encaixe ou antecipar\"", async () => {
-    await say(phone, "Oi");
-    let reply = await say(phone, "Preciso de um encaixe");
-    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "O encaixe é para qual tipo de atendimento?" });
-    expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(["Consulta", "Retorno", "Exame"]);
-    // Número sem atendimento marcado: a resposta de hoje do encaixe, com Marcar, do tipo escolhido.
-    reply = await say(phone, { id: "waitlist_type_return" });
-    expect(reply.at(-1)!.body).toContain("não encontramos um retorno marcado");
-    await reset(phone);
-    const other = await say(phone, "consigo um encaixe?");
-    expect(other.at(-1)!.body).toBe("O encaixe é para qual tipo de atendimento?");
-    // Com o tipo na mensagem, não pergunta.
-    await reset(phone);
-    const exam = await say(phone, "tem encaixe para exame?");
-    expect(exam.at(-1)!.body).toContain("A lista de espera serve para antecipar um horário já marcado, e não encontramos um exame marcado");
-  });
-
   it("sem a Lista de espera: explica e pergunta da recepção; sem recepção no app, o aviso e o menu", async () => {
     const { data: features } = await adminClient().from("clinic_features").select("feature_key").eq("clinic_id", f.clinicId);
     const keys = features!.map((x) => x.feature_key);
@@ -355,7 +300,6 @@ describe("item da matriz", () => {
 // ---------------------------------------------------------------------------
 
 const AFTER_RECEPTION = "Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?";
-const SUBJECT_Q = "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?";
 
 async function handoffOf(phone: string) {
   const { data } = await adminClient()
@@ -409,15 +353,6 @@ describe("dúvida respondida fora de um fluxo: sem confirmação (cliente, 04/no
     expect(steps.filter((s) => s.step === "started")).toHaveLength(2);
   });
 
-  it("no meio de uma marcação: só a resposta e o passo, sem \"Resolvido?\" nem dúvida no funil", async () => {
-    const phone = "+5584991337064";
-    await say(phone, "Oi");
-    await say(phone, "1");
-    await say(phone, "1");
-    const reply = await say(phone, "qual o endereço?");
-    expect(reply.at(-1)!.body).toBe("Com qual profissional?");
-    expect(await funnel(phone, "info")).toEqual([]);
-  });
 });
 
 describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo na mesma mensagem vai para a base (cliente, 06/nov/2026)", () => {
@@ -434,8 +369,8 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     expect(ask.at(-1)).toMatchObject({ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." });
     expect((await handoffOf(phone)).human_handoff).toBe(false);
     const reply = await say(phone, { id: "reception_yes" });
-    expect(reply[0].body).toContain("Vou te transferir para a recepção");
-    expect(reply.at(-1)!.body).toBe(SUBJECT_Q);
+    // BE-4: uma mensagem, que já pede a dúvida.
+    expect(bodies(reply)).toEqual([LEAN_HANDOFF]);
     expect((await handoffOf(phone)).human_handoff).toBe(true);
     expect((await funnel(phone, "handoff"))[0].metadata).toMatchObject({ origin: "typed" });
   });
@@ -467,7 +402,7 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     const phone = "+5584991337071";
     await say(phone, "Oi");
     const reply = await say(phone, "4"); // Falar com a recepção, pelo menu
-    expect(reply[0].body).toContain("Vou te transferir para a recepção");
+    expect(bodies(reply)).toEqual([LEAN_HANDOFF]);
     expect((await handoffOf(phone)).human_handoff).toBe(true);
     expect((await funnel(phone, "handoff"))[0].metadata).toMatchObject({ origin: "menu" });
   });
@@ -493,8 +428,7 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     await say(phone, "Oi");
     await say(phone, text);
     const reply = await say(phone, { id: "kb_reception" });
-    expect(bodies(reply)).toHaveLength(1);
-    expect(reply[0].body).toContain("Vou te transferir para a recepção");
+    expect(bodies(reply)).toEqual([LEAN_HANDOFF]);
     const convo = await handoffOf(phone);
     expect(convo).toMatchObject({ human_handoff: true, handoff_subject: text });
     expect(convo.handoff_subject_asked_at).not.toBeNull();
@@ -502,28 +436,14 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     expect((await funnel(phone, "handoff"))[0].metadata).toMatchObject({ origin: "typed" });
   });
 
-  it("situação A, \"Agendar Atendimento\": pergunta o tipo (só os da clínica); a marcação começa e a dúvida conta como resolvida", async () => {
+  it("situação A, \"Agendar Atendimento\": o link do Agendar e a dúvida conta como resolvida", async () => {
     const phone = "+5584991337074";
     await say(phone, "Oi");
     const reply = await say(phone, "atendente, quanto custa a consulta?");
-    const type = await say(phone, { id: optionId(reply, "Agendar Atendimento") });
-    expect(type.at(-1)).toMatchObject({ kind: "buttons", body: "O que você quer agendar?" });
-    expect(titles(type)).toEqual(["Consulta", "Retorno", "Exame"]);
-    const booking = await say(phone, { id: optionId(type, "Consulta") });
-    expect(booking.at(-1)!.body).toBe("Com qual profissional?");
+    // Bot enxuto: o link do Agendar, onde se escolhe o tipo e o profissional.
+    const booking = await say(phone, { id: optionId(reply, "Agendar Atendimento") });
+    expect(bodies(booking)[0]).toMatch(BOOK_LINK);
     expect((await funnel(phone, "info")).at(-1)).toMatchObject({ step: "resolved", metadata: { via: "book" } });
-  });
-
-  it("\"Agendar Atendimento\" › Retorno abre o retorno (antes, o id do retorno abria a consulta)", async () => {
-    const phone = "+5584991337082";
-    await say(phone, "Oi");
-    const reply = await say(phone, "atendente, quanto custa a consulta?");
-    const type = await say(phone, { id: optionId(reply, "Agendar Atendimento") });
-    const ret = await say(phone, { id: optionId(type, "Retorno") });
-    // Número sem consulta anterior: a resposta de hoje do retorno, nada de consulta.
-    expect(ret.map((m) => m.body).join("\n")).not.toContain("Com qual profissional?");
-    const { data } = await adminClient().from("bot_funnel_events").select("flow").eq("clinic_id", f.clinicId).eq("contact_phone", phone).eq("step", "started").neq("flow", "info");
-    expect(data!.map((d) => d.flow)).toEqual(["return_booking"]);
   });
 
   it("motivo sem resposta segura na mesma mensagem: confirma; Sim transfere e pergunta o assunto", async () => {
@@ -533,8 +453,7 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     expect(ask.at(-1)).toMatchObject({ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." });
     expect((await handoffOf(phone)).human_handoff).toBe(false);
     const reply = await say(phone, { id: "reception_yes" });
-    expect(reply[0].body).toContain("Vou te transferir para a recepção");
-    expect(reply.at(-1)!.body).toBe(SUBJECT_Q);
+    expect(bodies(reply)).toEqual([LEAN_HANDOFF]);
     expect((await handoffOf(phone)).human_handoff).toBe(true);
   });
 
@@ -545,7 +464,7 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     expect(ask.at(-1)).toMatchObject({ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." });
     expect((await handoffOf(phone)).human_handoff).toBe(false);
     const reply = await say(phone, { id: "reception_yes" });
-    expect(reply[0].body).toContain("Vou te transferir para a recepção");
+    expect(bodies(reply)).toEqual([LEAN_HANDOFF]);
     expect((await handoffOf(phone)).human_handoff).toBe(true);
   });
 
@@ -557,11 +476,11 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     expect(reply.at(-1)!.body).toBe(AFTER_RECEPTION);
   });
 
-  it("pedido de fluxo na mesma mensagem: abre o fluxo (resolver primeiro)", async () => {
+  it("pedido de fluxo na mesma mensagem: o link do Agendar (resolver primeiro)", async () => {
     const phone = "+5584991337078";
     await say(phone, "Oi");
     const reply = await say(phone, "atendente, quero marcar uma consulta");
-    expect(reply.at(-1)!.body).toBe("O que você precisa sobre consultas?");
+    expect(reply.at(-1)!.body).toMatch(BOOK_LINK);
     expect((await handoffOf(phone)).human_handoff).toBe(false);
   });
 
@@ -571,7 +490,7 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     await say(phone, "Oi");
     await say(phone, "atendente");
     const reply = await say(phone, { id: "reception_yes" });
-    expect(reply[0].body).toContain("No momento a recepção está fora do horário de atendimento; responderemos assim que possível.");
+    expect(reply[0].body).toBe(`${LEAN_HANDOFF}\n\nA recepção está fora do horário de atendimento e responde assim que abrir.`);
     await setReceptionHours(ALWAYS_OPEN);
   });
 
@@ -580,22 +499,11 @@ describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo 
     const a = await say(phone, "Oi, qual o endereço?");
     await say(phone, "atendente");
     const b2 = await say(phone, { id: "reception_yes" });
-    // Com recepção no número, a apresentação cita a recepção.
-    expect(bodies(a).at(-1)).toBe(MENU_INTRO.replace("\n\nComo podemos", "\n\n👩‍💼 Falar diretamente com a recepção, se precisar de ajuda.\n\nComo podemos"));
-    expect(b2[0].body).toContain("Vou te transferir para a recepção");
+    expect(bodies(a).at(-1)).toBe(LEAN);
+    expect(bodies(b2)).toEqual([LEAN_HANDOFF]);
     expect((await handoffOf(phone)).human_handoff).toBe(true);
   });
 
-  it("no meio de uma marcação: a tentativa para (pediu a recepção) e a resposta vem com \"Resolvido?\"", async () => {
-    const phone = "+5584991337081";
-    await say(phone, "Oi");
-    await say(phone, "1");
-    await say(phone, "1");
-    const reply = await say(phone, "atendente, qual o endereço?");
-    expect(reply.at(-1)!.body).toBe(AFTER_RECEPTION);
-    const { data } = await adminClient().from("bot_funnel_events").select("step, metadata").eq("clinic_id", f.clinicId).eq("contact_phone", phone).eq("flow", "booking").eq("step", "abandoned");
-    expect(data![0].metadata).toMatchObject({ reason: "reception_requested" });
-  });
 });
 
 describe("Métricas: resolução sem a recepção a partir das conversas acima (EA)", () => {

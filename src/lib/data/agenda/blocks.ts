@@ -2,7 +2,7 @@ import type { DbClient } from "../clients";
 import { hasFeature } from "../features";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 import { cancelAppointments, listAppointmentsBetween, type Appointment } from "./appointments";
-import { createRebookingLink, type BookingLink } from "./links";
+import type { BookingLink } from "./links";
 import { createPortalRebookingLink, type PortalLink } from "../portal/links";
 import { logError } from "../../log";
 import { recessReturnDate, renderRecessMessage } from "../../recess";
@@ -101,12 +101,13 @@ async function cancelWithLinks(
   const withLinks = canceled.length > 0 && (await hasFeature(db, clinicId, "whatsapp_bot"));
   const result: CanceledWithLink[] = [];
   for (const appointment of canceled) {
-    let rebookingLink: BookingLink | null = null;
+    const rebookingLink: BookingLink | null = null;
     let portalLink: PortalLink | null = null;
     if (withLinks) {
       try {
+        // Bot enxuto (F3f): só o link do portal; sem ele (portal fechado, turma, sem celular), o aviso vai sem link e a
+        // recepção remarca (o /agendar não é mais criado).
         portalLink = await createPortalRebookingLink(db, clinicId, appointment, now);
-        if (!portalLink) rebookingLink = await createRebookingLink(db, clinicId, appointment, now);
       } catch (error) {
         // Melhor esforço, como no piloto: falha num link não desfaz os cancelamentos.
         logError("bloqueio: não gerou link de remarcação", error, { clinica: clinicId, atendimento: appointment.id });

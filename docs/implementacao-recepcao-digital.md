@@ -1063,6 +1063,35 @@ ligados (`listContactPatients(…, { linked: true })`, até sair na E3). Antes, 
 recebia "não está mais ativo". Teste de banco `varios-responsaveis-bot.test.ts` (falha sem a correção). Jornada do bot
 (regra geral) atualizada. O `notCompleted.ts` ainda lê pelo principal: sai na E3.
 
+**E2 + E3 juntas (cliente, 11/nov/2026; uma etapa só para não refazer testes duas vezes). Feitas:**
+- **Migração `20270117120000_link_portal_profissionais_cancelar.sql`** (aprovada pelo cliente, só no banco local): propósitos
+  `professionals` (abre `/medicos`) e `cancel` (abre `minhas-consultas/cancelar?a=`) no link do portal.
+- **Menu (BE-2):** uma mensagem: cabeçalho com o nome da clínica, "Olá[, Nome]! Seja bem-vindo(a). Como podemos ajudar?" (ou as
+  boas-vindas próprias da clínica) e a lista 📅 Agendar · 🗓 Minhas consultas · 👥 Profissionais · 🎧 Falar com a recepção
+  (esta só com coexistência). Títulos sem o número na frente (cabem nos 24); digitar o número continua valendo.
+- **Links (BE-3):** botão de link da Meta (`cta_url`, `ClinicSender.link`); sem ele, o texto com o endereço. Agendar abre e fecha
+  o funil `booking` com `link_sent`. Sem o portal (F3-5/F3-7): recepção; sem coexistência, "A clínica responderá…". Origem
+  nova da transferência nas Métricas: `no_portal`.
+- **Recepção (BE-4):** "Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor." numa mensagem; a primeira
+  resposta vira o assunto (sem a pergunta à parte). Fora do horário, na mesma mensagem: "A recepção atende de seg. a sex., 8h
+  às 18h, e responde assim que abrir." (`describeReceptionHoursForPatient`). Recesso como antes.
+- **IA (BE-7):** a resposta e depois o menu. Pedidos da base: marcar → Agendar; remarcar/cancelar/"minha consulta" → Minhas
+  consultas; encaixe → recepção.
+- **Lembrete atual:** Remarcar e Cancelar mandam o portal já na ação (`reschedule`/`cancel`); turma ou sem o portal → recepção.
+- **Saíram:** `booking.ts`, `entry.ts`, `notCompleted.ts`, `chooseProfessional.ts`; o chat de cancelar, remarcar e encaixe em
+  `manage.ts`; submenus e Informações gerais (o preparo segue pela base); "Link para marcar" e "Cancelamento confirmado" em
+  Configurações › Mensagens; 125 textos sem uso em `texts.ts`. O cancelamento pela clínica só cria o link do portal (sem ele,
+  o aviso vai sem link). Nenhum código cria mais link `/agendar`.
+- **Jornada do bot** refeita (5 itens); artigos da Central (bot, perguntas frequentes, limites, problemas, atendimento, agenda,
+  configurações, resumo, relacionamento). Captura `config-mensagens` na fila.
+- **Testes:** novo `bot-enxuto.test.ts`; apagados os do chat (entrada, marcar, convênio, pediatria, profissional, não concluído,
+  link do portal); `bot-limites` virou `limites-do-contato.test.ts`; testes do cancelamento pela clínica passaram ao link do
+  portal. Unidade 1217, banco 1131, `astro check` sem erros. Playwright: Configurações › Mensagens em 1280 e 390 (sem rolagem
+  lateral, sem erro no console).
+- **Para depois:** apagar as páginas `/agendar` e `api/agendar` (e `booking_links`) quando os links antigos vencerem (2 dias depois
+  da publicação na produção). Consequência: o paciente não entra mais sozinho na lista de espera (o Encaixe saiu do chat); entra
+  pela recepção.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

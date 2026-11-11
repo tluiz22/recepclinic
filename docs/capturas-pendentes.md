@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `config-mensagens` — bot enxuto (F3f): saíram "Link para marcar" e "Cancelamento confirmado"; boas-vindas, recepção e o menu com os textos novos (11/11/2026)

@@ -7,6 +7,7 @@ import {
   isClassifiedOut,
   isPastIdleTimeout,
   logAbandonment,
+  markHandoffSubjectAsked,
   openConversation,
   pauseForHuman,
   recordHandoffSubject,
@@ -19,13 +20,10 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { botRetryContext } from "../retryRules";
 import { messageBody, toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
-import { BOOKING_STATES, handleBookingState } from "./booking";
-import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, offerReception, RECEPTION_CONFIRM_KEY, repeatYesNo, say, sendButtons, textFor, type Bot, type BotEnv, type ReceptionOffer } from "./engine";
-import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
-import { CHOOSE_STATES, handleChooseState } from "./chooseProfessional";
-import { asksForReception, extractSelection, type Selection, isBack, isBackToMenu, parseBirthdate, shortBirthdate, TALK_TO_RECEPTION_ID, yesNo } from "./input";
-import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu, showPreviousMenu } from "./menus";
-import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, handoffText, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
+import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, offerReception, RECEPTION_CONFIRM_KEY, say, sendButtons, type Bot, type BotEnv, type ReceptionOffer } from "./engine";
+import { asksForReception, extractSelection, isBack, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
+import { handleMenu, handlePreparationChoice, showMenu, showPreviousMenu, startConversation } from "./menus";
+import { handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, handoffText, offerTapOf, reminderTapOf } from "./manage";
 import {
   BLOCKED_HANDOFF,
   BLOCKED_RECEPTION_WILL_CONTACT,
@@ -37,14 +35,10 @@ import {
   RECEPTION_DECLINED,
   RECEPTION_DECLINED_NO_MENU,
   RECEPTION_NOW_ID,
-  confirmTypedDate as typedDateQuestion,
-  TYPED_DATE_RETRY,
-  YES_NO_BUTTONS,
   willReply,
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
-import { handleNotCompleted, NOT_COMPLETED, promptExpiredLinks, promptExpiredPortalLinks, promptPendingCancel } from "./notCompleted";
 import { askReceptionReason, firstMessageAnswer, handleKnowledgeReply, handleReceptionReason, knowledgeHookFor, pendingReasonOf, performTakeover, REASON_KEY } from "./knowledge/respond";
 import { logError } from "../../../log";
 
@@ -53,8 +47,7 @@ import { logError } from "../../../log";
 // clínica conectado. Conversa pausada pela recepção fica em silêncio, menos
 // para os toques no lembrete (Confirmar) e na oferta de vaga, que respondem a
 // uma pergunta do sistema (F6.4). Número bloqueado pela clínica (F9.6b): só
-// os toques no lembrete e o fluxo que eles abrem (cancelar, remarcar); o resto
-// recebe a resposta neutra, uma vez por dia. Nunca lança: o erro vai para o
+// os toques no lembrete; o resto recebe a resposta neutra, uma vez por dia. Nunca lança: o erro vai para o
 // log e a Meta recebe 200 do mesmo jeito. Número marcado como Pessoal ou
 // Administrativo/outros (NA): como o pausado, sem o bot e sem pausa.
 // Mudou o caminho do paciente: atualizar o fluxograma em
@@ -79,14 +72,7 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   }
   // Número marcado como Pessoal ou Administrativo/outros (NA, decisões 2 e 4): o bot não responde. Só seguem os
   // botões do lembrete e da oferta (acima) e o fluxo que eles abrem (cancelar, remarcar, lista de espera).
-  if (isClassifiedOut(convo)) {
-    if (!MANAGE_STATES.has(convo.state)) return "skipped";
-    if (isBackToMenu(extractSelection(message))) {
-      await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
-      await setConversationState(env.db, env.clinicId, phone, WELCOME, { context: {} }, env.now);
-      return "skipped";
-    }
-  }
+  if (isClassifiedOut(convo)) return "skipped";
   if (paused) {
     // Assunto da transferência (jornada E4): a primeira resposta em texto depois da pergunta, guardada sem resposta do
     // bot (cliente, 06/nov/2026); o resto fica com a recepção.
@@ -135,58 +121,6 @@ const AUDIO_TYPES = new Set(["audio", "voice"]);
 const FREE_TEXT_AWAITING = new Set(["address_input", "contact_name", "patient_name", "self_name"]);
 const awaitingOf = (convo: Conversation) => ((convo.context ?? {}) as { awaiting?: string }).awaiting;
 
-/** Passos que esperam a data de nascimento digitada. */
-function expectsBirthdate(convo: Conversation): boolean {
-  const awaiting = awaitingOf(convo);
-  switch (convo.state) {
-    case "ENTRY_BIRTHDATE":
-      return true;
-    case "BOOK_PATIENT_SELECT":
-      return awaiting === "birthdate_search";
-    case "BOOK_PATIENT_NEW":
-      return awaiting === "patient_birthdate" || awaiting === "self_birthdate";
-    case "CANCEL_SELECT":
-    case "RESCHEDULE_SELECT":
-    case "WAITLIST_SELECT":
-      return awaiting === "birthdate_search" || awaiting === "identity_choice";
-    default:
-      return false;
-  }
-}
-
-const TYPED_DATE_KEY = "_typed_date";
-
-/**
- * Data sem barras ("10032020"): pergunta "Você quis dizer 10/03/2020?" com Sim e Não. Sim segue como se a pessoa
- * tivesse digitado a data com barras (devolve a seleção); Não pede a data de novo. "handled" = já respondeu.
- */
-async function askTypedDate(b: Bot, convo: Conversation, selection: Selection): Promise<Selection | "handled" | null> {
-  if (!expectsBirthdate(convo)) return null;
-  let pending = ((convo.context ?? {}) as Record<string, unknown>)[TYPED_DATE_KEY] as string | undefined;
-  if (pending) {
-    // Outra data digitada vale no lugar da pendente.
-    if (!selection.id && (parseBirthdate(selection.text, b.clinic.today) || shortBirthdate(selection.text, b.clinic.today))) {
-      await mergeContext(b, { [TYPED_DATE_KEY]: undefined });
-      pending = undefined;
-    } else {
-      const answer = yesNo(selection);
-      if (answer === null) {
-        await repeatYesNo(b, "bot_typed_date_confirm", typedDateQuestion(pending));
-        return "handled";
-      }
-      await mergeContext(b, { [TYPED_DATE_KEY]: undefined });
-      if (answer) return { id: null, text: pending };
-      await say(b, "bot_typed_date_retry", TYPED_DATE_RETRY);
-      return "handled";
-    }
-  }
-  if (selection.id) return null;
-  const date = shortBirthdate(selection.text, b.clinic.today);
-  if (!date) return null;
-  await mergeContext(b, { [TYPED_DATE_KEY]: date });
-  await sendButtons(b, "bot_typed_date_confirm", typedDateQuestion(date), YES_NO_BUTTONS);
-  return "handled";
-}
 /** Pedido de recepção digitado esperando o Sim ou o Não (no contexto, sem trocar o passo). */
 const receptionConfirmPending = (convo: Conversation) => !!((convo.context ?? {}) as Record<string, unknown>)[RECEPTION_CONFIRM_KEY];
 /** Transferência oferecida pelo bot (sem horário, convênio, "não entendi"…), e não o pedido digitado. */
@@ -200,7 +134,9 @@ async function acceptReceptionOffer(b: Bot, offer: ReceptionOffer): Promise<void
   if (offer.reason === "not_understood") return handoffNotUnderstood(b);
   await say(b, offer.kind, b.receptionAvailable ? await handoffText(b) : willReply(b.clinic.designation));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: offer.reason }, b.now);
-  await askHandoffSubject(b);
+  // BE-4: o aviso já pede a dúvida; sem a recepção no app, a pergunta do assunto.
+  if (b.receptionAvailable) await markHandoffSubjectAsked(b.db, b.clinicId, b.phone, b.now);
+  else await askHandoffSubject(b);
 }
 
 /** Não à transferência oferecida: o menu; na clínica sem nada para marcar, a despedida (cliente, 31/out/2026). */
@@ -214,10 +150,10 @@ async function declineReceptionOffer(b: Bot, offer: ReceptionOffer): Promise<voi
 }
 
 async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string, message: WaMessage): Promise<void> {
-  let selection = extractSelection(message);
+  const selection = extractSelection(message);
 
   const blocked = await blockedContactByPhone(env.db, env.clinicId, phone);
-  if (blocked && (!MANAGE_STATES.has(convo.state) || isBackToMenu(selection))) {
+  if (blocked) {
     await answerBlocked(b, blocked);
     return;
   }
@@ -284,40 +220,9 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
     return sendButtons(b, "bot_reception_confirm", RECEPTION_CONFIRM, RECEPTION_CONFIRM_BUTTONS);
   }
 
-  // Data digitada sem as barras: confirma com as barras antes de seguir (cliente, 02/nov/2026).
-  const typedDate = await askTypedDate(b, convo, selection);
-  if (typedDate === "handled") return;
-  if (typedDate) selection = typedDate;
-
-  // Pedido não concluído (PN2): os três botões; outra mensagem recomeça a conversa (cai no começo, abaixo).
-  if (convo.state === NOT_COMPLETED && (await handleNotCompleted(b, selection))) return;
-
-  if (ENTRY_STATES.has(convo.state)) {
-    await handleEntryState(b, convo.state, selection);
-    return;
-  }
-  if (CHOOSE_STATES.has(convo.state)) {
-    await handleChooseState(b, convo.state, selection);
-    return;
-  }
-  if (MANAGE_STATES.has(convo.state)) {
-    await handleManageState(b, convo.state, selection);
-    return;
-  }
-  if (BOOKING_STATES.has(convo.state)) {
-    await handleBookingState(b, convo.state, selection);
-    return;
-  }
   switch (convo.state) {
     case "MENU":
       await handleMenu(b, selection);
-      break;
-    case "CONSULTAS_MENU":
-    case "EXAMES_MENU":
-      await handleSubmenu(b, convo.state, selection);
-      break;
-    case "INFO_MENU":
-      await handleInfo(b, selection);
       break;
     case "INFO_PREP_SELECT":
       await handlePreparationChoice(b, selection);
@@ -358,13 +263,6 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
   if (!sender || !(await hasFeature(db, clinicId, "whatsapp_bot"))) return 0;
   // Texto próprio da clínica (F6.6), com o item liberado.
   const idleText = (await hasFeature(db, clinicId, "custom_messages")) ? ((await listBotMessages(db, clinicId)).get("idle_closed") ?? IDLE_CLOSED) : IDLE_CLOSED;
-  // Pedido não concluído (PN2): links do bot que venceram sem uso.
-  try {
-    await promptExpiredLinks(db, clinicId, sender, now);
-    await promptExpiredPortalLinks(db, clinicId, sender, now);
-  } catch (error) {
-    logError("bot: pedido não concluído", error, { clinica: clinicId });
-  }
   const before = new Date(now.getTime() - IDLE_TIMEOUT_MINUTES * 60_000);
   const rows = unwrap(
     await db
@@ -383,12 +281,6 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
       const convo = await openConversation(db, clinicId, phone, await contactIdByPhone(db, clinicId, phone));
       // Respondeu enquanto a rotina rodava.
       if (AT_REST.includes(convo.state) || !isPastIdleTimeout(convo.updatedAt, now)) continue;
-      // Cancelamento sem resposta ao "Tem certeza?" (PN2): a mensagem do pedido não concluído no lugar do "encerramos".
-      if (convo.state === "CANCEL_CONFIRM" && (await promptPendingCancel(await createBot({ db, clinicId, sender, now }, convo)))) {
-        await logAbandonment(db, clinicId, convo, "timeout", now);
-        closed++;
-        continue;
-      }
       const outcome = await sender.text(phone, idleText);
       await recordOutboundMessage(
         db,
