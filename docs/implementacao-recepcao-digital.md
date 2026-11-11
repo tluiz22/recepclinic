@@ -1144,6 +1144,7 @@ Celular (abaixo de 768 px): faixa dos 7 dias e a lista do dia escolhido. Bordas:
 na Semana e nos Próximos horários livres. Captura `agenda-dia` anotada em `capturas-pendentes.md`.
 Ajustes do cliente (11/nov): bordas com mais espaço (24 px nas laterais e 20 px no topo; 16 e 16 px no celular) e, no
 filtro de profissional (`ColumnPicker`), a especialidade que separa os grupos em negrito.
+**Validado pelo cliente no staging (11/nov/2026).**
 
 **Roteiro de validação (staging):** 1) Agenda › Semana na Clínica Exemplo Saúde: um quadro por profissional e dia,
 agrupado por especialidade; conferir "N de M" e livres de um dia com o Dia daquele profissional. 2) Tocar num quadro:
