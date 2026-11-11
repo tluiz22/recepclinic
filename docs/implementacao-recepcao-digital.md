@@ -1039,6 +1039,30 @@ o WhatsApp vira porta de entrada. Canvas aprovado tela a tela: https://claude.ai
   concluído, F3-5/F3-7 (sem link ou fora do portal → recepção), fim do "Primeiro horário". Jornada do bot refeita;
   artigos da Central e capturas revistos (fila em `capturas-pendentes.md` na etapa de código).
 
+#### 15.6.1 F3f em etapas (cliente, 11/nov/2026, branch `bot-enxuto`)
+
+Junto da F3f: o bot pela ligação (ponto 1 do `/code-review` da VR) e o UI-5. **UI-5 pelo portal (cliente, 11/nov):**
+Remarcar e Cancelar saem do chat e abrem o portal, que já lista todos os pacientes ligados ao número e manda o aviso
+da VR4; sem código novo de lista no chat.
+
+| Etapa | O que entrega | Migração |
+|---|---|---|
+| E1 Bot pela ligação | Toques do lembrete, oferta da lista de espera e consultas do chat por qualquer responsável ligado ou por quem marcou | não |
+| E2 Menu enxuto e links | BE-2, BE-3, BE-4, BE-7; sem portal → recepção (F3-5/F3-7); Remarcar e Cancelar do lembrete atual → link do portal | não |
+| E3 Limpeza | Sai a marcação no chat, a entrada com nascimento, os submenus, Informações, o Encaixe no chat, o pedido não concluído e o "Primeiro horário"; aviso de cancelamento pela clínica com o link do portal; `/agendar` leva ao portal | não |
+| E4 Cortesia | BE-8 | não |
+| E5 Portal | BE-5, BE-6 | não |
+| E6 Confirmação | BE-9 | sim (aviso antes) |
+| E7 Lembrete novo | BE-10 | talvez (aviso antes) |
+| E8 Fechamento | Central, capturas, suíte, `security-review`, `/code-review` | — |
+
+**E1 feita (11/nov/2026):** `upcomingOfContact` e `loadActive` (`bot/manage.ts`) acham as consultas pelos pacientes de
+`contact_patient_ids` (e `loadActive` também por `booked_by_contact_id`, quem recebeu o lembrete); `loadOffer`
+(`waitlist/offers.ts`) aceita a resposta de quem marcou ou de responsável ligado; a marcação no chat lista os pacientes
+ligados (`listContactPatients(…, { linked: true })`, até sair na E3). Antes, o pai tocando em Cancelar no lembrete
+recebia "não está mais ativo". Teste de banco `varios-responsaveis-bot.test.ts` (falha sem a correção). Jornada do bot
+(regra geral) atualizada. O `notCompleted.ts` ainda lê pelo principal: sai na E3.
+
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 
 Sessão de implementação (worktree `../recepclinic-impl`). Desenho aprovado: R3 (grade de 18), R3c (clínica pequena),

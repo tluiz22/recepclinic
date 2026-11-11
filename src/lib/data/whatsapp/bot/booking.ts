@@ -558,7 +558,7 @@ async function handleForWhom(b: Bot, selection: Selection): Promise<void> {
 }
 
 const activePatients = async (b: Bot): Promise<Patient[]> =>
-  b.convo.contactId ? listContactPatients(b.db, b.clinicId, b.convo.contactId) : [];
+  b.convo.contactId ? listContactPatients(b.db, b.clinicId, b.convo.contactId, { linked: true }) : [];
 
 /** Lista os pacientes do contato com atendimento futuro do mesmo tipo; nunca todos (convênio com muitas crianças, piloto). */
 async function enterPatientSelect(b: Bot, ctx: BookingContext): Promise<void> {

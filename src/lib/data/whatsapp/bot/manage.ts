@@ -8,6 +8,7 @@ import { getReceptionHours } from "../../config/receptionHours";
 import { addDays } from "../../../clinicTime";
 import { describeOpening, isReceptionOpen, nextReceptionOpening } from "../../../receptionHours";
 import { DataError, unwrap } from "../../errors";
+import { contactPatientIds } from "../../patientContacts";
 import { activeWaitlistAppointmentIds, endAsAdvanced, joinBlockReason, joinWaitlist, leaveWaitlist } from "../../waitlist/entries";
 import { acceptOffer, declineOffer, MIN_LEAD_MS, type OfferReplyResult, type OfferSender } from "../../waitlist/offers";
 import { pauseForHuman, setHandoffSubject, startFunnel, type HandoffOrigin } from "../conversations";
@@ -52,7 +53,7 @@ export type ManagedAppointment = {
 };
 
 const COLUMNS =
-  "id, patient_id, scheduled_at, service_id, agenda_id, home_visit_address, origin_appointment_id, series_id, status, services!inner ( name, category ), locations ( type ), patients!inner ( full_name, birthdate, contact_id )";
+  "id, patient_id, scheduled_at, service_id, agenda_id, home_visit_address, origin_appointment_id, series_id, status, services!inner ( name, category ), locations ( type ), booked_by_contact_id, patients!inner ( full_name, birthdate )";
 
 type Row = {
   id: string;
@@ -66,7 +67,8 @@ type Row = {
   status: Enums<"appointment_status">;
   services: { name: string; category: Category };
   locations: { type: Enums<"location_type"> } | null;
-  patients: { full_name: string; birthdate: string; contact_id: string };
+  booked_by_contact_id: string | null;
+  patients: { full_name: string; birthdate: string };
 };
 
 const toManaged = (row: Row): ManagedAppointment => ({
@@ -93,15 +95,20 @@ async function loadUpcoming(b: Bot, group: t.Group, category?: Category): Promis
   return (await upcomingOfContact(b)).filter((a) => (category ? a.category === category : inGroup(group, a.category)));
 }
 
-/** Atendimentos ativos (marcados ou confirmados) e futuros dos pacientes do contato, consultas e exames. */
+/**
+ * Atendimentos ativos (marcados ou confirmados) e futuros dos pacientes do contato, consultas e exames: todos os
+ * pacientes ligados ao número, principal ou não (VR, F3f; `contact_patient_ids`).
+ */
 export async function upcomingOfContact(b: Bot): Promise<ManagedAppointment[]> {
   if (!b.convo.contactId) return [];
+  const patientIds = await contactPatientIds(b.db, b.clinicId, b.convo.contactId);
+  if (!patientIds.length) return [];
   const rows = unwrap(
     await b.db
       .from("appointments")
       .select(COLUMNS)
       .eq("clinic_id", b.clinicId)
-      .eq("patients.contact_id", b.convo.contactId)
+      .in("patient_id", patientIds)
       .in("status", ["scheduled", "confirmed"])
       .gt("scheduled_at", b.now.toISOString())
       .order("scheduled_at"),
@@ -110,14 +117,16 @@ export async function upcomingOfContact(b: Bot): Promise<ManagedAppointment[]> {
   return rows.map(toManaged);
 }
 
-/** O atendimento, se ainda é do contato, ativo e futuro (revalida a cada passo). */
+/**
+ * O atendimento, se ainda é do contato, ativo e futuro (revalida a cada passo). Do contato = ele marcou (recebe o
+ * lembrete) ou é responsável ligado ao paciente (VR, F3f).
+ */
 export async function loadActive(b: Bot, id: string): Promise<ManagedAppointment | null> {
-  if (!b.convo.contactId) return null;
-  const row = unwrap(
-    await b.db.from("appointments").select(COLUMNS).eq("clinic_id", b.clinicId).eq("id", id).eq("patients.contact_id", b.convo.contactId).maybeSingle(),
-    "Atendimento",
-  ) as unknown as Row | null;
+  const contactId = b.convo.contactId;
+  if (!contactId) return null;
+  const row = unwrap(await b.db.from("appointments").select(COLUMNS).eq("clinic_id", b.clinicId).eq("id", id).maybeSingle(), "Atendimento") as unknown as Row | null;
   if (!row) return null;
+  if (row.booked_by_contact_id !== contactId && !(await contactPatientIds(b.db, b.clinicId, contactId)).includes(row.patient_id)) return null;
   const appointment = toManaged(row);
   return ["scheduled", "confirmed"].includes(appointment.status) && appointment.scheduledAt > b.now ? appointment : null;
 }
