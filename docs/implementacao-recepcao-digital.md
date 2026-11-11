@@ -1117,3 +1117,12 @@ fictícios com DDD 00 e lembrete já marcado como enviado (o chip de testes est�
 7. **Clínica pequena:** desligar profissionais até ficarem 7 agendas ou menos → volta o filtro "Agenda" e as colunas na
    largura toda.
 8. **Tempo:** Agenda e Próximos horários livres em menos de 2 s.
+
+### 16.3 Agenda › Semana no padrão do Dia (cliente, 11/nov/2026)
+
+Pedido: a Semana (7 caixas com lista de cartões) destoava do Dia (grade em colunas). Canvas com 3 opções
+(<https://claude.ai/artifact/2heY2omCb9DUB52THeRphR>): A, grade de horários de um profissional (colunas = dias); B, grade
+da especialidade dividida por profissional; C, quadro de ocupação (linha = profissional agrupado por especialidade,
+coluna = dia, "N de M" marcados, livres e barra; tocar abre o Dia daquele profissional). **Decisão do cliente: só C**,
+com o cabeçalho, os filtros e a legenda do Dia. Detalhes (celular, filtro Situação, contagem de livres) a decidir antes
+de implementar.
