@@ -331,7 +331,7 @@ atendimento de {{4}} ({{5}})", que serve também para exame e retorno):
   remarcou passa a ser quem marcou); Cancelar manda para quem marcou quando outro cancelou. {{3}} = "Ana (mãe)" pela
   ligação. A remarcação depois do cancelamento pela clínica não manda (não é "outro responsável").
 - Jornada do bot (regra geral) e artigo "Responsável/contato" com o aviso.
-- **Capturas na fila** (`capturas-pendentes.md`): `config-whatsapp` e `config-mensagens` (a lista ganhou os dois modelos).
+- **Capturas na fila** (`capturas-pendentes.md`): `config-whatsapp` e `config-mensagens` (a lista ganhou os dois modelos); recaptura no fim da frente, com a autorização na hora (cliente, 11/nov).
 
 Testes: `varios-responsaveis-portal.test.ts` (+2: sem o modelo nada sai; com ele, o pai recebe quando a mãe remarca,
 nada quando a mãe cancela a que passou a ser dela, a mãe recebe quando o pai cancela); `envio-whatsapp.test.ts` com os
