@@ -48,6 +48,9 @@ export const RETRYABLE_MESSAGE_TYPES: ReadonlySet<string> = new Set([
   "appointment_reschedule",
   "appointment_cancellation",
   "appointment_mass_cancellation",
+  // Aviso a quem marcou quando outro responsável remarca ou cancela (VR4, D14).
+  "appointment_rescheduled_by_other",
+  "appointment_canceled_by_other",
   "exam_preparation",
   "consultation_guidance",
   "daily_summary_consultas",

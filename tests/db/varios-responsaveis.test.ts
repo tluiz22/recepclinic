@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment } from "../../src/lib/data/agenda/appointments";
+import { changeSeriesFrom, createSeries, extendSeries } from "../../src/lib/data/agenda/series";
 import { anonymizePatient, getPatient, previewAnonymization, registerPatient } from "../../src/lib/data/patients";
 import {
   contactPatientIds,
@@ -166,6 +167,70 @@ describe("quem marcou (VR-1) e limites (VR-5)", () => {
     expect(await getPatient(asDb(fixture.admin), clinicId, child)).toMatchObject({ contactId: mom, isContactSelf: false });
     await setPrimaryContact(asDb(fixture.admin), clinicId, dadOwn, dad);
     expect(await getPatient(asDb(fixture.admin), clinicId, dadOwn)).toMatchObject({ contactId: dad, isContactSelf: true });
+  });
+});
+
+describe("séries (VR-1): as sessões geradas depois seguem com quem recebe os avisos", () => {
+  const bookersOf = async (ids: string[]) =>
+    (await sql<{ booked_by_contact_id: string }>("select booked_by_contact_id from public.appointments where id = any($1)", [ids])).map(
+      (r) => r.booked_by_contact_id,
+    );
+
+  it("Marcar com o pai: criadas, estendidas pelo agendador e alteradas daqui em diante ficam com o pai", async () => {
+    const db = asDb(fixture.reception);
+    const { series, created } = await createSeries(
+      db,
+      clinicId,
+      {
+        patientId: child,
+        serviceId: fixture.ids.consulta2,
+        agendaId: fixture.ids.agendaDra2,
+        locationId: fixture.ids.office,
+        intervalWeeks: 1,
+        startsOn: MON1,
+        startTime: "17:30",
+        bookedByContactId: dad,
+        actorId: fixture.reception.id,
+      },
+      NOW,
+    );
+    expect(created.length).toBeGreaterThan(0);
+    expect(new Set(await bookersOf(created.map((a) => a.id)))).toEqual(new Set([dad]));
+
+    const more = await extendSeries(db, clinicId, series.id, at("2031-03-23", "12:00"));
+    expect(more.created.length).toBeGreaterThan(0);
+    expect(new Set(await bookersOf(more.created.map((a) => a.id)))).toEqual(new Set([dad]));
+
+    const changed = await changeSeriesFrom(db, clinicId, created[2].id, { startsOn: "2031-03-25", startTime: "17:30" }, fixture.reception.id, NOW);
+    expect(changed.next!.created.length).toBeGreaterThan(0);
+    expect(new Set(await bookersOf(changed.next!.created.map((a) => a.id)))).toEqual(new Set([dad]));
+
+    // Sem deixar sessões para os testes seguintes.
+    const seriesIds = [series.id, changed.next!.series.id];
+    await sql("delete from public.appointments where series_id = any($1)", [seriesIds]);
+    await sql("delete from public.appointment_series where id = any($1)", [seriesIds]);
+  });
+
+  it("sem escolha, o principal", async () => {
+    const { series, created } = await createSeries(
+      asDb(fixture.reception),
+      clinicId,
+      {
+        patientId: child,
+        serviceId: fixture.ids.consulta2,
+        agendaId: fixture.ids.agendaDra2,
+        locationId: fixture.ids.office,
+        intervalWeeks: 1,
+        startsOn: MON1,
+        startTime: "17:30",
+        maxSessions: 2,
+        actorId: fixture.reception.id,
+      },
+      NOW,
+    );
+    expect(new Set(await bookersOf(created.map((a) => a.id)))).toEqual(new Set([mom]));
+    await sql("delete from public.appointments where series_id = $1", [series.id]);
+    await sql("delete from public.appointment_series where id = $1", [series.id]);
   });
 });
 

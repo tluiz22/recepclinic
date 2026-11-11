@@ -106,9 +106,10 @@ export const POST: APIRoute = async (context) => {
               endsOn: fim === "data" ? formText(form, "ends_on") || "invalida" : null,
               maxSessions: fim === "sessoes" ? formInt(form, "max_sessions") : null,
               homeVisitAddress: formOptionalText(form, "home_visit_address"),
+              // As sessões geradas depois (agendador, "alterar daqui em diante") seguem com o mesmo responsável.
+              bookedByContactId: bookerId,
               actorId,
             });
-            await setAppointmentsBooker(db, clinic.clinicId, created.created.map((a) => a.id), bookerId);
             const skipped = created.skipped.length ? ` ${created.skipped.length} data(s) pulada(s): veja abaixo.` : "";
             const notice = await notify("confirmation", firstByDate(created.created));
             return done(`Série criada: ${created.created.length} sessão(ões) marcada(s).${skipped}${asPrivateNote}${notice}`, `/admin/agenda/serie/${created.series.id}`);

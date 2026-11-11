@@ -22,11 +22,12 @@ const ACTIVE_APPOINTMENT_TYPES = new Set([
   "appointment_reminder",
   "appointment_confirmation",
   "appointment_reschedule",
+  "appointment_rescheduled_by_other",
   "exam_preparation",
   "consultation_guidance",
   "waitlist_offer",
 ]);
-const CANCELLATION_TYPES = new Set(["appointment_cancellation", "appointment_mass_cancellation"]);
+const CANCELLATION_TYPES = new Set(["appointment_cancellation", "appointment_mass_cancellation", "appointment_canceled_by_other"]);
 
 type RetryPayload = { request: Record<string, unknown>; context: RetryContext };
 

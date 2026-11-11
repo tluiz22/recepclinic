@@ -77,6 +77,9 @@ type Row = {
   locations: { name: string; type: string; address: string | null };
 };
 
+/** O número é do próprio paciente: "com avisos para o próprio paciente", "Marcada pelo próprio paciente". */
+const SELF_LABEL = "o próprio paciente";
+
 /** Responsáveis dos pacientes do celular: o nome de cada um na tela ("Carlos (pai)"), por paciente. */
 type Bookers = { sessionContactId: string | null; labels: Map<string, Map<string, string>> };
 
@@ -89,7 +92,7 @@ async function loadBookers(db: DbClient, clinicId: string, sessionContactId: str
   ) as unknown as { patient_id: string; contact_id: string; kinship: string | null; is_self: boolean; contacts: { full_name: string } | null }[];
   for (const row of rows) {
     const byContact = labels.get(row.patient_id) ?? new Map<string, string>();
-    byContact.set(row.contact_id, responsibleLabel({ fullName: row.contacts?.full_name ?? "", kinship: row.kinship, isSelf: row.is_self }, "o próprio paciente"));
+    byContact.set(row.contact_id, responsibleLabel({ fullName: row.contacts?.full_name ?? "", kinship: row.kinship, isSelf: row.is_self }, SELF_LABEL));
     labels.set(row.patient_id, byContact);
   }
   return { sessionContactId, labels };
@@ -112,7 +115,8 @@ export function bookedByText(row: Pick<Row, "patient_id" | "booked_by_contact_id
   const name = you ? "você" : byContact.get(row.booked_by_contact_id);
   if (!name) return null;
   if (row.booking_channel === "admin") return `Marcada pela recepção, com avisos para ${name}`;
-  return you ? "Marcada por você" : `Marcada por ${name}, que recebe os avisos`;
+  if (you) return "Marcada por você";
+  return `Marcada ${name === SELF_LABEL ? "pelo próprio paciente" : `por ${name}`}, que recebe os avisos`;
 }
 
 const toItem = (row: Row, bookers?: Bookers): MyAppointment => {
@@ -326,6 +330,8 @@ export async function rescheduleMine(
   let appointmentId: string;
   // O endereço novo só vira o padrão do contato se ficou gravado no atendimento.
   let addressSaved = true;
+  // Quem remarcou virou quem marcou (senão, o aviso ao outro responsável não cabe).
+  let bookerSaved = true;
   try {
     if (input.rebook) {
       const { appointment } = await bookAppointment(
@@ -349,9 +355,11 @@ export async function rescheduleMine(
     } else {
       appointmentId = (await rescheduleAppointment(db, clinicId, item.id, { start: slot.start, locationId: slot.locationId, channel: "portal", actorId: null }, now)).id;
       if (sessionContactId) {
-        await setAppointmentsBooker(db, clinicId, [appointmentId], sessionContactId).catch((error) =>
-          logError("portal: quem remarcou não gravado", error, { clinica: clinicId, atendimento: appointmentId }),
-        );
+        await setAppointmentsBooker(db, clinicId, [appointmentId], sessionContactId).catch((error) => {
+          // Sem a troca, quem marcou continua o mesmo: o aviso "remarcada" já vai para ele, sem o aviso a mais da VR4.
+          bookerSaved = false;
+          logError("portal: quem remarcou não gravado", error, { clinica: clinicId, atendimento: appointmentId });
+        });
       }
       if (atHome && address && address !== item.homeVisitAddress) {
         const saved = await db.from("appointments").update({ home_visit_address: address }).eq("clinic_id", clinicId).eq("id", appointmentId);
@@ -370,7 +378,7 @@ export async function rescheduleMine(
   }
   if (atHome && address && addressSaved && input.phone && address !== item.homeVisitAddress) await saveContactHomeAddress(db, clinicId, input.phone, address);
   await sendAppointmentNotice(db, clinicId, appointmentId, input.rebook ? "confirmation" : "reschedule", input.sender, now);
-  if (previousBooker && sessionContact && previousBooker.id !== sessionContact.id) {
+  if (bookerSaved && previousBooker && sessionContact && previousBooker.id !== sessionContact.id) {
     const actor = await actorLabel(db, clinicId, item.patientId, sessionContact).catch(() => firstNameOnly(sessionContact.fullName));
     await sendOtherResponsibleNotice(db, clinicId, { appointmentId, kind: "rescheduled_by_other", booker: previousBooker, actor }, input.sender, now);
   }
