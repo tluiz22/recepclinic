@@ -1092,3 +1092,28 @@ As quatro partes num commit só (`f3d057f0`) e as correções da revisão. **Sem
   turmas sem paginação em 30 dias, especialidades lidas duas vezes e as inativas, dia com reserva antes de outro).
   Fica: os bloqueios lidos duas vezes por agenda nos horários livres (custo pequeno, em paralelo).
 - **Tempo (local, 19 agendas):** Agenda ~0,2 s; Próximos horários livres ~0,4 s. Medir no staging (meta < 2 s).
+
+### 16.2 Roteiro de validação da F5a (staging, 11/nov/2026)
+
+**Clínica grande no staging** (cliente, 11/nov/2026): a Clínica Exemplo Saúde (`clinica-teste`) passa a ser a clínica de
+exemplo, com mais 10 profissionais fictícios (2 por especialidade: Pediatria, Psiquiatria, Odontologia, Endocrinologia e
+Oftalmologia), cada um com agenda, Consulta, Retorno, horários e convênios, e atendimentos nas 2 próximas semanas (~45%
+dos horários). Para apresentar a consultórios menores, o cliente desliga e liga os profissionais pela tela. Script
+`scripts/clinica-exemplo-grande.mjs` (simula sem `--confirmar`; rodar de novo renova as 2 semanas e mantém quem está
+desligado; `--remover` desfaz). Limite de profissionais da clínica: 10 → 12. Sem mensagem para ninguém: pacientes
+fictícios com DDD 00 e lembrete já marcado como enviado (o chip de testes está nessa clínica).
+
+1. **Grade (computador):** Agenda › Dia → colunas agrupadas por especialidade, "Profissionais 1 a 7 de 13", setas,
+   "Mais N", nomes e horas fixos, rolagem só dentro da grade, abre na hora atual; cores com legenda; "Livre" leva à
+   Marcar preenchida e Voltar devolve à agenda com os filtros.
+2. **Filtros:** Especialidade ou Profissional (com busca sem acento); Situação; filtro no endereço; sair e voltar não
+   lembra a escolha.
+3. **Reserva do portal:** portal parado na confirmação → horário tracejado "Em reserva até …"; a Marcar da equipe não o
+   oferece.
+4. **Atendimento aberto:** painel à direita; a coluna dele vai para a primeira, destacada; Fechar e Esc devolvem a ordem.
+5. **Próximos horários livres:** Especialidade e "A partir de" → 2 primeiros dias de cada profissional, convênios, "Mais
+   cedo", "Ver mais dias"; tocar abre a Marcar preenchida.
+6. **Celular:** uma agenda por vez (setas, deslizar, lista com busca), "Próximos horários livres" em destaque.
+7. **Clínica pequena:** desligar profissionais até ficarem 7 agendas ou menos → volta o filtro "Agenda" e as colunas na
+   largura toda.
+8. **Tempo:** Agenda e Próximos horários livres em menos de 2 s.
