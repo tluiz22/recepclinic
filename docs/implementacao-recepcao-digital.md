@@ -934,6 +934,9 @@ Testes: `horario-local-servico` (C5 revista), `horarios-de-servico-desativado`, 
 `configuracoes-ii`; Playwright no local (portal em casa × consultório; Horários com filtro, troca de local, erro mantendo
 os campos e salvar). Captura `config-horarios` na fila. Migração aplicada no banco local (OK do cliente).
 
+**11/nov (cliente):** o local "Consulta Domiciliar" da Clínica Exemplo Saúde (staging) passou a "Atendimento
+domiciliar", como nas outras clínicas do staging (o serviço segue "Consulta Domiciliar"). Só o cadastro, sem código.
+
 #### 15.5.7 Convênios de cada exame (cliente, 10/nov/2026; planejado)
 
 Pergunta do cliente na validação: no portal, todo exame aparece com Particular e convênio. Hoje não há vínculo: o

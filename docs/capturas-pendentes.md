@@ -11,3 +11,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 - `config-horarios` — o menu lateral de Configurações ganhou "Portal" e o texto de ajuda do Serviço, no Novo horário, diz que aparecem só os serviços do local escolhido (10/11/2026). Rodar no local (procura a Dra. Helena Costa do seed); no staging falha
 - `config-agendas`, `config-clinica`, `config-convenios`, `config-feriados`, `config-horarios`, `config-lembretes`, `config-locais`, `config-mensagens`, `config-nota-fiscal`, `config-profissionais`, `config-servicos`, `config-whatsapp` — o item "Portal" do menu só aparece com o módulo Portal ligado na clínica; refeitas do staging em 11/11 sem ele (a Clínica Exemplo Saúde do staging está sem o módulo). Refazer se o Portal for ligado nela (F3d, 10/11/2026)
+- `config-locais` — no staging, o local "Consulta Domiciliar" da Clínica Exemplo Saúde passou a "Atendimento domiciliar" (11/11/2026); refazer do staging
