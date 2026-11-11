@@ -51,7 +51,8 @@ export const CAPTURAS = [
   ["config-agendas", "/admin/configuracoes/agendas", ["Nova agenda"], []],
   ["config-servicos", "/admin/configuracoes/servicos", ["Novo serviço"], []],
   // O id da agenda muda a cada seed: "?agenda=@Nome" escolhe o profissional pelo nome (ver abaixo).
-  ["config-horarios", "/admin/configuracoes/horarios?agenda=@Dra. Helena Costa", [], ["[data-agenda-owner]"]],
+  // No staging, a Dra. Ana Karina (consultório e atendimento domiciliar; cliente, 11/nov/2026).
+  ["config-horarios", `/admin/configuracoes/horarios?agenda=@${LOCAL ? "Dra. Helena Costa" : "Dra. Ana Karina"}`, [], ["[data-agenda-owner]"]],
   ["config-feriados", "/admin/configuracoes/feriados", ["Adicionar"], []],
   ["config-convenios", "/admin/configuracoes/convenios", ["Novo plano"], []],
   ["config-lembretes", "/admin/configuracoes/lembretes", [], []],
