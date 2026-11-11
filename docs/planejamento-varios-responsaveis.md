@@ -22,9 +22,12 @@
 > - **VR4 feita (11/nov, mesma branch):** textos aprovados pelo cliente; migração `20270115120000_aviso_outro_responsavel.sql`
 >   (aprovada, só no banco local); envio pelo portal só com o modelo aprovado na Meta (envio à Meta pelo cliente, no
 >   staging). Capturas `config-whatsapp` e `config-mensagens` na fila (recaptura só com autorização). Seção 8.
-> - **Próximo:** depois da F3f, Remarcar/Cancelar do bot (resto da VR3, com o aviso da VR4). No fim: `security-review`,
->   `/code-review`, suíte inteira, staging (migrações `20270113120000`, `20270114120000` e `20270115120000` antes do
->   código), modelos novos enviados à Meta e roteiro de validação.
+> - **Fechamento técnico feito (11/nov):** `main` trazida, `security-review` sem achados, `/code-review` com 2 a 10
+>   corrigidos (bloqueio pelo que o número marcou, decisão do cliente; migração `20270116120000`, só no banco local).
+>   Suíte verde (unidade 1223, banco 1218). Seção 8.
+> - **Próximo:** depois da F3f, o bot pela ligação (ponto 1 do `/code-review`) e Remarcar/Cancelar do bot (resto da VR3,
+>   com o aviso da VR4). No fim: suíte inteira de novo, staging (migrações `20270113120000` a `20270116120000` antes do
+>   código), modelos novos enviados à Meta, recaptura e roteiro de validação.
 
 ## 1. O problema
 
@@ -337,3 +340,29 @@ Testes: `varios-responsaveis-portal.test.ts` (+2: sem o modelo nada sai; com ele
 nada quando a mãe cancela a que passou a ser dela, a mãe recebe quando o pai cancela); `envio-whatsapp.test.ts` com os
 15 modelos padrão. Unidade 1219; banco dos envios e modelos 128 (14 arquivos + o revisto) verdes; `astro check` sem erros.
 
+
+### Fechamento técnico (11/nov/2026, branch `varios-responsaveis`)
+
+Pedido do cliente (11/nov): `main` trazida para a branch (conflito só na fila de capturas: ficou a linha da VR4),
+suíte inteira, `security-review` e `/code-review`, sem juntar na `main`.
+
+- **`security-review`:** nada com confiança ≥ 8 (RLS e funções da VR1, importação, API de pacientes e atendimentos,
+  portal pela ligação ao celular comprovado).
+- **`/code-review`:** 10 pontos. Corrigidos 2 a 10:
+  - séries: as sessões geradas depois (agendador, "alterar daqui em diante") seguem com o responsável do Marcar
+    (`createSeries` recebe `bookedByContactId`; a sessão nova herda o da última, se ainda ligado);
+  - avisos da VR4 entram no reenvio (`retryRules.ts`, `retries.ts`);
+  - remarcar no portal: sem gravar quem remarcou, não sai o aviso a mais da VR4;
+  - "Marcada pelo próprio paciente" (era "por o próprio");
+  - ligar responsável: paciente conferido antes de criar o número; falha ao desativar a outra ficha vira aviso;
+  - busca pelo celular: desativados saem antes do limite de 150;
+  - lista de espera: `appointmentRecipientContact`;
+  - **bloquear no bot (decisão do cliente, 11/nov): cancela só o que o número marcou** (`booked_by_contact_id`); os
+    marcados pelo outro responsável continuam; séries sem sessão do paciente de que ele é o principal também terminam.
+    Texto da tela e artigo `bloquear-contato-no-bot` atualizados (sem captura);
+  - **ficha parecida pelos pacientes ligados ao número:** migração `20270116120000_parecidos_de_todos_os_responsaveis.sql`
+    (aprovada pelo cliente em 11/nov, só no banco local; troca só a função `similar_patient_ids`) e o mesmo nascimento
+    por `patient_contacts` no cadastro.
+- **Fica para a F3f (ponto 1):** o bot ainda acha pacientes e consultas só pelo principal (`bot/manage.ts`,
+  `bot/booking.ts`): o responsável que não é o principal recebe lembrete e aviso, mas no chat não vê as consultas e o
+  bot oferece cadastrar de novo. Entra com o UI-5 (Remarcar e Cancelar do bot). **VR2 e VR3 não vão à produção antes.**

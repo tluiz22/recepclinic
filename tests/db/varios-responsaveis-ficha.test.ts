@@ -132,3 +132,26 @@ describe("Marcar: confirmação e lembrete para (UI-6)", () => {
     expect(await bookedBy()).toBe(dad);
   });
 });
+
+describe("cadastro pelo número que não é o principal (/code-review; migração 20270116120000)", () => {
+  it("o pai cadastra a criança de novo: alerta de ficha parecida pelo nascimento e pelo nome", async () => {
+    const original = await getPatient(asDb(fixture.reception), clinicId, child);
+    const sameBirth = await registerPatient(
+      asDb(fixture.reception),
+      clinicId,
+      { fullName: "Outro Nome Qualquer", birthdate: original.birthdate, contact: { mode: "existing", contactId: dad } },
+      "2031-03-09",
+    );
+    expect(sameBirth.status).toBe("possible_duplicate");
+    if (sameBirth.status === "possible_duplicate") expect(sameBirth.existing.map((e) => e.id)).toContain(child);
+
+    const sameName = await registerPatient(
+      asDb(fixture.reception),
+      clinicId,
+      { fullName: original.fullName, birthdate: "2020-01-01", contact: { mode: "existing", contactId: dad } },
+      "2031-03-09",
+    );
+    expect(sameName.status).toBe("possible_duplicate");
+    if (sameName.status === "possible_duplicate") expect(sameName.existing.map((e) => e.id)).toContain(child);
+  });
+});

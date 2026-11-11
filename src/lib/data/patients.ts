@@ -566,9 +566,16 @@ export async function registerPatient(
   }
 
   if (contactExisted && !input.confirmDuplicate) {
-    // Mesmo nascimento (F3.5) ou, pela equipe, nome parecido (C19), entre os pacientes do mesmo responsável.
+    // Mesmo nascimento (F3.5) ou, pela equipe, nome parecido (C19), entre os pacientes ligados ao número (D14: principal
+    // ou não).
     const [{ data: twins }, similarIds] = await Promise.all([
-      db.from("patients").select("id").eq("clinic_id", clinicId).eq("contact_id", contact.id).eq("is_active", true).eq("birthdate", input.birthdate),
+      db
+        .from("patient_contacts")
+        .select("id:patient_id, patients!inner ( is_active, birthdate )")
+        .eq("clinic_id", clinicId)
+        .eq("contact_id", contact.id)
+        .eq("patients.is_active", true)
+        .eq("patients.birthdate", input.birthdate),
       checkSimilar
         ? db.rpc("similar_patient_ids", { p_clinic_id: clinicId, p_name: fullName, p_contact_id: contact.id }).then((r) => unwrap(r, "Pacientes parecidos"))
         : Promise.resolve([] as string[]),
