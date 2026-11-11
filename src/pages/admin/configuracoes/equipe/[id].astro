@@ -63,6 +63,9 @@ import { configuracoes } from "../../../../lib/ajuda/configuracoes";
   }
 
   <div class="flex max-w-3xl flex-col gap-4">
+    {/* Foto como primeiro item da tela (cliente, 11/nov/2026). */}
+    {!isNew && <PhotoCard action={action} photoUrl={photoUrl} name={member!.displayName ?? member!.email ?? "Equipe"} withDialog={false} />}
+
     <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value={isNew ? "convidar" : "salvar"} />
       <h2 class={SECTION_TITLE}>Quem é</h2>
@@ -168,8 +171,6 @@ import { configuracoes } from "../../../../lib/ajuda/configuracoes";
         <a href={"/admin/configuracoes/equipe"} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
-
-    {!isNew && <PhotoCard action={action} photoUrl={photoUrl} name={member!.displayName ?? member!.email ?? "Equipe"} withDialog={false} />}
 
     {
       !isNew && !isSelf && (

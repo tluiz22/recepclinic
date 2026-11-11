@@ -104,6 +104,12 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
   }
 
   <div class="flex max-w-3xl flex-col gap-4">
+    {/* Foto como primeiro item da tela (cliente, 11/nov/2026). */}
+    {
+      !isNew && (
+        <PhotoCard action={action} photoUrl={photoUrl} name={professional!.displayName} withDialog={ownOnly || !professional!.isActive} />
+      )
+    }
     <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value="salvar" />
       <h2 class={SECTION_TITLE}>Quem é</h2>
@@ -208,11 +214,6 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
           who="do profissional"
           createAgendaHref={ownOnly ? undefined : `/admin/configuracoes/agendas/novo?profissional=${encodeURIComponent(id!)}`}
         />
-      )
-    }
-    {
-      !isNew && (
-        <PhotoCard action={action} photoUrl={photoUrl} name={professional!.displayName} withDialog={ownOnly || !professional!.isActive} />
       )
     }
     {

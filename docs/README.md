@@ -4,16 +4,19 @@
 > [`historico.md`](historico.md) ("Bloco de retomada do README até 10/nov/2026").
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `64ec6b1` (08/nov). Fluxo: [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `be69117` (11/nov), migrações até `20270112120000`. Fluxo: [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`) = `main` atual: portal F2, F3a–F3e, F5a (agenda em colunas), ajustes da
 >   validação. Migrações até `20270112120000` (turmas na faixa, aplicada 11/nov com OK do cliente).
 >
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
-> **Próximo (cliente, 11/nov):** preparar a implantação da `main` em produção (`producao.md`: migrações desde
-> `64ec6b1`, portal na clínica piloto). Depois: F3f, o bot enxuto (seção 15.6), nas condições da F3-9. Roteiro 16.2 da
-> F5a e Resumo do dia por profissional (seção 16.4) validados em 11/nov. Clínica Exemplo Saúde do staging com 12 profissionais
+> **Validação final (11/nov, `59049142`):** CI verde (tipos no formato da CLI 2.121; local atualizada para 3.1.0, mesmo formato),
+> 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
+> **Implantação da `main` na produção (11/nov, feita):** 17 migrações aplicadas e conferidas, código publicado, saúde
+> `ok` (registro em `producao.md`); portal ligado na clínica piloto pelo cliente. Foto como primeiro item em
+> Configurações › Profissionais e Equipe (`be69117`, validada no staging e na produção, 11/nov). **Próximo:** F3f, o bot
+> enxuto (seção 15.6), nas condições da F3-9. Clínica Exemplo Saúde do staging com 12 profissionais
 > (`scripts/clinica-exemplo-grande.mjs`).
 > **Pendentes com o cliente:** vários responsáveis por paciente (planejado: VR-1 a VR-7, D14).
 >
