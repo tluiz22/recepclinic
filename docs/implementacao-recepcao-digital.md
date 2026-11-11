@@ -896,7 +896,8 @@ Passos 5, 6 e 7 ok (11/nov/2026): roteiro concluído.
 Ajuste 4 (cliente, 11/nov/2026): na recepção (Agenda › Marcar e Remarcar), a turma aparecia em lista ("qua 25/11 às
 07:00", só as 10 primeiras); passa à faixa de dias e aos horários do dia por turno, como os outros serviços, **com** as
 vagas ("4 de 4 vagas"; decisão do cliente: a equipe vê, o paciente não). Busca todas as turmas da janela (60 dias).
-Texto do artigo "Marcar atendimento" da Ajuda. Playwright no local (Marcar e Remarcar com a Espirometria).
+Texto do artigo "Marcar atendimento" da Ajuda. Playwright no local (Marcar e Remarcar com a Espirometria). Validado no
+staging pelo cliente (11/nov/2026).
 
 #### 15.5.5 Exames repetidos na agenda de Exames (cliente, 10/nov/2026)
 
