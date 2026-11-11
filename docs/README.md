@@ -11,11 +11,11 @@
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
 > a validação). Banco local único: migração só avisando.
-> **Próximo:** roteiro 16.2 (F5a) no staging. Semana da Agenda (quadro de ocupação) e bordas feitas e validadas pelo
-> cliente (11/nov, seção 16.3). Clínica Exemplo Saúde do staging com 12 profissionais
-> (`scripts/clinica-exemplo-grande.mjs`). Depois: F3f → F3f e produção (F3-9).
+> **Próximo:** cliente valida no staging o Resumo do dia por profissional (seção 16.4; roteiro 16.2 da F5a aprovado em
+> 11/nov). Clínica Exemplo Saúde do staging com 12 profissionais (`scripts/clinica-exemplo-grande.mjs`). Depois: F3f →
+> F3f e produção (F3-9).
 > **Pendentes com o cliente:** "Minhas consultas" da tela "Consulta marcada!" pelo link do profissional; renomear o
-> local "Consulta Domiciliar" do staging; capturas na fila (`agenda-dia`, `config-mensagens`, menu de Configurações,
+> local "Consulta Domiciliar" do staging; capturas na fila (`resumo-do-dia`, `agenda-dia`, `config-mensagens`, menu de Configurações,
 > `config-horarios`); vários responsáveis por paciente (planejado: VR-1 a VR-7, D14). Teste
 > `nao-atendimento-central` às vezes falha (depende do horário).
 >

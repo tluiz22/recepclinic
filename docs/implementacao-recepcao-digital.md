@@ -1150,3 +1150,21 @@ filtro de profissional (`ColumnPicker`), a especialidade que separa os grupos em
 agrupado por especialidade; conferir "N de M" e livres de um dia com o Dia daquele profissional. 2) Tocar num quadro:
 abre o Dia só daquele profissional. 3) Filtro Especialidade e Profissional. 4) Domingo 15/11: "Feriado". 5) Celular:
 tocar nos dias da faixa troca a lista. 6) Dia, Semana e Próximos horários livres na largura toda ao lado do menu.
+
+### 16.4 Relatório do dia › Resumo do dia por profissional (cliente, 11/nov/2026)
+
+Pedido: separar por profissional no computador e no celular; no celular a tela estava bagunçada (linhas quebrando em
+lugares diferentes). Canvas: <https://claude.ai/artifact/EHYw3YWjjmrfGNkDQ5agjJ>. Escolhas do cliente: computador como
+desenhado; celular na opção A (todos os profissionais em blocos que abrem e fecham; a B era um profissional por vez);
+blocos abertos no computador e **fechados no celular**.
+
+Feito (`ResumoDia.astro`, `ResumoLinha.astro`, `consultas/index.astro`):
+- Contadores (confirmados, não confirmados, compareceram, faltaram se houver, cancelados) que filtram a situação
+  (`situacao=` no endereço; tocar de novo tira o filtro). Substituem um filtro Situação separado.
+- Um bloco por profissional (`<details>`), agrupado por especialidade na ordem da Agenda (`buildColumns`); cabeçalho com
+  total, confirmados, não confirmados ("a confirmar" no celular) e "Ver na Agenda" (a agenda dele no dia). "Recolher
+  todos"/"Abrir todos". Com filtro de situação ou um só profissional, tudo aberto também no celular.
+- A partir de 8 agendas: filtros Especialidade e Profissional (os mesmos da Agenda, `ColumnPicker`); o filtro segue ao
+  trocar de dia. Clínica com uma agenda: lista direto, sem blocos.
+- Linha: 5 colunas alinhadas no computador (hora, paciente, serviço, quem marcou, situação); 2 linhas fixas no celular.
+- "Sem atendimentos: …" lista os profissionais ativos sem nada no dia.

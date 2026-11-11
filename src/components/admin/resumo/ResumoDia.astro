@@ -1,20 +1,22 @@
 ---
 // Resumo do Dia › Resumo do dia (F4.8): só informação, como no piloto desde
-// 03/out/2026 (as ações ficam na Agenda): hora, paciente, idade, responsável,
-// telefone, serviço, local, agenda, presença confirmada e quem marcou.
-// Redesign R3 (cliente, 15/out/2026): legenda com contadores e, no
-// computador, uma linha por atendimento; no celular, um cartão por atendimento.
-import { currentPath, withReturn } from "../../../lib/returnPath";
-import { CANCELED_TEXT, appointmentSituation } from "../agenda/situationStyle";
+// 03/out/2026 (as ações ficam na Agenda): hora, paciente, serviço, quem marcou
+// e situação.
+// Por profissional (cliente, 11/nov/2026; seção 16.4): contadores que filtram a
+// situação, um bloco por profissional agrupado por especialidade (como as
+// colunas da Agenda), que abre e fecha: no computador começa aberto, no celular
+// fechado. Linhas em colunas alinhadas no computador e em 2 linhas fixas no
+// celular (hora, paciente e situação; serviço e quem marcou).
+import { currentPath } from "../../../lib/returnPath";
+import ResumoLinha from "./ResumoLinha.astro";
+import { SITUATIONS, appointmentSituation, type Situation } from "../agenda/situationStyle";
 import HowItWorks from "../ui/HowItWorks.astro";
+import Icon from "../Icon.astro";
 import { agenda as ajudaAgenda } from "../../../lib/ajuda/agenda";
-import StatusPill from "../ui/StatusPill.astro";
-import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
-import { serviceBesideCategory } from "../agenda/categoryStyle";
-import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
 import { actorText, type ActorLabel } from "../../../lib/data/agenda/trail";
-import { confirmedByReminder } from "../../../lib/reminderResponse";
+import type { ServiceTagInfo } from "../agenda/ServiceTag.astro";
+import { EXAMS_GROUP, type GridColumn } from "../../../lib/agendaGrid";
 import type { Vocabulary } from "../../../lib/vocabulary";
 
 interface Props {
@@ -23,67 +25,170 @@ interface Props {
   date: string;
   timeZone: string;
   vocabulary: Vocabulary;
+  /** Mais de uma agenda: um bloco por profissional; senão, a lista direto. */
   showAgenda: boolean;
   /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
   tags: Map<string, ServiceTagInfo>;
+  /** Agendas mostradas (já filtradas), na ordem da Agenda: por especialidade e nome. */
+  columns: GridColumn[];
+  /** Situação escolhida nos contadores (null = todas). */
+  situation: Situation | null;
+  situationHref: (situation: Situation | null) => string;
 }
 
-const { appointments, actors, timeZone, tags } = Astro.props;
-const now = new Date();
+const { appointments, actors, timeZone, tags, date, showAgenda, columns, situation, situationHref } = Astro.props;
 const VIA: Record<string, string> = { admin: "pelo painel", whatsapp_bot: "pelo WhatsApp", booking_link: "pelo link" };
 const bookedBy = (a: AgendaAppointment) => {
   if (a.imported) return "Importado na implantação";
   const who = a.createdBy ? actorText(actors.get(a.createdBy)) : null;
-  return `Marcado ${VIA[a.bookingChannel] ?? ""}${who ? ` por ${who}` : ""}`;
-};
-const active = appointments.filter((a) => a.status !== "canceled");
-const canceled = appointments.filter((a) => a.status === "canceled");
-// Presença: o "confirmo" do lembrete também grava a presença, por isso vem primeiro.
-const presence = (a: AgendaAppointment) => {
-  const isActive = a.status === "scheduled" || a.status === "confirmed";
-  if (!isActive) return null;
-  if (confirmedByReminder(a.reminderResponse)) return { label: "Confirmou pelo lembrete", tone: "success" as const, icon: "check" as const };
-  if (a.patientConfirmedAt) return { label: "Presença confirmada", tone: "success" as const, icon: "check" as const };
-  if (a.scheduledAt > now) return { label: "Presença não confirmada", tone: "warning" as const, icon: "clock" as const };
-  return null;
+  const text = `${VIA[a.bookingChannel] ?? ""}${who ? ` por ${who}` : ""}`.trim();
+  return text ? text[0].toUpperCase() + text.slice(1) : "";
 };
 const here = currentPath(Astro.url);
+
+// Contadores: do que está na tela (com o filtro de profissional), antes do filtro de situação.
+const COUNTERS: { id: Situation; one: string; many: string; always: boolean }[] = [
+  { id: "confirmed", one: "confirmado", many: "confirmados", always: true },
+  { id: "pending", one: "não confirmado", many: "não confirmados", always: true },
+  { id: "attended", one: "compareceu", many: "compareceram", always: true },
+  { id: "no_show", one: "faltou", many: "faltaram", always: false },
+  { id: "canceled", one: "cancelado", many: "cancelados", always: true },
+];
+const countOf = (list: AgendaAppointment[], s: Situation) => list.filter((a) => appointmentSituation(a) === s).length;
+const counters = COUNTERS.map((c) => ({ ...c, count: countOf(appointments, c.id) })).filter((c) => c.always || c.count > 0 || c.id === situation);
+
+const shown = (situation ? appointments.filter((a) => appointmentSituation(a) === situation) : appointments).sort(
+  (a, b) => Number(a.status === "canceled") - Number(b.status === "canceled") || a.scheduledAt.getTime() - b.scheduledAt.getTime(),
+);
+// Um bloco por profissional com atendimento (na ordem da Agenda), agrupados por especialidade.
+const blocks = columns
+  .map((column) => ({ column, items: shown.filter((a) => a.agendaId === column.id), all: appointments.filter((a) => a.agendaId === column.id) }))
+  .filter((b) => b.items.length > 0);
+const groups: { name: string; blocks: typeof blocks }[] = [];
+for (const block of blocks) {
+  const last = groups.at(-1);
+  if (last?.name === block.column.group) last.blocks.push(block);
+  else groups.push({ name: block.column.group, blocks: [block] });
+}
+const idle = situation ? [] : columns.filter((c) => c.isActive && !appointments.some((a) => a.agendaId === c.id));
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const totalText = (list: AgendaAppointment[]) => {
+  const canceled = countOf(list, "canceled");
+  const active = list.length - canceled;
+  return [...(active || !canceled ? [plural(active, "atendimento", "atendimentos")] : []), ...(canceled ? [plural(canceled, "cancelado", "cancelados")] : [])].join(" · ");
+};
+// Filtro de situação ou de um profissional: tudo aberto também no celular.
+const alwaysOpen = situation !== null || blocks.length === 1;
+const agendaHref = (agendaId: string) => `/admin/agenda?date=${date}&agenda=${agendaId}`;
 ---
 
 <HowItWorks id="situacoes" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-1">
-  <p class="text-[14.5px] text-ink-soft">Só informação: as ações de cada atendimento ficam na Agenda.</p>
+  <p class="text-[14.5px] text-ink-soft">Só informação: as ações de cada atendimento ficam na Agenda. Toque num contador para ver só aquela situação.</p>
 </HowItWorks>
+
+<nav aria-label="Situação dos atendimentos" class="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+  {
+    counters.map((c) => {
+      const on = c.id === situation;
+      return (
+        <a
+          href={situationHref(on ? null : c.id)}
+          aria-current={on ? "true" : undefined}
+          class={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 no-underline sm:min-w-[150px] sm:px-4 ${on ? "border-brand bg-brand-soft" : "border-line bg-white hover:bg-canvas"}`}
+        >
+          <strong class="text-[20px] leading-none text-ink tabular-nums sm:text-[24px]">{c.count}</strong>
+          <span class={`rounded-full px-2 py-0.5 text-[13.5px] font-semibold ${SITUATIONS[c.id].pill}`}>{c.count === 1 ? c.one : c.many}</span>
+        </a>
+      );
+    })
+  }
+</nav>
+
 {
-  appointments.length > 0 && (
-    // Opção C do redesign do Relatório do dia (cliente, 02/nov/2026): uma linha curta por atendimento.
+  showAgenda && blocks.length > 1 && (
+    <div class="mt-3 flex justify-end">
+      <button type="button" data-resumo-todos class="min-h-11 rounded-lg border border-line-strong bg-white px-3 text-[14.5px] font-semibold text-ink hover:bg-canvas sm:min-h-10">
+        Recolher todos
+      </button>
+    </div>
+  )
+}
+
+{
+  shown.length > 0 && showAgenda && (
+    <div class="mt-2 flex flex-col gap-4" data-resumo-blocos={alwaysOpen ? "abertos" : "celular-fechados"}>
+      {groups.map((group) => (
+        <section aria-label={group.name} class="flex flex-col gap-2">
+          <h2 class="mt-1 text-[13px] font-bold tracking-[.06em] text-ink-soft uppercase">
+            {group.name} · {group.name === EXAMS_GROUP ? plural(group.blocks.length, "agenda", "agendas") : plural(group.blocks.length, "profissional", "profissionais")}
+          </h2>
+          {group.blocks.map(({ column, items, all }) => {
+            const pending = countOf(all, "pending");
+            const confirmed = countOf(all, "confirmed");
+            return (
+              <details open data-resumo-bloco class="group overflow-hidden rounded-xl border border-line bg-white">
+                <summary class="flex min-h-[60px] cursor-pointer list-none items-center gap-3 px-3.5 py-2.5 hover:bg-canvas sm:gap-4 sm:px-[18px] [&::-webkit-details-marker]:hidden">
+                  <Icon name="chevron-right" class="h-4 w-4 shrink-0 text-ink-soft transition-transform group-open:rotate-90" strokeWidth={2.4} />
+                  <span class="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-baseline sm:gap-4">
+                    <span class="truncate text-[16px] font-bold text-ink sm:w-[260px] sm:shrink-0 sm:text-[17px]">{column.name}</span>
+                    <span class="text-[13.5px] text-ink-soft sm:text-[14.5px] sm:text-ink-mid">
+                      {column.group !== column.name && <span class="sm:hidden">{column.group} · </span>}
+                      {totalText(all)}
+                    </span>
+                  </span>
+                  <span class="flex shrink-0 gap-1.5">
+                    {confirmed > 0 && <span class={`rounded-full px-2.5 py-0.5 text-[13px] font-semibold max-sm:hidden ${SITUATIONS.confirmed.pill}`}>{plural(confirmed, "confirmado", "confirmados")}</span>}
+                    {pending > 0 && (
+                      <span class={`rounded-full px-2.5 py-0.5 text-[12.5px] font-bold whitespace-nowrap sm:text-[13px] sm:font-semibold ${SITUATIONS.pending.pill}`}>
+                        <span class="sm:hidden">{pending} a confirmar</span>
+                        <span class="max-sm:hidden">{plural(pending, "não confirmado", "não confirmados")}</span>
+                      </span>
+                    )}
+                  </span>
+                  <a href={agendaHref(column.id)} class="shrink-0 text-[14px] font-semibold text-brand no-underline hover:underline max-sm:hidden">Ver na Agenda</a>
+                </summary>
+                <ul aria-label={`Atendimentos de ${column.name}`} class="border-t border-[#e7eeeb]">
+                  {items.map((a) => <ResumoLinha a={a} tag={tags.get(a.serviceId)} bookedBy={bookedBy(a)} timeZone={timeZone} here={here} />)}
+                </ul>
+                <a href={agendaHref(column.id)} class="flex min-h-11 items-center justify-center border-t border-[#eef3f1] text-[14px] font-semibold text-brand no-underline sm:hidden">Ver na Agenda</a>
+              </details>
+            );
+          })}
+        </section>
+      ))}
+    </div>
+  )
+}
+{
+  shown.length > 0 && !showAgenda && (
     <ul aria-label="Atendimentos do dia" class="mt-3 overflow-hidden rounded-xl border border-line bg-white">
-      {[...active, ...canceled].map((a) => {
-        const situation = appointmentSituation(a);
-        const p = presence(a);
-        const canceledRow = a.status === "canceled";
-        return (
-          <li class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[#e7eeeb] px-4 py-2.5 first:border-t-0 sm:px-[18px]">
-            <strong class={`min-w-[52px] text-[15px] tabular-nums ${canceledRow ? CANCELED_TEXT : "text-ink"}`}>{formatInstant(a.scheduledAt, timeZone, "HH:mm")}</strong>
-            <span class="min-w-0 flex-[1_1_240px] text-[15px]">
-              <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class={`font-bold no-underline hover:text-brand hover:underline ${canceledRow ? CANCELED_TEXT : "text-ink"}`}>{a.patientName}</a>
-              <span class="text-ink-mid">
-                {" · "}
-                <ServiceTag info={tags.get(a.serviceId)} />
-                {serviceBesideCategory(a.serviceName, a.category) && ` ${a.serviceName}`}
-                {` · ${a.agendaName}`}
-              </span>
-              {p && p.tone === "success" && <span class="sr-only"> · {p.label}</span>}
-            </span>
-            <span class="min-w-[160px] text-[13.5px] text-ink-soft">{bookedBy(a).replace(/^Marcado /, "")}</span>
-            <StatusPill situation={situation} />
-          </li>
-        );
-      })}
+      {shown.map((a) => <ResumoLinha a={a} tag={tags.get(a.serviceId)} bookedBy={bookedBy(a)} timeZone={timeZone} here={here} />)}
     </ul>
   )
 }
 {
-  appointments.length === 0 && (
-    <p class="mt-3 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Nenhum atendimento neste dia.</p>
+  shown.length === 0 && (
+    <p class="mt-3 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">
+      {situation ? "Nenhum atendimento nessa situação." : "Nenhum atendimento neste dia."}
+    </p>
   )
 }
+{showAgenda && idle.length > 0 && shown.length > 0 && <p class="mt-3 text-[14.5px] text-ink-soft">Sem atendimentos: {idle.map((c) => c.name).join(", ")}.</p>}
+
+<script>
+  // Blocos: no celular começam fechados (cliente, 11/nov/2026), salvo com filtro; "Recolher todos" / "Abrir todos".
+  const wrap = document.querySelector<HTMLElement>("[data-resumo-blocos]");
+  const blocks = [...document.querySelectorAll<HTMLDetailsElement>("[data-resumo-bloco]")];
+  const toggle = document.querySelector<HTMLButtonElement>("[data-resumo-todos]");
+  const sync = () => {
+    if (toggle) toggle.textContent = blocks.some((b) => b.open) ? "Recolher todos" : "Abrir todos";
+  };
+  if (wrap?.dataset.resumoBlocos === "celular-fechados" && matchMedia("(max-width: 639px)").matches) blocks.forEach((b) => (b.open = false));
+  blocks.forEach((b) => b.addEventListener("toggle", sync));
+  toggle?.addEventListener("click", () => {
+    const open = !blocks.some((b) => b.open);
+    blocks.forEach((b) => (b.open = open));
+    sync();
+  });
+  sync();
+</script>
