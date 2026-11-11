@@ -19,9 +19,10 @@
 > - **VR5 sem o bot feita (11/nov, mesma branch):** importação com o 2º responsável (migração
 >   `20270114120000_importacao_segundo_responsavel.sql`, aprovada pelo cliente e aplicada só no banco local), artigos e
 >   FAQ da Central; Métricas sem mudança; nenhuma captura da Central na fila. Detalhe na seção 8.
-> - **Próximo:** VR4 (modelo da Meta), **só depois de perguntar ao cliente**. Depois da F3f: Remarcar/Cancelar do bot
->   (resto da VR3). No fim: `security-review`, `/code-review`, suíte inteira, staging (migrações `20270113120000` e
->   `20270114120000` antes do código) e roteiro de validação.
+> - **VR4: textos dos dois modelos aprovados pelo cliente (11/nov)**, sem código ainda (seção 8). O código precisa de
+>   uma migração (as chaves novas no `whatsapp_templates_template_key_check`): perguntar ao cliente antes.
+> - **Próximo:** VR4 (código, com a migração, se o cliente aprovar). Depois da F3f: Remarcar/Cancelar do bot (resto da
+>   VR3). No fim: `security-review`, `/code-review`, suíte inteira, staging (migrações antes do código) e roteiro.
 
 ## 1. O problema
 
@@ -296,4 +297,22 @@ Playwright (script isolado) do link em 390 e 1280: erro só no 2º WhatsApp, `ar
 corrigido sem erro, número igual ao 1º recusado; sem erro no console. O link de teste foi apagado do banco local.
 
 **Fica para o fim da frente:** `security-review`, `/code-review` e a suíte inteira, antes do staging.
+
+### VR4 Aviso ao outro responsável: textos (11/nov/2026, sem código)
+
+Aprovados pelo cliente (11/nov), categoria Utilidade, `pt_BR`, no formato dos avisos de hoje (saudação; "o
+atendimento de {{4}} ({{5}})", que serve também para exame e retorno):
+
+- `rc_remarcada_por_outro_v1`: "Olá, {{1}}! Aqui é {{2}}.\n*Consulta remarcada*\n{{3}} remarcou o atendimento de {{4}}
+  ({{5}}) para *{{6}}*.\n\nDúvidas? Responda aqui."
+- `rc_cancelada_por_outro_v1`: "Olá, {{1}}! Aqui é {{2}}.\n*Consulta cancelada*\n{{3}} cancelou o atendimento de {{4}}
+  ({{5}}) de {{6}}.\n\nSe quiser marcar outro horário, é só responder esta mensagem."
+- Variáveis: {{1}} primeiro nome de quem marcou; {{2}} a clínica; {{3}} primeiro nome de quem mexeu, com o parentesco
+  ("Ana (mãe)"); {{4}} primeiro nome do paciente; {{5}} serviço com o profissional; {{6}} data e hora.
+- Sai só quando quem remarca ou cancela (portal; depois da F3f, o bot) não é quem marcou; a recepção remarcando não
+  manda (o aviso de hoje já vai para quem marcou). Envio à Meta pelo cliente (Configurações › WhatsApp, no staging);
+  o código só manda com o modelo aprovado.
+- **Para o código:** migração com as duas chaves novas na lista de `whatsapp_templates.template_key` (e o
+  `message_type`, se tiver lista), `DEFAULT_TEMPLATES`, o envio no `rescheduleMine` (para o anterior, antes de trocar
+  quem marcou) e no `cancelMine`.
 
