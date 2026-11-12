@@ -105,7 +105,6 @@ const today = todayIn(clinic.timezone, now);
 const indicatorRange = { from: period.from, to: period.to > today && period.from <= today ? today : period.to };
 const compare = params.get("comparar") !== "0";
 const grouping = params.get("agrupar") === "dia" ? "day" : params.get("agrupar") === "semana" ? "week" : defaultGrouping(indicatorRange);
-const sortByNoShow = params.get("ordem") === "faltas";
 
 // Serviço e local (Desempenho).
 const performanceTab = tab === "desempenho";
@@ -162,7 +161,6 @@ const keep = {
   local: selectedLocation?.id ?? "",
   comparar: compare ? "" : "0",
   agrupar: params.get("agrupar") ?? "",
-  ordem: sortByNoShow ? "faltas" : "",
   operacao: operation === "marcar" ? "" : operation,
   origem: digitalOrigin === "todas" ? "" : digitalOrigin,
   paciente: filterPatient?.id ?? "",
@@ -206,7 +204,6 @@ const returnsApply = !selectedService || selectedService.category === "consultat
 const hasFilters = !!(selectedAgenda || selectedService || selectedLocation);
 const performanceLinks = {
   grouping: (g: "day" | "week") => link({ agrupar: g === "day" ? "dia" : "semana" }),
-  sort: (byNoShow: boolean) => `${link({ ordem: byNoShow ? "faltas" : "" })}#por-servico`,
   clearFilters: hasFilters ? link({ agenda: "", servico: "", local: "" }) : null,
   wholeMonth: link({ periodo: "", de: "", ate: "" }),
   retry: link({}),
@@ -421,7 +418,6 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
             compare={compare}
             grouping={grouping}
             returnsApply={returnsApply}
-            sortByNoShow={sortByNoShow}
             links={performanceLinks}
             here={here}
             now={now}
