@@ -187,8 +187,18 @@ describe("no menu", () => {
     expect(JSON.stringify(data)).not.toContain("991337010");
   });
 
-  it("agradecimento: resposta curta e o menu", async () => {
+  it("agradecimento depois do menu: sem resposta (cortesia, BE-8); com pedido junto, a base responde", async () => {
     await reset(phone);
+    await say(phone, "menu");
+    expect(await say(phone, "obrigado!")).toEqual([]);
+    expect(bodies(await say(phone, "obrigado, vocês fazem exame?"))).toEqual(["Sim, fazemos *Exame*.", MENU]);
+  });
+
+  it("agradecimento depois de uma mensagem que não fecha assunto: resposta curta e o menu", async () => {
+    await reset(phone);
+    await adminClient()
+      .from("whatsapp_messages")
+      .insert({ clinic_id: f.clinicId, contact_phone: phone, direction: "outbound", message_type: "agent_reply", status: "sent", created_at: new Date().toISOString() });
     expect(bodies(await say(phone, "obrigado!"))).toEqual(["Por nada! Se precisar, é só mandar mensagem por aqui.", MENU]);
   });
 

@@ -187,7 +187,8 @@ export const JOURNEY: JourneySection[] = [
 /** Regras gerais, fora do desenho. */
 export const JOURNEY_RULES = [
   "A qualquer momento: \"0\", \"Voltar ao menu\" ou \"voltar\" mostra o menu principal.",
-  "Conversa parada por 15 minutos fora do começo (no menu, na escolha do preparo): o bot encerra com aviso; a próxima mensagem começa de novo.",
+  "Conversa parada por 15 minutos no menu: volta ao começo em silêncio (cliente, 11/nov/2026); parada na escolha do preparo: o bot encerra com aviso. A próxima mensagem começa de novo.",
+  "Cortesia depois do menu, de um link ou de uma orientação (\"ok\", \"obrigado\", \"perfeito\", 👍, reação): sem resposta, sem prazo e sem encerrar a conversa (BE-8). Com pedido junto (\"ok, mas qual o valor?\") segue o caminho normal; depois de uma pergunta do bot ou na 1ª mensagem, responde.",
   "Saíram com o bot enxuto (F3f, 11/nov/2026): a marcação no chat, a entrada com a data de nascimento, a especialidade antes do menu, os submenus Consultas e Exames, Informações gerais, o Encaixe no chat e o pedido não concluído.",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
   "Paciente com mais de um responsável (D14, 11/nov/2026): confirmação, lembrete, preparo, orientações, avisos da clínica e lista de espera vão para quem marcou; \"Confirmar presença\", \"Remarcar\" e \"Cancelar\" do lembrete e a resposta à oferta da lista de espera valem de qualquer responsável ligado (ou de quem marcou) (F3f); o aviso do cancelamento pelo portal vai para quem cancelou e, quando quem remarca ou cancela não é quem marcou, quem marcou recebe \"Consulta remarcada\" ou \"Consulta cancelada\" (modelo próprio da Meta, só com ele aprovado). No portal, cada número vê os pacientes de que é responsável.",

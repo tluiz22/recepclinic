@@ -1092,11 +1092,21 @@ recebia "não está mais ativo". Teste de banco `varios-responsaveis-bot.test.ts
   da publicação na produção). Consequência: o paciente não entra mais sozinho na lista de espera (o Encaixe saiu do chat); entra
   pela recepção.
 
-**Retomar daqui (sessão de 11/nov encerrada pelo cliente):** branch `bot-enxuto` (só local) com E1 (`99fa86ec`) e E2+E3
-(`d167c099`); validação da E2+E3 pelo cliente **pendente**. Decisão do cliente (11/nov): **conversa parada no menu encerra em
-silêncio** (volta ao começo sem mandar o "encerramos este atendimento"), a fazer junto da próxima etapa liberada. Depois: E4
-(cortesia, BE-8), E5 (portal), E6 (confirmação, migração), E7 (lembrete novo), E8 (fechamento). Captura `config-mensagens` na
-fila, sem autorização ainda.
+**E2+E3 validadas pelo cliente (11/nov/2026).**
+
+**E4 feita (11/nov/2026), com a conversa parada no menu:**
+- **Cortesia (BE-8):** `isCourtesyMessage` (`courtesy.ts`, a mesma da C27) em `router.ts`: com a conversa no começo ou no menu e
+  a última mensagem enviada ao número sendo do bot e de fechar assunto (menu, link do portal, links do lembrete, "a clínica
+  responderá", "que bom que ajudou", presença confirmada, preparo, encerramento), "ok", "obrigado", 👍 ou reação ficam sem
+  resposta, sem mudar o estado. Com pedido junto, depois de pergunta do bot, de template ou da recepção, ou na 1ª mensagem do
+  número: responde (na dúvida, responde).
+- **Parada no menu (cliente, 11/nov):** `closeIdleConversations` volta ao começo em silêncio; nos outros passos (lista de preparo),
+  o aviso de encerramento como antes.
+- Jornada do bot (regras gerais) e artigo do WhatsApp na Central. Testes: `bot-enxuto.test.ts` (+5), `bot-base-de-conhecimento`
+  (agradecimento depois do menu fica sem resposta). Unidade 1217, banco 1137, `astro check` sem erros.
+
+**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validação pendente). Depois: E5 (portal, BE-5/BE-6),
+E6 (confirmação, migração), E7 (lembrete novo), E8 (fechamento). Captura `config-mensagens` na fila, sem autorização ainda.
 
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 

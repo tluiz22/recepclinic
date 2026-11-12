@@ -41,6 +41,7 @@ import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../c
 import { listBotMessages } from "../customMessages";
 import { askReceptionReason, firstMessageAnswer, handleKnowledgeReply, handleReceptionReason, knowledgeHookFor, pendingReasonOf, performTakeover, REASON_KEY } from "./knowledge/respond";
 import { logError } from "../../../log";
+import { isCourtesyMessage } from "../courtesy";
 
 // Entrada do bot (F6.3): chamado pelo webhook para cada mensagem recebida, já
 // registrada. Só com o item "Bot de WhatsApp" liberado (D11) e o WhatsApp da
@@ -91,6 +92,10 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     }
   }
 
+  // Cortesia (BE-8, cliente, 11/nov/2026): "ok", "obrigado", 👍 ou reação depois do menu, de um link ou de uma
+  // orientação não tem resposta, sem prazo e sem encerrar a conversa. Com pedido junto, não é cortesia (segue o caminho).
+  if (isCourtesyMessage(message) && (await courtesyNeedsNoReply(env.db, env.clinicId, convo))) return "skipped";
+
   const b = await createBot(env, convo, message.id ?? null, message.type ?? null);
   // Base de conhecimento (BC, Etapa 4): texto digitado, ou toque numa mensagem dela, fora dos passos de texto livre.
   b.incomingText = message.type === "text" ? (messageBody(message) ?? "").trim() || null : null;
@@ -112,6 +117,30 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   const count = b.notUnderstoodSaid ? convo.notUnderstoodCount + 1 : 0;
   if (count !== convo.notUnderstoodCount) await setNotUnderstoodCount(env.db, env.clinicId, phone, count);
   return "handled";
+}
+
+/**
+ * Mensagens do bot depois das quais a cortesia fica sem resposta (BE-8): o menu, os links do portal e as orientações
+ * que fecham um assunto. Depois de uma pergunta (Sim/Não, "Você quis dizer…?", lista de preparo), de um template ou da
+ * recepção, responde (na dúvida, responde).
+ */
+const COURTESY_SILENT_AFTER = /^bot_(?:menu|portal_\w+|reminder_(?:reschedule|cancel)_link|kb_will_reply|kb_resolved|idle_closed|presence_(?:confirmed|already_confirmed|location)|appointment_inactive|info_preparation)$/;
+
+async function courtesyNeedsNoReply(db: DbClient, clinicId: string, convo: Conversation): Promise<boolean> {
+  if (convo.state !== WELCOME && convo.state !== "MENU") return false;
+  const last = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("message_type")
+      .eq("clinic_id", clinicId)
+      .eq("contact_phone", convo.phone)
+      .eq("direction", "outbound")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    "Última mensagem enviada",
+  );
+  return !!last && COURTESY_SILENT_AFTER.test(last.message_type);
 }
 
 /** Responde a mensagem conforme o ponto da conversa (o "não entendi" passa pelo motor, que conta). */
@@ -256,8 +285,9 @@ const AT_REST = [WELCOME, "HUMAN_HANDOFF"];
 /**
  * Rotina de minuto em minuto (agendador do Supabase): conversa parada há 15
  * minutos no meio de um atendimento recebe o aviso de encerramento, volta ao
- * começo e o funil registra a desistência por tempo. Só conversas do último
- * dia (a janela de 24h da Meta). Devolve quantas encerrou.
+ * começo e o funil registra a desistência por tempo. Parada no menu (nada em
+ * andamento): volta ao começo em silêncio (cliente, 11/nov/2026). Só conversas
+ * do último dia (a janela de 24h da Meta). Devolve quantas encerrou.
  */
 export async function closeIdleConversations(db: DbClient, clinicId: string, sender: ClinicSender | null, now: Date = new Date()): Promise<number> {
   if (!sender || !(await hasFeature(db, clinicId, "whatsapp_bot"))) return 0;
@@ -281,6 +311,12 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
       const convo = await openConversation(db, clinicId, phone, await contactIdByPhone(db, clinicId, phone));
       // Respondeu enquanto a rotina rodava.
       if (AT_REST.includes(convo.state) || !isPastIdleTimeout(convo.updatedAt, now)) continue;
+      if (convo.state === "MENU") {
+        await logAbandonment(db, clinicId, convo, "timeout", now);
+        await setConversationState(db, clinicId, phone, WELCOME, { context: {} }, now);
+        closed++;
+        continue;
+      }
       const outcome = await sender.text(phone, idleText);
       await recordOutboundMessage(
         db,

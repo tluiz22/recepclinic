@@ -28,7 +28,8 @@ export const whatsappArtigos = [
     notes: [
       "Sem o portal ligado para a clínica, Agendar, Minhas consultas, Profissionais e o Remarcar ou Cancelar do lembrete passam a conversa para a recepção.",
       "A qualquer momento, \"0\", \"Voltar ao menu\" ou \"voltar\" mostra o menu principal.",
-      "Conversa parada por 15 minutos no menu: o bot encerra com aviso; a próxima mensagem começa de novo.",
+      "Conversa parada por 15 minutos no menu: volta ao começo sem mandar nada; a próxima mensagem começa de novo.",
+      "\"Ok\", \"obrigado\" ou 👍 depois do menu ou de um link: o bot não responde (não precisa); com uma pergunta junto, responde.",
       "Na 4ª mensagem seguida que não entende, o bot pergunta \"Você quer falar com a recepção?\". Em recesso (Agenda › Bloquear), a transferência manda a mensagem de recesso.",
       "Áudio, foto e figurinha: o bot avisa que só lê texto.",
       "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",

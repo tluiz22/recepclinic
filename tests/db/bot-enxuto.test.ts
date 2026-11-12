@@ -53,7 +53,7 @@ const deps = (): WebhookDeps => ({
   senderFor: async () => sender,
 });
 
-async function say(phone: string, input: string | { id: string } | { payload: string }): Promise<Sent[]> {
+async function say(phone: string, input: string | { id: string } | { payload: string } | { reaction: string }): Promise<Sent[]> {
   sent = [];
   const id = `wamid.be.in.${++seq}`;
   const from = phone.slice(1);
@@ -62,7 +62,9 @@ async function say(phone: string, input: string | { id: string } | { payload: st
       ? { id, from, type: "text", text: { body: input } }
       : "payload" in input
         ? { id, from, type: "button", button: { payload: input.payload, text: "botão" } }
-        : { id, from, type: "interactive", interactive: { list_reply: { id: input.id, title: "" } } };
+        : "reaction" in input
+          ? { id, from, type: "reaction", reaction: { message_id: `wamid.be.out.${seq}`, emoji: input.reaction } }
+          : { id, from, type: "interactive", interactive: { list_reply: { id: input.id, title: "" } } };
   const summary = await processWebhook({ entry: [{ changes: [{ field: "messages", value: { metadata: { phone_number_id: NUMBER }, messages: [message] } }] }] }, deps(), new Date());
   expect(summary.errors).toBe(0);
   return sent;
@@ -251,7 +253,7 @@ describe("botões do lembrete atual (rc_lembrete_v1)", () => {
 });
 
 describe("conversa parada há 15 minutos", () => {
-  it("no menu: recebe o aviso e volta ao começo", async () => {
+  it("no menu: volta ao começo em silêncio (cliente, 11/nov/2026)", async () => {
     const phone = `${PREFIX}66`;
     await say(phone, "oi");
     const db = createClinicServiceClient(f.clinicId, env());
@@ -259,9 +261,57 @@ describe("conversa parada há 15 minutos", () => {
     sent = [];
     expect(await closeIdleConversations(db, f.clinicId, sender, new Date(now.getTime() + 10 * 60_000))).toBe(0);
     expect(await closeIdleConversations(db, f.clinicId, sender, new Date(now.getTime() + 16 * 60_000))).toBeGreaterThanOrEqual(1);
+    expect(sent.filter((m) => m.to === phone)).toEqual([]);
+    expect((await conversation(phone)).state).toBe("WELCOME");
+  });
+
+  it("no meio de um passo (lista de preparo): o aviso de encerramento e volta ao começo", async () => {
+    const phone = `${PREFIX}67`;
+    await say(phone, "oi");
+    await adminClient().from("conversation_state").update({ state: "INFO_PREP_SELECT" }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
+    const db = createClinicServiceClient(f.clinicId, env());
+    sent = [];
+    expect(await closeIdleConversations(db, f.clinicId, sender, new Date(Date.now() + 16 * 60_000))).toBeGreaterThanOrEqual(1);
     expect(sent.filter((m) => m.to === phone).map((m) => m.body)).toEqual([
       "Como não tivemos resposta nos últimos minutos, encerramos este atendimento. Quando quiser, é só mandar uma mensagem que começamos de novo. 😊",
     ]);
     expect((await conversation(phone)).state).toBe("WELCOME");
+  });
+});
+
+describe("cortesia (BE-8)", () => {
+  it("depois do menu: \"obrigado\", \"ok 👍\" e reação ficam sem resposta e a conversa segue no menu", async () => {
+    const phone = `${PREFIX}68`;
+    await say(phone, "oi");
+    expect(await say(phone, "obrigado")).toEqual([]);
+    expect(await say(phone, "ok 👍")).toEqual([]);
+    expect(await say(phone, { reaction: "👍" })).toEqual([]);
+    expect((await conversation(phone)).state).toBe("MENU");
+    // O menu segue valendo: "1" ainda é Agendar.
+    expect((await say(phone, "1"))[0]).toMatchObject({ kind: "link" });
+  });
+
+  it("depois do link: sem resposta, sem prazo; com pedido junto, segue o caminho normal", async () => {
+    const phone = `${PREFIX}69`;
+    await say(phone, "oi");
+    await say(phone, "1");
+    expect(await say(phone, "Perfeito, obrigada!")).toEqual([]);
+    expect(await say(phone, "👌")).toEqual([]);
+    expect((await say(phone, "ok, mas qual o valor?")).length).toBeGreaterThan(0);
+  });
+
+  it("1ª mensagem do número (nada do bot antes): responde com o menu", async () => {
+    const reply = await say(`${PREFIX}70`, "ok");
+    expect(reply).toHaveLength(1);
+    expect(reply[0]).toMatchObject({ kind: "list" });
+  });
+
+  it("depois de uma pergunta do bot (Falar com a recepção? Sim/Não): \"ok\" não é ignorado", async () => {
+    const phone = `${PREFIX}71`;
+    await say(phone, "oi");
+    await adminClient()
+      .from("whatsapp_messages")
+      .insert({ clinic_id: f.clinicId, contact_phone: phone, direction: "outbound", message_type: "bot_reception_confirm", status: "sent", created_at: new Date().toISOString() });
+    expect((await say(phone, "ok")).length).toBeGreaterThan(0);
   });
 });
