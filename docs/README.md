@@ -64,7 +64,7 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 
 ## Documentos
 
-**Comece por:** [`roadmap.md`](roadmap.md) (estado de tudo) e `iniciativas/<frente>/status.md` (a frente em andamento).
+**Manual de uso:** [`manual-de-uso.md`](manual-de-uso.md). **Comece por:** [`roadmap.md`](roadmap.md) (estado de tudo) e `iniciativas/<frente>/status.md` (a frente em andamento).
 
 - **Permanentes:** [`arquitetura.md`](arquitetura.md) (D1–D14), [`triagem-piloto.md`](triagem-piloto.md),
   [`politica-pedidos-de-autoridades.md`](politica-pedidos-de-autoridades.md).
