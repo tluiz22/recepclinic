@@ -32,7 +32,7 @@ export const pacientesArtigos = [
     category: "pacientes",
     module: "Pacientes › Novo",
     where: "Pacientes › Novo paciente",
-    keywords: ["cadastrar paciente", "novo paciente", "responsável", "whatsapp", "plano", "carteirinha", "anotação"],
+    keywords: ["cadastrar paciente", "novo paciente", "responsável", "whatsapp", "plano", "carteirinha", "anotação", "ficha repetida", "outro responsável"],
     synonyms: ["incluir paciente", "criar cadastro", "adicionar cliente"],
     related: ["responsavel-e-contato", "ficha-do-paciente", "marcar-atendimento"],
     order: 31,
@@ -44,6 +44,7 @@ export const pacientesArtigos = [
       "Com Convênios, escolha o plano; carteirinha e validade são opcionais.",
       "Toque em Cadastrar e confira os dados na janela que abre (o nascimento aparece com a idade). Toque em Confirmar e cadastrar.",
       "Se o contato já tem alguém com o nome parecido ou o mesmo nascimento, a tela pergunta se é a mesma pessoa: Sim abre a ficha que já existe; Não cadastra.",
+      "Se o paciente já tem ficha com outro responsável (mesmo nome e mesmo nascimento), a tela mostra a ficha e o responsável dela. Sim liga o WhatsApp digitado a essa ficha como outro responsável (com o parentesco, opcional), sem criar ficha nova; Não cadastra.",
       "Se já existe um contato com o nome parecido e outro WhatsApp, escolha atualizar o WhatsApp dele (o paciente entra junto dele) ou cadastrar um novo contato.",
     ],
     fields: [
@@ -71,6 +72,7 @@ export const pacientesArtigos = [
     intro: "A ficha reúne os dados, os responsáveis (quem fala com a clínica), o plano de saúde, o histórico de atendimentos e as abas Documentos, Anotações e Lembretes.",
     fields: [
       { name: "Responsáveis", text: "Quem fala com a clínica: nome, parentesco, número e WhatsApp de cada um; com mais de um, o principal tem o selo Principal. O nome abre a página do responsável (editar nome e telefone). Com uma conversa no atendimento humano, mostra se está aguardando ou em atendimento, com Abrir no WhatsApp e Finalizar atendimento. Veja Responsável/contato para adicionar, tornar principal e desligar." },
+      { name: "Possível ficha repetida", text: "Quando outra ficha ativa tem o mesmo nome e nascimento (acontece pelo portal e pelo bot, onde ninguém se liga sozinho), uma faixa mostra a outra ficha e o responsável dela. \"Ligar o número e desativar a repetida\" liga o número da mais nova à mais antiga e desativa a repetida (o histórico dela não passa); \"Não é a mesma\" separa as duas e o aviso não volta. Administrador e Recepção." },
       { name: "Portal bloqueado", text: "Com o Portal: quando o celular pediu código demais ou marcou 5 consultas em 24 h, uma faixa no alto mostra até quando fica bloqueado e, com mais de um responsável, de quem é o celular. \"Liberar agora\" (Administrador e Recepção) libera na hora; vale para todos os pacientes do mesmo celular." },
       { name: "Histórico", text: "Os atendimentos próximos e anteriores, das agendas que a sua função vê (o Profissional vê só as próprias). Com mais de um responsável, cada atendimento diz quem marcou e quem recebe os avisos." },
       { name: "Anotações", text: "Texto livre com data e autor. A equipe vê." },

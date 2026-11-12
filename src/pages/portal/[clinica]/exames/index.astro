@@ -1,14 +1,15 @@
 ---
 // Exames, passo 1 (F2d; D4; canvas EX1): "Qual exame você vai fazer?", um cartão por exame (valor particular ou
-// convênio, duração e a etiqueta do preparo), busca a partir de 8 exames e "Falar com a recepção" no fim. Depois, as
+// convênio, duração e a etiqueta do preparo), busca a partir de 8 exames, "Ver valores e convênios aceitos" de todos
+// os exames (cliente, 11/nov/2026) e "Falar com a recepção" no fim. Depois, as
 // telas da consulta servem ao exame: particular ou convênio (todos os convênios), dias e horários da agenda da equipe
-// com o preparo, celular e código, quem será atendido, revisão e "Exame marcado".
+// (o preparo só em "Exame marcado", cliente, 11/nov/2026), celular e código, quem será atendido, revisão e "Exame marcado".
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
 import { openPortalPage } from "../../../../lib/data/portal/page";
 import { examProfessional, nextFreeSlots } from "../../../../lib/data/portal/portal";
-import { formatPrice, portalHref, portalSteps, readPlace, receptionWhatsappHref, stepPosition } from "../../../../lib/portal";
+import { examValuesText, formatPrice, portalHref, portalSteps, readPlace, receptionWhatsappHref, stepPosition } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 if (page.kind === "not_found") Astro.response.status = 404;
@@ -98,6 +99,16 @@ const waHref = waPhone ? receptionWhatsappHref(waPhone, "Olá! Quero marcar um e
             Nenhum exame com esse nome.
           </p>
         )}
+        <details class="rounded-[14px] border border-gray-200 bg-white px-4" data-portal-exam-values>
+          <summary class="flex min-h-[52px] cursor-pointer items-center font-bold text-clinic-ink">Ver valores e convênios aceitos</summary>
+          <ul class="flex flex-col gap-2 pb-3.5 text-base">
+            {exams.map((exam) => (
+              <li>
+                <b>{exam.name}:</b> {examValuesText(exam)}
+              </li>
+            ))}
+          </ul>
+        </details>
         <div class="flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5">
           <span class="text-base text-gray-600">Não achou o exame do seu pedido médico?</span>
           {waHref ? (

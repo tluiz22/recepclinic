@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   backFromProfessional,
   changeProfessionalHref,
   doctorsHref,
   chosenModality,
+  examValuesText,
   initialsOf,
   isPortalHost,
   matchesName,
@@ -224,5 +226,27 @@ describe("exame nas telas da consulta (F2d)", () => {
   it("preparo sem os marcadores do WhatsApp, só em palavras inteiras", () => {
     expect(whatsappPlain("Jejum de *8 horas*. Use _roupa leve_.")).toBe("Jejum de 8 horas. Use roupa leve.");
     expect(whatsappPlain("Veja site.com/preparo_jejum_8h e o arquivo exame_sangue_v2")).toBe("Veja site.com/preparo_jejum_8h e o arquivo exame_sangue_v2");
+  });
+});
+
+describe("exames: valores e preparo (cliente, 11/nov/2026)", () => {
+  const exam = { priceCents: 25000, priceVaries: false, acceptsPrivate: true, plans: [{ name: "Unimed" }, { name: "Bradesco" }] };
+
+  it("valores e convênios de cada exame", () => {
+    expect(examValuesText(exam)).toBe(nb("Particular, R$ 250. Unimed, Bradesco."));
+    expect(examValuesText({ ...exam, priceVaries: true, plans: [] })).toBe(nb("Particular, a partir de R$ 250."));
+    expect(examValuesText({ ...exam, priceCents: null, plans: [] })).toBe("Particular.");
+    expect(examValuesText({ ...exam, acceptsPrivate: false, plans: [{ name: "Unimed" }] })).toBe("Não aceita particular. Unimed.");
+  });
+
+  it("a lista de exames tem o \"Ver valores e convênios aceitos\"", () => {
+    const page = readFileSync("src/pages/portal/[clinica]/exames/index.astro", "utf8");
+    expect(page).toContain("Ver valores e convênios aceitos");
+    expect(page).toContain("examValuesText(exam)");
+  });
+
+  it("o preparo sai dos dias e horários e da revisão e fica só em \"Exame marcado\"", () => {
+    for (const page of ["horarios", "revisao"]) expect(readFileSync(`src/pages/portal/[clinica]/[profissional]/${page}.astro`, "utf8")).not.toContain("PortalPreparation");
+    expect(readFileSync("src/pages/portal/[clinica]/[profissional]/marcada.astro", "utf8")).toContain("<PortalPreparation");
   });
 });

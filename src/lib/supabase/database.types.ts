@@ -1551,6 +1551,38 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
+                },"patient_not_duplicates": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"created_by": string | null,"id": string,"patient_a": string,"patient_b": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"patient_a": string,"patient_b": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"patient_a"?: string,"patient_b"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "patient_not_duplicates_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "patient_not_duplicates_clinic_id_patient_a_fkey"
+      columns: ["clinic_id","patient_a"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "patient_not_duplicates_clinic_id_patient_b_fkey"
+      columns: ["clinic_id","patient_b"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"patient_notes": {
                   Row: {
                     "body": string,"clinic_id": string,"created_at": string,"created_by": string | null,"from_observations": boolean,"id": string,"patient_id": string,"updated_at": string | null
@@ -2911,6 +2943,9 @@ isOneToOne: false
                            },
 "mark_my_invitations_accepted":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"mark_patients_not_duplicate":
+{ Args: { "p_clinic_id": string,"p_other_id": string,"p_patient_id": string }; Returns: undefined
                            },
 "mark_reception_summary_sent":
 { Args: { "p_date": string }; Returns: undefined

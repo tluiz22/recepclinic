@@ -4,9 +4,9 @@
 > [`historico.md`](historico.md) ("Bloco de retomada do README até 10/nov/2026").
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `be69117` (11/nov), migrações até `20270112120000`. Fluxo: [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`) = `main` atual (`5034a30`, 11/nov): produção + **vários responsáveis (VR1–VR5)**.
->   Migrações até `20270116120000` (VR, aplicadas e conferidas 11/nov). Modelos "Remarcada/Cancelada por outro
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `2fffd62` (11/nov: `be69117` + correção do portal de exames, sessão paralela; registro em `producao.md`), migrações até `20270112120000`. Fluxo: [`producao.md`](producao.md).
+> - **Staging** (`teste.recepclinic.com.br`) = `main` atual (11/nov): produção + **vários responsáveis (VR1–VR5)** + avisos de ficha repetida (cadastro e ficha). **VR validada pelo cliente (V1–V12, 11/nov).**
+>   Migrações até `20270116120000` + `20270118120000` (fichas não repetidas; `20270117120000` é da F3f), conferidas 11/nov. Modelos "Remarcada/Cancelada por outro
 >   responsável" enviados à Meta pelo cliente (11/nov). **Não publicar na produção antes da F3f** (o bot ainda só
 >   reconhece o responsável principal).
 >

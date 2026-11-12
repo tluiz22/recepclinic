@@ -65,7 +65,7 @@ import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agen
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, listContactPatients, previewAnonymization } from "../../../lib/data/patients";
 import { listOpenBirthdateChecks } from "../../../lib/data/portalBirthdate";
-import { listPatientContacts, responsibleLabel } from "../../../lib/data/patientContacts";
+import { duplicateSuspects, listPatientContacts, responsibleLabel } from "../../../lib/data/patientContacts";
 import { portalPhoneBlock } from "../../../lib/data/portalPhone";
 import { MAX_HOLDS_PER_DAY } from "../../../lib/portalIdentity";
 import { shortDate } from "../../../lib/portalBooking";
@@ -277,6 +277,17 @@ const canBook = patient.isActive && !anonymized;
 // Responsáveis (VR2, UI-1): Administrador, Recepção e Suporte ligam, desligam e tornam principal.
 const canManageResponsibles = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception"));
 const selfLabel = `O próprio ${vocabulary.patient}`;
+// Possível ficha repetida (cliente, 11/nov/2026, validação da VR): mesmo nome e nascimento em outra ficha ativa (o
+// portal e o bot não ligam ninguém sozinho). A mais antiga fica: o número da mais nova é ligado a ela pelo Adicionar
+// responsável, que desativa a repetida.
+const suspects = canManageResponsibles && patient.isActive ? await duplicateSuspects(db, clinic.clinicId, patient).catch(() => []) : [];
+const VIA: Record<string, string> = { portal: "pelo portal", whatsapp: "pelo bot", admin: "pela equipe" };
+const suspectLink = (s: (typeof suspects)[number]) =>
+  s.keep === "other"
+    ? withReturn(`/admin/pacientes/${s.id}/responsavel?${new URLSearchParams({ contato: patient.contactId })}`, here)
+    : s.primary
+      ? withReturn(`/admin/pacientes/${patient.id}/responsavel?${new URLSearchParams({ contato: s.primary.contactId })}`, here)
+      : null;
 const whoLabel = (r: (typeof responsibles)[number]) => responsibleLabel(r, selfLabel);
 // "Marcada por … · avisos para …" (UI-1, VR-1): só com mais de um responsável (com um só, é sempre ele). Quem marcou e
 // já foi desligado continua nas consultas passadas: o nome vem do contato.
@@ -448,6 +459,61 @@ const bookedText = (a: (typeof history)[number]) => {
             Liberar agora
           </button>
         </form>
+      </section>
+    )
+  }
+
+  {
+    suspects.length > 0 && (
+      <section aria-labelledby="ficha-repetida" class="mt-4 flex flex-col gap-3 rounded-xl border border-pend-500 bg-pend-50 px-4 py-3.5 sm:px-[18px]" data-duplicate-suspects>
+        <div class="flex items-start gap-2.5">
+          <Icon name="warning" class="mt-0.5 h-5 w-5 shrink-0 text-pend-800" strokeWidth={2} />
+          <h2 id="ficha-repetida" class="text-[12.5px] font-bold tracking-[.05em] text-pend-800 uppercase">Possível ficha repetida</h2>
+        </div>
+        {suspects.map((s) => {
+          const href = suspectLink(s);
+          const newerVia = s.keep === "other" ? VIA[patient.createdVia ?? ""] : VIA[s.createdVia];
+          const newerWhen = formatInstant(new Date(s.keep === "other" ? (createdAt ?? s.createdAt) : s.createdAt), clinic.timezone, "dd/MM/yyyy");
+          return (
+            <div class="flex flex-col gap-2.5 border-t border-pend-200 pt-3 first-of-type:border-t-0 first-of-type:pt-0">
+              <p class="text-[15.5px] leading-snug text-ink">
+                <strong>{s.fullName}</strong> ({formatCalendarDate(s.birthdate, "dd/MM/yyyy")}) também tem ficha
+                {s.primary ? ` com ${s.primary.fullName}${s.primary.kinship ? ` (${s.primary.kinship.toLowerCase()})` : ""} · ${formatPhoneBR(s.primary.phone)}` : ""}.
+              </p>
+              <p class="text-sm text-ink-mid">
+                {s.keep === "other" ? "Esta ficha é a mais nova" : "A outra ficha é a mais nova"}
+                {newerVia ? ` (criada ${newerVia} em ${newerWhen})` : ` (criada em ${newerWhen})`}. Fica a mais antiga; o histórico, as anotações e
+                os documentos da repetida não passam, e as consultas futuras dela a recepção remarca na que fica.
+              </p>
+              {s.alreadyLinked && <p class="text-sm text-ink-mid">O responsável da mais nova já está na mais antiga: falta só desativar a repetida (Mais › Desativar).</p>}
+              <div class="flex flex-wrap gap-2">
+                {href && !s.alreadyLinked && (
+                  <a href={href} class={`${buttonClass("primary", "sm")} w-full sm:w-auto`}>
+                    Ligar o número e desativar a repetida
+                  </a>
+                )}
+                <a href={withReturn(`/admin/pacientes/${s.id}`, here)} class={`${buttonClass("secondary", "sm")} w-full sm:w-auto`}>
+                  Abrir a outra ficha
+                </a>
+                <form method="POST" action={action} class="w-full sm:w-auto">
+                  <input type="hidden" name="acao" value="nao_repetida" />
+                  <input type="hidden" name="other_id" value={s.id} />
+                  <button
+                    type="submit"
+                    class={`${buttonClass("secondary", "sm")} js-confirm-delete w-full sm:w-auto`}
+                    data-sending-label="Salvando…"
+                    data-confirm-title="Não é a mesma pessoa?"
+                    data-confirm-message={`As duas fichas de ${s.fullName} ficam separadas e o aviso não volta.`}
+                    data-confirm-label="Não é a mesma"
+                    data-confirm-tone="primary"
+                  >
+                    Não é a mesma
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        })}
       </section>
     )
   }

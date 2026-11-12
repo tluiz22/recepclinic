@@ -7,7 +7,7 @@ import { DataError } from "../../../../lib/data/errors";
 import { logError } from "../../../../lib/log";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { anonymizePatient, contactForResponsible, getContact, getPatient, setPatientActive, setPatientInsurance, updatePatient } from "../../../../lib/data/patients";
-import { linkPatientContact, listPatientContacts, setPrimaryContact, similarRecordsOfContact, unlinkPatientContact } from "../../../../lib/data/patientContacts";
+import { linkPatientContact, listPatientContacts, markNotDuplicate, setPrimaryContact, similarRecordsOfContact, unlinkPatientContact } from "../../../../lib/data/patientContacts";
 import { releasePortalPhone } from "../../../../lib/data/portalPhone";
 import { formatPhoneBR } from "../../../../lib/phone";
 import { formOptionalText, formText } from "../../../../lib/forms";
@@ -127,6 +127,11 @@ export const POST: APIRoute = async (context) => {
           const name = who?.fullName ?? "Responsável";
           const extra = moved > 0 ? ` Os avisos de ${moved === 1 ? "1 consulta futura passaram" : `${moved} consultas futuras passaram`} ao principal.` : "";
           return { redirectTo: page, message: `${name} desligado de ${patient.fullName}.${extra}` };
+        }
+        case "nao_repetida": {
+          // Possível ficha repetida (cliente, 11/nov/2026): o par não volta a aparecer.
+          await markNotDuplicate(db, clinic.clinicId, id, formText(form, "other_id"));
+          return { redirectTo: page, message: "Pronto: as fichas ficam separadas." };
         }
         case "tornar_principal": {
           const contactId = formText(form, "contact_id");

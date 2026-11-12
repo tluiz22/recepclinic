@@ -99,7 +99,7 @@ Hoje a ligação paciente → número é `patients.contact_id` (um só). Os pont
 | VR-1 | Quem recebe lembretes, confirmações e avisos da consulta | **Decidido (cliente, 10/nov): quem marcou.** Lembrete, confirmação, aviso de cancelamento pela clínica, preparo de exame e oferta de vaga vão só para o número que marcou. Marcação pela recepção: ela escolhe o responsável (padrão: o principal). Sem mensagem em dobro na Meta |
 | VR-2 | O que cada responsável vê e pode fazer (portal e bot) | **Decidido (cliente, 10/nov): todos veem e mexem.** Qualquer responsável ligado vê todas as consultas do paciente em Minhas consultas e no bot, remarca, cancela e marca retorno. Quem remarcou ou cancelou recebe o aviso, e quem marcou também |
 | VR-3 | Responsável principal | **Decidido (cliente, 10/nov): sim, trocável.** O principal é quem cadastrou; aparece primeiro na ficha e nos cartões, é o responsável financeiro e o padrão das mensagens quando a recepção marca. "Tornar principal" na ficha, com confirmação |
-| VR-4 | Fichas repetidas: como juntar | **Decidido (cliente, 10/nov): não juntar.** A recepção liga o número do outro responsável na ficha certa e desativa a repetida; histórico, anotações e documentos da desativada não passam; as consultas futuras dela a recepção remarca à mão. Sem ferramenta de juntar e sem aviso automático de repetidas |
+| VR-4 | Fichas repetidas: como juntar | **Decidido (cliente, 10/nov): não juntar.** A recepção liga o número do outro responsável na ficha certa e desativa a repetida; histórico, anotações e documentos da desativada não passam; as consultas futuras dela a recepção remarca à mão. Sem ferramenta de juntar. **Revisto (cliente, 11/nov, validação V1):** o cadastro pela equipe avisa quando já existe ficha com o mesmo nome e nascimento cuidada por outro responsável e oferece ligar o número a ela |
 | VR-5 | Limites por telefone com dois responsáveis | **Decidido (cliente, 10/nov): conta por quem marcou.** Consultas futuras, faltas, cadastros novos e as 5 marcações do portal em 24 h contam no número que marcou (consulta antiga, sem quem marcou: conta no principal). A faixa "Portal bloqueado" mostra qual responsável está bloqueado |
 | VR-6 | Anonimização (LGPD) com vários responsáveis | **Decidido (cliente, 10/nov): só quem fica sem paciente.** O paciente é anonimizado e desligado de todos; o responsável que não cuida de mais ninguém é anonimizado junto; quem ainda cuida de outro paciente continua. A tela mostra isso antes de confirmar |
 | VR-7 | Importação da agenda com 2º telefone | **Decidido (cliente, 10/nov): coluna opcional.** "Nome do 2º responsável" e "Telefone do 2º responsável"; o 1º telefone é o principal; a revisão avisa se o 2º número já é de outro contato |
@@ -402,3 +402,27 @@ Uma tela por vez; ajuste pedido entra direto na `main` (vai ao staging no push).
 - Por isso a VR (VR2 e VR3) **não vai à produção antes da F3f**.
 
 Resultado de cada tela: anotar aqui (ok ou ajuste com o commit).
+
+- **Preparo (11/nov):** a cliente cadastrou "Alice Luz" (11/07/2016) por outro número, e ela já tinha ficha pelo do pai:
+  sem aviso (a VR-4 não previa). **Ajuste (cliente, 11/nov):** em Pacientes › Novo, número que ainda não cuida da
+  ficha + mesmo nome (sem acento e caixa) e nascimento de uma ficha ativa de outro responsável → aviso com a ficha, o
+  principal e o telefone dele, Parentesco opcional, "Sim: ligar este número à ficha" (confirmação com o WhatsApp, liga
+  pela `link_patient_contact`, sem criar ficha) ou "Não, é outra pessoa: cadastrar". A conferência roda antes de criar
+  o número. Não vale para "o próprio paciente" nem para o bot/portal. `twinsOfOtherResponsibles`
+  (`patientContacts.ts`), `registerPatient` (`otherResponsible`), `novo.astro`; `confirmFormData.ts` não lê botões como
+  campos. Artigo "Cadastrar um paciente". Testes: banco 1222, unidade 1223; Playwright 390/1280 (aviso, dados mantidos,
+  ligar → "Responsáveis (3)", sem erro no console). Captura `paciente-novo` sem mudança (formulário vazio).
+
+- **Ficha repetida pelo portal (11/nov, cliente):** a cliente marcou pelo celular "Kate Doguinho" (12/10/2026), que já
+  tinha ficha, e o portal criou outra (no portal ninguém se liga sozinho: decisão de 10/nov, mantida). **Ajuste
+  (cliente, 11/nov):** a ficha mostra a faixa **"Possível ficha repetida"** (mesmo nome sem acento/caixa e nascimento,
+  outra ficha ativa; só Administrador, Recepção e Suporte) com o responsável da outra, qual é a mais nova e de onde veio
+  (portal, bot, equipe); **"Ligar o número e desativar a repetida"** abre o Adicionar responsável na ficha mais antiga,
+  já com o número e "Desativar a outra ficha" marcado; "Abrir a outra ficha"; **"Não é a mesma"** guarda o par e o aviso
+  não volta. **Migração `20270118120000_fichas_nao_repetidas.sql`** (tabela `patient_not_duplicates` + função
+  `mark_patients_not_duplicate`; local feita, **staging pendente, antes do código**; renumerada porque a F3f já usa
+  `20270117120000`). `duplicateSuspects` e `markNotDuplicate` (`patientContacts.ts`), ficha, API (`nao_repetida`),
+  `seed.sql`. Testes: banco 1225, unidade e `astro check` ok; Playwright 390/1280 (faixa, ligar e desativar, não é a
+  mesma). Artigos da Central: texto em "Ficha do paciente" a revisar.
+
+**Validação no staging concluída (cliente, 11/nov/2026):** V1 a V12 validados, incluindo os avisos de ficha repetida. A VR segue fora da produção até a F3f (o bot só reconhece o responsável principal).

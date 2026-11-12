@@ -7,6 +7,7 @@ import type { DbClient } from "./clients";
 import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "./errors";
 import { documentPaths, removeDocumentFiles } from "./patientDocuments";
 import { addPatientNote } from "./patientNotes";
+import { linkPatientContact, twinsOfOtherResponsibles, type OtherResponsibleTwin } from "./patientContacts";
 import { logError } from "../log";
 
 // Contatos e pacientes (D4a, D10). O contato é quem conversa no WhatsApp
@@ -481,6 +482,11 @@ export type RegisterPatientInput = {
    * cadastrado com o WhatsApp novo ou cadastrar um novo responsável.
    */
   similarContact?: { action: "update_phone"; contactId: string } | { action: "new" };
+  /**
+   * Resposta à ficha de outro responsável (mesmo nome e nascimento; cliente, 11/nov/2026): ligar o número à ficha
+   * existente (2º responsável, com o parentesco) ou cadastrar mesmo assim.
+   */
+  otherResponsible?: { action: "link"; patientId: string; kinship?: string | null } | { action: "new" };
   /** Cadastro pelo bot: conta no limite de cadastros do contato (F9.6a). Padrão: a equipe. */
   createdVia?: "admin" | "whatsapp" | "portal";
 };
@@ -491,6 +497,10 @@ export type RegisterPatientResult =
   | { status: "confirm_same_person"; contact: Contact }
   /** O contato já tem paciente ativo com a mesma data de nascimento ou o nome parecido (C19). */
   | { status: "possible_duplicate"; contact: Contact; existingNames: string[]; existing: SimilarPatient[] }
+  /** O número foi ligado à ficha que já existia (outro responsável), sem criar paciente. */
+  | { status: "linked"; patientId: string; contact: Contact }
+  /** Há ficha com o mesmo nome e nascimento cuidada por outro responsável: ligar este número a ela? */
+  | { status: "other_responsible"; twins: OtherResponsibleTwin[] }
   /** Telefone novo, mas há responsável com o nome parecido (C19): mesma pessoa com outro WhatsApp? */
   | { status: "similar_contact"; phone: string; matches: SimilarContact[] };
 
@@ -526,6 +536,23 @@ export async function registerPatient(
   const checkSimilar = (input.createdVia ?? "admin") === "admin";
   let contact: Contact;
   let contactExisted: boolean;
+
+  // Ficha de outro responsável (cliente, 11/nov/2026): antes de criar o número, para não sobrar contato solto.
+  const choice = input.otherResponsible;
+  if (checkSimilar && input.contact.mode !== "self" && choice?.action !== "new") {
+    const known = input.contact.mode === "existing" ? await getContact(db, clinicId, input.contact.contactId) : await findContactByPhone(db, clinicId, phone!);
+    const twins = await twinsOfOtherResponsibles(db, clinicId, fullName, input.birthdate, known?.id ?? null);
+    if (choice?.action === "link") {
+      const target = twins.find((t) => t.id === choice.patientId);
+      if (!target) throw new DataError("invalid", "Paciente: a ficha mudou; confira os dados e tente de novo.");
+      if (known?.anonymizedAt) throw new DataError("invalid", "Responsável: número anonimizado", { phone: "Este número foi anonimizado; use outro." });
+      const linked = known ?? (await contactForPhone(db, clinicId, phone!, cleanText((input.contact as { fullName: string }).fullName)!));
+      if (!linked.isActive) await setContactActive(db, clinicId, linked.id, true);
+      await linkPatientContact(db, clinicId, target.id, linked.id, cleanText(choice.kinship)?.slice(0, 40) ?? null);
+      return { status: "linked", patientId: target.id, contact: { ...linked, isActive: true } };
+    }
+    if (twins.length) return { status: "other_responsible", twins };
+  }
 
   if (input.contact.mode === "existing") {
     contact = await getContact(db, clinicId, input.contact.contactId);
