@@ -33,7 +33,7 @@ export type ShortcutPurpose = keyof typeof t.LEAN_LINKS;
  * Agendar, Minhas consultas ou Profissionais: o link do portal (30 min, só para este número, celular já comprovado).
  * false = portal fechado para a clínica: quem chamou passa para a recepção (F3-5/F3-7).
  */
-export async function sendPortalShortcut(b: Bot, purpose: ShortcutPurpose): Promise<boolean> {
+export async function sendPortalShortcut(b: Bot, purpose: ShortcutPurpose, serviceId?: string): Promise<boolean> {
   try {
     if (!(await openPortalSlug(b))) return false;
   } catch (error) {
@@ -41,7 +41,8 @@ export async function sendPortalShortcut(b: Bot, purpose: ShortcutPurpose): Prom
     return false;
   }
   // Agendar conta como tentativa de marcação nas Métricas (o funil fecha com "link_sent", como o link de antes).
-  if (purpose === "book") {
+  const booking = purpose === "book" || purpose === "return" || purpose === "exam";
+  if (booking) {
     b.now = new Date(b.now.getTime() + 1);
     const sessionId = await startFunnel(b.db, b.clinicId, b.phone, "booking", { lean: true }, b.now);
     b.convo = { ...b.convo, funnelSessionId: sessionId, funnelFlow: "booking" };
@@ -50,18 +51,18 @@ export async function sendPortalShortcut(b: Bot, purpose: ShortcutPurpose): Prom
     const link = await createPortalLink(
       b.db,
       b.clinicId,
-      { phone: b.phone, contactId: b.convo.contactId, purpose, funnelSessionId: b.convo.funnelSessionId },
+      { phone: b.phone, contactId: b.convo.contactId, purpose, serviceId: purpose === "exam" ? serviceId : undefined, funnelSessionId: b.convo.funnelSessionId },
       b.now,
     );
     const url = portalLinkUrl(b.sender.baseUrl, shortId(link.id));
     const text = t.LEAN_LINKS[purpose];
     await sendLink(b, `bot_portal_${purpose}`, text.body, { text: text.button, url });
-    if (purpose === "book") await end(b, "link_sent", { portal_link_id: link.id, purpose });
+    if (booking) await end(b, "link_sent", { portal_link_id: link.id, purpose });
     else await go(b, WELCOME);
   } catch (error) {
     logError("bot: link do portal (atalho)", error, { clinica: b.clinicId });
     await say(b, "bot_book_link_error", t.linkError(b.clinic.designation));
-    if (purpose === "book") await end(b, "error", { reason: "link_error" });
+    if (booking) await end(b, "error", { reason: "link_error" });
     else await go(b, WELCOME);
   }
   return true;

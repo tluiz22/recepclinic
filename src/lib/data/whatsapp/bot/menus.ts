@@ -60,8 +60,8 @@ async function portalClosed(b: Bot): Promise<void> {
 }
 
 /** Agendar, Minhas consultas ou Profissionais (BE-3): o link do portal; fechado, a recepção. */
-export async function portalShortcut(b: Bot, purpose: ShortcutPurpose): Promise<void> {
-  if (!(await sendPortalShortcut(b, purpose))) await portalClosed(b);
+export async function portalShortcut(b: Bot, purpose: ShortcutPurpose, serviceId?: string): Promise<void> {
+  if (!(await sendPortalShortcut(b, purpose, serviceId))) await portalClosed(b);
 }
 
 const SHORTCUT: Partial<Record<t.LeanMenuId, ShortcutPurpose>> = { menu_book: "book", menu_mine: "my_appointments", menu_professionals: "professionals" };

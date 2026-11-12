@@ -208,7 +208,9 @@ async function bookTypes(b: Bot): Promise<(typeof BOOK_TYPES)[number][]> {
 }
 
 /** "Marcar" depois de uma resposta (bot enxuto): o Agendar do portal, onde se escolhe o tipo e o profissional. */
-async function startBookingOf(b: Bot): Promise<void> {
+async function startBookingOf(b: Bot, book?: Book): Promise<void> {
+  if (book?.category === "return_visit") return portalShortcut(b, "return");
+  if (book?.category === "exam" && book.serviceId) return portalShortcut(b, "exam", book.serviceId);
   return portalShortcut(b, "book");
 }
 
@@ -433,7 +435,7 @@ export async function handleKnowledgeReply(b: Bot, selection: Selection): Promis
   const book = selection.id?.match(BOOK_ID);
   if (book) {
     // "return_visit" tem "_": o id é lido inteiro (antes, o retorno abria a consulta).
-    await startBookingOf(b);
+    await startBookingOf(b, { category: book[1] as ServiceCategory, serviceId: book[2] });
     return "handled";
   }
   const context = (b.convo.context ?? {}) as Record<string, unknown>;

@@ -154,7 +154,7 @@ describe("links do portal (BE-3)", () => {
     expect(reply[0]).toMatchObject({ kind: "link", body: "Veja os profissionais, valores e convênios aceitos. Se quiser, já agenda por lá.", link: { text: "Ver profissionais" } });
     const link = await lastLink(NEW);
     expect(link.purpose).toBe("professionals");
-    expect(portalLinkTarget({ purpose: "professionals", professionalId: null, serviceId: null, appointmentId: null }, { professionals: [], exams: [] } as never, "/portal/x")).toBe("/portal/x/medicos");
+    expect(portalLinkTarget({ purpose: "professionals", professionalId: null, serviceId: null, appointmentId: null }, { professionals: [], exams: [] } as never, "/portal/x")).toBe("/portal/x/medicos?lista=1");
     expect(portalLinkTarget({ purpose: "cancel", professionalId: null, serviceId: null, appointmentId: "a1" }, { professionals: [], exams: [] } as never, "/portal/x")).toBe(
       "/portal/x/minhas-consultas/cancelar?a=a1",
     );

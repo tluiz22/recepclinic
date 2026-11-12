@@ -99,6 +99,8 @@ export const leanMenuHeader = (clinicName: string) => clinicName;
 export const LEAN_LINKS = {
   book: { body: "Para agendar sua consulta ou exame, toque no botão abaixo. Você escolhe o profissional, o dia e o horário.", button: "Agendar no portal" },
   my_appointments: { body: "Para ver, remarcar ou cancelar suas consultas, toque no botão abaixo.", button: "Minhas consultas" },
+  return: { body: "Para marcar seu retorno, toque no botão abaixo.", button: "Marcar retorno" },
+  exam: { body: "Para marcar seu exame, toque no botão abaixo. Você escolhe o dia e o horário.", button: "Marcar exame" },
   professionals: { body: "Veja os profissionais, valores e convênios aceitos. Se quiser, já agenda por lá.", button: "Ver profissionais" },
 } as const;
 
