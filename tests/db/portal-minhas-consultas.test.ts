@@ -123,7 +123,6 @@ describe("Minhas consultas (F3c)", () => {
   it("cancelamento pela clínica com o portal: o aviso leva o link do portal, que marca de novo o mesmo atendimento", async () => {
     const appointment = await book(f.ids.p1, MON2, "11:00");
     const [canceled] = await cancelByClinic(asDb(f.admin), f.clinicId, [appointment.id], f.admin.id, NOW);
-    expect(canceled.rebookingLink).toBeNull();
     expect(canceled.portalLink).toMatchObject({ purpose: "reschedule", appointmentId: appointment.id, canceledAppointmentId: appointment.id, phone: PHONE });
     const allowed = await sessionLinkFor(service, f.clinicId, { linkId: canceled.portalLink!.id }, appointment.id);
     expect(allowed).toMatchObject({ noLead: true, rebook: true });

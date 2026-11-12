@@ -2,7 +2,6 @@ import type { DbClient } from "../clients";
 import { hasFeature } from "../features";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 import { cancelAppointments, listAppointmentsBetween, type Appointment } from "./appointments";
-import type { BookingLink } from "./links";
 import { createPortalRebookingLink, type PortalLink } from "../portal/links";
 import { logError } from "../../log";
 import { recessReturnDate, renderRecessMessage } from "../../recess";
@@ -28,7 +27,7 @@ export type ScheduleBlock = {
 };
 
 /** O link de remarcação do aviso: o do portal (F3-3) quando ele cobre o atendimento, senão o de /agendar. */
-export type CanceledWithLink = { appointment: Appointment; rebookingLink: BookingLink | null; portalLink: PortalLink | null };
+export type CanceledWithLink = { appointment: Appointment; portalLink: PortalLink | null };
 
 const COLUMNS = "id, agenda_id, starts_at, ends_at, reason, recess_message, removed_at";
 
@@ -101,7 +100,6 @@ async function cancelWithLinks(
   const withLinks = canceled.length > 0 && (await hasFeature(db, clinicId, "whatsapp_bot"));
   const result: CanceledWithLink[] = [];
   for (const appointment of canceled) {
-    const rebookingLink: BookingLink | null = null;
     let portalLink: PortalLink | null = null;
     if (withLinks) {
       try {
@@ -113,7 +111,7 @@ async function cancelWithLinks(
         logError("bloqueio: não gerou link de remarcação", error, { clinica: clinicId, atendimento: appointment.id });
       }
     }
-    result.push({ appointment, rebookingLink, portalLink });
+    result.push({ appointment, portalLink });
   }
   return result;
 }

@@ -1,13 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, cancelAppointment, getAppointment, listUpcomingAppointments } from "../../src/lib/data/agenda/appointments";
 import { cancelByClinic, createBlock, findBlockConflicts, listBlocks, removeBlock, updateBlock } from "../../src/lib/data/agenda/blocks";
-import {
-  BOT_LINK_TTL_MS,
-  claimBookingLink,
-  createBookingLink,
-  getBookingLink,
-  linkState,
-} from "../../src/lib/data/agenda/links";
 import { changeSeriesFrom, createSeries, endSeriesFrom, extendSeries, getSeries, listSeriesSkips } from "../../src/lib/data/agenda/series";
 import { getFreeSlots } from "../../src/lib/data/agenda/slots";
 import { setMemberAgendaAccess } from "../../src/lib/data/config/agendas";
@@ -28,10 +21,6 @@ const book = (patient: string, service: string, agenda: string, start: Date, ext
   bookAppointment(db(reception), clinicId, { patientId: patient, serviceId: service, agendaId: agenda, start, channel: "admin", actorId: reception.id, ...extra }, now);
 
 const localDate = (instant: Date) => instant.toLocaleDateString("sv-SE", { timeZone: "America/Fortaleza" });
-const contactOf = async (patientId: string) => {
-  const { data } = await adminClient().from("patients").select("contact_id, contacts ( phone )").eq("id", patientId).single();
-  return data as unknown as { contact_id: string; contacts: { phone: string } };
-};
 
 beforeAll(async () => {
   fixture = await setupAgendaClinic("Clínica do teste de séries", "859777700");
@@ -40,59 +29,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await fixture.cleanup();
-});
-
-describe("links de agendamento", () => {
-  it("link do bot vale 30 minutos e só é usado uma vez", async () => {
-    const contact = await contactOf(ids.p1);
-    const link = await createBookingLink(
-      db(reception),
-      clinicId,
-      {
-        mode: "create",
-        contactId: contact.contact_id,
-        patientId: ids.p1,
-        serviceId: ids.consulta,
-        agendaId: null,
-        locationId: null,
-        locationCategory: "clinic",
-        appointmentId: null,
-        originAppointmentId: null,
-        contactPhone: contact.contacts.phone,
-        homeVisitAddress: null,
-        ttlMs: BOT_LINK_TTL_MS,
-      },
-      NOW,
-    );
-    expect(link.expiresAt.getTime() - NOW.getTime()).toBe(30 * 60_000);
-    expect(linkState(link, NOW)).toBe("valid");
-    expect(await claimBookingLink(db(reception), clinicId, link.id, new Date(link.expiresAt.getTime() + 1))).toBe(false);
-    expect(await claimBookingLink(db(reception), clinicId, link.id, NOW)).toBe(true);
-    expect(await claimBookingLink(db(reception), clinicId, link.id, NOW)).toBe(false);
-    expect(linkState(await getBookingLink(db(reception), clinicId, link.id), NOW)).toBe("used");
-  });
-
-  it("remarcação precisa do atendimento", async () => {
-    const contact = await contactOf(ids.p1);
-    expect(
-      await codeOf(() =>
-        createBookingLink(db(reception), clinicId, {
-          mode: "reschedule",
-          contactId: contact.contact_id,
-          patientId: ids.p1,
-          serviceId: ids.consulta,
-          agendaId: null,
-          locationId: null,
-          locationCategory: null,
-          appointmentId: null,
-          originAppointmentId: null,
-          contactPhone: contact.contacts.phone,
-          homeVisitAddress: null,
-          ttlMs: BOT_LINK_TTL_MS,
-        }),
-      ),
-    ).toBe("invalid");
-  });
 });
 
 describe("bloqueios", () => {
@@ -113,7 +49,6 @@ describe("bloqueios", () => {
     );
     expect(block.reason).toBe("Reunião");
     expect(canceled.map((c) => c.appointment.id)).toEqual([a1.id]);
-    expect(canceled[0].rebookingLink).toBeNull();
     const link = canceled[0].portalLink!;
     expect(link).toMatchObject({ purpose: "reschedule", appointmentId: a1.id, canceledAppointmentId: a1.id, originAppointmentId: null });
     expect(link.expiresAt.getTime() - NOW.getTime()).toBe(2 * 24 * 60 * 60_000);
@@ -148,7 +83,6 @@ describe("bloqueios", () => {
     expect(ret.originAppointmentId).toBe(consult.id);
     const [result] = await cancelByClinic(db(reception), clinicId, [ret.id], reception.id, later);
     // O portal remarca em casa (F3e-1) e o retorno sem o prazo da consulta de origem.
-    expect(result.rebookingLink).toBeNull();
     expect(result.portalLink).toMatchObject({ purpose: "reschedule", canceledAppointmentId: ret.id, originAppointmentId: consult.id });
     const { data } = await adminClient().from("portal_links").select("return_deadline_waived").eq("id", result.portalLink!.id).single();
     expect(data!.return_deadline_waived).toBe(true);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingPath, guidancePath, parsePublicId, preparationPath, shortId } from "./publicId";
+import { guidancePath, parsePublicId, preparationPath, shortId } from "./publicId";
 
 const UUID = "f1f92b6b-5809-41e1-ad34-0a0a327d33d7";
 const PIX_KEY = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -7,8 +7,7 @@ const PIX_KEY = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 describe("ids nos links do paciente", () => {
   it("o link não leva o UUID, que o WhatsApp lê como chave Pix (cliente, 18/out)", () => {
     expect(shortId(UUID)).toHaveLength(22);
-    for (const path of [bookingPath(UUID), preparationPath(UUID), guidancePath(UUID)]) expect(path).not.toMatch(PIX_KEY);
-    expect(bookingPath(UUID)).toBe(`/agendar/${shortId(UUID)}`);
+    for (const path of [preparationPath(UUID), guidancePath(UUID)]) expect(path).not.toMatch(PIX_KEY);
   });
 
   it("o id curto volta ao UUID, e o UUID dos links antigos continua valendo", () => {

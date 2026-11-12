@@ -15,13 +15,12 @@ import { cancelNoticeText, whatsappMessageHref } from "../../../lib/cancelNotice
 import { isUuid } from "../../../lib/clinicAccess";
 import { formatInstant } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
-import { listValidRebookingLinks } from "../../../lib/data/agenda/links";
 import { listAgendaAppointmentsByIds } from "../../../lib/data/agenda/view";
 import { formatPhoneBR } from "../../../lib/phone";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { clinicLabel } from "../../../lib/data/whatsapp/templates";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
-import { bookingPath, shortId } from "../../../lib/publicId";
+import { shortId } from "../../../lib/publicId";
 import { portalLinkUrl } from "../../../lib/portal";
 import { listValidPortalRebookingLinks } from "../../../lib/data/portal/links";
 
@@ -33,11 +32,8 @@ const backTo = safeReturnPath(back, "/admin/agenda");
 const db = createUserClient(Astro.request, Astro.cookies);
 const appointments = (await listAgendaAppointmentsByIds(db, clinic.clinicId, ids)).filter((a) => a.status === "canceled");
 const settings = await getClinicSettings(db, clinic.clinicId);
-const [links, portalLinks] = await Promise.all([
-  listValidRebookingLinks(db, clinic.clinicId, appointments.map((a) => a.id)),
-  // Link do portal (F3-3), quando o portal cobre o atendimento.
-  listValidPortalRebookingLinks(db, clinic.clinicId, appointments.map((a) => a.id)),
-]);
+// Link do portal (F3-3), quando o portal cobre o atendimento.
+const portalLinks = await listValidPortalRebookingLinks(db, clinic.clinicId, appointments.map((a) => a.id));
 // Por que o aviso automático não saiu: a última tentativa registrada (nenhuma = WhatsApp não conectado).
 const attempts = appointments.length
   ? (
@@ -60,8 +56,7 @@ const reasonFor = (id: string) => REASONS[lastStatus.get(id) ?? ""] ?? "o WhatsA
 const rebookingFor = (appointmentId: string) => {
   const portal = portalLinks.get(appointmentId);
   if (portal) return { url: portalLinkUrl(Astro.url.origin, shortId(portal.id)), expiresAt: portal.expiresAt };
-  const link = links.get(appointmentId);
-  return link ? { url: new URL(bookingPath(link.id), Astro.url.origin).toString(), expiresAt: link.expiresAt } : null;
+  return null;
 };
 ---
 

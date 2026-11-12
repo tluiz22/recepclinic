@@ -511,8 +511,8 @@ describe("cancelamento pela clínica (F6.5)", () => {
     await adminClient().from("clinics").update({ portal_slug: `envio-${Date.now()}` }).eq("id", f.clinicId);
     const canceled = await cancelByClinic(asDb(f.reception), f.clinicId, [a1, a2], f.reception.id, NOW);
     await adminClient().from("clinics").update({ portal_slug: null }).eq("id", f.clinicId);
-    expect(canceled.every((c) => c.portalLink && !c.rebookingLink)).toBe(true);
-    const items = canceled.map((c) => ({ appointmentId: c.appointment.id, rebookingLinkId: null, portalLinkId: c.portalLink!.id }));
+    expect(canceled.every((c) => c.portalLink)).toBe(true);
+    const items = canceled.map((c) => ({ appointmentId: c.appointment.id, portalLinkId: c.portalLink!.id }));
 
     // Template ainda em análise: nenhum sai, os dois vão para a tela Avisar.
     const meta = fakeMeta();

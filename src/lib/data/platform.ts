@@ -75,18 +75,6 @@ export async function listClinicsInService(env: ServiceEnv = platformEnv()): Pro
   return (result.data ?? []) as string[];
 }
 
-/** /agendar/[token]: clínica do link de agendamento (vencido ou usado também resolve). */
-export async function resolveClinicByBookingLink(
-  linkId: string,
-  env: ServiceEnv = platformEnv(),
-): Promise<string | null> {
-  if (!isUuid(linkId)) return null;
-  return clinicIdOrNull(
-    "link de agendamento",
-    await platformClient(env).rpc("resolve_booking_link_clinic", { p_link_id: linkId }),
-  );
-}
-
 /** Link do portal mandado pelo bot (F3a, /s/{token}): a clínica do link. */
 export async function resolveClinicByPortalLink(linkId: string, env: ServiceEnv = platformEnv()): Promise<string | null> {
   if (!isUuid(linkId)) return null;

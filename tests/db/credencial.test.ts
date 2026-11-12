@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClinicServiceClient, mintClinicServiceToken } from "../../src/lib/data/clinicService";
-import { resolveClinicByBookingLink, resolveClinicByPhoneNumberId, resolveClinicByService } from "../../src/lib/data/platform";
+import { resolveClinicByPhoneNumberId, resolveClinicByService } from "../../src/lib/data/platform";
 import { adminClient, anonClient, signInSeedUser } from "./helpers";
 import { createClient } from "@supabase/supabase-js";
 
@@ -78,12 +78,6 @@ describe("credencial limitada (createClinicServiceClient)", () => {
 });
 
 describe("descoberta da clínica nas portas públicas", () => {
-  it("link de agendamento → clínica do link", async () => {
-    expect(await resolveClinicByBookingLink(linkA, env())).toBe(CLINIC_A);
-    expect(await resolveClinicByBookingLink(MISSING, env())).toBeNull();
-    expect(await resolveClinicByBookingLink("nao-e-uuid", env())).toBeNull();
-  });
-
   it("serviço (preparo) → clínica do serviço", async () => {
     expect(await resolveClinicByService(serviceB, env())).toBe(CLINIC_B);
     expect(await resolveClinicByService(MISSING, env())).toBeNull();

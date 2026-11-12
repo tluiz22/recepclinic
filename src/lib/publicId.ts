@@ -23,6 +23,5 @@ export function parsePublicId(value: string | null | undefined): string | null {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export const bookingPath = (linkId: string) => `/agendar/${shortId(linkId)}`;
 export const preparationPath = (serviceId: string) => `/preparo/${shortId(serviceId)}`;
 export const guidancePath = (clinicId: string) => `/orientacoes/${shortId(clinicId)}`;

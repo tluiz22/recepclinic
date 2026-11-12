@@ -117,7 +117,7 @@ if (Astro.request.method === "POST") {
     if (total > 0 && decision !== "cancelar" && decision !== "manter") {
       conflicts = await listAgendaAppointmentsByIds(db, clinic.clinicId, found.flatMap((item) => item.appointments.map((a) => a.id)));
     } else {
-      const canceled: { appointmentId: string; rebookingLinkId: string | null; portalLinkId: string | null }[] = [];
+      const canceled: { appointmentId: string; portalLinkId: string | null }[] = [];
       for (const item of found) {
         const result = await createBlock(db, clinic.clinicId, {
           agendaId: item.agendaId,
@@ -127,7 +127,7 @@ if (Astro.request.method === "POST") {
           cancelAppointmentIds: decision === "cancelar" ? item.appointments.map((a) => a.id) : [],
           actorId: Astro.locals.userId ?? null,
         });
-        canceled.push(...result.canceled.map((c) => ({ appointmentId: c.appointment.id, rebookingLinkId: c.rebookingLink?.id ?? null, portalLinkId: c.portalLink?.id ?? null })));
+        canceled.push(...result.canceled.map((c) => ({ appointmentId: c.appointment.id, portalLinkId: c.portalLink?.id ?? null })));
       }
       const agendaWord = found.length > 1 ? `${found.length} agendas bloqueadas` : "Agenda bloqueada";
       const backTo = `/admin/agenda?date=${values.startDate}`;
