@@ -76,7 +76,8 @@ const portalLink =
     ? await loadPortalSettings(createUserClient(Astro.request, Astro.cookies), clinic.clinicId)
         .then((settings) => {
           const mine = settings.professionals.find((p) => p.id === id);
-          return mine ? { link: portalLinksOf(Astro.url, settings).professionals.get(id!)!, shown: mine.showInPortal } : null;
+          const link = portalLinksOf(Astro.url, settings).professionals.get(id!);
+          return mine && link ? { link, shown: mine.showInPortal } : null;
         })
         .catch(() => null)
     : null;

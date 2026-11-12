@@ -26,6 +26,7 @@ import {
   filterConversations,
   isWaiting,
   isCentralActive,
+  countWaitingConversations,
   listConversationMedia,
   listConversationMessages,
   listConversations,
@@ -90,7 +91,8 @@ if (selectedPhone && !personal && !finished && !openItems.some((item) => item.ph
 }
 const shown = personal ? classifiedItems : finished ? finishedItems : filterConversations(openItems, filter, clinic.userId);
 const selected = selectedPhone ? ([...openItems, ...finishedItems, ...classifiedItems].find((item) => item.phone === selectedPhone) ?? null) : null;
-const waitingCount = openItems.filter(isWaiting).length;
+// O contador não segue a busca (o menu lateral conta todas as que aguardam).
+const waitingCount = await countWaitingConversations(db, clinic.clinicId).catch(() => openItems.filter(isWaiting).length);
 const marked = !!selected && selected.classification !== "patient";
 // Mensagens novas nos números marcados (por pessoa), no rótulo da aba.
 const classifiedUnread = classifiedItems.reduce((sum, item) => sum + item.unread, 0);

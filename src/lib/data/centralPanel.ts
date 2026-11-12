@@ -74,17 +74,17 @@ export async function listUsualProfessionals(db: DbClient, clinicId: string, pat
   const rows = unwrap(
     await db
       .from("appointments")
-      .select("agenda_id, service_id, scheduled_at, agendas ( name ), services ( name, category )")
+      .select("agenda_id, service_id, scheduled_at, agendas ( name, is_active ), services ( name, category )")
       .eq("clinic_id", clinicId)
       .eq("patient_id", patientId)
-      .neq("status", "canceled")
+      .in("status", ["completed", "confirmed", "scheduled"])
       .lte("scheduled_at", now.toISOString())
       .order("scheduled_at", { ascending: false })
       .limit(50),
     "Consultas anteriores do paciente",
-  ) as unknown as { agenda_id: string; service_id: string; scheduled_at: string; agendas: { name: string } | null; services: { name: string; category: string } | null }[];
+  ) as unknown as { agenda_id: string; service_id: string; scheduled_at: string; agendas: { name: string; is_active: boolean } | null; services: { name: string; category: string } | null }[];
   const usual = usualFromRows(
-    rows.map((r) => ({ agendaId: r.agenda_id, agendaName: r.agendas?.name ?? "Agenda", serviceId: r.service_id, serviceName: r.services?.name ?? "Consulta", category: r.services?.category ?? "consultation", at: new Date(r.scheduled_at) })),
+    rows.filter((r) => r.agendas?.is_active !== false).map((r) => ({ agendaId: r.agenda_id, agendaName: r.agendas?.name ?? "Agenda", serviceId: r.service_id, serviceName: r.services?.name ?? "Consulta", category: r.services?.category ?? "consultation", at: new Date(r.scheduled_at) })),
   );
   return Promise.all(
     usual.map(async (u) => {
@@ -144,12 +144,12 @@ export async function loadConversationPanel(
   ]);
   // Todos os pacientes de que o número é responsável (D14), não só os em que é o principal.
   const patients = contact ? await listContactPatients(db, clinicId, contact.id, { linked: true }) : [];
-  const [upcoming, plans, notes] = await Promise.all([
+  const [upcoming, plans, notes, usual] = await Promise.all([
     listUpcomingByPatient(db, clinicId, patients.map((p) => p.id), now),
     options.insurance && patients.some((p) => p.insurance) ? listInsurancePlans(db, clinicId, { includeInactive: true }) : Promise.resolve([]),
     patients.length === 1 ? listPatientNotes(db, clinicId, patients[0].id).catch(() => []) : Promise.resolve([]),
+    patients.length === 1 ? listUsualProfessionals(db, clinicId, patients[0].id, now).catch(() => [] as UsualProfessional[]) : Promise.resolve([] as UsualProfessional[]),
   ]);
-  const usual = patients.length === 1 ? await listUsualProfessionals(db, clinicId, patients[0].id, now).catch(() => []) : [];
   const planName = (patient: Patient) => (patient.insurance ? (plans.find((plan) => plan.id === patient.insurance!.planId)?.name ?? "Convênio") : "Particular");
   const ids = events.flatMap((e) => [e.actorId, e.assignedFrom, e.assignedTo]);
   const labels = await loadActorLabels(db, clinicId, ids);

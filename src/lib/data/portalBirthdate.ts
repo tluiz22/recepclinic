@@ -60,7 +60,10 @@ export async function listBirthdateChecksToConfirm(db: DbClient, clinicId: strin
     created_at: string;
     patients: { full_name: string } | null;
   }[];
-  return rows.map((row) => ({
+  // Um paciente pode ter várias abertas: vale a mais recente (a mesma regra da ficha), uma linha só.
+  const latest = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) latest.set(row.patient_id, row);
+  return [...latest.values()].map((row) => ({
     id: row.id,
     patientId: row.patient_id,
     registered: row.registered_birthdate,
