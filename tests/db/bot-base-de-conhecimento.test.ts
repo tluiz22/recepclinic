@@ -306,7 +306,7 @@ describe("item da matriz", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Evolução do assistente (EA, cliente, 02/nov/2026; docs/evolucao-assistente.md)
+// Evolução do assistente (EA, cliente, 02/nov/2026; docs/arquivo/modulos/evolucao-assistente.md)
 // ---------------------------------------------------------------------------
 
 const AFTER_RECEPTION = "Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?";

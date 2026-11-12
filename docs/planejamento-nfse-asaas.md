@@ -14,7 +14,7 @@
 > na produção. **Reanálise pedida pelo cliente (07/nov)**, com o print da habilitação fiscal; aguardando o Asaas.
 > **Revisão de 07/nov (seção 14):** emissão e cobrança das notas **por profissional** (pedido do cliente); fases
 > revistas em 14.5; **decisões N-P1 a N-P7 abertas** (14.6). Especialidades, convênios e bot por profissional em
-> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md) (M1 a M8). Código das fases direto na
+> [`planejamento-multiprofissional.md`](arquivo/modulos/planejamento-multiprofissional.md) (M1 a M8). Código das fases direto na
 > `main`, só com o OK do cliente (a branch `faturamento` foi aposentada em 07/nov).
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
 > (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
@@ -572,7 +572,7 @@ nos termos públicos e na tela de habilitação fiscal do painel (app.recepclini
 diferentes. Numa clínica com vários médicos, a **nota fiscal é configurada por profissional** e a **cobrança das notas
 é feita direto do profissional**, não da clínica. Se o profissional for o dono da clínica, ver a possibilidade de
 incluir na mesma cobrança da assinatura da clínica. Especialidades, convênios e informações do bot por profissional:
-frente própria em [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md).
+frente própria em [`planejamento-multiprofissional.md`](arquivo/modulos/planejamento-multiprofissional.md).
 
 ### 14.1 O que muda no modelo (seções 1, 3, 5 e 6)
 

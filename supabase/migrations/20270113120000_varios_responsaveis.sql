@@ -1,4 +1,4 @@
--- VR1 — Vários responsáveis por paciente (D14; decisões VR-1 a VR-7 em docs/planejamento-varios-responsaveis.md,
+-- VR1 — Vários responsáveis por paciente (D14; decisões VR-1 a VR-7 em docs/arquivo/modulos/planejamento-varios-responsaveis.md,
 -- cliente, 10/nov/2026). Só banco: nada muda para o usuário até a VR2 e a VR3.
 --
 -- 1. patient_contacts: uma linha por responsável do paciente (parentesco opcional, quem ligou e quando). A equipe e o

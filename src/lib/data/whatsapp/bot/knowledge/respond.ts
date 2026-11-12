@@ -14,7 +14,7 @@ import type { ServiceCategory } from "../../../config/services";
 import { loadKbClinicData } from "./clinicData";
 import { logError } from "../../../../log";
 
-// Base de conhecimento no bot (BC, Etapa 4; docs/base-de-conhecimento.md).
+// Base de conhecimento no bot (BC, Etapa 4; docs/arquivo/modulos/base-de-conhecimento.md).
 // Entra só onde o bot diria "não entendi" (decisão 2): o motor chama `run` no
 // primeiro "não entendi" da mensagem. Resposta em texto: enviada, e o passo se
 // repete sem o "não entendi" (não conta para o limite). Fluxo, recepção, aviso

@@ -1,4 +1,4 @@
--- MI (cliente, 07/nov/2026, M5; docs/planejamento-multiprofissional.md, seção 4):
+-- MI (cliente, 07/nov/2026, M5; docs/arquivo/modulos/planejamento-multiprofissional.md, seção 4):
 -- as "Informações que o bot responde" passam a ser só por profissional.
 --
 --   1. professional_bot_info: formas de pagamento, texto de convênios e

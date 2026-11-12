@@ -305,20 +305,20 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   **Ajuda contextual em toda a aplicação (pedido do cliente, 23/out):** Etapas 1 a 6 feitas e aprovadas em 23/out
   (diagnóstico, padrão dos 5 tipos, componentes, [inventário](https://claude.ai/artifact/SXkvcsAALCLhDeDApcyxnk) com
   56 pontos e a [proposta visual](https://claude.ai/artifact/MjDsWH1x5HugKCcxZeUsP1)); tudo em
-  [`ajuda-contextual.md`](ajuda-contextual.md). **Fim da sessão de 23/out (3ª). Retomar daqui (próxima sessão):**
+  [`ajuda-contextual.md`](arquivo/modulos/ajuda-contextual.md). **Fim da sessão de 23/out (3ª). Retomar daqui (próxima sessão):**
   Etapa 7, implementação aprovada pelo cliente: primeiro os componentes compartilhados (`HelpTip`, `Field`,
   `HowItWorks`, `EmptyState`, `scripts/helpTips.ts`) e as mensagens genéricas de `formAction.ts`; depois os pontos de
   prioridade Alta, módulo a módulo, cada parte testada no navegador e publicada no staging. Os 21 textos marcados
   "conferir na implementação" só vão para a tela depois de conferidos no arquivo indicado.
   **Etapa 7a (componentes e catálogo) implementada e testada no local em 23/out**, com os pilotos no Tipo
-  de Serviços e na Lista de espera (detalhes em [`ajuda-contextual.md`](ajuda-contextual.md)); publicada no staging
+  de Serviços e na Lista de espera (detalhes em [`ajuda-contextual.md`](arquivo/modulos/ajuda-contextual.md)); publicada no staging
   (sem migração). **O cliente valida a Etapa 7 inteira no fim** (23/out): 7b e 7c seguem sem parar, cada parte
   publicada no staging. **7b (mensagens do sistema e o erro embaixo de cada
   campo) implementada e publicada no staging em 23/out** (sem migração). **7c (os 22 pontos de prioridade Alta: Agenda,
   Configurações, Pacientes, Financeiro e Métricas) implementada, conferida no local e publicada no staging em
-  23/out** (sem migração; detalhes e as correções feitas na conferência em [`ajuda-contextual.md`](ajuda-contextual.md)).
+  23/out** (sem migração; detalhes e as correções feitas na conferência em [`ajuda-contextual.md`](arquivo/modulos/ajuda-contextual.md)).
   **Etapa 7 toda publicada. Pontos de prioridade Média (pedido do cliente, 23/out) também publicados no staging em
-  23/out** (sem migração; um commit por módulo; detalhes em [`ajuda-contextual.md`](ajuda-contextual.md)).
+  23/out** (sem migração; um commit por módulo; detalhes em [`ajuda-contextual.md`](arquivo/modulos/ajuda-contextual.md)).
   **Pontos de prioridade Baixa (pedido do cliente, 23/out) publicados no staging em 23/out** (sem migração); o
   inventário fica todo atendido (a tela WhatsApp do Suporte ficou sem mudança, como o inventário previa).
   **Retomar daqui:** o cliente valida a ajuda contextual inteira (Alta, Média e Baixa) no staging e traz os ajustes.
@@ -981,7 +981,7 @@ mudança; o texto próprio de "Menu" da clínica, quando existe, continua valend
 Investigação da produção (05/nov): 439 envios em 3 dias, 3 falhas: 131042 (pagamento da Meta, 03/nov, remarcação de um
 paciente já avisado), 131000 (instabilidade da Meta no "conversa encerrada" do bot, 04/nov, sem reenvio porque o bot
 ficava fora) e 131026 (número cadastrado errado, confirmação de 05/nov). Decisões e implementação em
-[`falhas-de-envio.md`](falhas-de-envio.md): conferência do número (A2), aviso de entrega na Agenda (C), "Corrigir
+[`falhas-de-envio.md`](arquivo/modulos/falhas-de-envio.md): conferência do número (A2), aviso de entrega na Agenda (C), "Corrigir
 número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. Migração
 `20261213120000_falhas_de_envio_descartadas`. Roteiro: `staging.md`, parte W.
 
@@ -1228,7 +1228,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 >
 > **NA, conversas que não são atendimento (07/nov):** NA1 a NA6 feitas, **no staging e na produção** (`d4aff65`,
 > migrações `20261226120000`, `20261226130000` e `20261226140000` aplicadas nos dois). **Validada (07/nov)** pelo
-> roteiro no fim do [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
+> roteiro no fim do [`conversas-nao-atendimento.md`](arquivo/modulos/conversas-nao-atendimento.md).
 >
 > **Ajuda desta tela (07/nov, `32df66f`):** no pé do menu lateral e, no celular, ícone "?" no cabeçalho. No staging e
 > na produção (`d4aff65`). **Validada (07/nov).** As 28 capturas refeitas (fila vazia). **`faturamento` com a `main` até `d4aff65`** (merge
@@ -1247,9 +1247,9 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 >
 > **CA, ciclo do atendimento humano (04/nov):** situação guardada, Finalizar atendimento sem mensagem, abas na tela
 > Atendimento e encerramento silencioso em 12 h. No **staging e na produção** (`1bfd20f`, 05/nov; migração
-> `20261211120000` aplicada nos dois). **Validada (05/nov).** Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+> `20261211120000` aplicada nos dois). **Validada (05/nov).** Plano em [`ciclo-atendimento-humano.md`](arquivo/modulos/ciclo-atendimento-humano.md).
 >
-> **Central de Atendimento Humano (05/nov):** planejamento em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
+> **Central de Atendimento Humano (05/nov):** planejamento em [`planejamento-central-atendimento.md`](arquivo/modulos/planejamento-central-atendimento.md).
 > Decisões 1 a 12 respondidas (D12 revista); CN0 feito. **Alertas para a produção (seção 5.1):** a Meta cobra as
 > mensagens de serviço desde 01/out (1.000 grátis/mês por número; sem pagamento, para de entregar) e descontinuou o
 > Embedded Signup v3 (o botão de conexão usa a v3) em 15/out. **Cliente (05/nov):** sem medição (só a clínica piloto na produção); o cliente confere a
@@ -1261,7 +1261,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
 > número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging e na produção**
 > (`ed2931d`; migração `20261213120000` aplicada nos dois). **Validada (05/nov).** Plano em
-> [`falhas-de-envio.md`](falhas-de-envio.md).
+> [`falhas-de-envio.md`](arquivo/modulos/falhas-de-envio.md).
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
@@ -1283,7 +1283,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda, com as **25 capturas reais de tela** (`public/ajuda/`, refazer quando a tela mudar) e o WhatsApp do suporte (05/nov). Detalhes em
-> [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
+> [`ajuda-contextual.md`](arquivo/modulos/ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
 > **Em produção (cliente, 04/nov):** a `main` inteira até a C30 (3ª leva, acima); antes, até a C21: PN1–PN2, IS1–IS5, C17–C20 e C21 (6 migrações,
 > `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Validado (05/nov). Detalhe no [`producao.md`](producao.md) (Publicações).
@@ -1305,7 +1305,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 >   **C21 (04/nov):** dúvida respondida fora de um fluxo mostra o menu (ou o submenu) de novo, sem "Isso resolve sua
 >   dúvida?"; menu com "Escolha uma opção abaixo ou faça uma pergunta."; nas Métricas, resolvida sem recepção em 30 min.
 >   **No staging e na produção (04/nov, sem migração)**; validada (05/nov).
-> - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
+> - **Evolução do assistente** ([`evolucao-assistente.md`](arquivo/modulos/evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
 > - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 e F12.2c a F12.2h na `main` e no staging (07/nov),
@@ -1313,7 +1313,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 >   aprovado (renovação automática, IPCA, arrependimento, cancelamento), Assinatura em passo a passo, cancelamento e
 >   troca de cartão pelo Administrador, lembrete do IPCA. Revisar: textos dos e-mails. Fora do código: token e webhook do
 >   Asaas, tokenização em produção, advogado. Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md`.
-> - **Implantação segura do WhatsApp** ([`implantacao-segura.md`](implantacao-segura.md)), após os incidentes de 03/nov
+> - **Implantação segura do WhatsApp** ([`implantacao-segura.md`](arquivo/modulos/implantacao-segura.md)), após os incidentes de 03/nov
 >   na clínica piloto (erro 131042 de pagamento na Meta; mensagem automática do app pausando o bot): guias públicos
 >   para o dono da clínica, mensagem de teste exigida para ativar, checklist de implantação, aviso de mensagem
 >   automática e Sistema › Problemas conhecidos. **IS1 no staging (03/nov, sem migração)**: guias públicos
@@ -1322,7 +1322,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 >   valida; nas clínicas existentes, "Enviar à Meta as que faltam" antes do teste. **IS3 a IS5 (03/nov)**: checklist
 >   de implantação (migração `20261204120000`), mensagem automática do app sem pausar o bot e Sistema › Problemas
 >   conhecidos (migração `20261205120000`). Na produção em 03/nov (cliente pediu, sem validar antes no staging).
-> - **Pedido não concluído** ([`pedido-nao-concluido.md`](pedido-nao-concluido.md)), após o caso de 03/nov (tocou em
+> - **Pedido não concluído** ([`pedido-nao-concluido.md`](arquivo/modulos/pedido-nao-concluido.md)), após o caso de 03/nov (tocou em
 >   Remarcar no lembrete e não concluiu): mensagem padrão com Novo link / Falar com a recepção / Desistir quando o link
 >   vence ou o cancelamento fica sem resposta; lembrete só muda com a ação concluída; grupo "Não concluiu".
 >   **PN1 e PN2 no staging (03/nov; migrações `20261201120000` e `20261202120000` aplicadas)**: grupo "Não concluíram"
@@ -1391,7 +1391,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 > (`api/agendar`, `booking_links`). Clínica Exemplo Saúde do staging com 12 profissionais
 > (`scripts/clinica-exemplo-grande.mjs`).
 > **VR na `main` (11/nov):** branch `varios-responsaveis` juntada (suíte verde: unidade 1223, banco 1218); detalhe na seção
-> 8 do [`planejamento-varios-responsaveis.md`](planejamento-varios-responsaveis.md). Pergunta aberta: atualizar a
+> 8 do [`planejamento-varios-responsaveis.md`](arquivo/modulos/planejamento-varios-responsaveis.md). Pergunta aberta: atualizar a
 > `nota-fiscal` com a `main`.
 >
 > **Outras frentes paradas**

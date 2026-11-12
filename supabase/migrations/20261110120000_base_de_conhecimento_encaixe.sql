@@ -1,5 +1,5 @@
 -- Base de Conhecimento: encaixe pela base (ajustes da homologação, cliente, 31/out/2026;
--- docs/base-de-conhecimento.md). "Encaixe", "preciso de um encaixe", "consigo um encaixe" iam para Não
+-- docs/arquivo/modulos/base-de-conhecimento.md). "Encaixe", "preciso de um encaixe", "consigo um encaixe" iam para Não
 -- reconhecidas. Fluxo novo `waitlist` (o "Encaixe ou antecipar" do bot) e a entrada EN1, em rascunho como o
 -- catálogo inicial: o Suporte ativa e publica. "encaixar" sai das palavras-chave de M1 (marcar consulta).
 

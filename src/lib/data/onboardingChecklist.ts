@@ -9,7 +9,7 @@ import { APP_AUTO_REPLY_TYPE } from "./whatsapp/conversations";
 import { templateApproval, templatesInUse, describeTemplateApproval } from "./whatsapp/templates";
 import { describeSendFailure } from "../whatsappErrors";
 
-// Checklist de implantação (IS3; cliente, 03/nov/2026; docs/implantacao-segura.md): o que precisa estar pronto para
+// Checklist de implantação (IS3; cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md): o que precisa estar pronto para
 // ativar a clínica, na Situação (Sistema › Clínicas › clínica). Itens que o sistema confere sozinho e itens que o
 // Suporte marca (`clinic_onboarding_checks`). Obrigatórios bloqueiam "Ativar a clínica" (tela, rota e banco:
 // app.clinic_activation_missing); recomendados não. O teste do bot fica para depois de ativar: em implantação o bot

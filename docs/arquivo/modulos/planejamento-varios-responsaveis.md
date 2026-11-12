@@ -5,7 +5,7 @@
 > cada um com o seu número; a recepção liga outro responsável à ficha; bot e portal reconhecem o paciente pelos números
 > ligados; ninguém se liga sozinho pelo portal.
 > - **Feito (10/nov):** levantamento do impacto no código (seção 3), modelo (seção 4), **decisões VR-1 a VR-7**
->   (seção 5) e **telas UI-1 a UI-6** (seção 6, canvas aprovado tela a tela), **D14** em [`arquitetura.md`](arquitetura.md)
+>   (seção 5) e **telas UI-1 a UI-6** (seção 6, canvas aprovado tela a tela), **D14** em [`arquitetura.md`](../../arquitetura.md)
 >   e as etapas VR1 a VR5 (seção 7).
 > - **VR1 (banco) feita (11/nov, sessão de implementação, branch `varios-responsaveis`):** migração
 >   `20270113120000_varios_responsaveis.sql` aplicada no banco local (com o OK do cliente), **não no staging**; detalhe

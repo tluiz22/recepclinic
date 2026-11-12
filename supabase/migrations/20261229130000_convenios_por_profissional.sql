@@ -1,4 +1,4 @@
--- MC (cliente, 07/nov/2026; docs/planejamento-multiprofissional.md, seção 3):
+-- MC (cliente, 07/nov/2026; docs/arquivo/modulos/planejamento-multiprofissional.md, seção 3):
 -- convênios por profissional.
 --
 --   1. associação positiva: professional_insurance_plans guarda os planos que o

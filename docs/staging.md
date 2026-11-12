@@ -600,7 +600,7 @@ Sem migração; publica com o push na `main`.
 ## V. Ciclo do atendimento humano (CA, 04/nov)
 
 Migração `20261211120000_ciclo_do_atendimento_humano.sql` (aplicar antes do push). Detalhe em
-[`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+[`ciclo-atendimento-humano.md`](arquivo/modulos/ciclo-atendimento-humano.md).
 
 1. **Abas.** Atendimento humano: Aguardando a clínica e Em atendimento, com contador; Notificações só com o cartão de
    ativar. No celular: "Aguardando", "Atendimento" e "Notificações" lado a lado, contador embaixo.
@@ -618,7 +618,7 @@ Migração `20261211120000_ciclo_do_atendimento_humano.sql` (aplicar antes do pu
 ## W. Falhas de envio (FE, 05/nov)
 
 Migração `20261213120000_falhas_de_envio_descartadas.sql` (aplicar antes do push). Detalhe em
-[`falhas-de-envio.md`](falhas-de-envio.md).
+[`falhas-de-envio.md`](arquivo/modulos/falhas-de-envio.md).
 
 1. **Conferência ao marcar.** Marcar um atendimento futuro: a confirmação mostra o WhatsApp que recebe a mensagem, em
    destaque, e "Marcar" só libera com "Conferi o número com o paciente" marcado. Data passada: sem o quadro.
@@ -638,7 +638,7 @@ Migração `20261213120000_falhas_de_envio_descartadas.sql` (aplicar antes do pu
 ## X. Preços da Meta e uso por categoria (CU2, 05/nov)
 
 Migração `20261214120000_precos_da_meta.sql` (aplicar antes do push). Login do Suporte. Plano em
-[`planejamento-central-atendimento.md`](planejamento-central-atendimento.md), seção 14.
+[`planejamento-central-atendimento.md`](arquivo/modulos/planejamento-central-atendimento.md), seção 14.
 
 1. **Menu.** Sistema › **Preços da Meta**, abaixo de Uso.
 2. **Vigente.** "Vigente desde 01/10/2026", Em uso: utilidade, autenticação e serviço R$ 0,0350; 1.000 grátis por
@@ -678,7 +678,7 @@ Migração `20261215120000_central_base.sql` (aplicar antes do push). Sem tela n
 
 Migrações `20261216120000` a `20261224120000` (`central_texto`, `central_lista`, `central_perfil`, `central_envio`,
 `central_retomar`, `central_midias`, `central_envio_midia`, `central_guarda`, `central_historico`), aplicadas antes do
-push. Plano em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md), seção 12.
+push. Plano em [`planejamento-central-atendimento.md`](arquivo/modulos/planejamento-central-atendimento.md), seção 12.
 
 **Antes (Suporte/cliente):** na clínica de testes, liberar o item "Central de atendimento" na Matriz (com o Bot);
 criar o modelo "Retomar conversa" (`rc_retomar_conversa_v1`) e esperar a aprovação da Meta; conferir no painel do app

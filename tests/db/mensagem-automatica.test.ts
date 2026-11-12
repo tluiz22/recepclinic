@@ -7,7 +7,7 @@ import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/we
 import { setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
-// IS4 — Mensagem automática do app (cliente, 03/nov/2026; docs/implantacao-segura.md): o eco do app que sai até 5 s
+// IS4 — Mensagem automática do app (cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md): o eco do app que sai até 5 s
 // depois da mensagem do paciente ou do bot (saudação, ausência) não pausa o bot e fica registrado para o aviso.
 
 const env = () => ({

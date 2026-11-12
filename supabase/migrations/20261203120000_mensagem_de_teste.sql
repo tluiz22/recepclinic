@@ -1,4 +1,4 @@
--- IS2 Mensagem de teste (cliente, 03/nov/2026; docs/implantacao-segura.md): o
+-- IS2 Mensagem de teste (cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md): o
 -- modelo novo `connection_test` (rc_teste_envio_v1) confirma que o WhatsApp da
 -- clínica entrega mensagens automáticas (cartão na Meta e template aprovado)
 -- antes de ativar a clínica. Só a lista de modelos aceitos muda.

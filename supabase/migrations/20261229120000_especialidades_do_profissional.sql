@@ -1,4 +1,4 @@
--- ME (cliente, 07/nov/2026; docs/planejamento-multiprofissional.md, seção 2):
+-- ME (cliente, 07/nov/2026; docs/arquivo/modulos/planejamento-multiprofissional.md, seção 2):
 -- especialidades do profissional.
 --
 --   1. a lista é a global do Suporte (kb_specialties, decisão M1): a equipe

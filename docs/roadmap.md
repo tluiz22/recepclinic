@@ -26,8 +26,7 @@ Multiprofissional (ME/MC/MI/MB/MS), Central de Atendimento, assistente/BC, impla
 concluído (PN), menu lateral, vários responsáveis na produção e site `www`. Os documentos antigos dizem "cliente
 valida", mas a linha do tempo indica que estão publicados; **não tratar como concluídos sem confirmação**.
 
-## Módulos já na produção (referência; ler só por busca)
-Multiprofissional `planejamento-multiprofissional.md` · Central `planejamento-central-atendimento.md`,
-`conversas-nao-atendimento.md`, `ciclo-atendimento-humano.md`, `falhas-de-envio.md`, `pedido-nao-concluido.md` ·
-Assistente `evolucao-assistente.md`, `base-de-conhecimento.md`, `implantacao-segura.md` · CRM `arquivo/crm.md` ·
-VR `planejamento-varios-responsaveis.md` · Ajuda `ajuda-contextual.md`.
+## Módulos (fichas curtas; o detalhe completo está em `arquivo/modulos/`, só por `grep`)
+[Central de atendimento](modulos/central-atendimento.md) · [Bot e assistente](modulos/bot-assistente.md) ·
+[Multiprofissional](modulos/multiprofissional.md) · [Vários responsáveis](modulos/varios-responsaveis.md) ·
+[Ajuda contextual](modulos/ajuda-contextual.md) · CRM: `arquivo/crm.md`.

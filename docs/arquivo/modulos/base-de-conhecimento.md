@@ -7,7 +7,7 @@
 > [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)). Etapa 3 na branch `base-conhecimento`
 > (Etapas 3 e 4) juntada na `main` e no **staging** (migração aplicada em 31/out; nada publicado, item
 > ligado em nenhuma clínica). Próximo: **Etapa 5**, homologação pelo roteiro da parte R do
-> [`staging.md`](staging.md). Produção: só depois, planejada à parte. Detalhe nas seções 10 e 11.
+> [`staging.md`](../../staging.md). Produção: só depois, planejada à parte. Detalhe nas seções 10 e 11.
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não

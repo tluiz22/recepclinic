@@ -1,4 +1,4 @@
--- CN5 — mídia recebida na Central (plano em docs/planejamento-central-atendimento.md, seção 6 e decisões 8b e 8c,
+-- CN5 — mídia recebida na Central (plano em docs/arquivo/modulos/planejamento-central-atendimento.md, seção 6 e decisões 8b e 8c,
 -- cliente, 05/nov/2026). Aditiva.
 --
 -- 1. O anexo do paciente só é guardado com a Central valendo (D12 revista, como o texto): a linha em `whatsapp_media`

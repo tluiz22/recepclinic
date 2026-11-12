@@ -11,7 +11,7 @@ import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/we
 import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
 
-// NA — Conversas que não são atendimento (cliente, 06/nov/2026; docs/conversas-nao-atendimento.md). NA1: a marcação no
+// NA — Conversas que não são atendimento (cliente, 06/nov/2026; docs/arquivo/modulos/conversas-nao-atendimento.md). NA1: a marcação no
 // banco (quem marca, isolamento por clínica, trilha em handoff_events, o atendimento aberto saindo sem mensagem e o
 // estado do bot zerado). Conversas pelo webhook com a Meta simulada; clínica com coexistência.
 

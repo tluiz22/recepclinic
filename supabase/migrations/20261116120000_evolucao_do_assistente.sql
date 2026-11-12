@@ -1,4 +1,4 @@
--- Evolução do assistente (EA, cliente, 02/nov/2026; docs/evolucao-assistente.md).
+-- Evolução do assistente (EA, cliente, 02/nov/2026; docs/arquivo/modulos/evolucao-assistente.md).
 --
 -- 1. Dúvida respondida pela base de conhecimento vira tentativa própria no funil
 --    (flow "info"): started → answered → resolved ("Resolvido") ou escalated

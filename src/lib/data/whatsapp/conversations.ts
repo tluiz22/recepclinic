@@ -15,7 +15,7 @@ import { logError } from "../../log";
 // bot fica em silêncio. A conversa volta ao bot pelo "Finalizar atendimento"
 // da tela Atendimento, pelo "#bot" da recepção ou pela rotina de 12 h
 // (handoffReturn.ts), sempre sem mandar nada ao paciente (CA, cliente,
-// 04/nov/2026; docs/ciclo-atendimento-humano.md).
+// 04/nov/2026; docs/arquivo/modulos/ciclo-atendimento-humano.md).
 
 /** Conversa parada fora do repouso por mais que isso recomeça do zero (piloto). */
 export const IDLE_TIMEOUT_MINUTES = 15;
@@ -620,7 +620,7 @@ export async function handleAgentEcho(
 }
 
 // ---------------------------------------------------------------------------
-// Conversas que não são atendimento (NA; cliente, 06/nov/2026; docs/conversas-nao-atendimento.md)
+// Conversas que não são atendimento (NA; cliente, 06/nov/2026; docs/arquivo/modulos/conversas-nao-atendimento.md)
 // ---------------------------------------------------------------------------
 
 /**

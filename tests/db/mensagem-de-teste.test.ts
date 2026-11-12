@@ -6,7 +6,7 @@ import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
-// IS2 — Mensagem de teste (cliente, 03/nov/2026; docs/implantacao-segura.md): o Administrador manda o modelo
+// IS2 — Mensagem de teste (cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md): o Administrador manda o modelo
 // rc_teste_envio_v1 para um celular; a entrega chega pelo webhook; a falha guarda o código da Meta.
 
 const env = () => ({

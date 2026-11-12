@@ -1,4 +1,4 @@
--- NA3 — Conversas que não são atendimento: métricas (cliente, 06/nov/2026, decisão 1; docs/conversas-nao-atendimento.md).
+-- NA3 — Conversas que não são atendimento: métricas (cliente, 06/nov/2026, decisão 1; docs/arquivo/modulos/conversas-nao-atendimento.md).
 --
 -- Enquanto marcado como Pessoal ou Administrativo/outros, o número inteiro sai das Métricas › Digital (tentativas do
 -- bot, pedidos de recepção, taxa de resolução), inclusive o período anterior à marcação; voltou para atendimento, o

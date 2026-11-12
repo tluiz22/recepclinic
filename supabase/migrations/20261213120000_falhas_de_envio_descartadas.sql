@@ -1,4 +1,4 @@
--- Falhas de envio descartadas (cliente, 05/nov/2026; docs/falhas-de-envio.md).
+-- Falhas de envio descartadas (cliente, 05/nov/2026; docs/arquivo/modulos/falhas-de-envio.md).
 --
 -- Dois lugares mostram um envio com falha, e cada um descarta o seu:
 --   'envios'  Relatório do dia › Envios (só o Suporte): erro já conhecido e resolvido sai da lista e do alerta;

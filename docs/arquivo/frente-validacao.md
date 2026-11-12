@@ -9,8 +9,8 @@
 
 | # | O quê | Onde está o roteiro | Situação |
 |---|---|---|---|
-| 1 | Multiprofissional: especialidades (ME), convênios por profissional (MC), informações do bot por profissional (MI) e escolha do profissional no bot (MB) | [`planejamento-multiprofissional.md`](../planejamento-multiprofissional.md), seção 8 | No staging, a validar |
-| 2 | Serviços por profissional (MS: S2, S3, S1, S4) | [`planejamento-multiprofissional.md`](../planejamento-multiprofissional.md), fim da seção 10 | No staging, a validar |
+| 1 | Multiprofissional: especialidades (ME), convênios por profissional (MC), informações do bot por profissional (MI) e escolha do profissional no bot (MB) | [`planejamento-multiprofissional.md`](modulos/planejamento-multiprofissional.md), seção 8 | No staging, a validar |
+| 2 | Serviços por profissional (MS: S2, S3, S1, S4) | [`planejamento-multiprofissional.md`](modulos/planejamento-multiprofissional.md), fim da seção 10 | No staging, a validar |
 | 3 | Ajuste da Central que foi junto com o BaaS do Asaas (`9b22e00`) | [`planejamento-nfse-asaas.md`](../planejamento-nfse-asaas.md), 13.10 | No staging e na produção, a validar |
 | 4 | Desbloqueio do portal pela recepção, na ficha do paciente (pedido do cliente na validação da F3, 10/nov) | [`implementacao-recepcao-digital.md`](../implementacao-recepcao-digital.md), 15.3.2 | **Validado (10/nov, staging)**: faixa no alto da ficha (opção A do canvas), libera o bloqueio e o limite do dia; roteiro na 15.3.2 |
 
@@ -38,7 +38,7 @@ Não são validação de tela; ficam aqui para não se perderem.
 
 - **08/nov:** ajuste pedido pelo cliente ao validar o item 1/2: escolha do profissional em Serviços e Horários (sem
   lembrar a escolha; só vem escolhido vindo de outra tela), especialidade em negrito e filtro em Agendas e
-  Profissionais. Detalhe e roteiro: seção 11 do [`planejamento-multiprofissional.md`](../planejamento-multiprofissional.md).
+  Profissionais. Detalhe e roteiro: seção 11 do [`planejamento-multiprofissional.md`](modulos/planejamento-multiprofissional.md).
 - **08/nov, melhorias pedidas pelo cliente (4 itens, um por vez):**
   1. **Desativar serviço desativa os horários só dele** (decisão: reativar traz de volta só os que saíram junto; o que
      cruza com outro horário fica desativado e a tela avisa). Migração `20270101120000` (`availability_windows.off_with_service`).

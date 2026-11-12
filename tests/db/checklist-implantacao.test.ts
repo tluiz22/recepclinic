@@ -4,7 +4,7 @@ import { setClinicStatus } from "../../src/lib/data/onboarding";
 import { loadOnboardingChecklist, setOnboardingCheck } from "../../src/lib/data/onboardingChecklist";
 import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, readyToActivate, type TestUser } from "./helpers";
 
-// IS3 — Checklist de implantação (cliente, 03/nov/2026; docs/implantacao-segura.md): o Suporte marca os itens; a
+// IS3 — Checklist de implantação (cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md): o Suporte marca os itens; a
 // ativação pelo Suporte só passa no banco com os obrigatórios que ele confere.
 
 let clinicId: string;

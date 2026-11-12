@@ -518,7 +518,7 @@ guardado. Revisão da jornada do bot, E4 ([`historico.md`](historico.md), busca 
 RecepClinic passa a guardar o texto e as mídias das conversas (paciente e recepção), a partir da ativação (o texto
 apagado em 28/out não volta). Leitura só pela tela, por função que confere o acesso e registra quem abriu, com prazo
 de guarda. As clínicas sem a Central seguem a D12 como acima. Antes da produção: termo de tratamento, contrato e
-política de privacidade revisados pelo advogado. Plano em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
+política de privacidade revisados pelo advogado. Plano em [`planejamento-central-atendimento.md`](arquivo/modulos/planejamento-central-atendimento.md).
 
 ## D13 — Nota fiscal das clínicas pelo Asaas (29/out/2026)
 
@@ -551,7 +551,7 @@ médico, documentos e métricas ficam divididos.
 apaga junto só o responsável que fica sem paciente; fichas repetidas não são juntadas (a recepção desativa a
 repetida ao ligar o número); aviso ao responsável que marcou quando outro remarca ou cancela, por modelo próprio da
 Meta. Decisões VR-1 a VR-7, telas UI-1 a UI-6 e etapas em
-[`planejamento-varios-responsaveis.md`](planejamento-varios-responsaveis.md).
+[`planejamento-varios-responsaveis.md`](arquivo/modulos/planejamento-varios-responsaveis.md).
 
 **Descartado:** o portal ligar o número sozinho (risco de um estranho ver as consultas da criança); mensagens para
 todos os responsáveis (em dobro na Meta); juntar fichas movendo o histórico; somar os limites da família.

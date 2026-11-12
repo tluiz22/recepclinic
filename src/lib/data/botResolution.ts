@@ -1,6 +1,6 @@
 import { IN_PROGRESS_MS, sessionOutcome, sessionStep, type FunnelSession } from "./botFunnel";
 
-// Resolução sem a recepção (EA, cliente, 02/nov/2026; docs/evolucao-assistente.md, seção 4): quanto das
+// Resolução sem a recepção (EA, cliente, 02/nov/2026; docs/arquivo/modulos/evolucao-assistente.md, seção 4): quanto das
 // necessidades dos pacientes o assistente resolve sozinho. Fonte: as mesmas tentativas do funil
 // (bot_funnel_events), sem tabela nova. Função pura.
 //

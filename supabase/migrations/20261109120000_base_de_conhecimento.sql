@@ -1,5 +1,5 @@
 -- BC 3.1 — Base de Conhecimento Global do bot (cliente, 31/out/2026;
--- docs/base-de-conhecimento.md).
+-- docs/arquivo/modulos/base-de-conhecimento.md).
 --
 -- Base única, mantida pelo Suporte RecepClinic e compartilhada por todas as
 -- clínicas. Não guarda dado de clínica: cada entrada diz como reconhecer a
@@ -12,7 +12,7 @@
 --   4. perguntas não reconhecidas (decisão 4): só o texto, a clínica e a data,
 --      sem telefone; apagadas depois de 90 dias;
 --   5. item da matriz "Perguntas frequentes no bot" (decisão 5);
---   6. catálogo inicial aprovado (docs/base-de-conhecimento-catalogo.md), todo
+--   6. catálogo inicial aprovado (docs/arquivo/modulos/base-de-conhecimento-catalogo.md), todo
 --      como rascunho e sem publicação: o bot não responde nada até o Suporte
 --      ativar e publicar.
 

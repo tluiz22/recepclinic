@@ -1,7 +1,7 @@
 import type { DbClient } from "./clients";
 import { unwrap } from "./errors";
 
-// Central de Atendimento (CN1; plano em docs/planejamento-central-atendimento.md): ligar e desligar pelo
+// Central de Atendimento (CN1; plano em docs/arquivo/modulos/planejamento-central-atendimento.md): ligar e desligar pelo
 // Administrador e a leitura do histórico de uma conversa. As regras ficam no banco: a Central vale com o item da
 // matriz liberado e ligada pelo Administrador; Administrador e Recepção veem todas as conversas, o Profissional só a
 // que está com ele, o Suporte todas; cada abertura e cada anexo ficam registrados.

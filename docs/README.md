@@ -70,10 +70,10 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
   [`politica-pedidos-de-autoridades.md`](politica-pedidos-de-autoridades.md).
 - **Operação:** [`staging.md`](staging.md), [`producao.md`](producao.md) (fluxo de publicação e registro).
 - **Integrações:** [`meta-tech-provider.md`](meta-tech-provider.md), `integracoes/` (Asaas: playbook BaaS e selos).
-- **Módulos (por busca):** ver "Módulos já na produção" no [`roadmap.md`](roadmap.md).
-- **Em andamento:** [`iniciativas/`](iniciativas/), mais [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md),
+- **Módulos:** fichas curtas em [`modulos/`](modulos/); detalhe completo em `arquivo/modulos/` (só por `grep`).
+- **Em andamento:** [`iniciativas/`](iniciativas), mais [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md),
   [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), [`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md).
-- **Arquivo (só por `grep`):** [`plano.md`](plano.md), [`historico.md`](historico.md) e [`arquivo/`](arquivo/)
+- **Arquivo (só por `grep`):** [`plano.md`](plano.md), [`historico.md`](historico.md) e [`arquivo/`](arquivo)
   (diagnósticos, limites, propostas pré-implementação, CRM, auditoria do frontend, roteiros antigos). `plano.md` e
   `historico.md` ficam na raiz de `docs/` porque comentários do código apontam para eles.
 - **Fila de capturas da Ajuda:** [`capturas-pendentes.md`](capturas-pendentes.md). **Site:** [`site-plano.md`](site-plano.md).

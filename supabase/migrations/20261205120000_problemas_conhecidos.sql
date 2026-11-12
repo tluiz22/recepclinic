@@ -1,4 +1,4 @@
--- IS5 Problemas conhecidos (cliente, 03/nov/2026; docs/implantacao-segura.md):
+-- IS5 Problemas conhecidos (cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md):
 -- registro do Suporte com o que já aconteceu e como resolver (sintoma, causa,
 -- solução e links), em Sistema › Problemas conhecidos. Da plataforma (sem
 -- clinic_id): só o Suporte lê e grava. Os primeiros registros são os casos de

@@ -1,4 +1,4 @@
--- CN4a — responder, assumir e transferir pela Central (plano em docs/planejamento-central-atendimento.md, decisões 4,
+-- CN4a — responder, assumir e transferir pela Central (plano em docs/arquivo/modulos/planejamento-central-atendimento.md, decisões 4,
 -- 5 e 7 e R2, cliente, 05/nov/2026). Aditiva.
 --
 -- 1. Responder (`central_send_prepare`): confere quem pode, a janela de 24 h e o responsável que a tela mostrou;

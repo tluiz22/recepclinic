@@ -1,4 +1,4 @@
--- CA — Ciclo de vida do atendimento humano (cliente, 04/nov/2026; docs/ciclo-atendimento-humano.md).
+-- CA — Ciclo de vida do atendimento humano (cliente, 04/nov/2026; docs/arquivo/modulos/ciclo-atendimento-humano.md).
 --
 -- A situação da conversa com a clínica passa a ser guardada (antes era calculada pela última mensagem):
 --   waiting_clinic   "Aguardando a clínica": o paciente pediu ou escreveu, e a clínica precisa agir;

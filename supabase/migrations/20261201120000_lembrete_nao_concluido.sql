@@ -1,4 +1,4 @@
--- Pedido não concluído, PN1 (cliente, 03/nov/2026; docs/pedido-nao-concluido.md):
+-- Pedido não concluído, PN1 (cliente, 03/nov/2026; docs/arquivo/modulos/pedido-nao-concluido.md):
 -- no lembrete, Remarcar e Cancelar só contam quando a remarcação ou o
 -- cancelamento aconteceu depois do toque. Antes disso, o desfecho é
 -- not_completed ("Não concluíram"), como no Relatório do dia (daily.ts,
