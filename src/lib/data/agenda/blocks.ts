@@ -26,7 +26,7 @@ export type ScheduleBlock = {
   removedAt: Date | null;
 };
 
-/** O link de remarcação do aviso: o do portal (F3-3) quando ele cobre o atendimento, senão o de /agendar. */
+/** O link de remarcação do aviso: o do portal (F3-3) quando ele cobre o atendimento; sem ele, o aviso vai sem link. */
 export type CanceledWithLink = { appointment: Appointment; portalLink: PortalLink | null };
 
 const COLUMNS = "id, agenda_id, starts_at, ends_at, reason, recess_message, removed_at";

@@ -163,7 +163,7 @@ export type ClinicCancellationNotice = { appointmentId: string; status: NoticeSt
 export async function notifyClinicCancellations(
   db: DbClient,
   clinicId: string,
-  canceled: { appointmentId: string; portalLinkId?: string | null }[],
+  canceled: { appointmentId: string; portalLinkId: string | null }[],
   sender: ClinicSender | null,
   now: Date = new Date(),
 ): Promise<ClinicCancellationNotice[]> {
