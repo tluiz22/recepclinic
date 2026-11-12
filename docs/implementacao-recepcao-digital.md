@@ -27,7 +27,7 @@ Muda a regra da proposta ("com os itens desligados, a clínica não vê diferen�
 - **Bot depende do portal:** sem o item Portal ligado, a clínica não pode ligar o bot.
 - **Clínica sem bot:** recebe só os lembretes; a clínica marca os atendimentos no painel.
 - **Telas da recepção (R1 a R8) para todas as clínicas:** implementadas sem depender do item Portal (o que só existe
-  com o portal, como o atalho do link no Meu dia, aparece só com ele).
+  com o portal, como o link e o QR no Meu perfil, aparece só com ele).
 - Consequências a decidir com o cliente: seção 6 (I6 em diante).
 
 ## 2. Como cada etapa é feita (cliente, 08/nov)
@@ -56,7 +56,7 @@ Revistas com as decisões I1, I6 a I9 (cliente, 08/nov). Telas da recepção par
 | **F2d Retorno e exames no portal** | Telas da D4: retorno pelas regras do bot (I8) e exames | Com Portal |
 | **F3 Bot com jornada única e links** | Bot: Agendar, Retorno e Exames levam ao portal; acaba a marcação no chat; Remarcar abre o portal; Cancelar segue no chat (I7); P12 Minhas consultas; Configurações › Portal, "Copiar link para…", QR; jornada do bot atualizada. **Muda o bot das clínicas em produção** | Com bot (todas com bot têm Portal) |
 | **F5a Agenda da clínica grande** | Agenda em colunas (até 7 sem rolagem; 8+ com Especialidade/Profissional e barra de rolagem), atendimento aberto na coluna à direita, Próximos horários livres, celular com uma agenda por vez | Todas |
-| **F5b Meu dia, Conversas, Meu perfil e celular** | Meu dia novo ("Precisa de você", tabela por profissional; atalho do link só com Portal); Conversas com aguardando primeiro, botão "Aguardando" e "Com quem ele já consulta" (com a Central); Meu perfil do profissional (link e QR só com Portal); barra embaixo no celular | Todas |
+| **F5b Meu dia, Conversas, Meu perfil e celular** | Meu dia novo ("Precisa de você", tabela por profissional; **sem atalho do link** (cliente, 12/nov)); Conversas com aguardando primeiro, botão "Aguardando" e "Com quem ele já consulta" (com a Central); Meu perfil do profissional (link e QR só com Portal); barra embaixo no celular | Todas |
 | **F6 Métricas e recuperação** | Métricas › Portal, Desempenho › "De onde vêm as marcações", aviso a quem não terminou de marcar (15 min), monitor do Suporte | Com Portal (origens em Desempenho: todas) |
 
 Ordem proposta: F1 → D4 → F2a → F2b → F2c → F2d → F3 → F5a → F5b → F6. A F5a só depende da F1 e pode ser antecipada.

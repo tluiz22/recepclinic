@@ -4,7 +4,7 @@
 > revistas). **Etapa 2 (design) fechada:** portal (P1 a P13, celular e computador), link do profissional e **painel da
 > recepção (rodada 3, revisada tela por tela e aprovada)**, no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb
 > (seção 18). Decisões da rodada 3 que mudam a proposta: conversa **sem profissional** (só com quem está); **vários
-> números de WhatsApp fora desta entrega** (seção 10, F4, RD11: pendentes); link no Meu dia e no perfil do profissional;
+> números de WhatsApp fora desta entrega** (seção 10, F4, RD11: pendentes); link no perfil do profissional (o atalho no Meu dia saiu em 12/nov);
 > aba Métricas › Portal e origens em Desempenho; links marcados por lugar. Especificação das telas
 > atualizada (08/nov). **Etapa 3: plano da implementação em [`implementacao-recepcao-digital.md`](../implementacao-recepcao-digital.md)**
 > (08/nov), **aprovado**; retomar por lá. **Revisões do cliente no plano (08/nov):** regra da Matriz (o item Portal só
@@ -674,7 +674,7 @@ profissionais". **Origem por link marcado:** "Copiar link para…" (Configuraç�
 celular) pergunta onde vai usar (Instagram, site, Google, mensagem, outro lugar) e o link leva a marca (`?de=…`); o QR
 sai marcado como cartaz; link sem marca conta como "origem não informada". Métricas **aprovadas**. **Vários números de WhatsApp fora desta entrega (cliente,
 08/nov):** pendente para planejar depois (seção 10, F4, RD11); saíram do desenho as telas Números de WhatsApp e
-Desconectar, o selo do número, o filtro Número e a faixa "Respondendo pelo número" em Conversas. **Onde pegar o link (cliente, 08/nov):** **atalho no Meu dia** para mandar no WhatsApp
+Desconectar, o selo do número, o filtro Número e a faixa "Respondendo pelo número" em Conversas. **Onde pegar o link (cliente, 08/nov):** **[Revista em 12/nov: o atalho no Meu dia foi retirado pelo cliente; o link fica no Meu perfil e em Configurações › Portal.]** ~~atalho no Meu dia~~ para mandar no WhatsApp
 ("Copiar link" e "Abrir o WhatsApp"): a recepção pega por padrão o **link da clínica** (todos os profissionais); o
 profissional, no Meu dia dele, o **próprio link**. Os links marcados para **redes sociais, site e Google** (e o QR)
 ficam no **perfil do profissional** ("Meu perfil"), e **cada profissional altera tudo o que é dele** (o Administrador
