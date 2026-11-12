@@ -317,10 +317,10 @@ export function serviceLine(serviceName: string, professionalName: string | null
   return professionalName ? `${serviceName} com ${professionalName}` : serviceName;
 }
 
-/** Variáveis {{1}}…{{6}} da confirmação, remarcação e lembrete ({{1}}…{{5}} do cancelamento). */
 /** O lembrete da v2 tem 7 variáveis (a 7ª é o mapa); o texto da v1 tem 6 e leva as 3 respostas rápidas. */
 export const hasReminderLinks = (body: string | null | undefined): boolean => !!body && paramCount(body) >= 7;
 
+/** Variáveis {{1}}…{{6}} da confirmação, remarcação e lembrete ({{1}}…{{5}} do cancelamento). */
 export function appointmentParams(clinic: string, a: AppointmentForMessage): string[] {
   return [
     firstName(a.contactName),

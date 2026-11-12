@@ -19,7 +19,7 @@ const portal = page.kind === "open" ? page.portal : null;
 const base = page.kind === "open" ? page.base : "";
 const flow = readFlow(Astro.url.searchParams);
 // "Profissionais e valores" (BE-6, vindo do início): vitrine com título próprio, filtro de especialidade e sem passos.
-const directory = flow.directory || !flow.specialty;
+const directory = flow.directory;
 const nameQuery = flow.name ?? "";
 const specialties = portal ? portalSpecialties(portal.professionals) : [];
 const specialty = flow.specialty && flow.specialty !== "todos" ? (specialties.find((s) => s.id === flow.specialty) ?? null) : null;

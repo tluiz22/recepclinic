@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../lib/data/clients";
 import { updateClinicSettings } from "../../../../lib/data/config/clinic";
+import { DataError } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked } from "../../../../lib/forms";
 
@@ -16,6 +17,7 @@ export const POST: APIRoute = async (context) => {
   return runFormAction(
     context,
     async () => {
+      if (!form) throw new DataError("invalid", "Formulário inválido.");
       await updateClinicSettings(db, clinicId, {
         confirmPortalBooking: formChecked(form, "confirm_portal_booking"),
         confirmReceptionBooking: formChecked(form, "confirm_reception_booking"),

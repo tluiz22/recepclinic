@@ -184,7 +184,7 @@ export function portalLinkTarget(link: Pick<PortalLink, "purpose" | "professiona
   if (link.purpose === "reschedule" && link.appointmentId) return `${base}/minhas-consultas/remarcar?a=${link.appointmentId}`;
   if (link.purpose === "my_appointments") return `${base}/minhas-consultas`;
   // Bot enxuto (F3f): Profissionais, valores e convênios; Cancelar direto na consulta (lembrete novo, BE-10).
-  if (link.purpose === "professionals") return `${base}/medicos`;
+  if (link.purpose === "professionals") return `${base}/medicos?lista=1`;
   if (link.purpose === "cancel" && link.appointmentId) return `${base}/minhas-consultas/cancelar?a=${link.appointmentId}`;
   if (link.purpose === "exam") {
     const exam = portal.exams.find((e) => e.serviceId === link.serviceId);
