@@ -1,7 +1,7 @@
 import type { DbClient } from "./clients";
 import { DataError, unwrap, unwrapOne } from "./errors";
 
-// Problemas conhecidos (IS5; cliente, 03/nov/2026; docs/implantacao-segura.md): o registro do Suporte com o que já
+// Problemas conhecidos (IS5; cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md): o registro do Suporte com o que já
 // aconteceu e como resolver, em Sistema › Problemas conhecidos. Da plataforma (`known_issues`, sem clinic_id); o
 // banco só deixa o Suporte ler e gravar.
 

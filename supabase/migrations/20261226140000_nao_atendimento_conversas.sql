@@ -1,4 +1,4 @@
--- NA4 — Conversas que não são atendimento: tela Conversas (cliente, 06/nov/2026; telas NA0; docs/conversas-nao-atendimento.md).
+-- NA4 — Conversas que não são atendimento: tela Conversas (cliente, 06/nov/2026; telas NA0; docs/arquivo/modulos/conversas-nao-atendimento.md).
 --
 --  1. A lista ganha a aba "Pessoal e admin." (p_classified): os números marcados, com o selo, quem marcou e quando e as
 --     mensagens novas (não lidas por pessoa). Abertas e Finalizadas deixam esses números de fora.

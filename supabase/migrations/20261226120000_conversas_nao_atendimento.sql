@@ -1,4 +1,4 @@
--- NA1 — Conversas que não são atendimento (cliente, 06/nov/2026; docs/conversas-nao-atendimento.md, decisões 1 a 5).
+-- NA1 — Conversas que não são atendimento (cliente, 06/nov/2026; docs/arquivo/modulos/conversas-nao-atendimento.md, decisões 1 a 5).
 --
 -- A equipe marca o número como Pessoal ou Administrativo/outros: o número sai do bot, das métricas e dos pendentes.
 -- Aditiva, sem tabela nova:

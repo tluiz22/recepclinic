@@ -10,7 +10,7 @@ import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/we
 import { asDb, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
 
-// CA — Ciclo de vida do atendimento humano (cliente, 04/nov/2026; docs/ciclo-atendimento-humano.md): situação
+// CA — Ciclo de vida do atendimento humano (cliente, 04/nov/2026; docs/arquivo/modulos/ciclo-atendimento-humano.md): situação
 // guardada (Aguardando a clínica, Em atendimento), "Finalizar atendimento" pela tela, reativação silenciosa do bot,
 // encerramento automático em 12 h e os eventos em handoff_events.
 // Conversas pelo webhook com a Meta simulada; clínica com coexistência.
@@ -186,7 +186,7 @@ describe("ciclo do atendimento humano (CA)", () => {
 
   it("10. a próxima mensagem depois de finalizar é do bot", async () => {
     const reply = await say(P, "Oi");
-    expect(reply[0]).toMatch(/^Olá, Resp\.! 👋/);
+    expect(reply[0]).toMatch(/^Olá, Resp\.! 👋\n\nEste é o contato oficial/);
     expect(await conversation(P)).toMatchObject({ human_handoff: false });
   });
 

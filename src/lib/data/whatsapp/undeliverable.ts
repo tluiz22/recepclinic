@@ -1,7 +1,7 @@
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
 
-// Falhas de envio que a clínica resolve (cliente, 05/nov/2026; docs/falhas-de-envio.md).
+// Falhas de envio que a clínica resolve (cliente, 05/nov/2026; docs/arquivo/modulos/falhas-de-envio.md).
 //
 // Número sem WhatsApp: a Meta devolve 131026 quando o número não tem WhatsApp (ou o app está muito desatualizado, ou
 // a pessoa não aceitou os termos novos) — quase sempre um número cadastrado errado. O Início mostra "Corrigir

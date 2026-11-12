@@ -6,11 +6,11 @@ import type { DbClient } from "../../clients";
 import { unwrap, unwrapOne } from "../../errors";
 import { getClinicFeatures } from "../../features";
 import { getWhatsappConnection } from "../connection";
-import { listBotMessages, renderMarkers, renderWelcome, type BotMessageKey } from "../customMessages";
+import { listBotMessages, renderMarkers, type BotMessageKey } from "../customMessages";
 import { logFunnelStep, markHandoffSubjectAsked, setConversationState, WELCOME, type Conversation } from "../conversations";
 import { recordOutboundMessage, type SendOutcome } from "../messages";
 import { botRetryContext } from "../retryRules";
-import { sendPreparationFile, type ClinicSender, type ListSection, type ReplyButton } from "../send";
+import { linkBody, sendPreparationFile, type ClinicSender, type LinkButton, type ListSection, type ReplyButton } from "../send";
 import { downloadPreparationFile } from "../preparation";
 import type { PreparationFile } from "../../config/preparationFile";
 import { preparationFileCaption } from "../../../preparationMessage";
@@ -20,10 +20,7 @@ import { loadCatalog, type BotCatalog } from "./catalog";
 import { buildScope, EXAMS_CHOICE, PROFESSIONAL_KEY, scopeAttendance, scopeCatalog, type ProfessionalScope } from "./professionalScope";
 import { BOOKING_HORIZON_DEFAULT } from "../../config/clinic";
 import {
-  ASK_BIRTHDATE_AGAIN,
   HANDOFF_SUBJECT_QUESTION,
-  INVALID_BIRTHDATE,
-  INVALID_BIRTHDATE_AGAIN,
   LIST_BUTTON,
   MEDIA_AUDIO,
   MEDIA_OTHER,
@@ -31,11 +28,7 @@ import {
   RECEPTION_CONFIRM,
   RECEPTION_CONFIRM_BUTTONS,
   receptionContactOffer,
-  wayOutButtons,
-  welcome,
   wordsFor,
-  YES_NO_BACK_BUTTONS,
-  YES_NO_BUTTONS,
   type Words,
 } from "./texts";
 
@@ -171,7 +164,7 @@ const MEDIA_TYPES = new Set(["image", "video", "sticker", "document"]);
  * conhecimento: se ela respondeu, null (o passo se repete sem o "não entendi"
  * e não conta).
  */
-async function notUnderstood(b: Bot, body: string): Promise<string | null> {
+export async function notUnderstood(b: Bot, body: string): Promise<string | null> {
   if (b.knowledge && !b.knowledge.done && !b.notUnderstoodSaid) {
     b.knowledge.done = true;
     const outcome = await b.knowledge.run(b);
@@ -331,22 +324,6 @@ async function loadProfessionalInfo(b: Bot): Promise<void> {
   b.words = wordsFor(b.clinic.profile);
 }
 
-/** Guarda a escolha da especialidade ou do profissional (MB) e passa a conversa para o contexto dele. */
-export async function applyProfessionalChoice(b: Bot, choice: string): Promise<void> {
-  await mergeContext(b, { [PROFESSIONAL_KEY]: choice });
-  b.scope = buildScope(b.fullCatalog, b.convo.context);
-  b.catalog = async () => scopeCatalog(b.fullCatalog, b.scope);
-  await loadProfessionalInfo(b);
-}
-
-/** Esquece a escolha (o paciente quer outra especialidade ou outro profissional). */
-export async function clearProfessionalChoice(b: Bot): Promise<void> {
-  await mergeContext(b, { [PROFESSIONAL_KEY]: undefined });
-  b.scope = buildScope(b.fullCatalog, b.convo.context);
-  b.catalog = async () => scopeCatalog(b.fullCatalog, b.scope);
-  await loadProfessionalInfo(b);
-}
-
 export { EXAMS_CHOICE };
 
 async function record(b: Bot, kind: string, outcome: SendOutcome, body: string): Promise<void> {
@@ -392,10 +369,10 @@ export async function sayPreparationFile(b: Bot, kind: string, examName: string,
   await record(b, kind, outcome, `[${file.name}] ${preparationFileCaption(examName)}`);
 }
 
-export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[]): Promise<void> {
+export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[], header?: string): Promise<void> {
   if (kind === NOT_UNDERSTOOD_KIND && (await notUnderstood(b, body)) === null) body = withoutNotUnderstood(body);
   if (await staffTookOver(b)) return;
-  const outcome = await b.sender.list(b.phone, body, LIST_BUTTON, sections);
+  const outcome = await b.sender.list(b.phone, body, LIST_BUTTON, sections, header);
   await record(b, kind, outcome, body);
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
   if (!outcome.sent) await textFallback(b, kind, outcome, body, sections.flatMap((section) => section.rows));
@@ -411,31 +388,17 @@ export async function sendButtons(b: Bot, kind: string, body: string, buttons: R
 }
 
 /**
- * Data de nascimento não entendida (cliente, 30/out/2026): conta no "não entendi" (na 4ª seguida, a conversa vai
- * para a clínica) e, da 2ª seguida em diante, vem com "Voltar ao menu" e "Falar com a recepção". Digitar a data
- * continua valendo.
+ * Mensagem com o botão de link (bot enxuto, BE-3): uma mensagem só. Sem o botão (sender sem `link`, ou a Meta
+ * recusou), o mesmo texto com o endereço, para a conversa não parar.
  */
-export async function sayInvalidBirthdate(b: Bot): Promise<void> {
-  const again = b.convo.notUnderstoodCount > 0;
-  const body = await notUnderstood(b, again ? INVALID_BIRTHDATE_AGAIN : INVALID_BIRTHDATE);
-  // A base respondeu: a pergunta da data de novo, sem o "não entendi".
-  if (body === null) return say(b, "bot_ask_birthdate_again", ASK_BIRTHDATE_AGAIN);
-  if (again) return sendButtons(b, "bot_invalid_birthdate", body, wayOutButtons(b.receptionAvailable));
+export async function sendLink(b: Bot, kind: string, body: string, button: LinkButton): Promise<void> {
   if (await staffTookOver(b)) return;
-  await record(b, "bot_invalid_birthdate", await b.sender.text(b.phone, body), body);
+  const outcome = b.sender.link ? await b.sender.link(b.phone, body, button) : null;
+  if (outcome) await record(b, kind, outcome, linkBody(body, button));
+  if (outcome?.sent || (outcome && outcome.reason === "contato anonimizado")) return;
+  const text = `${body}\n${button.url}`;
+  await record(b, outcome ? `${kind}_text` : kind, await b.sender.text(b.phone, text), text);
 }
-
-/**
- * Sim/Não não entendido: o aviso e a pergunta de novo numa mensagem com Sim e Não; da 2ª seguida em diante
- * (cliente, 30/out/2026), também com "Voltar ao menu".
- */
-export async function repeatYesNo(b: Bot, kind: string, question: string): Promise<void> {
-  // Sempre com os botões (cliente, 01/nov/2026); da 2ª seguida, com "Voltar ao menu".
-  await sendButtons(b, NOT_UNDERSTOOD_KIND, `${NOT_UNDERSTOOD_YES_NO}\n\n${question}`, b.convo.notUnderstoodCount > 0 ? YES_NO_BACK_BUTTONS : YES_NO_BUTTONS);
-}
-
-/** Botões de Sim/Não: com "Voltar ao menu" quando esta é a 2ª resposta não entendida seguida (cliente, 30/out/2026). */
-export const yesNoButtonsFor = (b: Bot) => (b.notUnderstoodSaid && b.convo.notUnderstoodCount > 0 ? YES_NO_BACK_BUTTONS : YES_NO_BUTTONS);
 
 /** Junta valores ao contexto da conversa sem trocar o passo (undefined tira a chave). */
 export async function mergeContext(b: Bot, values: Record<string, unknown>): Promise<void> {
@@ -492,12 +455,6 @@ export async function end(b: Bot, outcome: string, metadata: Record<string, unkn
   await go(b, WELCOME);
 }
 
-/** O contato passou a existir no meio da conversa (cadastro pelo bot). */
-export async function attachContact(b: Bot, contactId: string): Promise<void> {
-  unwrap(await b.db.from("conversation_state").update({ contact_id: contactId }).eq("id", b.convo.id), "Conversa do WhatsApp");
-  b.convo = { ...b.convo, contactId };
-}
-
 /** Texto da mensagem: o próprio da clínica (com os valores nos marcadores) ou o padrão. */
 export function textFor(b: Bot, key: BotMessageKey, fallback: string, values: Record<string, string> = {}): string {
   const custom = b.custom.get(key);
@@ -505,23 +462,12 @@ export function textFor(b: Bot, key: BotMessageKey, fallback: string, values: Re
 }
 
 /** Primeiro nome do contato da conversa (número cadastrado); null sem cadastro ou se a leitura falhar. */
-async function contactFirstName(b: Bot): Promise<string | null> {
+export async function contactFirstName(b: Bot): Promise<string | null> {
   if (!b.convo.contactId) return null;
   const { data, error } = await b.db.from("contacts").select("full_name").eq("clinic_id", b.clinicId).eq("id", b.convo.contactId).maybeSingle();
   if (error) logError("bot: nome do contato", error, { clinica: b.clinicId });
   const name = data?.full_name?.trim();
   return name ? firstName(name) : null;
-}
-
-/**
- * Boas-vindas: o texto próprio da clínica ou o padrão (com a base ligada, convida a escrever; EA, 02/nov/2026). Número
- * cadastrado: com o primeiro nome (cliente, 08/nov/2026); no texto próprio, onde a clínica pôs {nome}.
- */
-export async function welcomeText(b: Bot): Promise<string> {
-  const name = await contactFirstName(b);
-  const custom = b.custom.get("welcome");
-  if (!custom) return welcome(b.clinic.label, b.features.includes("knowledge_base"), name);
-  return renderWelcome(custom, b.clinic.label, name);
 }
 
 /** Depois de passar a conversa para a recepção (jornada E4): pergunta o assunto, uma vez por pausa. */

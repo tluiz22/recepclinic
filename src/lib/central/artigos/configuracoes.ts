@@ -49,7 +49,7 @@ export const configuracoesArtigos = [
       { name: "Atendimento", text: "Perfil (as palavras do bot e do link de agendar: criança/responsável ou paciente/contato), prazo para oferecer horários (até quantos dias à frente o bot e o link mostram horários livres; o painel não tem esse limite) e idade limite da consulta (quem passou da idade não marca Consulta com ele pelo bot; no Marcar, só aviso). Ficam na agenda dele: sem agenda, o cartão pede para criar. O profissional com login também muda os dele." },
       { name: "Especialidades", text: "Marque uma ou mais da lista (com mais de uma, escolha a principal). No WhatsApp, numa clínica com mais de um profissional, o paciente escolhe a especialidade e depois o profissional. Falta alguma na lista? Peça ao Suporte." },
       { name: "Convênios atendidos", text: "Os planos que ele atende; nenhum marcado: só particular. Com o item Convênios." },
-      { name: "Informações que o bot responde", text: "Formas de pagamento, o texto sobre convênios e observações dele, mostrados em Informações gerais depois que o paciente o escolhe. Vazio: a opção não aparece." },
+      { name: "Informações que o bot responde", text: "Formas de pagamento, o texto sobre convênios e observações dele, usados nas respostas das Perguntas frequentes no bot." },
       { name: "RQE", text: "Registro de Qualificação de Especialista. Preencha só se tiver; o registro aparece só no painel." },
       { name: "WhatsApp", text: "Para ele receber, pelo WhatsApp da clínica, a lista dos atendimentos das agendas dele, como definido em Lembretes." },
       { name: "Limite de profissionais ativos", text: "A tela mostra \"X de Y ativos\". Atingido o limite, é preciso desativar um ou falar com o suporte." },
@@ -74,7 +74,7 @@ export const configuracoesArtigos = [
       { name: "Consultório", text: "O paciente vai até a clínica. O endereço vai no lembrete e na confirmação, com o link do mapa. Consultório sem endereço aparece com o selo \"sem endereço\"." },
       { name: "Domiciliar", text: "A equipe vai até o paciente; o endereço é pedido ao marcar. Precisa do item Atendimento domiciliar liberado para a clínica (senão o selo \"não liberado\" aparece)." },
     ],
-    notes: ["O tipo do local não muda depois de criado.", "O endereço também alimenta a opção Endereço de Informações gerais no bot."],
+    notes: ["O tipo do local não muda depois de criado.", "O endereço também alimenta a resposta do bot a \"qual o endereço?\" (Perguntas frequentes no bot) e o mapa depois do Confirmar presença."],
     contextual: ["/admin/configuracoes/locais"],
   }),
   article({
@@ -209,7 +209,8 @@ export const configuracoesArtigos = [
     order: 68,
     intro: "Um lembrete por público: paciente (item Lembrete automático), profissional e equipe (itens do resumo do dia).",
     fields: [
-      { name: "Lembrete ao paciente", text: "Escolha Na véspera ou No dia e a hora. O paciente pode confirmar presença, remarcar ou cancelar pelos botões." },
+      { name: "Confirmação ao paciente", text: "Duas opções, ligadas por padrão: a confirmação da marcação feita pelo portal e a da feita pela recepção. Desligue a que a clínica não quer mandar." },
+      { name: "Lembrete ao paciente", text: "Escolha Na véspera ou No dia e a hora. O paciente confirma presença pelo botão e remarca ou cancela pelos botões que abrem o portal; a mensagem leva o link do mapa." },
       { name: "Resumo ao profissional", text: "A lista dos atendimentos dele, na véspera ou no dia, na hora escolhida, para os profissionais com WhatsApp cadastrado." },
       { name: "Resumo à equipe", text: "A lista para os contatos da equipe cadastrados aqui (para quem não é profissional, ex.: recepção, gerente)." },
     ],

@@ -7,8 +7,8 @@ import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/we
 import { setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
-// IS4 — Mensagem automática do app (cliente, 03/nov/2026; docs/implantacao-segura.md): o eco do app que sai até 5 s
-// depois da mensagem do paciente ou do bot (saudação, ausência) não pausa o bot e fica registrado para o aviso.
+// IS4 revisto (cliente, 12/nov/2026): o eco do app NÃO é mais classificado pelo tempo. A mensagem que a recepção digitou
+// 1,5 s depois do paciente ("ESQUECI ONTEM", clínica piloto) virou "mensagem automática" por engano. Todo eco é da recepção.
 
 const env = () => ({
   supabaseUrl: process.env.SUPABASE_LOCAL_API_URL!,
@@ -77,19 +77,14 @@ beforeAll(async () => {
 
 afterAll(async () => f.cleanup());
 
-describe("mensagem automática do app", () => {
-  it("saudação segundos depois do \"oi\": não pausa, fica como mensagem automática e gera o aviso", async () => {
+describe("eco do app sem classificação por tempo", () => {
+  it("mensagem segundos depois do paciente: é da recepção, pausa o bot e não gera o aviso", async () => {
     const phone = "+5584988880001";
-    expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId)).toBeNull();
     await hello(phone);
-    await echo(phone, "Olá! Obrigado por entrar em contato. Responderemos em breve.", 2);
-    expect(await paused(phone)).toBe(false);
-    expect(await lastEchoType(phone)).toBe(APP_AUTO_REPLY_TYPE);
-    expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId)).not.toBeNull();
-    // O aviso vale por 6 horas (cliente, 06/nov/2026): 5 h depois ainda aparece; 7 h depois, não.
-    const later = (hours: number) => new Date(Date.now() + hours * 60 * 60_000);
-    expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId, later(5))).not.toBeNull();
-    expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId, later(7))).toBeNull();
+    await echo(phone, "ESQUECI ONTEM", 2);
+    expect(await paused(phone)).toBe(true);
+    expect(await lastEchoType(phone)).toBe("agent_reply");
+    expect(await latestAutomaticEcho(createClinicServiceClient(f.clinicId, env()), f.clinicId)).toBeNull();
   });
 
   it("a recepção responde um minuto depois: pausa como sempre", async () => {
@@ -100,7 +95,7 @@ describe("mensagem automática do app", () => {
     expect(await lastEchoType(phone)).toBe("agent_reply");
   });
 
-  it("eco sem a hora da Meta: a regra de antes (pausa); \"#bot\" segue devolvendo", async () => {
+  it("eco sem a hora da Meta: pausa; \"#bot\" segue devolvendo", async () => {
     const phone = "+5584988880003";
     await hello(phone);
     await echo(phone, "Já te respondo", null);

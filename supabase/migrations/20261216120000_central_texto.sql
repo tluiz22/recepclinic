@@ -1,5 +1,5 @@
 -- CN2 — texto das conversas e última mensagem (Central de Atendimento; plano em
--- docs/planejamento-central-atendimento.md, seções 3.4, 4.1, 4.3 e 14). Aditiva.
+-- docs/arquivo/modulos/planejamento-central-atendimento.md, seções 3.4, 4.1, 4.3 e 14). Aditiva.
 --
 -- 1. Guarda do texto (D12 revista, cliente, 05/nov/2026): o texto do paciente e o das respostas pelo app do WhatsApp
 --    só fica guardado com a Central valendo para a clínica (item liberado e ligada pelo Administrador). A regra fica

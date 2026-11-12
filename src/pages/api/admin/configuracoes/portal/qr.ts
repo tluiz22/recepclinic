@@ -2,17 +2,23 @@ import type { APIRoute } from "astro";
 import QRCode from "qrcode";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { loadPortalSettings } from "../../../../../lib/data/config/portal";
+import { ownSettingsOnly } from "../../../../../lib/clinicAccess";
 import { portalLinksOf } from "../../../../../lib/data/config/portalLinks";
 
 // QR code do link (F3d; R7 "QR code só pelo botão"): o link do cartaz (`?de=cartaz`) da clínica (`p=clinica`) ou de um
 // profissional (`p={id}`), em SVG (na janela) ou PNG ("Baixar imagem"). Só o Administrador (área de Configurações).
 export const GET: APIRoute = async ({ request, cookies, locals, url }) => {
+  // Profissional com login: só o QR do próprio link (F5b), conferido antes de ler as configurações.
+  const own = ownSettingsOnly(locals.clinic!);
+  if (own && (!locals.clinic!.ownProfessionalId || (url.searchParams.get("p") ?? "clinica") !== locals.clinic!.ownProfessionalId)) return new Response("Sem acesso.", { status: 403 });
   const db = createUserClient(request, cookies);
   const settings = await loadPortalSettings(db, locals.clinic!.clinicId);
   const links = portalLinksOf(url, settings);
   const key = url.searchParams.get("p") ?? "clinica";
   const link = key === "clinica" ? links.clinic : links.professionals.get(key);
-  if (!link) return new Response("Link não encontrado.", { status: 404 });
+  if (!link || (key !== "clinica" && own && !settings.professionals.find((p) => p.id === key)?.showInPortal)) {
+    return new Response("Link não encontrado.", { status: 404 });
+  }
   const options = { errorCorrectionLevel: "M" as const, margin: 2 };
   if (url.searchParams.get("formato") === "png") {
     const png = await QRCode.toBuffer(link.posterUrl, { ...options, width: 1024 });

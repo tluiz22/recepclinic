@@ -83,6 +83,35 @@ export function describeReceptionHours(hours: ReceptionHours): string {
   return parts.length ? parts.join(" · ") : "Fechada todos os dias";
 }
 
+const WEEKDAY_PATIENT = ["dom.", "seg.", "ter.", "qua.", "qui.", "sex.", "sáb."] as const;
+const hourWords = (time: string) => {
+  const [hour, minute] = time.split(":");
+  return `${Number(hour)}h${minute === "00" ? "" : minute}`;
+};
+
+/**
+ * Para o paciente (bot enxuto, BE-4): "seg. a sex., 8h às 18h" ou "seg. a sex., 8h às 18h; sáb., 8h às 12h". Vazio
+ * quando a recepção não tem horário.
+ */
+export function describeReceptionHoursForPatient(hours: ReceptionHours): string {
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const parts: string[] = [];
+  let i = 0;
+  while (i < order.length) {
+    const day = hours[order[i]];
+    if (!day) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j + 1 < order.length && hours[order[j + 1]]?.open === day.open && hours[order[j + 1]]?.close === day.close) j++;
+    const span = j > i ? `${WEEKDAY_PATIENT[order[i]]} a ${WEEKDAY_PATIENT[order[j]]}` : WEEKDAY_PATIENT[order[i]];
+    parts.push(`${span}, ${hourWords(day.open)} às ${hourWords(day.close)}`);
+    i = j + 1;
+  }
+  return parts.join("; ");
+}
+
 /** Para o paciente: "hoje, às 8h", "amanhã, às 13h30", "segunda-feira, às 8h" ou "10/11, às 8h". */
 export function describeOpening(opening: Date, now: Date, timeZone: string): string {
   const [hour, minute] = localTimeOf(opening, timeZone).split(":");

@@ -1,5 +1,5 @@
 -- CN4b — "Retomar conversa" e liberação em 30 min (Central de Atendimento; plano em
--- docs/planejamento-central-atendimento.md, decisões 5 e 7 e R1, cliente, 05/nov/2026). Aditiva.
+-- docs/arquivo/modulos/planejamento-central-atendimento.md, decisões 5 e 7 e R1, cliente, 05/nov/2026). Aditiva.
 --
 -- 1. Modelo novo `conversation_resume` (rc_retomar_conversa_v1, texto aprovado pelo cliente em 05/nov, opção C): fora
 --    das 24 h, o único jeito de voltar a falar com o paciente. `central_resume_prepare` confere quem pode, a janela

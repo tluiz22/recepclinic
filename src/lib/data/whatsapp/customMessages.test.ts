@@ -44,8 +44,7 @@ describe("marcadores dos templates (F6.6)", () => {
 });
 
 describe("conversa do bot (F6.6)", () => {
-  it("link enviado exige o {link}; marcador de outra mensagem não vale", () => {
-    expect(fieldError(() => validateBotMessage("booking_link", "Marque aqui!"))).toBe("Falta: {link}");
+  it("marcador de outra mensagem não vale", () => {
     expect(fieldError(() => validateBotMessage("welcome", "Oi, {paciente}!"))).toBe("Campo automático desconhecido: {paciente}");
     expect(validateBotMessage("welcome", "  Oi! Aqui é {clinica} 😊  ")).toBe("Oi! Aqui é {clinica} 😊");
   });

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { DataError } from "../errors";
-import { linkState } from "./links";
 import { addMonthsToDate, firstCandidateDate, generationLimit, validateSeriesInput, type SeriesInput } from "./series";
 
 describe("horizonte de 3 meses (decisão de 04/out)", () => {
@@ -65,14 +64,5 @@ describe("validação da série", () => {
     expect(fields({ endsOn: "2031-03-01" })).toHaveProperty("endsOn");
     expect(fields({ maxSessions: 0 })).toHaveProperty("maxSessions");
     expect(fields({ startTime: "8h" })).toHaveProperty("startTime");
-  });
-});
-
-describe("estado do link de agendamento", () => {
-  const now = new Date("2031-03-09T15:00:00Z");
-  it("válido, vencido (no instante do fim também) ou usado", () => {
-    expect(linkState({ usedAt: null, expiresAt: new Date("2031-03-09T15:30:00Z") }, now)).toBe("valid");
-    expect(linkState({ usedAt: null, expiresAt: now }, now)).toBe("expired");
-    expect(linkState({ usedAt: now, expiresAt: new Date("2031-03-10T00:00:00Z") }, now)).toBe("used");
   });
 });

@@ -9,6 +9,7 @@ import { findContactByPhone, registerPatient, type Contact } from "../patients";
 import { responsibleLabel } from "../patientContacts";
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent, type BotLimitHit } from "../whatsapp/botLimits";
 import { dispatchNotice, enqueueNotice } from "../whatsapp/noticeQueue";
+import { confirmationEnabled } from "../whatsapp/notices";
 import type { ClinicSender } from "../whatsapp/send";
 import { afterLinkBooking, getPortalLink, linkSpentByBooking } from "./links";
 import { PORTAL_PLACES, type PortalPlaceParam } from "../../portal";
@@ -445,9 +446,12 @@ export async function confirmPortalBooking(
 
   await afterBooking(db, clinicId, { appointmentId, hold, insurancePlanId: input.insurancePlanId, entry: input.entry, place: input.place ?? null }, now);
   if (atHome && hold.homeVisitAddress) await saveContactHomeAddress(db, clinicId, hold.phone, hold.homeVisitAddress);
-  await enqueueNotice(db, clinicId, appointmentId, "confirmation", now).catch((error) => logError("portal: confirmação fora da fila", error, { clinica: clinicId }));
-  // Sem quem envia agora (falha ao carregar o WhatsApp da clínica): a linha fica pendente e a rotina manda.
-  if (input.sender) await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
+  // Confirmação desligada em Configurações › Lembretes (BE-9): marca sem avisar.
+  if (await confirmationEnabled(db, clinicId, "portal")) {
+    await enqueueNotice(db, clinicId, appointmentId, "confirmation", now).catch((error) => logError("portal: confirmação fora da fila", error, { clinica: clinicId }));
+    // Sem quem envia agora (falha ao carregar o WhatsApp da clínica): a linha fica pendente e a rotina manda.
+    if (input.sender) await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
+  }
   return { status: "booked", appointmentId };
 }
 

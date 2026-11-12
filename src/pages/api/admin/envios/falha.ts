@@ -12,7 +12,7 @@ import { dismissSendFailure, getOutboundMessage } from "../../../../lib/data/wha
 import { formOptionalText, formText } from "../../../../lib/forms";
 import { formatPhoneBR } from "../../../../lib/phone";
 
-// Envio com falha (cliente, 05/nov/2026; docs/falhas-de-envio.md):
+// Envio com falha (cliente, 05/nov/2026; docs/arquivo/modulos/falhas-de-envio.md):
 // - `descartar`: o Suporte tira da aba Envios o erro já conhecido e resolvido (sem confirmação);
 // - `numero_certo`: a recepção tira do Início o aviso de número sem WhatsApp;
 // - `corrigir`: a recepção corrige o WhatsApp do contato; se a mensagem era a confirmação (ou a remarcação) de um

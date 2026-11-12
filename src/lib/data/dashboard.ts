@@ -3,6 +3,7 @@ import type { Enums } from "../supabase/database.types";
 import type { DbClient } from "./clients";
 import { unwrap } from "./errors";
 import { confirmedByReminder } from "../reminderResponse";
+import { listBirthdateChecksToConfirm } from "./portalBirthdate";
 import { listHumanAttention } from "./whatsapp/attention";
 import { listContactsToReview } from "./whatsapp/botLimits";
 import { listNumbersWithoutWhatsapp } from "./whatsapp/undeliverable";
@@ -87,7 +88,8 @@ export async function getDashboardCounts(db: DbClient, clinicId: string, timeZon
 
 /**
  * Contador do Meu dia no menu (RX6, decisão 5.1; cliente, 02/nov/2026): conversas aguardando atendimento humano +
- * conversas com a clínica que ainda não voltaram ao bot + consultas sem presença registrada + contatos a conferir.
+ * conversas com a clínica que ainda não voltaram ao bot + consultas sem presença registrada + contatos a conferir +
+ * datas de nascimento a conferir (portal, F5b).
  * Fora dele: "Esperando o paciente" e as listas de Pacientes › Para contatar (têm o próprio número).
  * Cada parte que falha conta 0 e vai para `onError`, para o menu não cair.
  */
@@ -124,6 +126,7 @@ export async function getMeuDiaCount(
       return count ?? 0;
     }),
     bot ? safe("contatos a conferir", async () => (await listContactsToReview(db, clinicId, now)).length) : 0,
+    features.includes("portal") ? safe("datas a conferir", async () => (await listBirthdateChecksToConfirm(db, clinicId)).length) : 0,
     safe("números sem WhatsApp", async () => (await listNumbersWithoutWhatsapp(db, clinicId, now)).length),
   ]);
   return parts.reduce((total, n) => total + n, 0);

@@ -10,6 +10,7 @@ export type { SendOutcome };
 import { rescheduleAppointment } from "../agenda/appointments";
 import { getFreeSlots, getGroupSessions, getNextAvailableDates, loadSchedulingPlan, type SchedulingPlan } from "../agenda/slots";
 import { logError } from "../../log";
+import { contactPatientIds } from "../patientContacts";
 import { appointmentRecipientContact, BOOKER_COLUMNS, type RecipientContact } from "../whatsapp/recipient";
 
 // Motor de ofertas da lista de espera (Fase 25 do piloto, etapa 3), F3.7b.
@@ -591,7 +592,7 @@ type LoadedOffer = {
   expiresAt: Date;
   slotStart: Date;
   slotLocationId: string;
-  appointment: { id: string; status: string; scheduledAt: Date; patientName: string; contactId: string };
+  appointment: { id: string; status: string; scheduledAt: Date; patientName: string };
 };
 
 async function loadOffer(db: DbClient, clinicId: string, offerId: string, contactId: string | null): Promise<LoadedOffer | null> {
@@ -599,7 +600,7 @@ async function loadOffer(db: DbClient, clinicId: string, offerId: string, contac
     await db
       .from("waitlist_offers")
       .select(
-        "id, entry_id, opening_id, status, expires_at, slot_scheduled_at, slot_location_id, appointments!waitlist_offers_clinic_id_appointment_id_fkey ( id, status, scheduled_at, patients ( full_name, contact_id ) )",
+        "id, entry_id, opening_id, status, expires_at, slot_scheduled_at, slot_location_id, appointments!waitlist_offers_clinic_id_appointment_id_fkey ( id, status, scheduled_at, patient_id, booked_by_contact_id, patients ( full_name ) )",
       )
       .eq("clinic_id", clinicId)
       .eq("id", offerId)
@@ -613,11 +614,11 @@ async function loadOffer(db: DbClient, clinicId: string, offerId: string, contac
     expires_at: string;
     slot_scheduled_at: string;
     slot_location_id: string;
-    appointments: { id: string; status: string; scheduled_at: string; patients: { full_name: string; contact_id: string } };
+    appointments: { id: string; status: string; scheduled_at: string; patient_id: string; booked_by_contact_id: string | null; patients: { full_name: string } };
   } | null;
   if (!row) return null;
-  // Só o contato do paciente pode responder.
-  if (contactId && row.appointments.patients.contact_id !== contactId) return null;
+  // Só responde quem marcou (quem recebeu a oferta) ou um responsável ligado ao paciente (VR, F3f).
+  if (contactId && row.appointments.booked_by_contact_id !== contactId && !(await contactPatientIds(db, clinicId, contactId)).includes(row.appointments.patient_id)) return null;
   return {
     id: row.id,
     entryId: row.entry_id,
@@ -631,7 +632,6 @@ async function loadOffer(db: DbClient, clinicId: string, offerId: string, contac
       status: row.appointments.status,
       scheduledAt: new Date(row.appointments.scheduled_at),
       patientName: row.appointments.patients.full_name,
-      contactId: row.appointments.patients.contact_id,
     },
   };
 }

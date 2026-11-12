@@ -1,4 +1,4 @@
--- CN6 — enviar foto e PDF pela Central (plano em docs/planejamento-central-atendimento.md, seção 6 e decisão 8b,
+-- CN6 — enviar foto e PDF pela Central (plano em docs/arquivo/modulos/planejamento-central-atendimento.md, seção 6 e decisão 8b,
 -- cliente, 05/nov/2026). Aditiva.
 --
 -- 1. O navegador sobe o arquivo direto ao bucket `whatsapp-media` (link de envio de uso único, gerado pelo servidor

@@ -13,6 +13,7 @@ import { DataError, unwrap } from "../errors";
 import { findContactByPhone } from "../patients";
 import { checkBookingLimits, contactForLimits, recordBotLimitEvent } from "../whatsapp/botLimits";
 import { dispatchNotice, enqueueNotice } from "../whatsapp/noticeQueue";
+import { confirmationEnabled } from "../whatsapp/notices";
 import type { ClinicSender } from "../whatsapp/send";
 import { afterBooking, claimHold, loadHold, phonePatients, unclaimHold, type BlockReason, type ConfirmOutcome, type PortalPatient } from "./booking";
 import { scopeLastDate, type PortalClinic, type PortalLocation, type PortalProfessional, type SlotScope } from "./portal";
@@ -243,7 +244,9 @@ export async function confirmPortalReturn(
   if (done.error) logError("portal: reserva sem o atendimento", done.error, { clinica: clinicId, reserva: hold.id });
   // Retorno: o convênio fica o do cadastro (o retorno nunca fala de valor).
   await afterBooking(db, clinicId, { appointmentId, hold, entry: "clinic_link" }, now);
-  await enqueueNotice(db, clinicId, appointmentId, "confirmation", now).catch((error) => logError("portal: confirmação fora da fila", error, { clinica: clinicId }));
-  if (input.sender) await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
+  if (await confirmationEnabled(db, clinicId, "portal")) {
+    await enqueueNotice(db, clinicId, appointmentId, "confirmation", now).catch((error) => logError("portal: confirmação fora da fila", error, { clinica: clinicId }));
+    if (input.sender) await dispatchNotice(db, clinicId, appointmentId, "confirmation", input.sender, now);
+  }
   return { status: "booked", appointmentId };
 }

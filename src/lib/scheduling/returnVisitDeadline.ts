@@ -44,19 +44,6 @@ export async function getReturnVisitLastDate(
 }
 
 /**
- * Limite de datas de um link de agendar/remarcar (`booking_links`): só
- * retorno vinculado a uma Consulta tem limite, e o link de reagendamento
- * gerado pela clínica (cancelamento em massa/bloqueio) dispensa o prazo.
- */
-export async function getBookingLinkLastDate(
-  supabase: SupabaseClient,
-  link: { appointment_type: string; origin_appointment_id: string | null; return_deadline_waived: boolean }
-): Promise<string | null> {
-  if (link.appointment_type !== "return_visit" || link.return_deadline_waived) return null;
-  return getReturnVisitLastDate(supabase, link.origin_appointment_id);
-}
-
-/**
  * Se a Consulta de origem já tem um retorno não cancelado vinculado (regra
  * "1 retorno por consulta", Fase 17). `ignoreAppointmentId` exclui o
  * próprio retorno sendo remarcado.

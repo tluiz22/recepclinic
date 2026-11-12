@@ -1,4 +1,4 @@
--- CN3a — lista da tela Conversas (Central de Atendimento; plano em docs/planejamento-central-atendimento.md, decisões 3,
+-- CN3a — lista da tela Conversas (Central de Atendimento; plano em docs/arquivo/modulos/planejamento-central-atendimento.md, decisões 3,
 -- 4, 6 e 12, telas T1 e T6). Só funções de leitura; nada muda nas tabelas.
 --
 -- `central_enabled`: a Central vale para a clínica (menu, tela e redirecionamento do Atendimento antigo), para toda a

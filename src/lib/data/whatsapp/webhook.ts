@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DbClient } from "../clients";
 import { echoChange, toE164, type WaMessage } from "./meta";
 import { hasFeature } from "../features";
-import { getConversation, handleAgentEcho, isClassifiedOut, isLikelyAutomaticEcho, markAutomaticEcho } from "./conversations";
+import { getConversation, handleAgentEcho, isClassifiedOut } from "./conversations";
 import { applyEchoChange, recordAgentEcho, saveProfileName, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
 import { sendPreparationAfterDelivery } from "./preparation";
 import { sendGuidanceAfterDelivery } from "./guidance";
@@ -367,12 +367,6 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         // Número marcado como Pessoal ou Administrativo/outros (NA): a resposta fica no histórico e não abre atendimento.
         const marked = await getConversation(db, clinicId, toE164(echo.to) ?? "");
         if (marked && isClassifiedOut(marked)) return;
-        // Mensagem automática do app (IS4, cliente, 03/nov/2026): segundos depois do paciente ou do bot, não pausa; avisa.
-        if (await isLikelyAutomaticEcho(db, clinicId, echo, result.id)) {
-          await markAutomaticEcho(db, clinicId, result.id);
-          logWarn("whatsapp: mensagem automática do app (não pausou o bot)", { clinica: clinicId });
-          return;
-        }
         // A recepção respondeu pelo app (coexistência): pausa o bot naquela conversa; "#bot" devolve (F6.4).
         await handleAgentEcho(db, clinicId, echo, result.contactId, now);
       });

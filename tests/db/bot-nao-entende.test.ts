@@ -95,11 +95,9 @@ beforeEach(async () => {
 const OFFER = "Não consegui entender sua mensagem.\n\nVocê quer falar com a recepção? A conversa passa para a nossa equipe.";
 
 describe("bot que não entende (F8.5d)", () => {
-  it("1º menu com recepção no número: a apresentação cita a recepção (cliente, 04/nov/2026)", async () => {
+  it("1º menu: uma mensagem com as boas-vindas do bot enxuto (BE-2)", async () => {
     const phone = "+5584991227700";
-    const reply = await message(phone, "oi");
-    expect(reply.at(-1)).toContain("👩‍💼 Falar diretamente com a recepção, se precisar de ajuda.");
-    expect(reply.at(-1)).toMatch(/^Estamos aqui para ajudar você! 😊/);
+    expect(await message(phone, "oi")).toEqual([expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento d/)]);
   });
 
   it("áudio e figurinha: aviso próprio no lugar do 'não entendi'", async () => {
@@ -166,7 +164,7 @@ describe("bot que não entende (F8.5d)", () => {
     await message(phone, "y");
     await message(phone, "z");
     expect((await conversation(phone)).not_understood_count).toBe(3);
-    await message(phone, { id: "menu_info" });
+    await message(phone, "voltar");
     expect((await conversation(phone)).not_understood_count).toBe(0);
     for (const text of ["a", "b", "c"]) expect((await message(phone, text))[0]).toMatch(NOT_UNDERSTOOD);
     expect((await conversation(phone)).human_handoff).toBe(false);

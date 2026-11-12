@@ -7,7 +7,7 @@ import { recordOutboundMessage, type SendOutcome } from "./messages";
 import type { ClinicSender } from "./send";
 import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, paramCount, serviceLine } from "./templates";
 import { logError } from "../../log";
-import { bookingPath, shortId } from "../../publicId";
+import { shortId } from "../../publicId";
 import { portalLinkUrl } from "../../portal";
 import { appointmentRecipient, BOOKER_COLUMNS, type RecipientContact } from "./recipient";
 
@@ -49,6 +49,13 @@ type NoticeRow = {
 };
 
 const NOTICE_COLUMNS = `id, scheduled_at, home_visit_address, services ( name, category ), agendas ( professionals ( display_name ) ), locations ( name, type, address ), patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS}`;
+
+/** Confirmação ao paciente ligada para quem marcou (BE-9; ligada por padrão). Na dúvida (erro ao ler), confirma. */
+export async function confirmationEnabled(db: DbClient, clinicId: string, by: "portal" | "reception"): Promise<boolean> {
+  const column = by === "portal" ? "confirm_portal_booking" : "confirm_reception_booking";
+  const { data } = await db.from("clinic_settings").select(column).eq("clinic_id", clinicId).maybeSingle();
+  return (data as Record<string, boolean> | null)?.[column] ?? true;
+}
 
 /** Envia o aviso de um atendimento e registra. Nunca lança: erro vira "failed" no log. */
 export async function sendAppointmentNotice(
@@ -156,21 +163,19 @@ export type ClinicCancellationNotice = { appointmentId: string; status: NoticeSt
 export async function notifyClinicCancellations(
   db: DbClient,
   clinicId: string,
-  canceled: { appointmentId: string; rebookingLinkId: string | null; portalLinkId?: string | null }[],
+  canceled: { appointmentId: string; portalLinkId: string | null }[],
   sender: ClinicSender | null,
   now: Date = new Date(),
 ): Promise<ClinicCancellationNotice[]> {
   const result: ClinicCancellationNotice[] = [];
-  for (const { appointmentId, rebookingLinkId, portalLinkId } of canceled) {
-    // O link do portal (F3-3) quando há; senão, o de /agendar.
+  for (const { appointmentId, portalLinkId } of canceled) {
+    // O link do portal (F3-3) quando há; sem ele, o aviso vai sem link.
     // Sem quem envie (WhatsApp não carregou), o aviso fica "não conectado" igual, mas com o mesmo modelo.
     const url = portalLinkId
       ? sender
         ? portalLinkUrl(sender.baseUrl, shortId(portalLinkId))
         : ""
-      : rebookingLinkId
-        ? `${sender?.baseUrl ?? ""}${bookingPath(rebookingLinkId)}`
-        : null;
+      : null;
     const status = url !== null
       ? await sendAppointmentNotice(db, clinicId, appointmentId, "clinic_cancellation", sender, now, url)
       : await sendAppointmentNotice(db, clinicId, appointmentId, "cancellation", sender, now);

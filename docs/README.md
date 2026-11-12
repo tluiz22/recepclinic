@@ -1,46 +1,7 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui, 11/nov).** Bloco enxuto: só ambientes e próximo passo. Histórico até 10/nov no
-> [`historico.md`](historico.md) ("Bloco de retomada do README até 10/nov/2026").
->
-> **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `2fffd62` (11/nov: `be69117` + correção do portal de exames, sessão paralela; registro em `producao.md`), migrações até `20270112120000`. Fluxo: [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`) = `main` atual (11/nov): produção + **vários responsáveis (VR1–VR5)** + avisos de ficha repetida (cadastro e ficha). **VR validada pelo cliente (V1–V12, 11/nov).**
->   Migrações até `20270116120000` + `20270118120000` (fichas não repetidas; `20270117120000` é da F3f), conferidas 11/nov. Modelos "Remarcada/Cancelada por outro
->   responsável" enviados à Meta pelo cliente (11/nov). **Não publicar na produção antes da F3f** (o bot ainda só
->   reconhece o responsável principal).
->
-> **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
-> Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
-> a validação). Banco local único: migração só avisando.
-> **Validação final (11/nov, `59049142`):** CI verde (tipos no formato da CLI 2.121; local atualizada para 3.1.0, mesmo formato),
-> 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
-> **Implantação da `main` na produção (11/nov, feita):** 17 migrações aplicadas e conferidas, código publicado, saúde
-> `ok` (registro em `producao.md`); portal ligado na clínica piloto pelo cliente. Foto como primeiro item em
-> Configurações › Profissionais e Equipe (`be69117`, validada no staging e na produção, 11/nov). **Próximo:** validação da VR no staging (roteiro
-> a escrever pela sessão de validação) e, em paralelo, a F3f (bot enxuto, seção 15.6, BE-1 a BE-10) numa branch curta,
-> com o bot pela ligação e o Remarcar/Cancelar do bot (UI-5, aviso da VR4). Clínica Exemplo Saúde do staging com 12 profissionais
-> (`scripts/clinica-exemplo-grande.mjs`).
-> **VR na `main` (11/nov):** branch `varios-responsaveis` juntada (suíte verde: unidade 1223, banco 1218); detalhe na seção
-> 8 do [`planejamento-varios-responsaveis.md`](planejamento-varios-responsaveis.md). Pergunta aberta: atualizar a
-> `nota-fiscal` com a `main`.
->
-> **Outras frentes paradas**
-> - **Biomedical** ([proposta](propostas/clinica-12-profissionais/README.md)): implantação depende do portal, F3, F5 e F6 no ar.
-> - **Nota fiscal:** N1–N5 na branch `nota-fiscal` (só local), validação pendente (seção 15.2 do
->   [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)); N6 depende de Asaas, contador e advogado.
-> - **Asaas:** reanálise do BaaS aguardando; tokenização do cartão em produção pedida (conferir antes do 1º contrato
->   com implantação no cartão). Faturamento: `planejamento-faturamento-saas.md`.
-> - **Pendências:** limpeza de `booking_horizon_days`/`consultation_age_limit_years`; onde mostrar fotos; F11 (T3.1);
->   1º backup diário da produção; advogado (páginas legais, contrato, termo de dados); verificação da empresa na Meta.
->
-> **Como trabalhar**
-> - **Migrações:** staging com `supabase db push` (simular → aplicar → conferir → push do código); produção só com
->   autorização, pelo `producao.md` (`git push origin main:producao`).
-> - **Local:** OrbStack, `npm run db:start`, `npm run dev`; `npm test`, `npm run test:db` (PATH com `/opt/homebrew/bin`).
-> - **WhatsApp de testes:** `+55 61 9903-3143` ("Consultorio de Teste", staging).
-> - **Demos:** antes de apresentar, `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar`.
-> - **Outras:** site em [`site-plano.md`](site-plano.md); triagem em [`triagem-piloto.md`](triagem-piloto.md).
+> **Estado atual: ver [`roadmap.md`](roadmap.md).** O histórico do bloco de retomada até 10/nov está no
+> [`historico.md`](historico.md).
 
 > **RecepClinic — a recepção inteligente da sua clínica.**
 
@@ -93,24 +54,26 @@ Banco (Supabase), Vercel e app da Meta próprios: staging em [`staging.md`](stag
 [`producao.md`](producao.md). Os segredos ficam fora do git (`.env` local e `.env.staging`); nunca usar as
 credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Meta, segredos).
 
+## Como trabalhar (permanente)
+
+- **Migrações:** staging com `supabase db push` (simular → aplicar → conferir → push do código); produção só com
+  autorização, pelo [`producao.md`](producao.md) (`git push origin main:producao`).
+- **Local:** OrbStack, `npm run db:start`, `npm run dev`; `npm test`, `npm run test:db` (PATH com `/opt/homebrew/bin`).
+- **WhatsApp de testes:** `+55 61 9903-3143` ("Consultorio de Teste", staging).
+- **Demos:** antes de apresentar, `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar`.
+
 ## Documentos
 
-- [`historico.md`](historico.md): andamento completo, sessão a sessão (arquivo; só por busca).
-- [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md): especialidades, convênios e bot por
-  profissional (ponto de retomada).
-- [`crm.md`](crm.md): etapa paralela do CRM (ponto de retomada); plano ativo em
-  [`analises/plano-evolucao-relacionamento.md`](analises/plano-evolucao-relacionamento.md) e o que já foi feito em
-  [`analises/crm-arquivo.md`](analises/crm-arquivo.md).
-- [`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md): faturamento do SaaS pelo Asaas (planejamento,
-  decisões pendentes e roadmap F12).
-- [`producao.md`](producao.md): produção (`app.`), fluxo de publicação e registro.
-- [`triagem-piloto.md`](triagem-piloto.md): registro das mudanças do piloto depois da cópia.
-- [`diagnostico.md`](diagnostico.md): diagnóstico da arquitetura atual (etapa 1).
-- [`limites.md`](limites.md): limites e problemas para várias clínicas (etapa 2).
-- [`arquitetura.md`](arquitetura.md): decisões da arquitetura alvo (etapa 3).
-- [`plano.md`](plano.md): plano de evolução em fases (etapa 4).
-- [`site-plano.md`](site-plano.md): plano do site `www.recepclinic.com.br` (frente paralela).
-- [`staging.md`](staging.md): roteiro do staging na nuvem (F5.5).
-- [`meta-tech-provider.md`](meta-tech-provider.md): Análise do App e Tech Provider na Meta (textos e respostas).
-- [`politica-pedidos-de-autoridades.md`](politica-pedidos-de-autoridades.md): pedidos de autoridades
-  sobre dados (adotada na verificação da Meta; a revisar pelo advogado).
+**Manual de uso:** [`manual-de-uso.md`](manual-de-uso.md). **Comece por:** [`roadmap.md`](roadmap.md) (estado de tudo) e `iniciativas/<frente>/status.md` (a frente em andamento).
+
+- **Permanentes:** [`arquitetura.md`](arquitetura.md) (D1–D14), [`triagem-piloto.md`](triagem-piloto.md),
+  [`politica-pedidos-de-autoridades.md`](politica-pedidos-de-autoridades.md).
+- **Operação:** [`staging.md`](staging.md), [`producao.md`](producao.md) (fluxo de publicação e registro).
+- **Integrações:** [`meta-tech-provider.md`](meta-tech-provider.md), `integracoes/` (Asaas: playbook BaaS e selos).
+- **Módulos:** fichas curtas em [`modulos/`](modulos/); detalhe completo em `arquivo/modulos/` (só por `grep`).
+- **Em andamento:** [`iniciativas/`](iniciativas), mais [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md),
+  [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), [`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md).
+- **Arquivo (só por `grep`):** [`plano.md`](plano.md), [`historico.md`](historico.md) e [`arquivo/`](arquivo)
+  (diagnósticos, limites, propostas pré-implementação, CRM, auditoria do frontend, roteiros antigos). `plano.md` e
+  `historico.md` ficam na raiz de `docs/` porque comentários do código apontam para eles.
+- **Fila de capturas da Ajuda:** [`capturas-pendentes.md`](capturas-pendentes.md). **Site:** [`site-plano.md`](site-plano.md).

@@ -1,201 +1,91 @@
 import { preparationMessageText } from "../../../preparationMessage";
-import { servicesOf, type BotService } from "./catalog";
-import { go, say, sayPreparationFile, sendList, textFor, welcomeText, type Bot } from "./engine";
+import type { BotService } from "./catalog";
+import { contactFirstName, go, notUnderstood as countNotUnderstood, say, sayPreparationFile, sendList, textFor, type Bot } from "./engine";
+import { renderWelcome } from "../customMessages";
+import { sendPortalShortcut, type ShortcutPurpose } from "./portalLink";
 import { pick, type Selection } from "./input";
 import * as t from "./texts";
-import { BOOKING_STATES, handOver, startBooking, startReturn } from "./booking";
-import { handoff, MANAGE_STATES, startManage } from "./manage";
-import { askReceptionReason } from "./knowledge/respond";
-import { askSpecialty } from "./chooseProfessional";
-import { clearProfessionalChoice, EXAMS_CHOICE } from "./engine";
-
-// Menus do bot, na estrutura do piloto: Consultas › Marcar consulta / Marcar
-// retorno / Remarcar / Cancelar / Encaixe ou antecipar; Exames › Marcar exame
-// / Remarcar / Cancelar / Encaixe ou antecipar (F6.4; o Encaixe só com o item
-// "Lista de espera"); Informações gerais (itens com conteúdo; nome de 02/nov/2026); Falar com a recepção
-// só com o número em coexistência (cliente, 07/out).
+import { handoff } from "./manage";
 
 type Item = { id: string; label: string; description?: string | null };
 
-async function mainItems(b: Bot): Promise<Item[]> {
-  const catalog = await b.catalog();
-  const items: Item[] = [];
-  if (servicesOf(catalog, "consultation").length || servicesOf(catalog, "return_visit").length) items.push({ id: "menu_consultations", label: "Consultas" });
-  if (servicesOf(catalog, "exam").length) items.push({ id: "menu_exams", label: "Exames" });
-  if ((await infoItems(b)).length) items.push({ id: "menu_info", label: "Informações gerais" });
-  if (b.receptionAvailable) items.push({ id: "menu_reception", label: "Falar com a recepção" });
-  // Clínica com mais de um profissional (MB, 07/nov/2026): trocar a escolha.
-  if (b.scope.multi && b.scope.choice) {
-    items.push({ id: "menu_change_professional", label: b.scope.choice === EXAMS_CHOICE ? t.CHANGE_SPECIALTY_LABEL : t.CHANGE_PROFESSIONAL_LABEL });
-  }
-  // Descrição em cada opção (cliente, 04/nov/2026).
-  return items.map((item) => ({ ...item, description: t.MAIN_MENU_DESCRIPTIONS[item.id as keyof typeof t.MAIN_MENU_DESCRIPTIONS] }));
+// Bot enxuto (F3f, BE-2, cliente, 11/nov/2026): o menu leva ao portal. Agendar · Minhas consultas · Profissionais ·
+// Falar com a recepção (esta só com a recepção no app, coexistência; cliente, 07/out). Sem a especialidade e o
+// profissional antes do menu, sem os submenus e sem Informações gerais.
+function mainItems(b: Bot): Item[] {
+  const exams = b.features.includes("exams");
+  return t.LEAN_MENU.filter((item) => item.id !== "menu_reception" || b.receptionAvailable).map((item) => ({
+    ...item,
+    description: item.id === "menu_book" && !exams ? t.LEAN_BOOK_DESCRIPTION_NO_EXAM : item.description,
+  }));
 }
 
-async function consultationItems(b: Bot): Promise<Item[]> {
-  const catalog = await b.catalog();
-  return [
-    ...(servicesOf(catalog, "consultation").length ? [{ id: "book_consultation", label: "Marcar consulta" }] : []),
-    ...(servicesOf(catalog, "return_visit").length ? [{ id: "book_return", label: "Marcar retorno" }] : []),
-    ...manageItems(b),
-  ];
+/** Corpo do 1º menu da conversa: as boas-vindas próprias da clínica ou as do bot enxuto, com o primeiro nome. */
+async function leanWelcomeBody(b: Bot): Promise<string> {
+  const custom = b.custom.get("welcome");
+  const name = await contactFirstName(b);
+  return custom ? renderWelcome(custom, b.clinic.label, name) : t.leanWelcome(name, b.clinic.label, b.clinic.name, { exams: b.features.includes("exams"), reception: b.receptionAvailable });
 }
-
-const manageItems = (b: Bot): Item[] => [
-  { id: "manage_reschedule", label: "Remarcar" },
-  { id: "manage_cancel", label: "Cancelar" },
-  ...(b.features.includes("waitlist") ? [{ id: "manage_waitlist", label: "Encaixe ou antecipar", description: "Lista de espera para um horário mais cedo" }] : []),
-];
-
-const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" }, ...manageItems(b)];
 
 /**
- * Menu principal; clínica sem nada para mostrar recebe o aviso e a recepção assume. O 1º menu da conversa (com as
- * boas-vindas, ou `intro`) vem com a apresentação do que dá para resolver (cliente, 04/nov/2026).
+ * Menu principal. O 1º da conversa (`withWelcome` ou `intro`) é uma mensagem só: o nome da clínica no cabeçalho, as
+ * boas-vindas e a lista (BE-2); nas outras vezes, o corpo curto.
  */
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false, intro = false } = {}): Promise<void> {
-  // Mais de um profissional e nenhum escolhido: a especialidade e o profissional antes do menu (MB, 07/nov/2026).
-  if (b.scope.multi && !b.scope.choice) return askSpecialty(b, { withWelcome, notUnderstood });
-  if (withWelcome) await say(b, "bot_welcome", await welcomeText(b));
-  const items = await mainItems(b);
-  // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
-  if (!items.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
-  if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
-  // Com a base, convida a perguntar; sem ela, o texto livre não seria entendido (cliente, 04/nov/2026).
-  const ask = b.features.includes("knowledge_base");
-  const has = (id: string) => items.some((i) => i.id === id);
-  const body =
-    withWelcome || intro
-      ? t.menuIntro({
-          consultations: has("menu_consultations"),
-          exams: has("menu_exams"),
-          waitlist: b.features.includes("waitlist"),
-          info: has("menu_info"),
-          reception: has("menu_reception"),
-          ask,
-        })
-      : ask
-        ? t.MENU_BODY_ASK
-        : t.MENU_BODY;
-  await sendList(b, "bot_menu", textFor(b, "menu", body), t.numberedList(items, false));
+  // "Não entendi" e o menu numa mensagem só (cliente, 12/nov/2026): o texto do "não entendi" vira o corpo da lista.
+  // Passa pela contagem do "não entendi"; null = a base de conhecimento já respondeu (o menu volta com o corpo normal).
+  const misunderstood = notUnderstood ? await countNotUnderstood(b, textFor(b, "not_understood", t.notUnderstood(true))) : null;
+  const first = withWelcome || intro;
+  const body = misunderstood ?? (first ? await leanWelcomeBody(b) : textFor(b, "menu", b.features.includes("knowledge_base") ? t.MENU_BODY_ASK : t.MENU_BODY));
+  // Sem o número na frente (título com até 24 caracteres, como no canvas); digitar o número continua valendo.
+  const rows = mainItems(b).map((item) => ({ id: item.id, title: item.label, description: item.description ?? undefined }));
+  await sendList(b, "bot_menu", body, [{ rows }], first && misunderstood === null ? t.leanMenuHeader(b.clinic.name) : undefined);
   await go(b, "MENU");
 }
 
 /**
- * "voltar" digitado (cliente, 31/out/2026): dentro de um fluxo, o submenu de onde veio (Consultas ou Exames); no
- * preparo, Informações; no submenu, em Informações ou fora de um fluxo com grupo, o menu principal.
+ * Começo da conversa (bot enxuto, BE-2): o menu com as boas-vindas, numa mensagem; sem a pergunta "Identificamos um
+ * agendamento…" e sem a data de nascimento (as consultas ficam em Minhas consultas, no portal). Pergunta da base na
+ * 1ª mensagem (BE-7): a resposta e depois o menu; false = a base assumiu a conversa.
  */
+export async function startConversation(b: Bot, { afterWelcome }: { afterWelcome?: () => Promise<boolean> } = {}): Promise<void> {
+  if (afterWelcome && !(await afterWelcome())) return;
+  return showMenu(b, { withWelcome: true });
+}
+
+/** "voltar" digitado: no bot enxuto, sempre o menu principal. */
 export async function showPreviousMenu(b: Bot): Promise<void> {
-  const state = b.convo.state;
-  if (state === "PICK_PROFESSIONAL") return askSpecialty(b);
-  if (state === "INFO_PREP_SELECT") return showInfo(b);
-  const context = (b.convo.context ?? {}) as { category?: string; group?: string };
-  const inFlow = BOOKING_STATES.has(state) || MANAGE_STATES.has(state);
-  const group = !inFlow ? undefined : BOOKING_STATES.has(state) ? context.category : context.group;
-  if (group === "exam") return showSubmenu(b, "EXAMES_MENU");
-  if (group === "consultation" || group === "return_visit") return showSubmenu(b, "CONSULTAS_MENU");
   return showMenu(b);
 }
 
+/** Sem o portal (F3-5/F3-7): a recepção atende; sem a recepção no app, o aviso de que a clínica responde. */
+async function portalClosed(b: Bot): Promise<void> {
+  if (b.receptionAvailable) return handoff(b, "no_portal");
+  await say(b, "bot_kb_will_reply", t.willReply(b.clinic.designation));
+  await go(b, "WELCOME");
+}
+
+/** Agendar, Minhas consultas ou Profissionais (BE-3): o link do portal; fechado, a recepção. */
+export async function portalShortcut(b: Bot, purpose: ShortcutPurpose, serviceId?: string): Promise<void> {
+  if (!(await sendPortalShortcut(b, purpose, serviceId))) await portalClosed(b);
+}
+
+const SHORTCUT: Partial<Record<t.LeanMenuId, ShortcutPurpose>> = { menu_book: "book", menu_mine: "my_appointments", menu_professionals: "professionals" };
+
 export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
-  const choice = pick(selection, await mainItems(b), (i) => i.id);
-  if (choice?.id === "menu_consultations") return showSubmenu(b, "CONSULTAS_MENU");
-  if (choice?.id === "menu_exams") return showSubmenu(b, "EXAMES_MENU");
-  if (choice?.id === "menu_info") return showInfo(b);
-  if (choice?.id === "menu_change_professional") {
-    await clearProfessionalChoice(b);
-    return askSpecialty(b);
-  }
-  // Com a base: pergunta o motivo antes, com a recepção a um toque (EA, cliente, 02/nov/2026).
-  if (choice?.id === "menu_reception") return b.features.includes("knowledge_base") ? askReceptionReason(b, "menu") : handoff(b, "menu");
+  const choice = pick(selection, mainItems(b), (i) => i.id);
+  const purpose = choice ? SHORTCUT[choice.id as t.LeanMenuId] : undefined;
+  if (purpose) return portalShortcut(b, purpose);
+  // BE-4: a recepção numa mensagem, sem perguntar o motivo antes.
+  if (choice?.id === "menu_reception") return handoff(b, "menu");
   await showMenu(b, { notUnderstood: true });
 }
 
-export async function showSubmenu(b: Bot, state: "CONSULTAS_MENU" | "EXAMES_MENU", notUnderstood = false): Promise<void> {
-  if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-  const consultations = state === "CONSULTAS_MENU";
-  await sendList(
-    b,
-    consultations ? "bot_consultations_menu" : "bot_exams_menu",
-    consultations ? t.CONSULTATIONS_BODY : t.EXAMS_BODY,
-    t.numberedList(consultations ? await consultationItems(b) : examItems(b)),
-  );
-  await go(b, state);
-}
-
-export async function handleSubmenu(b: Bot, state: "CONSULTAS_MENU" | "EXAMES_MENU", selection: Selection): Promise<void> {
-  const items = state === "CONSULTAS_MENU" ? await consultationItems(b) : examItems(b);
-  const group = state === "CONSULTAS_MENU" ? "consultation" : "exam";
-  const choice = pick(selection, items, (i) => i.id);
-  if (choice?.id === "book_consultation") return startBooking(b, "consultation");
-  if (choice?.id === "book_return") return startReturn(b);
-  if (choice?.id === "book_exam") return startBooking(b, "exam");
-  if (choice?.id === "manage_reschedule") return startManage(b, "reschedule", group);
-  if (choice?.id === "manage_cancel") return startManage(b, "cancel", group);
-  if (choice?.id === "manage_waitlist") return startManage(b, "waitlist", group);
-  await showSubmenu(b, state, true);
-}
-
 // ---------------------------------------------------------------------------
-// Informações
+// Preparo de exame (pela base de conhecimento; Informações gerais saiu do menu, BE-2)
 // ---------------------------------------------------------------------------
-
-type InfoKey = keyof typeof t.INFO_ITEMS;
-
-async function infoItems(b: Bot): Promise<InfoKey[]> {
-  const catalog = await b.catalog();
-  const keys: InfoKey[] = [];
-  if (catalog.services.length) keys.push("prices");
-  // Convênios (MC + MI): os planos do profissional em uso e o texto dele; sem o item "Convênios", só o texto.
-  if (b.clinic.insurancePlans !== null || b.clinic.insuranceInfo) keys.push("insurance");
-  if (addressLocations(b, catalog.locations).length) keys.push("address");
-  if (preparationExams(catalog.services).length) keys.push("preparation");
-  if (b.clinic.notes) keys.push("notes");
-  return keys;
-}
-
-const addressLocations = (_b: Bot, locations: { name: string; type: string; address: string | null }[]) =>
-  locations.filter((l): l is typeof l & { address: string } => l.type === "clinic" && !!l.address);
 
 const preparationExams = (services: BotService[]) => services.filter((s) => s.category === "exam" && (s.preparation || s.preparationFile)).slice(0, t.MAX_LIST_ROWS - 1);
-
-async function showInfo(b: Bot, notUnderstood = false): Promise<void> {
-  if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-  const items = (await infoItems(b)).map((key) => ({ id: `info_${key}`, label: t.INFO_ITEMS[key] }));
-  await sendList(b, "bot_info_menu", t.INFO_BODY, t.numberedList(items));
-  await go(b, "INFO_MENU");
-}
-
-export async function handleInfo(b: Bot, selection: Selection): Promise<void> {
-  const catalog = await b.catalog();
-  const keys = await infoItems(b);
-  const choice = pick(selection, keys, (key) => `info_${key}`);
-  switch (choice) {
-    case "prices":
-      await say(b, "bot_info_prices", t.pricesText(catalog.services.map((s) => ({ name: s.name, lines: t.servicePriceLines(s) })), b.clinic.paymentInfo));
-      break;
-    case "insurance":
-      await say(
-        b,
-        "bot_info_insurance",
-        b.clinic.insurancePlans !== null && b.clinic.professionalName
-          ? t.insuranceInfoText(b.clinic.professionalName, b.clinic.insurancePlans, b.clinic.insuranceInfo, b.clinic.acceptsPrivate)
-          : b.clinic.insuranceInfo!,
-      );
-      break;
-    case "address":
-      await say(b, "bot_info_address", t.addressText(addressLocations(b, catalog.locations)));
-      break;
-    case "notes":
-      await say(b, "bot_info_notes", b.clinic.notes!);
-      break;
-    case "preparation":
-      return showPreparationChoice(b);
-    default:
-      return showInfo(b, true);
-  }
-  await showInfo(b);
-}
 
 /** Lista dos exames com preparo (Informações e base de conhecimento). */
 export async function showPreparationChoice(b: Bot): Promise<void> {
@@ -215,5 +105,5 @@ export async function handlePreparationChoice(b: Bot, selection: Selection): Pro
   // Como na confirmação, sem o link (C7.5; cliente, 28/out/2026): o arquivo, ou as instruções.
   if (exam.preparationFile) await sayPreparationFile(b, "bot_info_preparation", exam.name, exam.preparationFile);
   else await say(b, "bot_info_preparation", preparationMessageText(exam.name, exam.preparation!));
-  await showInfo(b);
+  await showMenu(b);
 }

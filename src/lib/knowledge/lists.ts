@@ -1,5 +1,5 @@
 // Base de Conhecimento Global do bot (cliente, 31/out/2026;
-// docs/base-de-conhecimento.md). Listas fechadas que o conteúdo cadastrado
+// docs/arquivo/modulos/base-de-conhecimento.md). Listas fechadas que o conteúdo cadastrado
 // pelo Suporte pode usar: fontes de dados da clínica, fluxos do bot e termos
 // da clínica exigidos na mensagem. São as mesmas das travas da tabela
 // `kb_entries` (um teste de banco confere). Fonte nova é código: lê o banco

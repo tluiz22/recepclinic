@@ -56,13 +56,13 @@ export const atendimentoArtigos = [
     intro:
       "Mostra as conversas do WhatsApp pendentes de atendimento humano: o bot parou de responder e alguém da clínica precisa atender. O bot é o atendimento automático do RecepClinic no WhatsApp da clínica.",
     fields: [
-      { name: "Quando a conversa entra", text: "O paciente pede para falar com a clínica; a recepção responde pelo app do WhatsApp Business; ou o bot não entende, não acha horário livre ou bate um limite do contato. Em todos os casos, o bot pergunta antes de transferir, exceto no limite de marcações." },
+      { name: "Quando a conversa entra", text: "O paciente pede para falar com a clínica; a recepção responde pelo app do WhatsApp Business; o bot não entende (pergunta antes de transferir); ou a clínica está sem o portal e o paciente toca em Agendar, Minhas consultas, Profissionais ou no Remarcar/Cancelar do lembrete." },
       { name: "Aba Aguardando a clínica", text: "Ninguém respondeu ainda, ou o paciente escreveu de novo. A mais antiga primeiro, com o contador na aba." },
       { name: "Aba Em atendimento", text: "A recepção já respondeu. Agradecimento ou despedida do paciente depois disso (\"ok\", \"obrigado\", \"tchau\", 👍) mantém a conversa aqui." },
       { name: "Aba Pessoal e administrativo", text: "Números marcados como não sendo de paciente (botão \"Não é atendimento\" nos cartões, com confirmação): o bot não responde e eles não contam nos pendentes nem nas métricas. Mostra o número, o tipo, a hora da última mensagem e o aviso de mensagem nova; \"Voltar para atendimento\" desfaz." },
       { name: "Aba Notificações", text: "Ativa, testa ou desativa os avisos neste aparelho." },
       { name: "Finalizar atendimento", text: "Em cada conversa, nas duas abas, com confirmação. O bot volta na hora, sem mandar nada ao paciente. Se o paciente escreveu depois que a tela abriu, o RecepClinic avisa para conferir antes." },
-      { name: "Assunto", text: "Ao transferir, o bot pergunta o assunto uma vez; a primeira resposta aparece aqui (\"Assunto ainda não informado\" até o paciente responder)." },
+      { name: "Assunto", text: "Ao transferir, o bot pede que o paciente escreva a dúvida; a primeira resposta aparece aqui (\"Assunto ainda não informado\" até o paciente responder)." },
     ],
     steps: [
       "Abra Atendimento. Use \"Abrir no WhatsApp\" para ir à conversa no WhatsApp do aparelho da clínica (celular ou WhatsApp Web).",

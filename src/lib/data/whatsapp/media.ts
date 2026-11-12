@@ -6,7 +6,7 @@ import { getSendingSetup } from "./connection";
 import { downloadMedia, fetchMediaInfo, type Fetcher } from "./graph";
 import { incomingMedia, type IncomingMediaKind, type WaMessage } from "./meta";
 
-// Mídia recebida na Central (CN5; plano em docs/planejamento-central-atendimento.md, seção 6 e decisões 8b e 8c,
+// Mídia recebida na Central (CN5; plano em docs/arquivo/modulos/planejamento-central-atendimento.md, seção 6 e decisões 8b e 8c,
 // cliente, 05/nov/2026). O webhook só anota o anexo como pendente (o 200 à Meta não espera o download); a rotina de
 // cada minuto baixa da Meta (a URL vale 5 minutos e pede o token), confere tipo e tamanho e sobe ao bucket privado
 // `whatsapp-media`. Foto, áudio e documento são guardados; vídeo e figurinha só com aviso, sem guardar o arquivo.

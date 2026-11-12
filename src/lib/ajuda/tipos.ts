@@ -1,4 +1,4 @@
-// Catálogo da ajuda contextual (23/out/2026; padrão em docs/ajuda-contextual.md).
+// Catálogo da ajuda contextual (23/out/2026; padrão em docs/arquivo/modulos/ajuda-contextual.md).
 // Um arquivo por módulo, com os textos do "i" (tipos A e D), do "Como
 // funciona?" (C) e das listas vazias (E). A orientação visível (B) continua
 // escrita na própria tela. Cada texto de regra anota o arquivo que calcula ou

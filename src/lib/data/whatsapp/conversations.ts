@@ -15,7 +15,7 @@ import { logError } from "../../log";
 // bot fica em silêncio. A conversa volta ao bot pelo "Finalizar atendimento"
 // da tela Atendimento, pelo "#bot" da recepção ou pela rotina de 12 h
 // (handoffReturn.ts), sempre sem mandar nada ao paciente (CA, cliente,
-// 04/nov/2026; docs/ciclo-atendimento-humano.md).
+// 04/nov/2026; docs/arquivo/modulos/ciclo-atendimento-humano.md).
 
 /** Conversa parada fora do repouso por mais que isso recomeça do zero (piloto). */
 export const IDLE_TIMEOUT_MINUTES = 15;
@@ -365,7 +365,7 @@ export function checkHandoff(conversation: Conversation): "active" | "paused" {
  * De onde veio o pedido de recepção (cliente, 30/out/2026): opção do menu, ações do agendamento na entrada, data
  * não encontrada, botão de saída de uma resposta não entendida (C12) ou pedido digitado ("atendente").
  */
-export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed" | "kb_answer" | "not_completed";
+export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed" | "kb_answer" | "not_completed" | "no_portal";
 
 export async function pauseForHuman(
   db: DbClient,
@@ -537,44 +537,13 @@ export async function recordHandoffSubject(db: DbClient, clinicId: string, convo
 // Mensagem automática do app (IS4; cliente, 03/nov/2026)
 // ---------------------------------------------------------------------------
 
-/** Tipo da mensagem do app que saiu sozinha (saudação, ausência): não conta como resposta da recepção. */
-export const APP_AUTO_REPLY_TYPE = "app_auto_reply";
-/** Eco do app até 5 s depois da mensagem do paciente ou do bot: mensagem automática, não gente. */
-export const AUTO_REPLY_WINDOW_MS = 5_000;
-
 /**
- * O eco do app parece mensagem automática (incidente da clínica piloto, 03/nov/2026: a mensagem de ausência saía
- * 2 a 3 s depois do "oi" e pausava o bot)? Só com a hora da Meta no eco (`timestamp`, sempre presente nos eventos
- * reais): até 5 s depois (ou 2 s antes, pelo relógio) de uma mensagem do paciente ou do bot naquela conversa.
+ * Tipo da mensagem do app que saiu sozinha (saudação, ausência). Ninguém mais grava este tipo: a classificação pelo
+ * tempo (eco até 5 s depois do paciente, IS4, 03/nov/2026) tratava como automática a mensagem que a recepção digitava
+ * junto com o paciente (12/nov/2026), então o eco do app conta sempre como resposta da recepção. Fica só para ler o
+ * que já foi gravado.
  */
-export async function isLikelyAutomaticEcho(db: DbClient, clinicId: string, echo: WaMessage, echoRecordId: string): Promise<boolean> {
-  const phone = toE164(echo.to);
-  const seconds = Number(echo.timestamp);
-  if (!phone || !echo.timestamp || !Number.isFinite(seconds) || isReturnToBotKeyword(messageBody(echo))) return false;
-  const at = seconds * 1000;
-  const rows = unwrap(
-    await db
-      .from("whatsapp_messages")
-      .select("id")
-      .eq("clinic_id", clinicId)
-      .eq("contact_phone", phone)
-      .neq("id", echoRecordId)
-      .or("direction.eq.inbound,message_type.like.bot_*")
-      .gte("created_at", new Date(at - AUTO_REPLY_WINDOW_MS).toISOString())
-      .lte("created_at", new Date(at + 2_000).toISOString())
-      .limit(1),
-    "Mensagens do WhatsApp",
-  );
-  return rows.length > 0;
-}
-
-/** O eco vira "mensagem automática do app": não pausa o bot e não conta como resposta da recepção. */
-export async function markAutomaticEcho(db: DbClient, clinicId: string, echoRecordId: string): Promise<void> {
-  unwrap(
-    await db.from("whatsapp_messages").update({ message_type: APP_AUTO_REPLY_TYPE }).eq("clinic_id", clinicId).eq("id", echoRecordId),
-    "Mensagem do WhatsApp",
-  );
-}
+export const APP_AUTO_REPLY_TYPE = "app_auto_reply";
 
 /**
  * A última mensagem automática do app nas últimas `hours` horas (aviso no Início e em Configurações › WhatsApp). 6 horas
@@ -620,7 +589,7 @@ export async function handleAgentEcho(
 }
 
 // ---------------------------------------------------------------------------
-// Conversas que não são atendimento (NA; cliente, 06/nov/2026; docs/conversas-nao-atendimento.md)
+// Conversas que não são atendimento (NA; cliente, 06/nov/2026; docs/arquivo/modulos/conversas-nao-atendimento.md)
 // ---------------------------------------------------------------------------
 
 /**

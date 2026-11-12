@@ -166,7 +166,7 @@ describe("travas no banco com o item desligado", () => {
       expired: 0, closedEntries: 0, offered: 0, skipped: 0, closedOpenings: 0, waitingOpenings: 0,
     });
     const [canceled] = await cancelByClinic(db(reception), clinicId, [appointment.id], reception.id, NOW);
-    expect(canceled).toMatchObject({ appointment: { id: appointment.id, status: "canceled" }, rebookingLink: null });
+    expect(canceled).toMatchObject({ appointment: { id: appointment.id, status: "canceled" }, portalLink: null });
   });
 
   it("desativar o que já existe continua permitido", async () => {

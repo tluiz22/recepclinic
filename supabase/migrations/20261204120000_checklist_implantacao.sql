@@ -1,4 +1,4 @@
--- IS3 Checklist de implantação (cliente, 03/nov/2026; docs/implantacao-segura.md,
+-- IS3 Checklist de implantação (cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md,
 -- seção 5): na Situação da clínica (Sistema › Clínicas), os itens que o sistema
 -- confere sozinho e os que o Suporte marca. "Ativar a clínica" só com os
 -- obrigatórios: na tela, na rota e aqui no banco.

@@ -1,0 +1,124 @@
+---
+// Métricas › Portal (F6, parte 2): o caminho do paciente no portal de agendamento, da clínica toda. Visitas, quem
+// confirmou o celular e quem escolheu um horário; as marcações feitas pelo portal e os bloqueios do período.
+// Uma visita pode reservar e marcar mais de uma vez: por isso as marcações ficam fora do funil e têm cartão próprio.
+import type { ClinicContext } from "../../../lib/clinicAccess";
+import { dayBounds, todayIn } from "../../../lib/clinicTime";
+import type { DbClient } from "../../../lib/data/clients";
+import { getPortalMetrics, portalSteps, type PortalMetrics } from "../../../lib/data/portalMetrics";
+import { logError } from "../../../lib/log";
+import { compareCounts, comparisonRange, describeComparison, formatRate, type DateRange } from "../../../lib/metricsRules";
+import { countDelta, previousCount } from "./compare";
+import Kpi from "./Kpi.astro";
+
+interface Props {
+  db: DbClient;
+  clinic: ClinicContext;
+  range: DateRange;
+  compare: boolean;
+  links: { retry: string };
+  now: Date;
+}
+
+const { db, clinic, range, compare, links, now } = Astro.props;
+const tz = clinic.timezone;
+const bounds = (r: DateRange) => ({ start: dayBounds(r.from, tz).start, end: dayBounds(r.to, tz).end });
+
+async function load(r: DateRange): Promise<PortalMetrics | null> {
+  try {
+    const b = bounds(r);
+    return await getPortalMetrics(db, clinic.clinicId, b.start, b.end);
+  } catch (error) {
+    logError("métricas: portal não carregou", error, { clinica: clinic.clinicId });
+    return null;
+  }
+}
+
+// Sessões e bloqueios do portal são apagados depois de 30 dias (limpeza diária): antes disso só as marcações existem.
+const limitDay = dayBounds(todayIn(tz, now), tz).start.getTime() - 30 * 86_400_000;
+const oldRange = dayBounds(range.from, tz).start.getTime() < limitDay;
+const prevRange = comparisonRange(range);
+const prevText = describeComparison(prevRange);
+const prevOld = dayBounds(prevRange.from, tz).start.getTime() < limitDay;
+const [m, prev] = await Promise.all([load(range), compare && !prevOld ? load(prevRange) : Promise.resolve(null)]);
+const steps = m ? portalSteps(m) : [];
+const visitsCmp = m && prev && prev.visits > 0 ? compareCounts(m.visits, prev.visits) : null;
+const bookedCmp = m && prev && prev.booked > 0 ? compareCounts(m.booked, prev.booked) : null;
+
+const card = "flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-5";
+const h2 = "font-display text-lg leading-tight font-bold text-ink";
+const sub = "text-sm leading-relaxed text-ink-soft";
+---
+
+{
+  m === null ? (
+    <div role="alert" class="mt-4 rounded-xl border border-ns-100 bg-ns-100/40 px-4 py-4">
+      <h2 class={`${h2} text-ns-800`}>Não foi possível carregar o Portal</h2>
+      <a href={links.retry} class="mt-2 inline-flex h-11 items-center rounded-lg bg-brand px-4 font-semibold text-white no-underline hover:bg-brand-strong">Tentar de novo</a>
+    </div>
+  ) : m.visits === 0 && m.booked === 0 ? (
+    <div class="mt-4 rounded-xl border border-line bg-white px-4 py-5">
+      <h2 id="sem-visitas" class={h2}>Ninguém usou o portal neste período</h2>
+      <p class={`${sub} mt-1`}>Quando alguém entrar pelo link da clínica, do profissional ou do WhatsApp, o caminho aparece aqui.</p>
+    </div>
+  ) : (
+    <>
+      {oldRange && (
+        <p role="note" class="mt-4 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3 text-sm text-ink-mid">
+          As visitas, os celulares confirmados, os horários escolhidos e os bloqueios são guardados por 30 dias. Neste período, esses números estão incompletos; só as marcações têm o histórico inteiro.
+        </p>
+      )}
+      <section aria-label="Indicadores principais" class="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-3">
+        <Kpi
+          id="kpi-visitas"
+          label="Entraram no portal"
+          value={String(m.visits)}
+          delta={visitsCmp ? countDelta(visitsCmp, "up") : null}
+          previous={visitsCmp ? previousCount(visitsCmp, prevText) : null}
+          rule="Sessões abertas no período (pela data de abertura): pelo link da clínica, do profissional ou do WhatsApp. Quem volta depois de a sessão vencer conta de novo."
+        >
+          {m.fromBotLink} pelo link que o WhatsApp mandou.
+        </Kpi>
+        <Kpi
+          id="kpi-marcacoes"
+          label="Marcações pelo portal"
+          value={String(m.booked)}
+          delta={bookedCmp ? countDelta(bookedCmp, "up") : null}
+          previous={bookedCmp ? previousCount(bookedCmp, prevText) : null}
+          rule="Atendimentos criados pelo portal no período (pela data da marcação), mesmo se cancelados depois, inclusive os do link do WhatsApp; a agenda importada fica de fora. Uma visita pode marcar mais de uma vez."
+        >
+          Consultas, retornos e exames marcados pelo próprio paciente.
+        </Kpi>
+        <Kpi
+          id="kpi-bloqueios"
+          label="Bloqueios por excesso de tentativas"
+          value={String(m.blocks)}
+          rule="Vezes em que o portal bloqueou um celular, um endereço ou uma sessão por tentativas demais (15 minutos, 1 hora ou 24 horas)."
+        >
+          {m.blocks === 0 ? "Nenhum no período." : "A recepção pode liberar o celular na ficha do paciente."}
+        </Kpi>
+      </section>
+
+      <section aria-labelledby="funil-portal" class="mt-4">
+        <div class={card}>
+          <h2 id="funil-portal" class={h2}>Onde o paciente avança</h2>
+          <p class={sub}>Cada passo sobre as {m.visits} visitas. Quem chega pelo link do WhatsApp conta como celular confirmado.</p>
+          <ol class="flex flex-col gap-3">
+            {steps.map((s) => (
+              <li class="flex flex-col gap-1" data-passo={s.id}>
+                <div class="flex items-baseline justify-between gap-3 text-[15px]">
+                  <span>{s.label}</span>
+                  <span class="font-bold tabular-nums">{s.count}{s.share !== null && <span class="ml-2 font-normal text-ink-soft">{formatRate(s.share)}</span>}</span>
+                </div>
+                <div class="h-3 overflow-hidden rounded-md bg-canvas-deep" role="img" aria-label={`${s.label}: ${s.count}`}>
+                  <div class="h-full bg-brand" style={`width:${(s.share ?? 0) * 100}%`} />
+                </div>
+                {s.lostAfter !== null && s.lostAfter > 0 && <p class="text-[13px] text-ink-soft">{s.lostAfter} {s.lostAfter === 1 ? "não seguiu" : "não seguiram"} para o próximo passo.</p>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    </>
+  )
+}

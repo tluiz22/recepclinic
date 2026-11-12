@@ -27,7 +27,7 @@ Muda a regra da proposta ("com os itens desligados, a clínica não vê diferen�
 - **Bot depende do portal:** sem o item Portal ligado, a clínica não pode ligar o bot.
 - **Clínica sem bot:** recebe só os lembretes; a clínica marca os atendimentos no painel.
 - **Telas da recepção (R1 a R8) para todas as clínicas:** implementadas sem depender do item Portal (o que só existe
-  com o portal, como o atalho do link no Meu dia, aparece só com ele).
+  com o portal, como o link e o QR no Meu perfil, aparece só com ele).
 - Consequências a decidir com o cliente: seção 6 (I6 em diante).
 
 ## 2. Como cada etapa é feita (cliente, 08/nov)
@@ -56,8 +56,8 @@ Revistas com as decisões I1, I6 a I9 (cliente, 08/nov). Telas da recepção par
 | **F2d Retorno e exames no portal** | Telas da D4: retorno pelas regras do bot (I8) e exames | Com Portal |
 | **F3 Bot com jornada única e links** | Bot: Agendar, Retorno e Exames levam ao portal; acaba a marcação no chat; Remarcar abre o portal; Cancelar segue no chat (I7); P12 Minhas consultas; Configurações › Portal, "Copiar link para…", QR; jornada do bot atualizada. **Muda o bot das clínicas em produção** | Com bot (todas com bot têm Portal) |
 | **F5a Agenda da clínica grande** | Agenda em colunas (até 7 sem rolagem; 8+ com Especialidade/Profissional e barra de rolagem), atendimento aberto na coluna à direita, Próximos horários livres, celular com uma agenda por vez | Todas |
-| **F5b Meu dia, Conversas, Meu perfil e celular** | Meu dia novo ("Precisa de você", tabela por profissional; atalho do link só com Portal); Conversas com aguardando primeiro, botão "Aguardando" e "Com quem ele já consulta" (com a Central); Meu perfil do profissional (link e QR só com Portal); barra embaixo no celular | Todas |
-| **F6 Métricas e recuperação** | Métricas › Portal, Desempenho › "De onde vêm as marcações", aviso a quem não terminou de marcar (15 min), monitor do Suporte | Com Portal (origens em Desempenho: todas) |
+| **F5b Meu dia, Conversas, Meu perfil e celular** | Meu dia novo ("Precisa de você" com a linha "Conferir data" das consultas do portal; **sem tabela "Por profissional"** (já está no Relatório do dia) e **sem atalho do link** (cliente, 12/nov; a recepção não gera o link por enquanto)); Conversas com aguardando primeiro, botão "Aguardando" e "Com quem ele já consulta" (com a Central); Meu perfil do profissional (link e QR só com Portal); barra embaixo no celular | Todas |
+| **F6 Métricas e recuperação** | Métricas › Portal, Desempenho › "De onde vêm as marcações", monitor do Suporte (**sem aviso a quem não terminou de marcar: cliente, 12/nov, decidiu que nem a recepção nem o paciente são avisados**) | Com Portal (origens em Desempenho: todas) |
 
 Ordem proposta: F1 → D4 → F2a → F2b → F2c → F2d → F3 → F5a → F5b → F6. A F5a só depende da F1 e pode ser antecipada.
 Em cada etapa: unidade e banco; Playwright em 390 e 1280 px; `security-review` na F2b, F2c e F3.
@@ -1038,6 +1038,103 @@ o WhatsApp vira porta de entrada. Canvas aprovado tela a tela: https://claude.ai
 - **Junto (da F3f original):** sai a marcação no chat, `/agendar` e `api/agendar` (após vencerem os links), o pedido não
   concluído, F3-5/F3-7 (sem link ou fora do portal → recepção), fim do "Primeiro horário". Jornada do bot refeita;
   artigos da Central e capturas revistos (fila em `capturas-pendentes.md` na etapa de código).
+
+#### 15.6.1 F3f em etapas (cliente, 11/nov/2026, branch `bot-enxuto`)
+
+Junto da F3f: o bot pela ligação (ponto 1 do `/code-review` da VR) e o UI-5. **UI-5 pelo portal (cliente, 11/nov):**
+Remarcar e Cancelar saem do chat e abrem o portal, que já lista todos os pacientes ligados ao número e manda o aviso
+da VR4; sem código novo de lista no chat.
+
+| Etapa | O que entrega | Migração |
+|---|---|---|
+| E1 Bot pela ligação | Toques do lembrete, oferta da lista de espera e consultas do chat por qualquer responsável ligado ou por quem marcou | não |
+| E2 Menu enxuto e links | BE-2, BE-3, BE-4, BE-7; sem portal → recepção (F3-5/F3-7); Remarcar e Cancelar do lembrete atual → link do portal | não |
+| E3 Limpeza | Sai a marcação no chat, a entrada com nascimento, os submenus, Informações, o Encaixe no chat, o pedido não concluído e o "Primeiro horário"; aviso de cancelamento pela clínica com o link do portal; `/agendar` leva ao portal | não |
+| E4 Cortesia | BE-8 | não |
+| E5 Portal | BE-5, BE-6 | não |
+| E6 Confirmação | BE-9 | sim (aviso antes) |
+| E7 Lembrete novo | BE-10 | talvez (aviso antes) |
+| E8 Fechamento | Central, capturas, suíte, `security-review`, `/code-review` | — |
+
+**E1 feita (11/nov/2026):** `upcomingOfContact` e `loadActive` (`bot/manage.ts`) acham as consultas pelos pacientes de
+`contact_patient_ids` (e `loadActive` também por `booked_by_contact_id`, quem recebeu o lembrete); `loadOffer`
+(`waitlist/offers.ts`) aceita a resposta de quem marcou ou de responsável ligado; a marcação no chat lista os pacientes
+ligados (`listContactPatients(…, { linked: true })`, até sair na E3). Antes, o pai tocando em Cancelar no lembrete
+recebia "não está mais ativo". Teste de banco `varios-responsaveis-bot.test.ts` (falha sem a correção). Jornada do bot
+(regra geral) atualizada. O `notCompleted.ts` ainda lê pelo principal: sai na E3.
+
+**E2 + E3 juntas (cliente, 11/nov/2026; uma etapa só para não refazer testes duas vezes). Feitas:**
+- **Migração `20270117120000_link_portal_profissionais_cancelar.sql`** (aprovada pelo cliente, só no banco local): propósitos
+  `professionals` (abre `/medicos`) e `cancel` (abre `minhas-consultas/cancelar?a=`) no link do portal.
+- **Menu (BE-2):** uma mensagem: cabeçalho com o nome da clínica, "Olá[, Nome]! Seja bem-vindo(a). Como podemos ajudar?" (ou as
+  boas-vindas próprias da clínica) e a lista 📅 Agendar · 🗓 Minhas consultas · 👥 Profissionais · 🎧 Falar com a recepção
+  (esta só com coexistência). Títulos sem o número na frente (cabem nos 24); digitar o número continua valendo.
+- **Links (BE-3):** botão de link da Meta (`cta_url`, `ClinicSender.link`); sem ele, o texto com o endereço. Agendar abre e fecha
+  o funil `booking` com `link_sent`. Sem o portal (F3-5/F3-7): recepção; sem coexistência, "A clínica responderá…". Origem
+  nova da transferência nas Métricas: `no_portal`.
+- **Recepção (BE-4):** "Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor." numa mensagem; a primeira
+  resposta vira o assunto (sem a pergunta à parte). Fora do horário, na mesma mensagem: "A recepção atende de seg. a sex., 8h
+  às 18h, e responde assim que abrir." (`describeReceptionHoursForPatient`). Recesso como antes.
+- **IA (BE-7):** a resposta e depois o menu. Pedidos da base: marcar → Agendar; remarcar/cancelar/"minha consulta" → Minhas
+  consultas; encaixe → recepção.
+- **Lembrete atual:** Remarcar e Cancelar mandam o portal já na ação (`reschedule`/`cancel`); turma ou sem o portal → recepção.
+- **Saíram:** `booking.ts`, `entry.ts`, `notCompleted.ts`, `chooseProfessional.ts`; o chat de cancelar, remarcar e encaixe em
+  `manage.ts`; submenus e Informações gerais (o preparo segue pela base); "Link para marcar" e "Cancelamento confirmado" em
+  Configurações › Mensagens; 125 textos sem uso em `texts.ts`. O cancelamento pela clínica só cria o link do portal (sem ele,
+  o aviso vai sem link). Nenhum código cria mais link `/agendar`.
+- **Jornada do bot** refeita (5 itens); artigos da Central (bot, perguntas frequentes, limites, problemas, atendimento, agenda,
+  configurações, resumo, relacionamento). Captura `config-mensagens` na fila.
+- **Testes:** novo `bot-enxuto.test.ts`; apagados os do chat (entrada, marcar, convênio, pediatria, profissional, não concluído,
+  link do portal); `bot-limites` virou `limites-do-contato.test.ts`; testes do cancelamento pela clínica passaram ao link do
+  portal. Unidade 1217, banco 1131, `astro check` sem erros. Playwright: Configurações › Mensagens em 1280 e 390 (sem rolagem
+  lateral, sem erro no console).
+- **Para depois:** apagar as páginas `/agendar` e `api/agendar` (e `booking_links`) quando os links antigos vencerem (2 dias depois
+  da publicação na produção). Consequência: o paciente não entra mais sozinho na lista de espera (o Encaixe saiu do chat); entra
+  pela recepção.
+
+**E2+E3 validadas pelo cliente (11/nov/2026).**
+
+**E4 feita (11/nov/2026), com a conversa parada no menu:**
+- **Cortesia (BE-8):** `isCourtesyMessage` (`courtesy.ts`, a mesma da C27) em `router.ts`: com a conversa no começo ou no menu e
+  a última mensagem enviada ao número sendo do bot e de fechar assunto (menu, link do portal, links do lembrete, "a clínica
+  responderá", "que bom que ajudou", presença confirmada, preparo, encerramento), "ok", "obrigado", 👍 ou reação ficam sem
+  resposta, sem mudar o estado. Com pedido junto, depois de pergunta do bot, de template ou da recepção, ou na 1ª mensagem do
+  número: responde (na dúvida, responde).
+- **Parada no menu (cliente, 11/nov):** `closeIdleConversations` volta ao começo em silêncio; nos outros passos (lista de preparo),
+  o aviso de encerramento como antes.
+- Jornada do bot (regras gerais) e artigo do WhatsApp na Central. Testes: `bot-enxuto.test.ts` (+5), `bot-base-de-conhecimento`
+  (agradecimento depois do menu fica sem resposta). Unidade 1217, banco 1137, `astro check` sem erros.
+
+**E5 feita (11/nov/2026), portal:**
+- **BE-5 início:** ícone no "Agendar consulta"; "Minhas consultas" com calendar-clock; novo botão "Profissionais e valores"
+  (Especialidades, valores e convênios) junto das outras ações (só em clínica com mais de um profissional); sai o link pequeno
+  "Ver médicos…". Botão "Recepção" do topo com o ícone headset (era o do WhatsApp).
+- **BE-6 `/medicos?lista=1`:** vitrine "Profissionais, valores e convênios" com ícone users, "‹ Início", sem barra de passos nem
+  resumo ao lado; filtro novo de **Especialidade** (filtra ao escolher) ao lado de "Atende meu convênio"; "Agendar ›" no rodapé do
+  cartão (e na lista compacta de 6+). `PortalFlow.directory` (`lista=1`) segue pelos cartões, e o Voltar dos passos seguintes
+  volta à vitrine; a especialidade não entra nos passos. Sem `lista` e com `esp` (vindo da P2): tela de antes.
+- Testes: unidade 1218 (+1 em `portal.test.ts`), `astro check` sem erros; Playwright em 390: vitrine e filtro de especialidade, sem
+  rolagem lateral. Banco 1137 (suíte inteira antes da E5). Sem captura da Central afetada.
+
+**E6 feita (11/nov/2026), confirmação (BE-9):** migração `20270119120000_confirmacao_ao_paciente` (colunas `confirm_portal_booking` e
+`confirm_reception_booking` em `clinic_settings`, ligadas por padrão; **só no banco local**, staging não aplicado; a `main` já usa o
+número 0118). Configurações › Lembretes ganha o quadro "Confirmação ao paciente" (`/api/admin/configuracoes/confirmacao`). Desligada,
+a marcação pelo portal (consulta, retorno, remarcação "marcar de novo") ou pela recepção (`marcar`) não manda a confirmação;
+lembrete, remarcação, cancelamento e reenvio manual não mudam. `confirmationEnabled` em `notices.ts`. Teste DB novo; os de portal
+passam a usar um IP por sessão. Captura `config-lembretes` na fila.
+
+**E7 feita (11/nov/2026), lembrete novo (BE-10):** sem migração. Modelo novo `rc_lembrete_v2` (Suporte cria na Meta em
+Configurações › WhatsApp › Criar): corpo com o mapa (7ª variável, Google Maps do endereço ou do local), botão de resposta
+**Confirmar presença** e dois botões de link **Remarcar** e **Cancelar** (`{raiz}/s/{{1}}`). No envio, o lembrete cria dois links do
+portal (`reschedule` e `cancel` do atendimento, validade até a hora da consulta, mínimo 30 min) e manda o código de cada um no botão.
+Clínica que só tem a v1 aprovada segue com a v1 (3 respostas), decidido por `hasReminderLinks(body)` (7 variáveis). A raiz do
+botão é `PORTAL_BUTTON_ROOT` (padrão `https://agendar.recepclinic.com.br`; **no staging, definir a variável de ambiente
+`PORTAL_BUTTON_ROOT=https://agendar-teste.…`** antes de criar o modelo lá, porque a Meta guarda o endereço fixo). Atenção: o link
+`reschedule` abre a remarcação sem o prazo mínimo (`noLead`), como o do bot; se o cliente quiser o prazo no lembrete, é ajuste à parte.
+Jornada do bot atualizada. Testes: unit 1219, DB com os modelos v2.
+
+**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validada), E5 (validada), E6 e E7 (feitas, validação no staging, migração 0119 só local). Depois:
+E8 (fechamento): Central e suíte feitas (11/nov); faltam `security-review`, `/code-review` e a junção com a `main`. Capturas `config-mensagens` e `config-lembretes` na fila, sem autorização.
 
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 

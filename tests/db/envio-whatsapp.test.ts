@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { bookingPath, guidancePath } from "../../src/lib/publicId";
+import { guidancePath, shortId } from "../../src/lib/publicId";
+import { portalLinkUrl } from "../../src/lib/portal";
 import { bookAppointment, cancelAppointment } from "../../src/lib/data/agenda/appointments";
 import { createClinicServiceClient } from "../../src/lib/data/clinicService";
 import type { DbClient } from "../../src/lib/data/clients";
@@ -92,7 +93,7 @@ afterAll(async () => {
 
 describe("templates padrão na conta da clínica (Suporte)", () => {
   it("cria os que a conta não tem; o que já existe só tem a situação guardada", async () => {
-    const meta = fakeMeta({ rc_lembrete_v1: { status: "APPROVED" } });
+    const meta = fakeMeta({ rc_lembrete_v2: { status: "APPROVED" } });
     const result = await createDefaultTemplates(service, f.clinicId, meta.fetcher);
     expect(result.ok && result.lines.map((l) => [l.key, l.status, l.problem])).toEqual([
       ["confirmation", "pending", null],
@@ -138,7 +139,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       rc_remarcacao_v1: { status: "APPROVED" },
       rc_cancelamento_v1: { status: "APPROVED" },
       rc_cancelamento_clinica_v1: { status: "PENDING" },
-      rc_lembrete_v1: { status: "APPROVED" },
+      rc_lembrete_v2: { status: "APPROVED" },
       rc_preparo_exame_v3: { status: "REJECTED", reason: "INVALID_FORMAT" },
     });
     expect(await refreshTemplateStatuses(service, f.clinicId, meta.fetcher)).toMatchObject({ ok: true });
@@ -506,9 +507,12 @@ describe("cancelamento pela clínica (F6.5)", () => {
       ).appointment.id;
     const a1 = await book(f.ids.p1, f.ids.agendaDra);
     const a2 = await book(f.ids.p3, f.ids.agendaDra2);
+    // Bot enxuto (F3f): o link de remarcação é o do portal.
+    await adminClient().from("clinics").update({ portal_slug: `envio-${Date.now()}` }).eq("id", f.clinicId);
     const canceled = await cancelByClinic(asDb(f.reception), f.clinicId, [a1, a2], f.reception.id, NOW);
-    expect(canceled.every((c) => c.rebookingLink)).toBe(true);
-    const items = canceled.map((c) => ({ appointmentId: c.appointment.id, rebookingLinkId: c.rebookingLink!.id }));
+    await adminClient().from("clinics").update({ portal_slug: null }).eq("id", f.clinicId);
+    expect(canceled.every((c) => c.portalLink)).toBe(true);
+    const items = canceled.map((c) => ({ appointmentId: c.appointment.id, portalLinkId: c.portalLink!.id }));
 
     // Template ainda em análise: nenhum sai, os dois vão para a tela Avisar.
     const meta = fakeMeta();
@@ -529,7 +533,7 @@ describe("cancelamento pela clínica (F6.5)", () => {
       "Paciente",
       "Consulta",
       "segunda, 17/03 às 08:00",
-      `${BASE_URL}${bookingPath(items[0].rebookingLinkId!)}`,
+      portalLinkUrl(BASE_URL, shortId(items[0].portalLinkId)),
     ]);
     // As duas tentativas têm o mesmo horário (relógio do teste): procura a enviada pela situação.
     const sentMessage = (await outbound(a1)).find((m) => m.status === "sent");

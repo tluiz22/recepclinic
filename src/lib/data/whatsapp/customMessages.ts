@@ -104,7 +104,8 @@ export function markersToTemplate(key: TemplateKey, text: string): string {
 // Conversa do bot
 // ---------------------------------------------------------------------------
 
-export type BotMessageKey = "welcome" | "menu" | "not_understood" | "handoff" | "booking_link" | "cancel_done" | "presence_confirmed" | "idle_closed";
+/** "booking_link" e "cancel_done" saíram com o bot enxuto (F3f): o link vai no botão e o cancelamento é pelo portal. */
+export type BotMessageKey = "welcome" | "menu" | "not_understood" | "handoff" | "presence_confirmed" | "idle_closed";
 
 export type BotMessageDef = {
   key: BotMessageKey;
@@ -118,7 +119,8 @@ export type BotMessageDef = {
 };
 
 export const BOT_MESSAGES: BotMessageDef[] = [
-  { key: "welcome", label: "Boas-vindas", markers: ["nome", "clinica"], required: [], defaultText: "Olá, {nome}! 👋 Aqui é {clinica}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo." },
+  // Bot enxuto (F3f, BE-2): as boas-vindas são o corpo do 1º menu, numa mensagem só (o nome da clínica vai no cabeçalho).
+  { key: "welcome", label: "Boas-vindas", markers: ["nome", "clinica"], required: [], defaultText: "Olá, {nome}! 👋\n\nEste é o contato oficial para agendamento {clinica}.\n\nEstamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar consulta, retorno ou exame.\n\n🗓 Remarcar ou cancelar sua consulta ou exame.\n\n👥 Consultar informações sobre profissionais, especialidades, valores e convênios.\n\n🎧 Falar diretamente com a recepção: atendimento com a nossa equipe.\n\nEscolha uma das opções abaixo." },
   { key: "menu", label: "Menu", markers: [], required: [], defaultText: "Escolha uma opção abaixo ou faça uma pergunta." },
   {
     key: "not_understood",
@@ -132,23 +134,8 @@ export const BOT_MESSAGES: BotMessageDef[] = [
     label: "Falar com a recepção",
     markers: [],
     required: [],
-    defaultText: "Combinado! Vou te transferir para a recepção, que responde por aqui assim que possível. O atendimento automático fica pausado até lá.",
-  },
-  {
-    key: "booking_link",
-    label: "Link para marcar",
-    // Link do portal (F3b): o que vai marcar ("consulta com Dra. Ana", "retorno", o exame); {paciente} saiu (o portal
-    // pergunta para quem é). No link antigo (domiciliar, turma), {servico} é o serviço.
-    markers: ["servico", "link"],
-    required: ["link"],
-    defaultText: "Para escolher o dia e o horário de *{servico}*, toque no link abaixo. Ele vale por 30 minutos e é só para este número:\n{link}",
-  },
-  {
-    key: "cancel_done",
-    label: "Cancelamento confirmado",
-    markers: ["atendimento", "paciente", "data"],
-    required: [],
-    defaultText: "Prontinho, cancelamos {atendimento} de {paciente} marcado(a) para {data}. Se precisar marcar de novo, é só me chamar.",
+    // BE-4: uma mensagem, que já pede a dúvida (fora do horário, o horário da recepção vem junto).
+    defaultText: "Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor.",
   },
   {
     key: "presence_confirmed",

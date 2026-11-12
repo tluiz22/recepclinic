@@ -421,6 +421,27 @@ export type BookInput = {
 /** `pastFrom`: a equipe marca ou altera no passado até essa data (Marcar e Alterar; cliente, 28/out/2026). */
 type AnyTimeInput = { anyTime?: boolean; acceptedWarnings?: boolean; pastFrom?: Date | null };
 
+/**
+ * Paciente que marca ou remarca para o mesmo dia já fica confirmado: o lembrete de confirmação saiu na véspera
+ * (cliente, 12/nov/2026). Só os canais do paciente (portal, bot, link); a recepção confirma à mão. A marcação já
+ * valeu: falha aqui só deixa o atendimento sem a confirmação (vai para o log).
+ */
+async function confirmIfSameDay(
+  db: DbClient,
+  clinicId: string,
+  id: string,
+  { channel, trailChannel, start, timeZone }: { channel: ActionChannel; trailChannel?: TrailChannel; start: Date; timeZone: string },
+  now: Date,
+): Promise<void> {
+  if (channel === "admin" || localDateOf(start, timeZone) !== todayIn(timeZone, now)) return;
+  try {
+    unwrap(await db.from("appointments").update({ patient_confirmed_at: now.toISOString(), patient_confirmed_by: null }).eq("clinic_id", clinicId).eq("id", id), "Atendimento");
+    await logTrail(db, clinicId, id, "presence_confirmed", trailChannel ?? channel, null);
+  } catch (error) {
+    logError("agenda: não confirmou o atendimento do mesmo dia", error, { clinica: clinicId, atendimento: id });
+  }
+}
+
 /** Horário da lista ou, para a equipe, qualquer horário que passe em checkFreeTime. O local do horário. */
 async function resolveIndividualSlot(
   db: DbClient,
@@ -573,6 +594,8 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
     unwrap(await db.from("appointments").update({ insurance_plan_id: null }).eq("clinic_id", clinicId).eq("id", id), "Atendimento");
   }
 
+  await confirmIfSameDay(db, clinicId, id, { channel: input.channel, trailChannel: input.trailChannel, start: input.start, timeZone: plan.timeZone }, now);
+
   // Links de agendamento pendentes do mesmo serviço perdem a validade (piloto, Fase 12). Serviços por profissional
   // (MS, 07/nov/2026): "o mesmo serviço" inclui as cópias dos outros profissionais (mesmo nome e tipo).
   const { data: catalog } = await db.from("services").select("id, name, category").eq("clinic_id", clinicId);
@@ -686,6 +709,7 @@ export async function rescheduleAppointment(
     unwrapOne({ data, error }, "Atendimento");
   }
 
+  await confirmIfSameDay(db, clinicId, id, { channel: input.channel, trailChannel: input.trailChannel, start: input.start, timeZone: plan.timeZone }, now);
   return getAppointment(db, clinicId, id);
 }
 

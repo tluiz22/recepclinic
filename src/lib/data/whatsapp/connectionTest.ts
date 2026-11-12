@@ -6,7 +6,7 @@ import { recordOutboundMessage } from "./messages";
 import type { ClinicSender } from "./send";
 import { cleanParam, fillTemplate, firstName } from "./templates";
 
-// Mensagem de teste (IS2; cliente, 03/nov/2026; docs/implantacao-segura.md): o Administrador ou o Suporte manda o
+// Mensagem de teste (IS2; cliente, 03/nov/2026; docs/arquivo/modulos/implantacao-segura.md): o Administrador ou o Suporte manda o
 // modelo `rc_teste_envio_v1` para o próprio celular e vê se a Meta entrega. Prova o cartão na Meta e o modelo
 // aprovado antes do primeiro paciente (o incidente de 03/nov: a "forma de pagamento conferida" era só visual).
 // Sai também com a clínica em implantação, e nunca para pacientes (o número é digitado por quem testa). A situação

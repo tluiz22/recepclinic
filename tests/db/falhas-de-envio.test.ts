@@ -11,7 +11,7 @@ import { dismissSendFailure, getLatestNotice, listNumbersWithoutWhatsapp } from 
 import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient, clinicServiceClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 
-// Falhas de envio (cliente, 05/nov/2026; docs/falhas-de-envio.md): descartar na aba Envios (só o Suporte), número sem
+// Falhas de envio (cliente, 05/nov/2026; docs/arquivo/modulos/falhas-de-envio.md): descartar na aba Envios (só o Suporte), número sem
 // WhatsApp no Início (corrigir ou "o número está certo") e o reenvio rápido das mensagens do bot.
 
 let f: AgendaFixture;

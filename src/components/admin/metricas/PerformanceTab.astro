@@ -3,19 +3,20 @@
 // canvas e as 10 decisões do cliente no plano). Junta a Visão geral e os
 // Atendimentos: indicadores com a comparação contra o mesmo período do mês
 // anterior, "Precisa de atenção", o que aconteceu em cada semana, de onde
-// vêm as marcações, comparecimento (por semana, pela resposta ao lembrete e
-// por serviço e local), resposta aos lembretes e retornos. As contas vêm do
+// vêm as marcações, comparecimento (por semana, pela resposta ao lembrete),
+// resposta aos lembretes e retornos. As contas vêm do
 // banco (src/lib/data/performance.ts); cada bloco falha sozinho.
 import type { ClinicContext } from "../../../lib/clinicAccess";
 import { dayBounds, formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
 import type { DbClient } from "../../../lib/data/clients";
 import {
-  byServiceAndLocation,
   listActivity,
   listAttendance,
+  listOrigins,
   listReminderOutcomes,
   listReturnOpportunities,
   listReturnRights,
+  summarizeOrigins,
   summarizePerformance,
   type ActivityDay,
   type AttendanceRow,
@@ -38,7 +39,6 @@ import {
 } from "../../../lib/metricsRules";
 import { withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
-import { TABLE } from "../ui/styles";
 import Attention, { type AttentionItem } from "./Attention.astro";
 import ColumnsChart from "./ColumnsChart.astro";
 import { countDelta, previousCount, previousRate, rateDelta } from "./compare";
@@ -54,13 +54,12 @@ interface Props {
   grouping: "day" | "week";
   /** Filtro de serviço que não é Consulta nem Retorno: o bloco de retornos não se aplica. */
   returnsApply: boolean;
-  sortByNoShow: boolean;
-  links: { grouping: (g: "day" | "week") => string; sort: (byNoShow: boolean) => string; clearFilters: string | null; wholeMonth: string; retry: string };
+  links: { grouping: (g: "day" | "week") => string; clearFilters: string | null; wholeMonth: string; retry: string };
   here: string;
   now: Date;
 }
 
-const { db, clinic, scope, range, compare, grouping, returnsApply, sortByNoShow, links, here, now } = Astro.props;
+const { db, clinic, scope, range, compare, grouping, returnsApply, links, here, now } = Astro.props;
 const tz = clinic.timezone;
 const today = todayIn(tz, now);
 const bounds = (r: DateRange) => ({ start: dayBounds(r.from, tz).start, end: dayBounds(r.to, tz).end });
@@ -88,7 +87,8 @@ const noCompareReason =
   !compare ? null : clinicStart && clinicStart > prevRange.from ? `Sem comparação: a clínica começou a usar o RecepClinic em ${formatCalendarDate(clinicStart, "dd/MM/yyyy")}.` : null;
 const comparing = compare && !noCompareReason;
 
-const [activity, attendance, reminders, rights, opportunities, prevActivity, prevAttendance, prevReminders] = await Promise.all([
+const [origins, activity, attendance, reminders, rights, opportunities, prevActivity, prevAttendance, prevReminders] = await Promise.all([
+  safe("origem das marcações", () => listOrigins(db, clinic.clinicId, current)),
   safe("agendamentos", () => listActivity(db, clinic.clinicId, current)),
   safe("comparecimento", () => listAttendance(db, clinic.clinicId, current, now)),
   safe("lembretes", () => listReminderOutcomes(db, clinic.clinicId, current, now)),
@@ -102,6 +102,9 @@ const [activity, attendance, reminders, rights, opportunities, prevActivity, pre
 const summarize = (a: ActivityDay[] | null, t: AttendanceRow[] | null, r: ReminderRow[] | null, rr: ReturnRight[] | null) =>
   summarizePerformance({ activity: a ?? [], attendance: t ?? [], reminders: r ?? [], returnRights: rr ?? [] });
 const s = summarize(activity, attendance, reminders, rights);
+const o = origins ? summarizeOrigins(origins) : null;
+const ENTRY_LABEL: Record<string, string> = { clinic_link: "Link da clínica", professional_link: "Link do profissional" };
+const PLACE_LABEL: Record<string, string> = { instagram: "Instagram", site: "Site", google: "Google", message: "Mensagem", poster: "Cartaz", other: "Outro lugar" };
 const p = comparing ? summarize(prevActivity, prevAttendance, prevReminders, null) : null;
 
 const isEmpty = activity !== null && attendance !== null && s.created.total === 0 && s.rescheduled.total === 0 && s.canceled.total === 0 && (attendance ?? []).length === 0;
@@ -124,9 +127,6 @@ const activitySeries = sumByBucket(
 const attendanceByBucket = sumByBucket(attendance ?? [], list, ["completed", "noShow"]);
 const ratePoints = list.map((b, i) => ({ label: b.label, n: attendanceByBucket[i].noShow, base: attendanceByBucket[i].completed + attendanceByBucket[i].noShow, partial: b.partial }));
 
-const table = byServiceAndLocation(attendance ?? []);
-const tableRows = sortByNoShow ? [...table.rows].sort((a, b) => (b.noShowRate.rate ?? -1) - (a.noShowRate.rate ?? -1)) : table.rows;
-const maxRowRate = Math.max(0.05, ...table.rows.map((r) => r.noShowRate.rate ?? 0));
 
 // Precisa de atenção (até 3, do mais urgente ao menos).
 const attention: AttentionItem[] = [];
@@ -136,16 +136,6 @@ if (s.attendance.unregistered > 0) {
     rest: "de comparecimento. As taxas ainda podem mudar.",
     href: "/admin/agenda",
     linkLabel: "Registrar na Agenda",
-  });
-}
-const hottest = [...table.rows].filter((r) => r.hot).sort((a, b) => (b.noShowRate.rate ?? 0) - (a.noShowRate.rate ?? 0))[0];
-if (hottest && table.total.noShowRate.rate) {
-  const times = hottest.noShowRate.rate! / table.total.noShowRate.rate;
-  attention.push({
-    strong: `${hottest.serviceName} · ${hottest.locationName} com ${formatRate(hottest.noShowRate.rate!)} de faltas`,
-    rest: `(${hottest.noShow} de ${hottest.registered}), ${times >= 1.95 ? `${times.toFixed(1).replace(".", ",")} vezes a taxa da clínica` : "bem acima da taxa da clínica"} (${formatRate(table.total.noShowRate.rate)}).`,
-    href: "#por-servico",
-    linkLabel: "Ver por serviço",
   });
 }
 if ((opportunities ?? []).length > 0) {
@@ -305,32 +295,53 @@ import { metricas } from "../../../lib/ajuda/metricas";
           <HelpTip subject="De onde vêm as marcações" text={metricas.dicas.marcadosPor} id="origem">
             <h2 class={h2}>De onde vêm as marcações</h2>
           </HelpTip>
-          {activity === null ? (
+          {activity === null || origins === null ? (
             <p role="alert" class="text-danger">{failed("Origem das marcações")}</p>
-          ) : s.created.total === 0 ? (
+          ) : (o?.total ?? 0) === 0 ? (
             <p class={sub}>Nenhum agendamento criado no período.</p>
           ) : (
             <>
-              <p class={sub}>Dos {s.created.total} agendamentos criados no período.</p>
-              <div class="flex h-7 overflow-hidden rounded-md" role="img" aria-label={`WhatsApp ${s.created.whatsapp}, painel ${s.created.panel}`}>
-                <div class="bg-whatsapp" style={`width:${(s.created.whatsapp / s.created.total) * 100}%`} />
-                <div class="bg-line-strong" style={`width:${(s.created.panel / s.created.total) * 100}%`} />
-              </div>
-              <table class="w-full text-[15px]">
-                <caption class="sr-only">Origem das marcações</caption>
-                <tbody>
-                  <tr class="border-b border-[#e6ecea]">
-                    <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px] bg-whatsapp" />WhatsApp (bot)</span></th>
-                    <td class="py-2 text-right font-bold tabular-nums">{s.created.whatsapp}</td>
-                    <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(s.created.whatsapp / s.created.total)}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px] bg-line-strong" />Painel (equipe)</span></th>
-                    <td class="py-2 text-right font-bold tabular-nums">{s.created.panel}</td>
-                    <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(s.created.panel / s.created.total)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <p class={sub}>Dos {o?.total} agendamentos criados no período.</p>
+              {o && (
+                <>
+                  <div class="flex h-7 overflow-hidden rounded-md" role="img" aria-label={`Recepção ${o.reception}, WhatsApp ${o.whatsapp}, link do portal ${o.portalLink}`}>
+                    <div class="bg-line-strong" style={`width:${(o.reception / o.total) * 100}%`} />
+                    <div class="bg-whatsapp" style={`width:${(o.whatsapp / o.total) * 100}%`} />
+                    <div class="bg-brand" style={`width:${(o.portalLink / o.total) * 100}%`} />
+                  </div>
+                  <table class="w-full text-[15px]">
+                    <caption class="sr-only">Origem das marcações</caption>
+                    <tbody>
+                      {[
+                        { label: "Recepção (equipe)", n: o.reception, color: "bg-line-strong" },
+                        { label: "WhatsApp", n: o.whatsapp, color: "bg-whatsapp" },
+                        { label: "Link do portal", n: o.portalLink, color: "bg-brand" },
+                      ].filter((r) => r.n > 0).map((r) => (
+                        <tr class="border-b border-[#e6ecea] last:border-0">
+                          <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class={`h-3 w-3 rounded-[3px] ${r.color}`} />{r.label}</span></th>
+                          <td class="py-2 text-right font-bold tabular-nums">{r.n}</td>
+                          <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(r.n / o.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {o.portalLink > 0 && (
+                    <div class="mt-3 flex flex-col gap-3 border-t border-[#e6ecea] pt-3">
+                      <h3 class="text-[14.5px] font-semibold text-ink-mid">De onde veio o link do portal</h3>
+                      {o.entries.length > 0 && (
+                        <p class={sub} data-origem="entrada">
+                          {o.entries.map((e) => `${ENTRY_LABEL[e.key] ?? e.key}: ${e.total}`).join(" · ")}
+                        </p>
+                      )}
+                      {(o.places.length > 0 || o.placeUnknown > 0) && (
+                        <p class={sub} data-origem="lugar">
+                          {[...o.places.map((e) => `${PLACE_LABEL[e.key] ?? e.key}: ${e.total}`), ...(o.placeUnknown > 0 ? [`Lugar não informado: ${o.placeUnknown}`] : [])].join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
           {activity !== null && (
@@ -395,65 +406,6 @@ import { metricas } from "../../../lib/ajuda/metricas";
                 )}
                 <a href="?tab=faltosos" class="inline-flex min-h-11 items-center self-start text-sm font-bold text-brand-ink no-underline hover:underline sm:min-h-0 sm:py-1">Ver quem falta com frequência ›</a>
               </div>
-            </div>
-
-            <div id="por-servico" class={`${card} scroll-mt-16`}>
-              <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class={h3}>Por serviço e local</h3>
-                <a href={links.sort(!sortByNoShow)} class="inline-flex min-h-11 items-center text-sm font-bold text-brand-ink no-underline hover:underline sm:min-h-0 sm:py-1">
-                  {sortByNoShow ? "Ordenar pelo volume" : "Ordenar pelas faltas"}
-                </a>
-              </div>
-              {table.rows.length === 0 ? (
-                <p class={sub}>Nenhum atendimento com data no período.</p>
-              ) : (
-                <>
-                  <div data-scroll-region="Por serviço e local" class={TABLE.box} tabindex="0">
-                    <table class={`${TABLE.table} min-w-[600px]`}>
-                      <caption class="sr-only">Volume e faltas por serviço e local, {sortByNoShow ? "pela taxa de faltas" : "pelo volume"}</caption>
-                      <thead>
-                        <tr>
-                          <th scope="col" class={TABLE.th}>Serviço · local</th>
-                          <th scope="col" class={`${TABLE.th} text-right`}>Atendimentos</th>
-                          <th scope="col" class={`${TABLE.th} text-right`}>Registrados</th>
-                          <th scope="col" class={`${TABLE.th} text-right`}>Faltas</th>
-                          <th scope="col" class={`${TABLE.th} w-[32%]`}>Taxa de faltas</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...tableRows, table.total].map((r, i, all) => {
-                          const isTotal = i === all.length - 1;
-                          return (
-                            <tr class={isTotal ? TABLE.total : ""}>
-                              <th scope="row" class={`${TABLE.td} text-left ${isTotal ? "font-bold" : "font-normal"}`}>
-                                {isTotal ? "Total" : <><b>{r.serviceName}</b> <span class="text-ink-soft">· {r.locationName}</span></>}
-                              </th>
-                              <td class={`${TABLE.td} ${TABLE.num}`}>{r.total}</td>
-                              <td class={`${TABLE.td} ${TABLE.num}`}>{r.registered}</td>
-                              <td class={`${TABLE.td} ${TABLE.num}`}>{r.noShow}</td>
-                              <td class={TABLE.td}>
-                                <div class="flex items-center gap-2.5">
-                                  {isTotal && <span class="flex-1" />}
-                                  {!isTotal && (
-                                    <span class="h-3.5 flex-1 overflow-hidden rounded bg-canvas-deep" aria-hidden="true">
-                                      <span class={`block h-3.5 rounded ${r.hot ? "bg-ns-500" : "bg-ns-200"}`} style={`width:${r.noShowRate.rate === null ? 0 : (r.noShowRate.rate / maxRowRate) * 100}%`} />
-                                    </span>
-                                  )}
-                                  <b class="min-w-[4.5rem] text-right tabular-nums">
-                                    {r.registered === 0 ? "—" : formatRatio(r.noShowRate)}
-                                    {r.hot && <span class="text-ns-800"> ▲</span>}
-                                  </b>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p class={sub}>Laranja forte e ▲: a taxa passa 1,5 vez a da clínica, com pelo menos 20 registrados.</p>
-                </>
-              )}
             </div>
           </>
         )}

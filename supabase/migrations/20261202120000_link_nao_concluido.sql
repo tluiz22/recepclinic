@@ -1,4 +1,4 @@
--- Pedido não concluído, PN2 (cliente, 03/nov/2026; docs/pedido-nao-concluido.md):
+-- Pedido não concluído, PN2 (cliente, 03/nov/2026; docs/arquivo/modulos/pedido-nao-concluido.md):
 -- link do bot vencido sem uso recebe uma vez a mensagem "Não concluímos…" com
 -- Novo link, Falar com a recepção e Desistir. Esta coluna marca o link já
 -- tratado pela rotina (a mensagem saiu, ou foi pulada: paciente em outra

@@ -18,11 +18,11 @@ const phone = brand.whatsappPhone;
 const href = phone ? receptionWhatsappHref(phone) : "#portal-recepcao";
 const pill =
   "inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3.5 text-base font-semibold text-clinic-ink no-underline hover:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink";
-const waIcon = "M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.5 8.5 0 1 1 21 11.5z";
+const headset = ["M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z", "M21 16v2a4 4 0 0 1-4 4h-5"];
 ---
 
 <a href={href} class={pill} data-portal-help target={phone ? "_blank" : undefined} rel={phone ? "noopener" : undefined} aria-haspopup="dialog">
-  <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={waIcon} /></svg>
+  <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{headset.map((d) => <path d={d} />)}</svg>
   <span class="sm:hidden">Recepção</span><span class="hidden sm:inline">Falar com a recepção</span>
 </a>
 
@@ -50,7 +50,7 @@ const waIcon = "M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.5 8.5 0 1 1 21 
             rel="noopener"
             class="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-clinic px-5 text-[19px] font-bold text-clinic-text no-underline hover:opacity-90"
           >
-            <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={waIcon} /></svg>
+            <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{headset.map((d) => <path d={d} />)}</svg>
             Abrir conversa no WhatsApp
           </a>
           <div class="flex flex-col gap-0.5 border-t border-gray-200 pt-3.5">

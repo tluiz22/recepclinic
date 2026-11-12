@@ -19,7 +19,7 @@ import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { joinWaitlist, leaveWaitlist } from "../../../../../lib/data/waitlist/entries";
 import { clinicSenderFor } from "../../../../../lib/data/whatsapp/clinicSender";
-import { firstByDate, NOTICE_RESULT_TEXT, sendAppointmentNotice, type NoticeKind } from "../../../../../lib/data/whatsapp/notices";
+import { confirmationEnabled, firstByDate, NOTICE_RESULT_TEXT, sendAppointmentNotice, type NoticeKind } from "../../../../../lib/data/whatsapp/notices";
 import { PREPARATION_RESEND_MESSAGES, resendPreparation } from "../../../../../lib/data/whatsapp/preparation";
 import { RESEND_MESSAGES, sendReminderFromPanel } from "../../../../../lib/data/whatsapp/reminders";
 import { GUIDANCE_RESEND_MESSAGES, resendGuidance } from "../../../../../lib/data/whatsapp/guidance";
@@ -59,6 +59,8 @@ export const POST: APIRoute = async (context) => {
   let tracked: string | null = null;
   const notify = async (kind: NoticeKind, appointment: { id: string; scheduledAt: Date } | null): Promise<string> => {
     if (!appointment || appointment.scheduledAt.getTime() <= Date.now()) return "";
+    // Confirmação desligada em Configurações › Lembretes (BE-9): marca sem avisar.
+    if (kind === "confirmation" && !(await confirmationEnabled(db, clinic.clinicId, "reception"))) return "";
     const sender = await clinicSenderFor(clinic.clinicId, request.url);
     const status = await sendAppointmentNotice(db, clinic.clinicId, appointment.id, kind, sender);
     if ((kind === "confirmation" || kind === "reschedule") && (status === "sent" || status === "failed")) tracked = appointment.id;

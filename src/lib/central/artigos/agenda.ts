@@ -87,7 +87,7 @@ export const agendaArtigos = [
     intro: "Na Agenda › Dia, cada atendimento é um bloco na coluna da agenda, na altura do horário, com o paciente, o serviço e a cor da situação. Toque nele para abrir as ações ao lado (o \"cartão\"). A cor e o selo dizem em que pé ele está; as ações mudam conforme a situação.",
     fields: [
       { name: "Não confirmado", text: "O paciente ainda não confirmou a presença." },
-      { name: "Confirmado", text: "O paciente tocou em Confirmar presença no lembrete do WhatsApp ou pelo bot, ou a recepção usou Confirmar presença no cartão." },
+      { name: "Confirmado", text: "O paciente tocou em Confirmar presença no lembrete do WhatsApp, ou a recepção usou Confirmar presença no cartão." },
       { name: "Compareceu / Faltou", text: "A recepção registra no cartão depois do atendimento." },
       { name: "Cancelado", text: "Cancelado pela clínica ou pelo paciente no WhatsApp. A única ação que sobra é o Histórico." },
       { name: "Bloqueio", text: "Período em que a agenda não recebe marcações." },
@@ -170,7 +170,7 @@ export const agendaArtigos = [
     ],
     result:
       "O horário volta a ficar livre. Com o WhatsApp conectado, o paciente recebe o aviso de cancelamento. Com a Lista de espera ligada, a vaga é oferecida a quem está na fila.",
-    notes: ["O paciente também pode cancelar sozinho pelo bot ou pelo botão Cancelar do lembrete.", "Para cancelar vários atendimentos de uma vez, use Bloquear a agenda."],
+    notes: ["O paciente também pode cancelar sozinho pelo portal (Minhas consultas, ou o botão Cancelar do lembrete).", "Para cancelar vários atendimentos de uma vez, use Bloquear a agenda."],
     contextual: [],
   }),
   article({
@@ -295,7 +295,7 @@ export const agendaArtigos = [
     synonyms: ["adiantar consulta", "quero um horário mais cedo", "vaga que abriu"],
     related: ["cancelar-atendimento", "como-funciona-o-bot", "relacionamento"],
     order: 21,
-    intro: "A lista é de quem já tem horário marcado e quer antecipar. Entra pelo WhatsApp (\"Encaixe ou antecipar\") ou pela recepção.",
+    intro: "A lista é de quem já tem horário marcado e quer antecipar. Entra pela recepção (o \"Encaixe ou antecipar\" saiu do WhatsApp com o bot enxuto).",
     fields: [
       { name: "Quem recebe a oferta", text: "Quem está na fila da mesma agenda e do mesmo serviço, com atendimento depois da vaga e no mesmo tipo de local, um paciente por vez, na ordem de entrada." },
       { name: "Antecedência", text: "A vaga só é oferecida se começar daqui a mais de 2 horas." },

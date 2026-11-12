@@ -63,6 +63,27 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
     {
       patientOn && (
         <Card>
+          <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Confirmação ao paciente</h2>
+          <p class="mt-1 text-sm text-ink-soft">Logo depois de marcar a consulta, o paciente recebe a confirmação pelo WhatsApp.</p>
+          <form method="POST" action="/api/admin/configuracoes/confirmacao" class="mt-3 flex flex-col gap-3">
+            <label class="flex items-center gap-2 text-sm font-medium text-ink-mid">
+              <input type="checkbox" name="confirm_portal_booking" checked={settings.confirmPortalBooking} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+              Marcadas pelo portal
+            </label>
+            <label class="flex items-center gap-2 text-sm font-medium text-ink-mid">
+              <input type="checkbox" name="confirm_reception_booking" checked={settings.confirmReceptionBooking} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+              Marcadas pela recepção
+            </label>
+            <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
+          </form>
+          <p class={HINT}>O lembrete, a remarcação e o cancelamento seguem como estão.</p>
+        </Card>
+      )
+    }
+
+    {
+      patientOn && (
+        <Card>
           <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Lembrete ao paciente</h2>
           <p class="mt-1 text-sm text-ink-soft">O paciente recebe um lembrete e pode confirmar a presença, remarcar ou cancelar.</p>
           <form method="POST" action="/api/admin/configuracoes/lembrete" class="mt-3 flex flex-col gap-3">

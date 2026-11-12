@@ -18,7 +18,8 @@ import { recipientOfAppointment } from "../whatsapp/recipient";
 
 export const PORTAL_LINK_TTL_MS = 30 * 60_000;
 
-export type PortalLinkPurpose = "book" | "return" | "exam" | "reschedule" | "my_appointments";
+/** professionals e cancel: bot enxuto (F3f; migração 20270117120000). */
+export type PortalLinkPurpose = "book" | "return" | "exam" | "reschedule" | "my_appointments" | "professionals" | "cancel";
 
 export type PortalLink = {
   id: string;
@@ -94,6 +95,7 @@ export async function createPortalLink(db: DbClient, clinicId: string, input: Po
   const ttl = input.ttlMs ?? PORTAL_LINK_TTL_MS;
   if (!(ttl > 0)) throw new DataError("invalid", "Link do portal: validade inválida");
   if (input.purpose === "reschedule" && !input.appointmentId) throw new DataError("invalid", "Link do portal: remarcar precisa do atendimento");
+  if (input.purpose === "cancel" && !input.appointmentId) throw new DataError("invalid", "Link do portal: cancelar precisa do atendimento");
   unwrap(
     await db
       .from("portal_links")
@@ -181,6 +183,9 @@ export function portalLinkTarget(link: Pick<PortalLink, "purpose" | "professiona
   // Remarcar (F3c; I7): os dias e horários do mesmo profissional; Minhas consultas: a lista do celular.
   if (link.purpose === "reschedule" && link.appointmentId) return `${base}/minhas-consultas/remarcar?a=${link.appointmentId}`;
   if (link.purpose === "my_appointments") return `${base}/minhas-consultas`;
+  // Bot enxuto (F3f): Profissionais, valores e convênios; Cancelar direto na consulta (lembrete novo, BE-10).
+  if (link.purpose === "professionals") return `${base}/medicos?lista=1`;
+  if (link.purpose === "cancel" && link.appointmentId) return `${base}/minhas-consultas/cancelar?a=${link.appointmentId}`;
   if (link.purpose === "exam") {
     const exam = portal.exams.find((e) => e.serviceId === link.serviceId);
     return exam ? `${base}/${examSlug(exam.serviceId)}/atendimento?de=exames` : `${base}/exames`;
@@ -200,7 +205,7 @@ export async function markPortalLinkUsed(db: DbClient, clinicId: string, linkId:
   );
 }
 
-const CATEGORY = { book: "consultation", return: "return_visit", exam: "exam", reschedule: "consultation", my_appointments: "consultation" } as const;
+const CATEGORY = { book: "consultation", return: "return_visit", exam: "exam", reschedule: "consultation", my_appointments: "consultation", professionals: "consultation", cancel: "consultation" } as const;
 
 /**
  * Passo do funil do bot (Fase 15; Métricas › Agendamento digital): o link ligado à tentativa do bot que o gerou.

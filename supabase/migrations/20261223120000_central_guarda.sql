@@ -1,4 +1,4 @@
--- CN7 — prazo de guarda e anonimização das conversas (plano em docs/planejamento-central-atendimento.md, seção 6 e
+-- CN7 — prazo de guarda e anonimização das conversas (plano em docs/arquivo/modulos/planejamento-central-atendimento.md, seção 6 e
 -- decisão 8, cliente, 05/nov/2026). Aditiva.
 --
 -- 1. Guarda (rotina diária `/api/cron/guarda-conversas`): texto das mensagens com mais de 5 anos fica nulo; anexo com

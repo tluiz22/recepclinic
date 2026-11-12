@@ -2,7 +2,7 @@
 
 > **Estado atual (retomar daqui), 03/nov/2026.** Branch **`faturamento`**, local, sem push. F12.1 e F12.2 validadas
 > no local. **Cliente valida no fim (02/nov):** seguir as fases sem parar; validar tudo junto no local.
-> **03/nov: F12.2c a F12.2h feitas** (abaixo); roteiro de validação em [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md).
+> **03/nov: F12.2c a F12.2h feitas** (abaixo); roteiro de validação em [`roteiro-validacao-faturamento.md`](arquivo/roteiro-validacao-faturamento.md).
 > **04/nov: F12.2i feita** (passo do pagamento). Próximo: cliente valida F12.2b a F12.2i no local; depois, F12.11.
 > **Main trazida em 03/nov (até `aae0195`, a produção):** PN1–PN2, IS1–IS5 e C17–C20; conflitos só de juntar os dois
 > lados (envio: suspensa não envia nem a mensagem de teste; implantação só a de teste). Migração nova
@@ -175,7 +175,7 @@
   `main` e foi excluída. Ela é **recriada da `main` só quando o código começar** (F12.1 ou N1), e segue as regras de
   branch paralela do `CLAUDE.md`.
 - **Ajuda contextual (cliente, 30/out):** cada fase entra com a ajuda das próprias telas ("i" nos campos e "Como
-  funciona?", padrão de [`ajuda-contextual.md`](ajuda-contextual.md); textos em `src/lib/ajuda/`). A F12.1 já entrou com
+  funciona?", padrão de [`ajuda-contextual.md`](arquivo/modulos/ajuda-contextual.md); textos em `src/lib/ajuda/`). A F12.1 já entrou com
   a da tela Assinatura (WhatsApp financeiro e telefone financeiro).
 - **Parar e voltar à `main`:** commit e push do que estiver em andamento na `faturamento`, atualizar o bloco "Estado
   atual" deste arquivo e `git switch main`.

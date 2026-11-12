@@ -1,4 +1,4 @@
--- CN8 — histórico do app na conexão (plano em docs/planejamento-central-atendimento.md, decisão 10 e seção 4.7,
+-- CN8 — histórico do app na conexão (plano em docs/arquivo/modulos/planejamento-central-atendimento.md, decisão 10 e seção 4.7,
 -- cliente, 05/nov/2026). Aditiva.
 --
 -- 1. `whatsapp_history_events`: o webhook só grava o evento `history` bruto (um por bloco do histórico, um por aviso

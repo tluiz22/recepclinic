@@ -43,6 +43,9 @@ export type ClinicSettings = {
   teamSummaryHour: number;
   /** Orientações gerais depois da marcação de uma consulta (cliente, 08/out/2026). */
   guidanceEnabled: boolean;
+  /** Confirmação ao paciente (BE-9): consultas marcadas pelo portal e pela recepção. */
+  confirmPortalBooking: boolean;
+  confirmReceptionBooking: boolean;
   /** Limites do contato no bot (F9.6a): atendimentos futuros (1 a 10), cadastros em 30 dias (1 a 10), faltas em 90 dias (0 desliga). */
   botMaxFutureAppointments: number;
   botMaxNewPatients: number;
@@ -81,7 +84,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, reminder_hour, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows, message_noun, message_noun_article";
+  "clinic_id, profile, timezone, reminder_hour, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, confirm_portal_booking, confirm_reception_booking, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows, message_noun, message_noun_article";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -111,6 +114,8 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     teamSummaryTiming: settings.team_summary_timing as ReminderTiming,
     teamSummaryHour: settings.team_summary_hour,
     guidanceEnabled: settings.guidance_enabled,
+    confirmPortalBooking: settings.confirm_portal_booking,
+    confirmReceptionBooking: settings.confirm_reception_booking,
     botMaxFutureAppointments: settings.bot_max_future_appointments,
     botMaxNewPatients: settings.bot_max_new_patients,
     botMaxNoShows: settings.bot_max_no_shows,
@@ -208,6 +213,8 @@ export async function updateClinicSettings(
     ["teamSummaryTiming", "team_summary_timing"],
     ["teamSummaryHour", "team_summary_hour"],
     ["guidanceEnabled", "guidance_enabled"],
+    ["confirmPortalBooking", "confirm_portal_booking"],
+    ["confirmReceptionBooking", "confirm_reception_booking"],
     ["botMaxFutureAppointments", "bot_max_future_appointments"],
     ["botMaxNewPatients", "bot_max_new_patients"],
     ["botMaxNoShows", "bot_max_no_shows"],

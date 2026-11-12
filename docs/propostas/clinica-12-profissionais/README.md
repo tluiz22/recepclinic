@@ -1,6 +1,6 @@
 # Proposta oficial: Biomedical, 12 profissionais (09/nov/2026)
 
-Depois da apresentação ([roteiro](../../roteiro-apresentacao-clinica-18-profissionais.md)): a clínica tem **12
+Depois da apresentação ([roteiro](../../arquivo/roteiro-apresentacao-clinica-18-profissionais.md)): a clínica tem **12
 profissionais** (não 18) e 3 secretárias. Hoje usa o CliqueMassa na recepção e o sistema de prontuário como agenda. A dona
 gostou e levantou três preocupações: o custo da Meta (a simulação da reunião deu quase R$ 1.000), o risco de bloqueio
 do WhatsApp pelos lembretes e o tamanho da equipe do RecepClinic.

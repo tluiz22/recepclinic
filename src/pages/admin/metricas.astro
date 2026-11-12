@@ -43,6 +43,7 @@ import { getContact, getPatient, listContactPatients, searchContacts, searchPati
 import { metricsScope, type FeatureKey } from "../../lib/features";
 import { buildFunnelReportFromSessions, DIGITAL_OPERATIONS, listFunnelSessions, type DigitalOperation, type DigitalOrigin, type FunnelSession } from "../../lib/data/botFunnel";
 import DigitalTab from "../../components/admin/metricas/DigitalTab.astro";
+import PortalTab from "../../components/admin/metricas/PortalTab.astro";
 import { logError } from "../../lib/log";
 import { loadContactNames } from "../../lib/data/people";
 import { loadRecallDismissals, withoutDismissed } from "../../lib/data/relationship";
@@ -61,13 +62,16 @@ const now = new Date();
 const TABS: { id: string; label: string; feature: FeatureKey }[] = [
   { id: "desempenho", label: "Desempenho", feature: "metrics_performance" },
   { id: "digital", label: "Agendamento digital", feature: "metrics_funnel" },
+  { id: "portal", label: "Portal", feature: "portal" },
   { id: "retomar_contato", label: "Retomar contato", feature: "metrics_recall" },
   { id: "faltosos", label: "Faltosos", feature: "metrics_no_shows" },
   { id: "financeiro", label: "Financeiro", feature: "metrics_financial" },
 ];
 // Agendamento digital e Retomar contato são da clínica toda: o Profissional (só a própria agenda) não vê.
 const BOT_TABS = ["digital", "retomar_contato"];
-const visible = TABS.filter((t) => clinic.features.includes(t.feature) && (!BOT_TABS.includes(t.id) || metricsScope(clinic) === "clinic"));
+// Abas da clínica toda (sem seletor de agenda): as do bot e o Portal.
+const isClinicWide = (id: string | null) => !!id && (BOT_TABS.includes(id) || id === "portal");
+const visible = TABS.filter((t) => clinic.features.includes(t.feature) && (!isClinicWide(t.id) || metricsScope(clinic) === "clinic"));
 const tab = visible.find((t) => t.id === params.get("tab"))?.id ?? visible[0]?.id ?? null;
 
 // Escopo: a clínica toda (Administrador, com o seletor) ou só as agendas do próprio Profissional.
@@ -101,7 +105,6 @@ const today = todayIn(clinic.timezone, now);
 const indicatorRange = { from: period.from, to: period.to > today && period.from <= today ? today : period.to };
 const compare = params.get("comparar") !== "0";
 const grouping = params.get("agrupar") === "dia" ? "day" : params.get("agrupar") === "semana" ? "week" : defaultGrouping(indicatorRange);
-const sortByNoShow = params.get("ordem") === "faltas";
 
 // Serviço e local (Desempenho).
 const performanceTab = tab === "desempenho";
@@ -158,7 +161,6 @@ const keep = {
   local: selectedLocation?.id ?? "",
   comparar: compare ? "" : "0",
   agrupar: params.get("agrupar") ?? "",
-  ordem: sortByNoShow ? "faltas" : "",
   operacao: operation === "marcar" ? "" : operation,
   origem: digitalOrigin === "todas" ? "" : digitalOrigin,
   paciente: filterPatient?.id ?? "",
@@ -172,16 +174,16 @@ const link = (changes: Partial<Record<keyof typeof keep | "busca", string>>) => 
 const periodTitle = indicatorRange.from === period.from && indicatorRange.to === period.to ? period.label : `${formatCalendarDate(indicatorRange.from, "d")} a ${formatCalendarDate(indicatorRange.to, "d 'de' MMMM")}`;
 const money = (cents: number) => formatCentsBRL(cents);
 const here = currentPath(Astro.url);
-const hasAgendaPicker = selectable.length > 1 && !botTab;
+const hasAgendaPicker = selectable.length > 1 && !isClinicWide(tab);
 const filtered = !!(filterPatient || filterContact);
 const showCustom = period.preset === "personalizado" || period.invalid;
 // Período inválido (R7, QA-04): marca o campo a corrigir (os dois quando um depende do outro).
 const badFrom = period.invalidReason === "missing" ? !period.requested?.from : period.invalidReason !== null;
 const badTo = period.invalidReason === "missing" ? !period.requested?.to : period.invalidReason !== null;
-const scopeText = scope === "own_agenda" ? "só da sua agenda" : botTab ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
+const scopeText = scope === "own_agenda" ? "só da sua agenda" : isClinicWide(tab) ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
 const extraFilters = performanceTab ? [selectedService?.name, selectedLocation?.name].filter(Boolean).join(" · ") : "";
 const subtitle = tab
-  ? `${!usesPeriod ? "Todo o histórico" : performanceTab || tab === "digital" ? periodTitle : period.label} · ${scopeText}${extraFilters ? ` · ${extraFilters}` : ""}`
+  ? `${!usesPeriod ? "Todo o histórico" : performanceTab || tab === "digital" || tab === "portal" ? periodTitle : period.label} · ${scopeText}${extraFilters ? ` · ${extraFilters}` : ""}`
   : undefined;
 const filterSummary = [
   usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null,
@@ -202,7 +204,6 @@ const returnsApply = !selectedService || selectedService.category === "consultat
 const hasFilters = !!(selectedAgenda || selectedService || selectedLocation);
 const performanceLinks = {
   grouping: (g: "day" | "week") => link({ agrupar: g === "day" ? "dia" : "semana" }),
-  sort: (byNoShow: boolean) => `${link({ ordem: byNoShow ? "faltas" : "" })}#por-servico`,
   clearFilters: hasFilters ? link({ agenda: "", servico: "", local: "" }) : null,
   wholeMonth: link({ periodo: "", de: "", ate: "" }),
   retry: link({}),
@@ -313,7 +314,7 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
                   </select>
                 </form>
               )}
-              {(performanceTab || tab === "digital") && (
+              {(performanceTab || tab === "digital" || tab === "portal") && (
                 <a
                   href={link({ comparar: compare ? "0" : "" })}
                   role="switch"
@@ -417,11 +418,14 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
             compare={compare}
             grouping={grouping}
             returnsApply={returnsApply}
-            sortByNoShow={sortByNoShow}
             links={performanceLinks}
             here={here}
             now={now}
           />
+        )}
+
+        {tab === "portal" && (
+          <PortalTab db={db} clinic={clinic} range={indicatorRange} compare={compare} links={{ retry: link({}) }} now={now} />
         )}
 
         {tab === "digital" && (

@@ -1,6 +1,6 @@
 ---
 // P1 Início do portal da clínica (F2a; canvas, opção A da rodada 4): nome, "Agendar consulta", especialidades em
-// destaque, "Ver médicos, convênios e valores", endereço e horário da recepção. Clínica de um só profissional: o início
+// destaque, "Profissionais e valores", endereço e horário da recepção. Clínica de um só profissional: o início
 // dele (PP). "Marcar retorno" e "Marcar exame" (F2d) abaixo de "Agendar consulta" e, por último, "Minhas consultas" (F3c).
 import PortalLayout from "../../../components/portal/PortalLayout.astro";
 import PortalMoreActions from "../../../components/portal/PortalMoreActions.astro";
@@ -42,6 +42,9 @@ const actions = [
     ? [{ href: portalHref(`${base}/exames`, { origem }), label: "Marcar exame", detail: examNames.length > 2 ? `${examNames.slice(0, 2).join(", ")} e outros` : examNames.join(" e "), icon: "exam" as const }]
     : []),
   ...(portal ? [MY_APPOINTMENTS(base)] : []),
+  ...(portal && !single && portal.professionals.length > 0
+    ? [{ href: portalHref(`${base}/medicos`, { origem, lista: "1" }), label: "Profissionais e valores", detail: "Especialidades, valores e convênios", icon: "pros" as const }]
+    : []),
 ];
 const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
 ---
@@ -65,6 +68,7 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
           </div>
           {bookable ? (
             <a href={startHref} class="flex min-h-[58px] items-center justify-center rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text no-underline hover:opacity-90 sm:max-w-[360px]">
+              <svg aria-hidden="true" class="mr-2.5 h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4" /><path d="M16 2v4" /><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" /><path d="M3 10h18" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
               Agendar consulta
             </a>
           ) : (
@@ -85,11 +89,6 @@ const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
                 {specialties.length > 6 && <li class="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-base">+ {specialties.length - 6}</li>}
               </ul>
             </div>
-          )}
-          {portal.professionals.length > 0 && (
-            <a href={portalHref(`${base}/medicos`, { origem })} class="flex min-h-11 items-center self-start text-[17px] font-semibold text-clinic-ink">
-              Ver médicos, convênios e valores
-            </a>
           )}
         </div>
         {(located.length > 0 || portal.receptionHours) && (

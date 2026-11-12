@@ -32,6 +32,7 @@ const when = (instant: Date) => {
   const word = day === today ? "Hoje" : day === addDays(today, 1) ? "Amanhã" : capitalize(formatInstant(instant, timeZone, "EEE, dd/MM"));
   return `${word}, ${formatInstant(instant, timeZone, "HH:mm")}`;
 };
+const hourOf = (instant: Date) => formatInstant(instant, timeZone, "HH:mm");
 const single = panel.patients.length === 1 ? panel.patients[0] : null;
 const showResponsible = !!panel.contact && !panel.selfPatient;
 const finished = panel.events.filter((event) => event.kind === "finished").slice(-5).reverse();
@@ -212,6 +213,33 @@ const newPatientHref = withReturn(
               </a>
             </div>
           </div>
+          {panel.usual.length > 0 && (
+            <div class={section}>
+              <span class={head}>Com quem ele já consulta</span>
+              {panel.usual.map((u) => (
+                <div class="flex flex-col gap-1.5 rounded-[10px] border border-line p-3">
+                  <strong class="text-[15px] text-ink">{u.agendaName}</strong>
+                  <span class="text-sm text-ink-mid">{u.nextStart ? `Próximo horário: ${when(u.nextStart)}` : "Sem horário livre no prazo."}</span>
+                  <div class="flex flex-wrap gap-2">
+                    {u.nextStart && u.nextDate && (
+                      <a
+                        href={withReturn(`/admin/agenda/marcar?patient_id=${single.patient.id}&agenda_id=${u.agendaId}&service_id=${u.serviceId}&date=${u.nextDate}&hora=${hourOf(u.nextStart)}${panel.contact ? `&responsavel=${panel.contact.id}` : ""}`, here)}
+                        class={button}
+                      >
+                        Marcar este horário
+                      </a>
+                    )}
+                    <a href={withReturn(`/admin/agenda/marcar?patient_id=${single.patient.id}&agenda_id=${u.agendaId}&service_id=${u.serviceId}${panel.contact ? `&responsavel=${panel.contact.id}` : ""}`, here)} class={button}>
+                      Outro horário
+                    </a>
+                  </div>
+                </div>
+              ))}
+              <a href={withReturn(`/admin/agenda/marcar?patient_id=${single.patient.id}${panel.contact ? `&responsavel=${panel.contact.id}` : ""}`, here)} class="self-start text-sm font-semibold text-brand-ink">
+                Agendar com outro profissional
+              </a>
+            </div>
+          )}
           {panel.notes.length > 0 && (
             <div class={section}>
               <span class={head}>Anotações</span>

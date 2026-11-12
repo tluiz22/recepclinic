@@ -1,14 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, cancelAppointment, getAppointment, listUpcomingAppointments } from "../../src/lib/data/agenda/appointments";
 import { cancelByClinic, createBlock, findBlockConflicts, listBlocks, removeBlock, updateBlock } from "../../src/lib/data/agenda/blocks";
-import {
-  BOT_LINK_TTL_MS,
-  bookingLinkLastDate,
-  claimBookingLink,
-  createBookingLink,
-  getBookingLink,
-  linkState,
-} from "../../src/lib/data/agenda/links";
 import { changeSeriesFrom, createSeries, endSeriesFrom, extendSeries, getSeries, listSeriesSkips } from "../../src/lib/data/agenda/series";
 import { getFreeSlots } from "../../src/lib/data/agenda/slots";
 import { setMemberAgendaAccess } from "../../src/lib/data/config/agendas";
@@ -29,10 +21,6 @@ const book = (patient: string, service: string, agenda: string, start: Date, ext
   bookAppointment(db(reception), clinicId, { patientId: patient, serviceId: service, agendaId: agenda, start, channel: "admin", actorId: reception.id, ...extra }, now);
 
 const localDate = (instant: Date) => instant.toLocaleDateString("sv-SE", { timeZone: "America/Fortaleza" });
-const contactOf = async (patientId: string) => {
-  const { data } = await adminClient().from("patients").select("contact_id, contacts ( phone )").eq("id", patientId).single();
-  return data as unknown as { contact_id: string; contacts: { phone: string } };
-};
 
 beforeAll(async () => {
   fixture = await setupAgendaClinic("Clínica do teste de séries", "859777700");
@@ -43,61 +31,10 @@ afterAll(async () => {
   await fixture.cleanup();
 });
 
-describe("links de agendamento", () => {
-  it("link do bot vale 30 minutos e só é usado uma vez", async () => {
-    const contact = await contactOf(ids.p1);
-    const link = await createBookingLink(
-      db(reception),
-      clinicId,
-      {
-        mode: "create",
-        contactId: contact.contact_id,
-        patientId: ids.p1,
-        serviceId: ids.consulta,
-        agendaId: null,
-        locationId: null,
-        locationCategory: "clinic",
-        appointmentId: null,
-        originAppointmentId: null,
-        contactPhone: contact.contacts.phone,
-        homeVisitAddress: null,
-        ttlMs: BOT_LINK_TTL_MS,
-      },
-      NOW,
-    );
-    expect(link.expiresAt.getTime() - NOW.getTime()).toBe(30 * 60_000);
-    expect(linkState(link, NOW)).toBe("valid");
-    expect(await claimBookingLink(db(reception), clinicId, link.id, new Date(link.expiresAt.getTime() + 1))).toBe(false);
-    expect(await claimBookingLink(db(reception), clinicId, link.id, NOW)).toBe(true);
-    expect(await claimBookingLink(db(reception), clinicId, link.id, NOW)).toBe(false);
-    expect(linkState(await getBookingLink(db(reception), clinicId, link.id), NOW)).toBe("used");
-  });
-
-  it("remarcação precisa do atendimento", async () => {
-    const contact = await contactOf(ids.p1);
-    expect(
-      await codeOf(() =>
-        createBookingLink(db(reception), clinicId, {
-          mode: "reschedule",
-          contactId: contact.contact_id,
-          patientId: ids.p1,
-          serviceId: ids.consulta,
-          agendaId: null,
-          locationId: null,
-          locationCategory: null,
-          appointmentId: null,
-          originAppointmentId: null,
-          contactPhone: contact.contacts.phone,
-          homeVisitAddress: null,
-          ttlMs: BOT_LINK_TTL_MS,
-        }),
-      ),
-    ).toBe("invalid");
-  });
-});
-
 describe("bloqueios", () => {
   it("mostra os atingidos, cancela só os escolhidos com link de remarcação de 2 dias, e tira os horários", async () => {
+    // Bot enxuto (F3f): o link de remarcação é só o do portal (o /agendar não é mais criado).
+    await adminClient().from("clinics").update({ portal_slug: `series-${Date.now()}` }).eq("id", clinicId);
     const a1 = (await book(ids.p1, ids.consulta, ids.agendaDra, at(MON1, "08:30"))).appointment;
     const a2 = (await book(ids.p2, ids.consulta, ids.agendaDra, at(MON1, "09:30"))).appointment;
     const conflicts = await findBlockConflicts(db(reception), clinicId, { agendaId: ids.agendaDra, startsAt: at(MON1, "08:45"), endsAt: at(MON1, "10:00") });
@@ -112,8 +49,8 @@ describe("bloqueios", () => {
     );
     expect(block.reason).toBe("Reunião");
     expect(canceled.map((c) => c.appointment.id)).toEqual([a1.id]);
-    const link = canceled[0].rebookingLink!;
-    expect(link).toMatchObject({ mode: "create", patientId: ids.p1, serviceId: ids.consulta, agendaId: ids.agendaDra, locationCategory: "clinic", returnDeadlineWaived: false });
+    const link = canceled[0].portalLink!;
+    expect(link).toMatchObject({ purpose: "reschedule", appointmentId: a1.id, canceledAppointmentId: a1.id, originAppointmentId: null });
     expect(link.expiresAt.getTime() - NOW.getTime()).toBe(2 * 24 * 60 * 60_000);
     expect((await getAppointment(db(reception), clinicId, a2.id)).status).toBe("scheduled");
 
@@ -145,14 +82,10 @@ describe("bloqueios", () => {
     const ret = (await book(ids.p3, ids.retorno, ids.agendaDra, at(MON2, "14:00"), { homeVisitAddress: "Rua C, 3", locationId: ids.home }, later)).appointment;
     expect(ret.originAppointmentId).toBe(consult.id);
     const [result] = await cancelByClinic(db(reception), clinicId, [ret.id], reception.id, later);
-    expect(result.rebookingLink).toMatchObject({
-      originAppointmentId: consult.id,
-      returnDeadlineWaived: true,
-      locationCategory: "home_visit",
-      homeVisitAddress: "Rua C, 3",
-    });
-    expect(await bookingLinkLastDate(db(reception), clinicId, result.rebookingLink!, later)).toBeNull();
-    expect(await bookingLinkLastDate(db(reception), clinicId, { ...result.rebookingLink!, returnDeadlineWaived: false }, later)).toBe("2031-04-09");
+    // O portal remarca em casa (F3e-1) e o retorno sem o prazo da consulta de origem.
+    expect(result.portalLink).toMatchObject({ purpose: "reschedule", canceledAppointmentId: ret.id, originAppointmentId: consult.id });
+    const { data } = await adminClient().from("portal_links").select("return_deadline_waived").eq("id", result.portalLink!.id).single();
+    expect(data!.return_deadline_waived).toBe(true);
   });
 });
 

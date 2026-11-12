@@ -143,16 +143,8 @@ describe("conversa do bot", () => {
         { resolveClinic: (pid) => resolveClinicByPhoneNumberId(pid, env()), clientFor: (cid) => createClinicServiceClient(cid, env()), senderFor: async () => sender },
       );
     await hello("wamid.f66.in.1");
-    expect(sent[0]).toBe("Oi! Aqui é da Clínica Mensagens F66 😊");
-    // Clínica sem serviço para o bot: depois das boas-vindas, a pergunta; Sim e a recepção assume (cliente, 31/out/2026).
-    expect(sent[1]).toBe("No momento não há horários para marcar por aqui.\n\nVocê quer que a clínica entre em contato por aqui?");
-    await processWebhook(
-      { entry: [{ changes: [{ field: "messages", value: { metadata: { phone_number_id: NUMBER }, messages: [{ id: "wamid.f66.in.yes", from: "5584991226601", type: "text", text: { body: "sim" } }] } }] }] },
-      { resolveClinic: (pid) => resolveClinicByPhoneNumberId(pid, env()), clientFor: (cid) => createClinicServiceClient(cid, env()), senderFor: async () => sender },
-    );
-    expect(sent[2]).toBe("A clínica responderá sua mensagem em breve.");
-    const { data: paused } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", clinicId).single();
-    expect(paused!.human_handoff).toBe(true);
+    // Bot enxuto (BE-2): as boas-vindas próprias são o corpo do menu, numa mensagem só.
+    expect(sent).toEqual(["Oi! Aqui é da Clínica Mensagens F66 😊"]);
 
     // Sem o item: o padrão volta, e o Administrador não grava.
     const { data: all } = await adminClient().from("features").select("key");
@@ -161,7 +153,7 @@ describe("conversa do bot", () => {
     sent.length = 0;
     await adminClient().from("conversation_state").update({ state: "WELCOME", human_handoff: false }).eq("clinic_id", clinicId);
     await hello("wamid.f66.in.2");
-    expect(sent[0]).toBe("Olá! 👋 Aqui é da Clínica Mensagens F66.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.");
+    expect(sent[0]).toMatch(/^Olá! 👋\n\nEste é o contato oficial para agendamento d/);
   });
 });
 

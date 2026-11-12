@@ -31,7 +31,7 @@ export const resumo = {
     },
     // src/lib/data/waitlist/offers.ts (cabeçalho, OFFER_MINUTES, MIN_LEAD_MS); D2 em docs/arquitetura.md.
     listaEspera: {
-      serve: "Pacientes que já têm horário marcado e querem antecipar. Entram pelo WhatsApp (\"Encaixe ou antecipar\") ou pela recepção.",
+      serve: "Pacientes que já têm horário marcado e querem antecipar. Entram pela recepção.",
       como: [
         "Quando um atendimento é cancelado ou remarcado, a vaga é oferecida pelo WhatsApp a um paciente por vez, na ordem de entrada na lista.",
         "Só recebe quem está na fila da mesma agenda e do mesmo serviço, com atendimento depois da vaga e no mesmo tipo de local.",
@@ -47,7 +47,7 @@ export const resumo = {
     // docs/plano.md F3.7a e F6.4.
     listaEspera: {
       titulo: "Ninguém na lista de espera",
-      texto: "Entra aqui quem já tem horário e pede para antecipar, pelo WhatsApp (\"Encaixe ou antecipar\") ou pela recepção.",
+      texto: "Entra aqui quem já tem horário e pede para antecipar, pela recepção.",
     },
   },
 } satisfies ModuloDeAjuda;

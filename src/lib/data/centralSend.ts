@@ -11,7 +11,7 @@ import { pauseForHuman } from "./whatsapp/conversations";
 import { readOutboundFile, readStoredMedia } from "./whatsapp/media";
 import { defaultTemplate, fillTemplate } from "./whatsapp/templates";
 
-// Responder, assumir e transferir pela Central (CN4a; plano em docs/planejamento-central-atendimento.md, decisões 5
+// Responder, assumir e transferir pela Central (CN4a; plano em docs/arquivo/modulos/planejamento-central-atendimento.md, decisões 5
 // e 7 e R2, cliente, 05/nov/2026) e o "Retomar conversa" fora das 24 h (CN4b). O banco confere quem pode, a janela de
 // 24 h e o responsável que a tela mostrou, e grava a mensagem antes de enviar (com a chave da tela: o mesmo envio não
 // sai duas vezes). Enviar e gravar o resultado é com a credencial da clínica, a única que lê o token do WhatsApp.

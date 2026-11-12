@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   backFromProfessional,
   changeProfessionalHref,
+  doctorsHref,
   chosenModality,
   examValuesText,
   initialsOf,
@@ -127,7 +128,13 @@ describe("passos", () => {
 
 describe("caminho", () => {
   it("lê só valores válidos do endereço", () => {
-    expect(readFlow(new URLSearchParams("de=x&esp=<script>&conv=abc-1&onde=lua"))).toEqual({ from: null, specialty: null, plan: "abc-1", name: null, place: null, where: null });
+    expect(readFlow(new URLSearchParams("de=x&esp=<script>&conv=abc-1&onde=lua"))).toEqual({ from: null, specialty: null, plan: "abc-1", name: null, place: null, where: null, directory: false });
+  });
+  it("lista (BE-6): volta no endereço do Voltar e tira a especialidade dos passos", () => {
+    const flow = readFlow(new URLSearchParams("de=medicos&esp=cardio&lista=1"));
+    expect(flow.directory).toBe(true);
+    expect(doctorsHref("/portal/x", flow)).toBe("/portal/x/medicos?esp=cardio&lista=1");
+    expect(professionalSteps(flow, true).includes("specialty")).toBe(false);
   });
   it("onde (F3e-1): em casa ou no consultório, e volta no endereço", () => {
     expect(readFlow(new URLSearchParams("onde=casa")).where).toBe("home");
