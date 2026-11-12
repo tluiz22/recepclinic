@@ -2971,6 +2971,11 @@ isOneToOne: false
               "canceled": number,"completed": number,"day": string,"location_id": string,"location_name": string,"no_show": number,"scheduled": number,"service_category": Database["public"]['Enums']["service_category"],"service_id": string,"service_name": string,"unregistered": number,"upcoming": number
             }[]
                            },
+"metrics_portal":
+{ Args: { "p_clinic_id": string,"p_end": string,"p_start": string }; Returns: {
+              "blocks": number,"booked": number,"from_bot_link": number,"held": number,"verified": number,"visits": number
+            }[]
+                           },
 "metrics_origin":
 { Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_service_ids"?: (string)[],"p_start": string }; Returns: {
               "entry": string | null,"origin": string,"place": string | null,"total": number
