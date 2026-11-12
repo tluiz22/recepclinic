@@ -5,10 +5,12 @@
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `2fffd62` (11/nov: `be69117` + correção do portal de exames, sessão paralela; registro em `producao.md`), migrações até `20270112120000`. Fluxo: [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`) = `main` atual (11/nov): produção + **vários responsáveis (VR1–VR5)** + avisos de ficha repetida (cadastro e ficha). **VR validada pelo cliente (V1–V12, 11/nov).**
->   Migrações até `20270116120000` + `20270118120000` (fichas não repetidas; `20270117120000` é da F3f), conferidas 11/nov. Modelos "Remarcada/Cancelada por outro
->   responsável" enviados à Meta pelo cliente (11/nov). **Não publicar na produção antes da F3f** (o bot ainda só
->   reconhece o responsável principal).
+> - **Staging** (`teste.recepclinic.com.br`) = `main` `bddd483d` (12/nov): produção + **vários responsáveis (VR1–VR5)** + **F3f (bot enxuto, E1–E8)**.
+>   VR validada pelo cliente (V1–V12, 11/nov); **F3f a validar no staging** (E6 e E7 só lá). Migrações até `20270119120000`
+>   (inclui `20270117120000` e `20270119120000` da F3f, aplicadas e conferidas em 12/nov). `PORTAL_BUTTON_ROOT` definida no projeto
+>   `recepclinic` da Vercel (`https://agendar-teste.recepclinic.com.br`). **Pendente:** o Suporte criar o `rc_lembrete_v2` em
+>   Configurações › WhatsApp e esperar a Meta (até lá, `rc_lembrete_v1`). Modelos "Remarcada/Cancelada por outro responsável"
+>   enviados à Meta (11/nov). **Produção só depois da validação da F3f no staging** (a produção tem a VR sem o bot pela ligação).
 >
 > **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
 > Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
@@ -17,9 +19,10 @@
 > 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
 > **Implantação da `main` na produção (11/nov, feita):** 17 migrações aplicadas e conferidas, código publicado, saúde
 > `ok` (registro em `producao.md`); portal ligado na clínica piloto pelo cliente. Foto como primeiro item em
-> Configurações › Profissionais e Equipe (`be69117`, validada no staging e na produção, 11/nov). **Próximo:** validação da VR no staging (roteiro
-> a escrever pela sessão de validação) e, em paralelo, a F3f (bot enxuto, seção 15.6, BE-1 a BE-10) numa branch curta,
-> com o bot pela ligação e o Remarcar/Cancelar do bot (UI-5, aviso da VR4). Clínica Exemplo Saúde do staging com 12 profissionais
+> Configurações › Profissionais e Equipe (`be69117`, validada no staging e na produção, 11/nov). **F3f (bot enxuto, seção 15.6, BE-1 a BE-10) feita na `main` e no staging (12/nov);
+> code-review e segurança passados.** **Próximo:** roteiro de validação da F3f no staging (menu e links do bot, portal com Profissionais
+> e valores, Confirmação ao paciente em Lembretes, lembrete v2 depois do modelo aprovado); depois, produção e a limpeza do `/agendar`
+> (`api/agendar`, `booking_links`). Clínica Exemplo Saúde do staging com 12 profissionais
 > (`scripts/clinica-exemplo-grande.mjs`).
 > **VR na `main` (11/nov):** branch `varios-responsaveis` juntada (suíte verde: unidade 1223, banco 1218); detalhe na seção
 > 8 do [`planejamento-varios-responsaveis.md`](planejamento-varios-responsaveis.md). Pergunta aberta: atualizar a
