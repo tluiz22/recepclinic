@@ -72,7 +72,7 @@ export const welcome = (clinicLabel: string, invite = true, name: string | null 
     ? `${hello} Aqui é ${clinicLabel}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.`
     : `${hello} Aqui é ${clinicLabel}.`;
 };
-export const MENU_BODY = "Escolha uma opção abaixo (ou digite o número).";
+export const MENU_BODY = "Escolha uma das opções abaixo.";
 /** Menu com a base de conhecimento ligada: convida a perguntar (cliente, 04/nov/2026). */
 export const MENU_BODY_ASK = "Escolha uma opção abaixo ou faça uma pergunta.";
 
