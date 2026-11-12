@@ -74,9 +74,10 @@ export async function listUsualProfessionals(db: DbClient, clinicId: string, pat
   const rows = unwrap(
     await db
       .from("appointments")
-      .select("agenda_id, service_id, scheduled_at, agendas ( name, is_active ), services ( name, category )")
+      .select("agenda_id, service_id, scheduled_at, agendas!inner ( name, is_active ), services ( name, category )")
       .eq("clinic_id", clinicId)
-      .eq("patient_id", patientId)
+.eq("patient_id", patientId)
+      .eq("agendas.is_active", true)
       .in("status", ["completed", "confirmed", "scheduled"])
       .lte("scheduled_at", now.toISOString())
       .order("scheduled_at", { ascending: false })
