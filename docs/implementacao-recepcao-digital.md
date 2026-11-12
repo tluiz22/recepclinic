@@ -1123,8 +1123,18 @@ a marcação pelo portal (consulta, retorno, remarcação "marcar de novo") ou p
 lembrete, remarcação, cancelamento e reenvio manual não mudam. `confirmationEnabled` em `notices.ts`. Teste DB novo; os de portal
 passam a usar um IP por sessão. Captura `config-lembretes` na fila.
 
-**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validada), E5 (validada), E6 (feita, validação pendente, migração só local). Depois:
-E7 (lembrete novo), E8 (fechamento). Captura `config-mensagens` na fila, sem autorização ainda.
+**E7 feita (11/nov/2026), lembrete novo (BE-10):** sem migração. Modelo novo `rc_lembrete_v2` (Suporte cria na Meta em
+Configurações › WhatsApp › Criar): corpo com o mapa (7ª variável, Google Maps do endereço ou do local), botão de resposta
+**Confirmar presença** e dois botões de link **Remarcar** e **Cancelar** (`{raiz}/s/{{1}}`). No envio, o lembrete cria dois links do
+portal (`reschedule` e `cancel` do atendimento, validade até a hora da consulta, mínimo 30 min) e manda o código de cada um no botão.
+Clínica que só tem a v1 aprovada segue com a v1 (3 respostas), decidido por `hasReminderLinks(body)` (7 variáveis). A raiz do
+botão é `PORTAL_BUTTON_ROOT` (padrão `https://agendar.recepclinic.com.br`; **no staging, definir a variável de ambiente
+`PORTAL_BUTTON_ROOT=https://agendar-teste.…`** antes de criar o modelo lá, porque a Meta guarda o endereço fixo). Atenção: o link
+`reschedule` abre a remarcação sem o prazo mínimo (`noLead`), como o do bot; se o cliente quiser o prazo no lembrete, é ajuste à parte.
+Jornada do bot atualizada. Testes: unit 1219, DB com os modelos v2.
+
+**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validada), E5 (validada), E6 e E7 (feitas, validação no staging, migração 0119 só local). Depois:
+E8 (fechamento). Captura `config-mensagens` na fila, sem autorização ainda.
 
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 

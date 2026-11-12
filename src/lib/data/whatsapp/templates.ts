@@ -19,6 +19,8 @@ export type DefaultTemplate = {
   examples: string[];
   /** Botões de resposta rápida, na ordem (payload definido no envio). */
   quickReplies?: string[];
+  /** Botões de link (depois das respostas rápidas): "{raiz do portal}/s/{{1}}", com o código do link no envio (BE-10). */
+  urlButtons?: { text: string; example: string }[];
   /** Documento (PDF) no topo da mensagem (F11.5): a Meta pede um PDF de exemplo na criação. */
   documentHeader?: boolean;
   /**
@@ -27,6 +29,9 @@ export type DefaultTemplate = {
    */
   authentication?: { codeExpirationMinutes: number };
 };
+
+/** Raiz dos botões de link do template (a Meta guarda o endereço fixo); outro ambiente muda por PORTAL_BUTTON_ROOT. */
+export const PORTAL_BUTTON_ROOT: string = (typeof import.meta !== "undefined" && import.meta.env?.PORTAL_BUTTON_ROOT) || "https://agendar.recepclinic.com.br";
 
 export const TEMPLATE_LANGUAGE = "pt_BR";
 export const TEMPLATE_CATEGORY = "UTILITY";
@@ -71,11 +76,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     examples: ["Maria", "da Clínica Sorriso", "João", "Consulta", "segunda, 12/10 às 08:00", "https://app.recepclinic.com.br/agendar/exemplo"],
   },
   {
+    // v2 (BE-10, cliente 11/nov/2026): o mapa dentro do lembrete e os botões Confirmar presença · Remarcar ↗ · Cancelar ↗
+    // (os dois últimos abrem o portal direto na ação). Quem só tem a v1 aprovada segue com ela (3 respostas rápidas):
+    // o envio decide pelo texto guardado (`hasReminderLinks`).
     key: "reminder",
-    name: "rc_lembrete_v1",
-    body: `${GREETING}\nPassando para lembrar do seu atendimento:\n\n📋 {{3}}\n👤 Paciente: {{4}}\n📅 {{5}}\n📍 {{6}}\n\nPode confirmar a presença?`,
-    examples: APPOINTMENT_EXAMPLES,
-    quickReplies: ["Confirmar presença", "Remarcar", "Cancelar"],
+    name: "rc_lembrete_v2",
+    body: `${GREETING}\nPassando para lembrar do seu atendimento:\n\n📋 {{3}}\n👤 Paciente: {{4}}\n📅 {{5}}\n📍 {{6}}\n🗺️ Mapa: {{7}}\n\nPode confirmar a presença?`,
+    examples: [...APPOINTMENT_EXAMPLES, "https://www.google.com/maps/search/?api=1&query=Rua+das+Flores+100"],
+    quickReplies: ["Confirmar presença"],
+    urlButtons: [
+      { text: "Remarcar", example: "AbCdEfGhIjKlMnOpQrStUv" },
+      { text: "Cancelar", example: "AbCdEfGhIjKlMnOpQrStUv" },
+    ],
   },
   {
     // v2: a Meta classificou a v1 como marketing (07/out); o texto deixa claro que é o exame marcado.
@@ -306,6 +318,9 @@ export function serviceLine(serviceName: string, professionalName: string | null
 }
 
 /** Variáveis {{1}}…{{6}} da confirmação, remarcação e lembrete ({{1}}…{{5}} do cancelamento). */
+/** O lembrete da v2 tem 7 variáveis (a 7ª é o mapa); o texto da v1 tem 6 e leva as 3 respostas rápidas. */
+export const hasReminderLinks = (body: string | null | undefined): boolean => !!body && paramCount(body) >= 7;
+
 export function appointmentParams(clinic: string, a: AppointmentForMessage): string[] {
   return [
     firstName(a.contactName),
@@ -342,9 +357,11 @@ export function templateCreationPayload(template: DefaultTemplate, headerHandle?
   if (template.documentHeader) components.push({ type: "HEADER", format: "DOCUMENT", example: { header_handle: [headerHandle ?? ""] } });
   // Sem variáveis (ex.: "Retomar conversa"), a Meta não aceita exemplo.
   components.push({ type: "BODY", text: template.body, ...(template.examples.length ? { example: { body_text: [template.examples] } } : {}) });
-  if (template.quickReplies?.length) {
-    components.push({ type: "BUTTONS", buttons: template.quickReplies.map((text) => ({ type: "QUICK_REPLY", text })) });
-  }
+  const buttons = [
+    ...(template.quickReplies ?? []).map((text) => ({ type: "QUICK_REPLY", text })),
+    ...(template.urlButtons ?? []).map((b) => ({ type: "URL", text: b.text, url: `${PORTAL_BUTTON_ROOT}/s/{{1}}`, example: [`${PORTAL_BUTTON_ROOT}/s/${b.example}`] })),
+  ];
+  if (buttons.length) components.push({ type: "BUTTONS", buttons });
   return { name: template.name, language: TEMPLATE_LANGUAGE, category: TEMPLATE_CATEGORY, components };
 }
 

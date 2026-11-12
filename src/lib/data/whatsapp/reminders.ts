@@ -8,6 +8,10 @@ import { logTrail } from "../agenda/appointments";
 import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { resetConversationAfterNotice } from "./conversations";
 import { recordOutboundMessage, type SendOutcome } from "./messages";
+import { logError } from "../../log";
+import { createPortalLink } from "../portal/links";
+import { shortId } from "../../publicId";
+import { hasReminderLinks } from "./templates";
 import { appointmentRecipient, BOOKER_COLUMNS, phoneCaresForPatient, type RecipientContact } from "./recipient";
 
 // Lembrete ao paciente (Fases 19, 22 e 23 do piloto), F3.9b; reestruturado
@@ -167,8 +171,10 @@ export type ReminderToSend = {
   /** Endereço do atendimento domiciliar, ou do local. */
   address: string | null;
   template: { name: string; language: string; body?: string | null };
-  /** Payloads dos três botões, na ordem do template. */
+  /** Payloads dos botões de resposta, na ordem do template (v1: três; v2: só Confirmar presença). */
   buttonPayloads: string[];
+  /** Lembrete v2 (BE-10): códigos dos links Remarcar e Cancelar do portal, nesta ordem. Sem eles, o lembrete da v1. */
+  linkTokens?: string[];
 };
 
 export type ReminderSender = (reminder: ReminderToSend) => Promise<SendOutcome>;
@@ -297,6 +303,23 @@ async function deliverReminder(
   now: Date,
 ): Promise<boolean> {
   const contact = appointmentRecipient(row);
+  const scheduledAt = new Date(row.scheduled_at);
+  // v2: os botões Remarcar e Cancelar abrem o portal direto na ação; o link vale até a hora do atendimento (mínimo 30 min).
+  let linkTokens: string[] | undefined;
+  if (hasReminderLinks(template.body)) {
+    const ttlMs = Math.max(30 * 60_000, scheduledAt.getTime() - now.getTime());
+    try {
+      const links = await Promise.all(
+        (["reschedule", "cancel"] as const).map((purpose) =>
+          createPortalLink(db, clinicId, { phone: contact.phone, contactId: contact.id, purpose, appointmentId: row.id, ttlMs }, now),
+        ),
+      );
+      linkTokens = links.map((link) => shortId(link.id));
+    } catch (error) {
+      logError("lembrete: links do portal", error, { clinica: clinicId, atendimento: row.id });
+      return false;
+    }
+  }
   const reminder: ReminderToSend = {
     clinicId,
     timeZone: settings.timeZone,
@@ -312,7 +335,8 @@ async function deliverReminder(
     isHomeVisit: row.locations.type === "home_visit",
     address: row.home_visit_address ?? row.locations.address,
     template,
-    buttonPayloads: REMINDER_BUTTONS.map((button) => reminderButtonPayload(button, row.id)),
+    buttonPayloads: (linkTokens ? (["confirm"] as const) : REMINDER_BUTTONS).map((button) => reminderButtonPayload(button, row.id)),
+    ...(linkTokens ? { linkTokens } : {}),
   };
   let outcome: SendOutcome;
   try {

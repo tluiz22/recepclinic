@@ -93,7 +93,7 @@ afterAll(async () => {
 
 describe("templates padrão na conta da clínica (Suporte)", () => {
   it("cria os que a conta não tem; o que já existe só tem a situação guardada", async () => {
-    const meta = fakeMeta({ rc_lembrete_v1: { status: "APPROVED" } });
+    const meta = fakeMeta({ rc_lembrete_v2: { status: "APPROVED" } });
     const result = await createDefaultTemplates(service, f.clinicId, meta.fetcher);
     expect(result.ok && result.lines.map((l) => [l.key, l.status, l.problem])).toEqual([
       ["confirmation", "pending", null],
@@ -139,7 +139,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       rc_remarcacao_v1: { status: "APPROVED" },
       rc_cancelamento_v1: { status: "APPROVED" },
       rc_cancelamento_clinica_v1: { status: "PENDING" },
-      rc_lembrete_v1: { status: "APPROVED" },
+      rc_lembrete_v2: { status: "APPROVED" },
       rc_preparo_exame_v3: { status: "REJECTED", reason: "INVALID_FORMAT" },
     });
     expect(await refreshTemplateStatuses(service, f.clinicId, meta.fetcher)).toMatchObject({ ok: true });

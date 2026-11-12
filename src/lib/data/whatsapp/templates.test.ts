@@ -16,6 +16,8 @@ import {
   templateEditPayload,
   templatesInUse,
   templateStatusFromMeta,
+  hasReminderLinks,
+  PORTAL_BUTTON_ROOT,
 } from "./templates";
 import type { WhatsappTemplate } from "./connection";
 import { templateStatusChanges } from "./webhook";
@@ -71,7 +73,7 @@ describe("templates padrão (F6.2)", () => {
 
   it("pedido de criação: Utilidade, português, exemplos e os botões do lembrete", () => {
     expect(templateCreationPayload(defaultTemplate("reminder")!)).toEqual({
-      name: "rc_lembrete_v1",
+      name: "rc_lembrete_v2",
       language: "pt_BR",
       category: "UTILITY",
       components: [
@@ -80,8 +82,8 @@ describe("templates padrão (F6.2)", () => {
           type: "BUTTONS",
           buttons: [
             { type: "QUICK_REPLY", text: "Confirmar presença" },
-            { type: "QUICK_REPLY", text: "Remarcar" },
-            { type: "QUICK_REPLY", text: "Cancelar" },
+            { type: "URL", text: "Remarcar", url: `${PORTAL_BUTTON_ROOT}/s/{{1}}`, example: [`${PORTAL_BUTTON_ROOT}/s/AbCdEfGhIjKlMnOpQrStUv`] },
+            { type: "URL", text: "Cancelar", url: `${PORTAL_BUTTON_ROOT}/s/{{1}}`, example: [`${PORTAL_BUTTON_ROOT}/s/AbCdEfGhIjKlMnOpQrStUv`] },
           ],
         },
       ],
@@ -92,7 +94,7 @@ describe("templates padrão (F6.2)", () => {
   it("pedido de edição do recusado (F8a.1): os mesmos componentes, sem nome nem idioma", () => {
     const reminder = defaultTemplate("reminder")!;
     const { name, language, ...rest } = templateCreationPayload(reminder);
-    expect([name, language]).toEqual(["rc_lembrete_v1", "pt_BR"]);
+    expect([name, language]).toEqual(["rc_lembrete_v2", "pt_BR"]);
     expect(templateEditPayload(reminder)).toEqual(rest);
   });
 
@@ -145,6 +147,28 @@ describe("quem envia (F6.2)", () => {
         ["reminder:confirm:a1", "reminder:reschedule:a1", "reminder:cancel:a1"],
       ],
     ]);
+  });
+
+  it("lembrete v2 (BE-10): o mapa é a 7ª variável e Remarcar e Cancelar levam o código do link; a v1 segue com 3 respostas", async () => {
+    expect(hasReminderLinks(defaultTemplate("reminder")!.body)).toBe(true);
+    expect(hasReminderLinks("Olá {{1}} {{2}} {{3}} {{4}} {{5}} {{6}}")).toBe(false);
+    expect(hasReminderLinks(null)).toBe(false);
+    const { sender, calls } = fakeSender();
+    await reminderSender(sender)({
+      ...appointment,
+      clinicId: "c1",
+      appointmentId: "a1",
+      phone: "+5584999990000",
+      serviceCategory: "consultation",
+      template: { name: "rc_lembrete_v2", language: "pt_BR" },
+      buttonPayloads: ["reminder:confirm:a1"],
+      linkTokens: ["TOKENremarcar", "TOKENcancelar"],
+    });
+    const call = calls[0] as unknown[];
+    expect((call[4] as string[]).length).toBe(7);
+    expect((call[4] as string[])[6]).toMatch(/^https:\/\/www\.google\.com\/maps\/search\//);
+    expect(call[5]).toEqual(["reminder:confirm:a1"]);
+    expect(call[6]).toEqual(["TOKENremarcar", "TOKENcancelar"]);
   });
 
   it("preparo (C7.4): sem saudação nem link; texto com as quebras (janela aberta) ou a v3 numa linha (fechada); quem só tem a v2 segue com o link", async () => {

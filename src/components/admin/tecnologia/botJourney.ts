@@ -84,7 +84,7 @@ export const JOURNEY: JourneySection[] = [
     intro: "Mensagens que saem sozinhas, sem ninguém da equipe. Com mais de um responsável na ficha, vão para quem marcou (ou para o escolhido pela recepção); quem remarca pelo portal passa a recebê-las (D14, 11/nov/2026).",
     flow: [
       auto("Confirmação, com preparo ou orientações quando houver", "Consulta em casa: sem as orientações gerais (cliente, 10/nov/2026)."),
-      auto("Lembrete na véspera ou no dia (como a clínica escolher), com Confirmar presença · Remarcar · Cancelar"),
+      auto("Lembrete na véspera ou no dia (como a clínica escolher), com endereço e mapa e os botões Confirmar presença · Remarcar ↗ · Cancelar ↗ (os dois últimos abrem o portal direto na ação)"),
       branch(
         ["Confirmar presença", [bot("\"Presença confirmada ✓\"", "Em seguida, outra mensagem com o nome e o endereço do local e o link do Google Maps (só local da clínica com endereço)"), reception("A agenda mostra a presença confirmada")]],
         ["Remarcar", [bot("\"Para remarcar a consulta de [paciente], toque no botão abaixo.\" [Remarcar]", "Abre o portal já nos dias e horários do mesmo profissional. Turma, ou sem o portal: a recepção.")]],
@@ -190,7 +190,7 @@ export const JOURNEY_RULES = [
   "Conversa parada por 15 minutos no menu: volta ao começo em silêncio (cliente, 11/nov/2026); parada na escolha do preparo: o bot encerra com aviso. A próxima mensagem começa de novo.",
   "Cortesia depois do menu, de um link ou de uma orientação (\"ok\", \"obrigado\", \"perfeito\", 👍, reação): sem resposta, sem prazo e sem encerrar a conversa (BE-8). Com pedido junto (\"ok, mas qual o valor?\") segue o caminho normal; depois de uma pergunta do bot ou na 1ª mensagem, responde.",
   "Saíram com o bot enxuto (F3f, 11/nov/2026): a marcação no chat, a entrada com a data de nascimento, a especialidade antes do menu, os submenus Consultas e Exames, Informações gerais, o Encaixe no chat e o pedido não concluído.",
-  "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
+  "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa. Lembrete novo (BE-10, modelo rc_lembrete_v2): só Confirmar presença responde na conversa (\"Presença confirmada ✓\"); Remarcar e Cancelar são links do portal. Clínica que só tem o modelo antigo aprovado segue com as 3 respostas.",
   "Paciente com mais de um responsável (D14, 11/nov/2026): confirmação, lembrete, preparo, orientações, avisos da clínica e lista de espera vão para quem marcou; \"Confirmar presença\", \"Remarcar\" e \"Cancelar\" do lembrete e a resposta à oferta da lista de espera valem de qualquer responsável ligado (ou de quem marcou) (F3f); o aviso do cancelamento pelo portal vai para quem cancelou e, quando quem remarca ou cancela não é quem marcou, quem marcou recebe \"Consulta remarcada\" ou \"Consulta cancelada\" (modelo próprio da Meta, só com ele aprovado). No portal, cada número vê os pacientes de que é responsável.",
   "Mensagem que não sai por instabilidade da Meta (ex.: \"131000 Something went wrong\"): 3 tentativas. Do bot, 30 segundos e 2 minutos depois, só se a conversa não andou; as automáticas (confirmação, lembrete, avisos), 10 e 30 minutos depois (cliente, 05/nov/2026).",
   "Mensagem automática do app WhatsApp Business (saudação, ausência), até 5 segundos depois da do paciente ou do bot: não pausa o bot; aviso para desligar no app.",

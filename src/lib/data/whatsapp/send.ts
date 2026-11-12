@@ -12,6 +12,7 @@ import type { DailySummarySender } from "./dailySummary";
 import type { OfferSender } from "../waitlist/offers";
 import { getApprovedTemplate } from "./connection";
 import { isCustomerServiceWindowOpen, recordOutboundMessage } from "./messages";
+import { mapsHref } from "../../portal";
 import { appointmentParams, cleanParam, LEGACY_PREPARATION_BODY, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
 import { isAnonymizedPhone } from "../../anonymization";
 import { logError } from "../../log";
@@ -35,6 +36,8 @@ export type ClinicSender = {
     template: { name: string; language: string; body?: string | null },
     params: string[],
     buttonPayloads?: string[],
+    /** Códigos dos botões de link, na ordem (depois das respostas rápidas): lembrete v2 (BE-10). */
+    urlButtonTokens?: string[],
   ): Promise<SendOutcome>;
   text(to: string, body: string): Promise<SendOutcome>;
   /** Lista interativa (até 10 linhas no total). Só na janela de 24h, como o texto. `header`: título em negrito (até 60). */
@@ -126,7 +129,7 @@ export async function createClinicSender(
     clinicId,
     clinicLabel: clinicLabel(clinic.name, settings.message_article as MessageArticle),
     baseUrl: baseUrl.replace(/\/$/, ""),
-    template(to, key, template, params, buttonPayloads = []) {
+    template(to, key, template, params, buttonPayloads = [], urlButtonTokens = []) {
       const text = template.body ?? defaultTemplate(key)?.body ?? null;
       // Só as variáveis que o corpo usa (o cancelamento não leva o local).
       const used = text ? params.slice(0, paramCount(text)) : params;
@@ -134,6 +137,9 @@ export async function createClinicSender(
       if (used.length) components.push({ type: "body", parameters: used.map((text) => ({ type: "text", text: cleanParam(text) })) });
       buttonPayloads.forEach((payload, index) => {
         components.push({ type: "button", sub_type: "quick_reply", index: String(index), parameters: [{ type: "payload", payload }] });
+      });
+      urlButtonTokens.forEach((token, index) => {
+        components.push({ type: "button", sub_type: "url", index: String(buttonPayloads.length + index), parameters: [{ type: "text", text: token }] });
       });
       const body = text ? fillTemplate(text, used) : `[${template.name}] ${used.join(" · ")}`;
       return post(
@@ -208,8 +214,15 @@ export async function createClinicSender(
 
 /** Lembrete (template com os botões Confirmar presença · Remarcar · Cancelar). */
 export function reminderSender(sender: ClinicSender): ReminderSender {
-  return (reminder) =>
-    sender.template(reminder.phone, "reminder", reminder.template, appointmentParams(sender.clinicLabel, reminder), reminder.buttonPayloads);
+  return (reminder) => {
+    const params = appointmentParams(sender.clinicLabel, reminder);
+    // v2: o mapa é a 7ª variável e os botões Remarcar e Cancelar levam o código do link do portal.
+    if (reminder.linkTokens) {
+      const place = reminder.address ?? reminder.locationName;
+      return sender.template(reminder.phone, "reminder", reminder.template, [...params, cleanParam(mapsHref(place))], reminder.buttonPayloads, reminder.linkTokens);
+    }
+    return sender.template(reminder.phone, "reminder", reminder.template, params, reminder.buttonPayloads);
+  };
 }
 
 /** Preparo do exame: texto com as orientações (janela aberta) ou o template (fechada); com arquivo, o arquivo (C7.5). */
