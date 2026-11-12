@@ -42,6 +42,7 @@ import { listBotMessages } from "../customMessages";
 import { askReceptionReason, firstMessageAnswer, handleKnowledgeReply, handleReceptionReason, knowledgeHookFor, pendingReasonOf, performTakeover, REASON_KEY } from "./knowledge/respond";
 import { logError } from "../../../log";
 import { isCourtesyMessage } from "../courtesy";
+import { followsRecentProof, hasRecentCompletedAppointment, isPaymentProof, PROOF_CONTEXT_KEY, proofFileNameOf, proofTextOf } from "./paymentProof";
 
 // Entrada do bot (F6.3): chamado pelo webhook para cada mensagem recebida, já
 // registrada. Só com o item "Bot de WhatsApp" liberado (D11) e o WhatsApp da
@@ -96,6 +97,13 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   // orientação não tem resposta, sem prazo e sem encerrar a conversa. Com pedido junto, não é cortesia (segue o caminho).
   if (isCourtesyMessage(message) && (await courtesyNeedsNoReply(env.db, env.clinicId, convo))) return "skipped";
 
+  // Comprovante de pagamento (cliente, 12/nov/2026): foto ou PDF de quem pagou na recepção fica sem resposta, só nesta
+  // mensagem (e anexos nos 10 min seguintes); a conversa segue com o bot e a secretária vê o anexo nas Conversas.
+  if (await isProofWithoutReply(env, convo, message)) {
+    await setConversationState(env.db, env.clinicId, phone, convo.state, { context: { ...convo.context, [PROOF_CONTEXT_KEY]: env.now.toISOString() } }, env.now);
+    return "skipped";
+  }
+
   const b = await createBot(env, convo, message.id ?? null, message.type ?? null);
   // Base de conhecimento (BC, Etapa 4): texto digitado, ou toque numa mensagem dela, fora dos passos de texto livre.
   b.incomingText = message.type === "text" ? (messageBody(message) ?? "").trim() || null : null;
@@ -117,6 +125,18 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   const count = b.notUnderstoodSaid ? convo.notUnderstoodCount + 1 : 0;
   if (count !== convo.notUnderstoodCount) await setNotUnderstoodCount(env.db, env.clinicId, phone, count);
   return "handled";
+}
+
+/** Conversa parada (começo ou menu) e mensagem reconhecida como comprovante (regras em paymentProof.ts). */
+async function isProofWithoutReply(env: BotEnv, convo: Conversation, message: WaMessage): Promise<boolean> {
+  if (!["image", "document", "text"].includes(message.type ?? "")) return false;
+  const idle = convo.state === WELCOME || convo.state === "MENU";
+  if (!idle) return false;
+  const base = { type: message.type ?? null, text: proofTextOf(message), fileName: proofFileNameOf(message), idle, followsRecentProof: followsRecentProof(convo.context, env.now) };
+  // A consulta só é lida quando as palavras sozinhas não decidem.
+  if (isPaymentProof({ ...base, recentCompletedAppointment: false })) return true;
+  if (!isPaymentProof({ ...base, recentCompletedAppointment: true })) return false;
+  return hasRecentCompletedAppointment(env.db, env.clinicId, convo.contactId, env.now);
 }
 
 /**

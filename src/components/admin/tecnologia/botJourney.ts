@@ -186,6 +186,7 @@ export const JOURNEY: JourneySection[] = [
 
 /** Regras gerais, fora do desenho. */
 export const JOURNEY_RULES = [
+  "Comprovante de pagamento (cliente, 12/nov/2026): foto ou PDF com \"comprovante\", \"pix\", \"pagamento\" ou parecido na legenda ou no nome do arquivo, ou sem legenda até 24 h depois de uma consulta concluída, com a conversa no começo ou no menu: sem resposta e sem contar como \"não entendi\". Anexos nos 10 minutos seguintes também. Um pedido por texto (\"quero marcar o retorno\") responde normalmente; a secretária vê o anexo nas Conversas.",
   "A qualquer momento: \"0\", \"Voltar ao menu\" ou \"voltar\" mostra o menu principal.",
   "Conversa parada por 15 minutos no menu: volta ao começo em silêncio (cliente, 11/nov/2026); parada na escolha do preparo: o bot encerra com aviso. A próxima mensagem começa de novo.",
   "Cortesia depois do menu, de um link ou de uma orientação (\"ok\", \"obrigado\", \"perfeito\", 👍, reação): sem resposta, sem prazo e sem encerrar a conversa (BE-8). Com pedido junto (\"ok, mas qual o valor?\") segue o caminho normal; depois de uma pergunta do bot ou na 1ª mensagem, responde.",
