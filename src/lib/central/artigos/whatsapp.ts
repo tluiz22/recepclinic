@@ -51,7 +51,7 @@ export const whatsappArtigos = [
     intro: "O sistema lembra o paciente, o profissional e a equipe dos atendimentos pelo WhatsApp da clínica.",
     fields: [
       { name: "Quando sai", text: "Na véspera (atendimentos do dia seguinte) ou no dia (os que começam depois do horário), na hora escolhida, das 6h às 20h, no fuso da clínica." },
-      { name: "O que o paciente responde", text: "Pelos botões Confirmar presença, Remarcar ou Cancelar." },
+      { name: "O que o paciente responde", text: "Confirmar presença responde na conversa; Remarcar e Cancelar abrem o portal já na ação." },
       { name: "Atendimento marcado depois do envio", text: "Fica sem lembrete automático: na Agenda, o botão Enviar lembrete resolve. Remarcar zera o lembrete." },
       { name: "Falha técnica", text: "O envio é tentado de novo sozinho, em 10 e 30 minutos." },
     ],

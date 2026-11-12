@@ -1134,7 +1134,7 @@ botão é `PORTAL_BUTTON_ROOT` (padrão `https://agendar.recepclinic.com.br`; **
 Jornada do bot atualizada. Testes: unit 1219, DB com os modelos v2.
 
 **Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validada), E5 (validada), E6 e E7 (feitas, validação no staging, migração 0119 só local). Depois:
-E8 (fechamento). Captura `config-mensagens` na fila, sem autorização ainda.
+E8 (fechamento): Central e suíte feitas (11/nov); faltam `security-review`, `/code-review` e a junção com a `main`. Capturas `config-mensagens` e `config-lembretes` na fila, sem autorização.
 
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 

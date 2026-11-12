@@ -209,7 +209,8 @@ export const configuracoesArtigos = [
     order: 68,
     intro: "Um lembrete por público: paciente (item Lembrete automático), profissional e equipe (itens do resumo do dia).",
     fields: [
-      { name: "Lembrete ao paciente", text: "Escolha Na véspera ou No dia e a hora. O paciente pode confirmar presença, remarcar ou cancelar pelos botões." },
+      { name: "Confirmação ao paciente", text: "Duas opções, ligadas por padrão: a confirmação da marcação feita pelo portal e a da feita pela recepção. Desligue a que a clínica não quer mandar." },
+      { name: "Lembrete ao paciente", text: "Escolha Na véspera ou No dia e a hora. O paciente confirma presença pelo botão e remarca ou cancela pelos botões que abrem o portal; a mensagem leva o link do mapa." },
       { name: "Resumo ao profissional", text: "A lista dos atendimentos dele, na véspera ou no dia, na hora escolhida, para os profissionais com WhatsApp cadastrado." },
       { name: "Resumo à equipe", text: "A lista para os contatos da equipe cadastrados aqui (para quem não é profissional, ex.: recepção, gerente)." },
     ],
