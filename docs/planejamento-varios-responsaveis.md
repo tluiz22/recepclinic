@@ -424,3 +424,5 @@ Resultado de cada tela: anotar aqui (ok ou ajuste com o commit).
   `20270117120000`). `duplicateSuspects` e `markNotDuplicate` (`patientContacts.ts`), ficha, API (`nao_repetida`),
   `seed.sql`. Testes: banco 1225, unidade e `astro check` ok; Playwright 390/1280 (faixa, ligar e desativar, não é a
   mesma). Artigos da Central: texto em "Ficha do paciente" a revisar.
+
+**Validação no staging concluída (cliente, 11/nov/2026):** V1 a V12 validados, incluindo os avisos de ficha repetida. A VR segue fora da produção até a F3f (o bot só reconhece o responsável principal).
