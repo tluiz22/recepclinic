@@ -93,7 +93,24 @@ export const LEAN_BOOK_DESCRIPTION_NO_EXAM = "Consulta ou retorno";
 export type LeanMenuId = (typeof LEAN_MENU)[number]["id"];
 
 /** BE-2: o 1º menu da conversa, com o primeiro nome quando o número é cadastrado (cliente, 08/nov/2026). */
-export const leanWelcome = (name: string | null) => `Olá${name ? `, ${name}` : ""}! Seja bem-vindo(a). Como podemos ajudar?`;
+/**
+ * Boas-vindas do menu principal (cliente, 12/nov/2026): diz que é o contato oficial de agendamento e o que o paciente
+ * consegue fazer. "Exames" só com exame na clínica; "Falar com a recepção" só quando a recepção atende pelo app.
+ */
+export const leanWelcome = (name: string | null, clinicLabel: string, { exams = true, reception = true } = {}) =>
+  [
+    `Olá${name ? `, ${name}` : ""}! 👋`,
+    `Este é o contato oficial para agendamento ${clinicLabel}.`,
+    [
+      "Estamos aqui para ajudar você! 😊",
+      "Por aqui, você pode:",
+      `📅 Agendar ou remarcar consultas${exams ? " e exames" : ""}.`,
+      "🔄 Solicitar cancelamentos ou entrar na fila de espera.",
+      "ℹ️ Consultar informações sobre atendimentos.",
+      ...(reception ? ["👩‍💼 Falar diretamente com a recepção, se precisar de ajuda."] : []),
+    ].join("\n\n"),
+    "Escolha uma das opções abaixo.",
+  ].join("\n\n");
 /** O cabeçalho do menu (BE-2): "Clínica [Nome]" é o nome da clínica como ela se cadastrou. */
 export const leanMenuHeader = (clinicName: string) => clinicName;
 

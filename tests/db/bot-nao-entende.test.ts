@@ -97,7 +97,7 @@ const OFFER = "Não consegui entender sua mensagem.\n\nVocê quer falar com a re
 describe("bot que não entende (F8.5d)", () => {
   it("1º menu: uma mensagem com as boas-vindas do bot enxuto (BE-2)", async () => {
     const phone = "+5584991227700";
-    expect(await message(phone, "oi")).toEqual(["Olá! Seja bem-vindo(a). Como podemos ajudar?"]);
+    expect(await message(phone, "oi")).toEqual([expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento d/)]);
   });
 
   it("áudio e figurinha: aviso próprio no lugar do 'não entendi'", async () => {

@@ -108,7 +108,7 @@ describe("menu enxuto (BE-2)", () => {
   it("1ª mensagem: uma só, com o nome da clínica no cabeçalho, as boas-vindas e os 3 atalhos (sem a recepção no app)", async () => {
     const reply = await say(NEW, "oi");
     expect(reply).toHaveLength(1);
-    expect(reply[0]).toMatchObject({ kind: "list", header: "Clínica Enxuta", body: "Olá! Seja bem-vindo(a). Como podemos ajudar?" });
+    expect(reply[0]).toMatchObject({ kind: "list", header: "Clínica Enxuta", body: expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento da Clínica Enxuta\./) });
     expect(reply[0].options.map((o) => o.title)).toEqual(MENU_TITLES.slice(0, 3));
   });
 
@@ -118,7 +118,7 @@ describe("menu enxuto (BE-2)", () => {
       await restart(PATIENT);
       const reply = await say(PATIENT, "Bom dia");
       expect(reply).toHaveLength(1);
-      expect(reply[0].body).toMatch(/^Olá, .+! Seja bem-vindo\(a\)\. Como podemos ajudar\?$/);
+      expect(reply[0].body).toMatch(/^Olá, .+! 👋\n\nEste é o contato oficial para agendamento d/);
       expect(reply[0].options.map((o) => o.title)).toEqual(MENU_TITLES);
     } finally {
       await setCoexistence(false);

@@ -120,7 +120,7 @@ export type BotMessageDef = {
 
 export const BOT_MESSAGES: BotMessageDef[] = [
   // Bot enxuto (F3f, BE-2): as boas-vindas são o corpo do 1º menu, numa mensagem só (o nome da clínica vai no cabeçalho).
-  { key: "welcome", label: "Boas-vindas", markers: ["nome", "clinica"], required: [], defaultText: "Olá, {nome}! Seja bem-vindo(a). Como podemos ajudar?" },
+  { key: "welcome", label: "Boas-vindas", markers: ["nome", "clinica"], required: [], defaultText: "Olá, {nome}! 👋\n\nEste é o contato oficial para agendamento {clinica}.\n\nEstamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar ou remarcar consultas e exames.\n\n🔄 Solicitar cancelamentos ou entrar na fila de espera.\n\nℹ️ Consultar informações sobre atendimentos.\n\n👩‍💼 Falar diretamente com a recepção, se precisar de ajuda.\n\nEscolha uma das opções abaixo." },
   { key: "menu", label: "Menu", markers: [], required: [], defaultText: "Escolha uma opção abaixo ou faça uma pergunta." },
   {
     key: "not_understood",

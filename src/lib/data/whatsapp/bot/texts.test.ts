@@ -13,9 +13,17 @@ describe("menu enxuto (BE-2)", () => {
     expect(t.LIST_BUTTON).toBe("Ver opções");
   });
 
-  it("boas-vindas com e sem o nome", () => {
-    expect(t.leanWelcome(null)).toBe("Olá! Seja bem-vindo(a). Como podemos ajudar?");
-    expect(t.leanWelcome("Ana")).toBe("Olá, Ana! Seja bem-vindo(a). Como podemos ajudar?");
+  it("boas-vindas com e sem o nome, exame e recepção", () => {
+    const full = t.leanWelcome("Ana", "da Clínica X");
+    expect(full.startsWith("Olá, Ana! 👋\n\nEste é o contato oficial para agendamento da Clínica X.\n\n")).toBe(true);
+    expect(full).toContain("consultas e exames.");
+    expect(full).toContain("Falar diretamente com a recepção");
+    expect(full.endsWith("\n\nEscolha uma das opções abaixo.")).toBe(true);
+    expect(t.leanWelcome(null, "da Clínica X").startsWith("Olá! 👋")).toBe(true);
+    const lean = t.leanWelcome(null, "da Clínica X", { exams: false, reception: false });
+    expect(lean).toContain("consultas.");
+    expect(lean).not.toContain("exames");
+    expect(lean).not.toContain("recepção");
   });
 });
 
