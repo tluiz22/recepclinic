@@ -150,7 +150,7 @@ export type ConversationSummary = {
 export const CLASSIFICATION_LABELS = { personal: "Pessoal", administrative: "Administrativo" } as const;
 
 /** Filtro das Abertas: Todas ou Minhas (NA0, cliente, 06/nov/2026; antes, o "Mostrar" da decisão 3, com quatro opções). */
-export type ConversationFilter = "todas" | "minhas";
+export type ConversationFilter = "todas" | "minhas" | "aguardando";
 
 const date = (value: string | null) => (value ? new Date(value) : null);
 
@@ -199,7 +199,22 @@ export async function listConversations(
 
 /** Aplica o filtro das Abertas: "Minhas" = as que estão com a pessoa. */
 export function filterConversations(items: ConversationSummary[], filter: ConversationFilter, userId: string): ConversationSummary[] {
-  return filter === "minhas" ? items.filter((item) => item.assignedTo === userId) : items;
+  const kept = filter === "minhas" ? items.filter((item) => item.assignedTo === userId) : filter === "aguardando" ? items.filter(isWaiting) : items;
+  return waitingFirst(kept);
+}
+
+/** Aguardando a clínica (o paciente espera a primeira resposta humana). */
+export const isWaiting = (item: Pick<ConversationSummary, "open" | "status">): boolean => item.open && item.status === "waiting_clinic";
+
+/** F5b (cliente, 08/nov): as aguardando primeiro, da que espera há mais tempo; depois as outras, pela última mensagem. */
+export function waitingFirst<T extends Pick<ConversationSummary, "open" | "status" | "statusAt" | "lastMessageAt">>(items: T[]): T[] {
+  const time = (value: Date | null) => value?.getTime() ?? 0;
+  return [...items].sort((a, b) => {
+    const wa = isWaiting(a);
+    const wb = isWaiting(b);
+    if (wa !== wb) return wa ? -1 : 1;
+    return wa ? time(a.statusAt) - time(b.statusAt) : time(b.lastMessageAt) - time(a.lastMessageAt);
+  });
 }
 
 /** Quem está com a conversa, na lista e no topo da conversa. */
