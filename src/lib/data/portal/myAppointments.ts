@@ -6,7 +6,7 @@ import { earliestDate, getFreeSlots, getNextAvailableDates, horizonLastDate } fr
 import { BOOKING_HORIZON_DEFAULT } from "../config/clinic";
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { sendAppointmentNotice, sendOtherResponsibleNotice } from "../whatsapp/notices";
+import { confirmationEnabled, sendAppointmentNotice, sendOtherResponsibleNotice } from "../whatsapp/notices";
 import { recipientOfAppointment } from "../whatsapp/recipient";
 import type { ClinicSender } from "../whatsapp/send";
 import { phonePatients, saveContactHomeAddress } from "./booking";
@@ -377,7 +377,9 @@ export async function rescheduleMine(
     return { status: "failed" };
   }
   if (atHome && address && addressSaved && input.phone && address !== item.homeVisitAddress) await saveContactHomeAddress(db, clinicId, input.phone, address);
-  await sendAppointmentNotice(db, clinicId, appointmentId, input.rebook ? "confirmation" : "reschedule", input.sender, now);
+  if (!input.rebook || (await confirmationEnabled(db, clinicId, "portal"))) {
+    await sendAppointmentNotice(db, clinicId, appointmentId, input.rebook ? "confirmation" : "reschedule", input.sender, now);
+  }
   if (bookerSaved && previousBooker && sessionContact && previousBooker.id !== sessionContact.id) {
     const actor = await actorLabel(db, clinicId, item.patientId, sessionContact).catch(() => firstNameOnly(sessionContact.fullName));
     await sendOtherResponsibleNotice(db, clinicId, { appointmentId, kind: "rescheduled_by_other", booker: previousBooker, actor }, input.sender, now);

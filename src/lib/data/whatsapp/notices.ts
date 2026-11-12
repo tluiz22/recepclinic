@@ -50,6 +50,13 @@ type NoticeRow = {
 
 const NOTICE_COLUMNS = `id, scheduled_at, home_visit_address, services ( name, category ), agendas ( professionals ( display_name ) ), locations ( name, type, address ), patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS}`;
 
+/** Confirmação ao paciente ligada para quem marcou (BE-9; ligada por padrão). Na dúvida (erro ao ler), confirma. */
+export async function confirmationEnabled(db: DbClient, clinicId: string, by: "portal" | "reception"): Promise<boolean> {
+  const column = by === "portal" ? "confirm_portal_booking" : "confirm_reception_booking";
+  const { data } = await db.from("clinic_settings").select(column).eq("clinic_id", clinicId).maybeSingle();
+  return (data as Record<string, boolean> | null)?.[column] ?? true;
+}
+
 /** Envia o aviso de um atendimento e registra. Nunca lança: erro vira "failed" no log. */
 export async function sendAppointmentNotice(
   db: DbClient,

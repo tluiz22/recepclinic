@@ -1116,8 +1116,15 @@ recebia "não está mais ativo". Teste de banco `varios-responsaveis-bot.test.ts
 - Testes: unidade 1218 (+1 em `portal.test.ts`), `astro check` sem erros; Playwright em 390: vitrine e filtro de especialidade, sem
   rolagem lateral. Banco 1137 (suíte inteira antes da E5). Sem captura da Central afetada.
 
-**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validada), E5 (feita, validação pendente). Depois:
-E6 (confirmação, migração), E7 (lembrete novo), E8 (fechamento). Captura `config-mensagens` na fila, sem autorização ainda.
+**E6 feita (11/nov/2026), confirmação (BE-9):** migração `20270119120000_confirmacao_ao_paciente` (colunas `confirm_portal_booking` e
+`confirm_reception_booking` em `clinic_settings`, ligadas por padrão; **só no banco local**, staging não aplicado; a `main` já usa o
+número 0118). Configurações › Lembretes ganha o quadro "Confirmação ao paciente" (`/api/admin/configuracoes/confirmacao`). Desligada,
+a marcação pelo portal (consulta, retorno, remarcação "marcar de novo") ou pela recepção (`marcar`) não manda a confirmação;
+lembrete, remarcação, cancelamento e reenvio manual não mudam. `confirmationEnabled` em `notices.ts`. Teste DB novo; os de portal
+passam a usar um IP por sessão. Captura `config-lembretes` na fila.
+
+**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validada), E5 (validada), E6 (feita, validação pendente, migração só local). Depois:
+E7 (lembrete novo), E8 (fechamento). Captura `config-mensagens` na fila, sem autorização ainda.
 
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)
 

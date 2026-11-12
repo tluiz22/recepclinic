@@ -25,6 +25,7 @@ let dra: PortalProfessional;
 const today = todayIn(TZ);
 const yearsAgo = (n: number) => `${Number(today.slice(0, 4)) - n}${today.slice(4)}`;
 let phoneSeq = 0;
+let ipSeq = 0;
 const newPhone = () => `+55849${String(Date.now() % 1_000_000).padStart(6, "0")}${String(++phoneSeq).padStart(2, "0")}`.slice(0, 14);
 
 function jar(): AstroCookies {
@@ -37,8 +38,9 @@ function jar(): AstroCookies {
 
 async function verified(phone: string): Promise<PortalSession> {
   const cookies = jar();
-  const session = await ensureSession(service, fixture.clinicId, cookies, { ip: "200.9.9", secure: false });
-  const sent = await sendCode(service, fixture.clinicId, session, phone, { ip: "200.9.9", sender: null, devMode: true });
+  const ip = `200.9.${++ipSeq}`; // um IP por sessão: o limite de códigos por IP não atrapalha os testes
+  const session = await ensureSession(service, fixture.clinicId, cookies, { ip, secure: false });
+  const sent = await sendCode(service, fixture.clinicId, session, phone, { ip, sender: null, devMode: true });
   if (sent.status !== "sent" || !sent.devCode) throw new Error(sent.status);
   const result = await verifyCode(service, fixture.clinicId, session, sent.devCode);
   if (result.status !== "ok") throw new Error(result.status);
@@ -118,6 +120,21 @@ describe("marcar pelo portal", () => {
     // Conta no limite de pacientes novos do telefone, como o bot.
     const contact = (await phonePatients(service, fixture.clinicId, phone)).contact!;
     expect(await countBotNewPatients(service, fixture.clinicId, contact.id)).toBe(1);
+  });
+
+  it("confirmação desligada em Lembretes (BE-9): marca pelo portal sem pôr a confirmação na fila", async () => {
+    const db = adminClient();
+    await db.from("clinic_settings").update({ confirm_portal_booking: false }).eq("clinic_id", fixture.clinicId);
+    try {
+      const { session, holdId } = await holding("09:00", undefined, MON2);
+      expect(await setHoldPatient(service, fixture.clinicId, session.id, holdId, { newPatient: { for: "self", name: "Paula Sem Aviso", birthdate: yearsAgo(30), contactName: null } })).toBe(true);
+      const outcome = await confirm(session, holdId);
+      expect(outcome.status).toBe("booked");
+      const { data: queue } = await db.from("notice_queue").select("kind").eq("appointment_id", (outcome as { appointmentId: string }).appointmentId);
+      expect(queue).toEqual([]);
+    } finally {
+      await db.from("clinic_settings").update({ confirm_portal_booking: true }).eq("clinic_id", fixture.clinicId);
+    }
   });
 
   it("duplo toque: duas marcações ao mesmo tempo criam um atendimento só", async () => {

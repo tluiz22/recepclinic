@@ -10,3 +10,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 ## Pendentes
 
 - `config-mensagens` — bot enxuto (F3f): saíram "Link para marcar" e "Cancelamento confirmado"; boas-vindas, recepção e o menu com os textos novos (11/11/2026)
+- `config-lembretes` — novo quadro "Confirmação ao paciente" (Marcadas pelo portal / pela recepção), F3f E6 (11/11/2026)
