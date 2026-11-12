@@ -24,7 +24,9 @@ import { createUserClient } from "../../lib/data/clients";
 import {
   CLASSIFICATION_LABELS,
   filterConversations,
+  isWaiting,
   isCentralActive,
+  countWaitingConversations,
   listConversationMedia,
   listConversationMessages,
   listConversations,
@@ -57,7 +59,7 @@ if (!allowed || !clinic.features.includes("central_attendance") || !(await isCen
 }
 
 const params = Astro.url.searchParams;
-const FILTERS: Record<ConversationFilter, string> = { todas: "Todas", minhas: "Minhas" };
+const FILTERS: Record<ConversationFilter, string> = { todas: "Todas", minhas: "Minhas", aguardando: "Aguardando" };
 const search = (params.get("busca") ?? "").trim().slice(0, 80);
 const filter: ConversationFilter = (params.get("mostrar") as ConversationFilter) in FILTERS ? (params.get("mostrar") as ConversationFilter) : "todas";
 const selectedPhone = /^\+\d{10,15}$/.test(params.get("conversa") ?? "") ? params.get("conversa")! : null;
@@ -89,6 +91,8 @@ if (selectedPhone && !personal && !finished && !openItems.some((item) => item.ph
 }
 const shown = personal ? classifiedItems : finished ? finishedItems : filterConversations(openItems, filter, clinic.userId);
 const selected = selectedPhone ? ([...openItems, ...finishedItems, ...classifiedItems].find((item) => item.phone === selectedPhone) ?? null) : null;
+// O contador não segue a busca (o menu lateral conta todas as que aguardam).
+const waitingCount = await countWaitingConversations(db, clinic.clinicId).catch(() => openItems.filter(isWaiting).length);
 const marked = !!selected && selected.classification !== "patient";
 // Mensagens novas nos números marcados (por pessoa), no rótulo da aba.
 const classifiedUnread = classifiedItems.reduce((sum, item) => sum + item.unread, 0);
@@ -293,6 +297,9 @@ const tabClass = (active: boolean) =>
                 ]}
               >
                 {label}
+                {value === "aguardando" && waitingCount > 0 && (
+                  <span class:list={["ml-1.5 rounded-full px-1.5 text-xs font-semibold", value === filter ? "bg-white text-ink" : "bg-ink text-white"]}>{waitingCount}</span>
+                )}
               </a>
             ))}
           </nav>
@@ -308,6 +315,8 @@ const tabClass = (active: boolean) =>
                   ? "Nenhum número marcado. Conversa pessoal ou com fornecedor: abra a conversa e use o menu ⋯ para marcar."
                   : finished
                   ? "Nenhuma conversa finalizada ainda."
+                  : filter === "aguardando"
+                    ? "Nenhuma conversa aguardando a clínica."
                   : filter === "todas"
                     ? "Nenhuma conversa aberta. Quando o paciente pedir para falar com a clínica, a conversa aparece aqui."
                     : "Nenhuma conversa neste filtro."}

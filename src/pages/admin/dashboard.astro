@@ -21,6 +21,8 @@ import { relacionamento } from "../../lib/ajuda/relacionamento";
 import { meuDia } from "../../lib/ajuda/meu-dia";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
+import { listBirthdateChecksToConfirm } from "../../lib/data/portalBirthdate";
+import { shortDate } from "../../lib/portalBooking";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
 import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
@@ -114,7 +116,7 @@ const load = async <T,>(label: string, run: () => Promise<T>): Promise<T | null>
     return null;
   }
 };
-const [pendingReminders, todayAppointments, pendingAttendanceList, numbersToFix] = await Promise.all([
+const [pendingReminders, todayAppointments, pendingAttendanceList, numbersToFix, birthdateChecks] = await Promise.all([
   has("reminders") ? load("lembretes sem resposta", () => listPendingReminders(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
   load("próximas consultas", async () => {
     const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });
@@ -124,7 +126,10 @@ const [pendingReminders, todayAppointments, pendingAttendanceList, numbersToFix]
   counts.pendingAttendance > 0 ? load("consultas a registrar", () => listPendingAttendance(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
   // Número sem WhatsApp (cliente, 05/nov/2026): a recepção corrige o cadastro ou diz que o número está certo.
   load("números sem WhatsApp", () => listNumbersWithoutWhatsapp(db, clinic.clinicId, nowAt)),
+  // F5b (cliente, 12/nov/2026): datas de nascimento a conferir do portal.
+  has("portal") ? load("datas a conferir", () => listBirthdateChecksToConfirm(db, clinic.clinicId)) : Promise.resolve([]),
 ]);
+const toCheck = birthdateChecks ?? [];
 const toFix = numbersToFix ?? [];
 const waiting = pendingReminders?.filter((r) => r.kind === "no_answer" && r.appointment.scheduledAt > nowAt && r.appointment.scheduledAt < tomorrowEnd).map((r) => ({ appointment: r.appointment, sentAt: r.sentAt })) ?? [];
 const upcoming = todayAppointments?.filter((a) => a.status === "scheduled" || a.status === "confirmed") ?? [];
@@ -198,13 +203,13 @@ const pendingNames = (() => {
 })();
 const pendingFirstDate = pendingSorted[0] ? localDay(pendingSorted[0].scheduledAt) : todayDate;
 // Linhas de "Precisa de você" (o número ao lado do título; o do menu soma os itens).
-const precisaLines = (awaiting.length > 0 ? 1 : 0) + (inProgress.length > 0 ? 1 : 0) + (counts.pendingAttendance > 0 ? 1 : 0) + (toReview?.length ?? 0) + toFix.length;
+const precisaLines = (awaiting.length > 0 ? 1 : 0) + (inProgress.length > 0 ? 1 : 0) + (counts.pendingAttendance > 0 ? 1 : 0) + (toReview?.length ?? 0) + toFix.length + toCheck.length;
 const tagClass = "rounded-md px-2 py-0.5 text-[12.5px] font-bold whitespace-nowrap";
 // "Precisa de você": some a linha de quem não tem pendência; vazio mostra um texto de tudo em dia.
 // O menu usa este número (mesma conta de getMeuDiaCount) sem ler de novo.
-Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0) + toFix.length;
+Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0) + toFix.length + toCheck.length;
 Astro.locals.meuDiaConversations = awaiting.length + inProgress.length;
-const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0 || toFix.length > 0;
+const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0 || toFix.length > 0 || toCheck.length > 0;
 const RESENDABLE = new Set(["appointment_confirmation", "appointment_reschedule"]);
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
@@ -375,6 +380,18 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
           </div>
         </div>
       )
+    }
+    {
+      toCheck.map((item) => (
+        <div class="flex flex-wrap items-center gap-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+          <span class={`${tagClass} bg-blk-100 text-blk-800`}>Conferir data</span>
+          <div class="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5">
+            <span class="text-base"><strong>{item.patientName}</strong> marcou pelo portal com outra data de nascimento</span>
+            <span class="text-sm text-ink-soft">Cadastrada {shortDate(item.registered)}; informada {shortDate(item.informed)}.</span>
+          </div>
+          <Button href={withReturn(`/admin/pacientes/${item.patientId}`, here)}>Conferir data</Button>
+        </div>
+      ))
     }
     {
       toReview?.map((item) => (

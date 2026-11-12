@@ -7,6 +7,7 @@ import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
 import PortalLinkActions from "../../../components/admin/config/PortalLinkActions.astro";
+import PortalLinkTools from "../../../components/admin/config/PortalLinkTools.astro";
 import { HINT, INPUT_INLINE, LABEL, SECTION_TITLE } from "../../../components/admin/config/formStyles";
 import Icon from "../../../components/admin/Icon.astro";
 import Notice from "../../../components/admin/ui/Notice.astro";
@@ -150,103 +151,10 @@ const linkText = "min-w-0 break-all text-[15px] font-semibold text-brand-ink";
     </Card>
   </div>
 
-  <dialog id="portal-qr" class="m-auto w-[min(92vw,420px)] rounded-2xl border border-line bg-white p-5 backdrop:bg-black/40" aria-labelledby="portal-qr-title">
-    <div class="flex items-start justify-between gap-3">
-      <div>
-        <h2 id="portal-qr-title" class={SECTION_TITLE}>QR code</h2>
-        <p class="text-sm text-ink-soft" data-qr-label></p>
-      </div>
-      <form method="dialog">
-        <button type="submit" class={buttonClass("quiet", "sm")} aria-label="Fechar">
-          <Icon name="x-mark" class="h-5 w-5" strokeWidth={2} />
-        </button>
-      </form>
-    </div>
-    <img data-qr-image alt="" width="280" height="280" class="mx-auto mt-3 h-[280px] w-[280px]" />
-    <p class="mt-2 text-center text-sm text-ink-soft">Aponte a câmera para agendar. Quem agenda pelo QR conta como "cartaz" nas Métricas.</p>
-    <div class="mt-4 flex flex-col gap-2">
-      <a data-qr-download class={buttonClass("primary", "md")} download>
-        <Icon name="arrow-down-tray" class="h-4 w-4" strokeWidth={2} />
-        Baixar imagem
-      </a>
-      <a data-qr-poster-page target="_blank" rel="noopener" class={buttonClass("secondary", "md")}>Imprimir cartaz</a>
-      <button type="button" data-qr-copy class={buttonClass("secondary", "md")}>Copiar link do cartaz</button>
-    </div>
-  </dialog>
-  <p class="sr-only" role="status" aria-live="polite" data-copy-status></p>
-  <div class="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4" aria-hidden="true">
-    <p class="hidden rounded-full bg-ink px-4 py-2 text-[15px] font-semibold text-white shadow-lg" data-copy-toast></p>
-  </div>
+  <PortalLinkTools />
 </ConfigShell>
 
 <script>
-  // Copiar link para… (R7): copia o link com a marca do lugar e avisa; no celular, abre o Compartilhar do aparelho.
-  const status = document.querySelector<HTMLElement>("[data-copy-status]");
-  const toast = document.querySelector<HTMLElement>("[data-copy-toast]");
-  let toastTimer: number | undefined;
-  const announce = (text: string) => {
-    if (status) status.textContent = text;
-    if (!toast) return;
-    toast.textContent = text;
-    toast.classList.remove("hidden");
-    window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => toast.classList.add("hidden"), 2800);
-  };
-  const copy = async (url: string, what: string) => {
-    const coarse = window.matchMedia("(pointer: coarse)").matches;
-    if (coarse && navigator.share) {
-      try {
-        await navigator.share({ url });
-        return;
-      } catch {
-        // Cancelado: copia.
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      announce(`${what} copiado.`);
-    } catch {
-      window.prompt("Copie o link:", url);
-    }
-  };
-  document.querySelectorAll<HTMLButtonElement>("[data-copy-url]").forEach((button) => {
-    button.addEventListener("click", () => {
-      button.closest<HTMLElement>("[popover]")?.hidePopover();
-      void copy(button.dataset.copyUrl!, `Link para ${button.dataset.copyLabel === "Outro lugar" ? "outro lugar" : `o ${button.dataset.copyLabel}`}`);
-    });
-  });
-  // O menu abre junto ao botão (o popover fica por cima de tudo).
-  document.querySelectorAll<HTMLButtonElement>(".rc-copy-trigger").forEach((trigger) => {
-    const menu = document.getElementById(trigger.getAttribute("popovertarget") ?? "");
-    menu?.addEventListener("toggle", (event) => {
-      if ((event as ToggleEvent).newState !== "open") return;
-      const box = trigger.getBoundingClientRect();
-      const left = Math.min(box.left, window.innerWidth - menu.offsetWidth - 8);
-      menu.style.position = "fixed";
-      menu.style.left = `${Math.max(8, left)}px`;
-      menu.style.top = `${Math.min(box.bottom + 4, window.innerHeight - menu.offsetHeight - 8)}px`;
-    });
-  });
-
-  // QR code (R7): a janela com a imagem do link do cartaz, Baixar imagem, Imprimir cartaz e Copiar link do cartaz.
-  const dialog = document.getElementById("portal-qr") as HTMLDialogElement | null;
-  let poster = "";
-  document.querySelectorAll<HTMLButtonElement>("[data-qr-open]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (!dialog) return;
-      const key = encodeURIComponent(button.dataset.qrOpen!);
-      poster = button.dataset.qrPoster ?? "";
-      dialog.querySelector<HTMLElement>("[data-qr-label]")!.textContent = button.dataset.qrLabel ?? "";
-      const image = dialog.querySelector<HTMLImageElement>("[data-qr-image]")!;
-      image.src = `/api/admin/configuracoes/portal/qr?p=${key}`;
-      image.alt = `QR code: ${button.dataset.qrLabel ?? ""}`;
-      dialog.querySelector<HTMLAnchorElement>("[data-qr-download]")!.href = `/api/admin/configuracoes/portal/qr?p=${key}&formato=png`;
-      dialog.querySelector<HTMLAnchorElement>("[data-qr-poster-page]")!.href = `/admin/configuracoes/portal/cartaz?p=${key}`;
-      dialog.showModal();
-    });
-  });
-  dialog?.querySelector<HTMLButtonElement>("[data-qr-copy]")?.addEventListener("click", () => void copy(poster, "Link do cartaz"));
-
   // Busca e especialidade (clínica com muitos profissionais).
   const search = document.querySelector<HTMLInputElement>("[data-pro-search]");
   const specialty = document.querySelector<HTMLSelectElement>("[data-pro-specialty]");

@@ -139,6 +139,9 @@ const AREA_PREFIXES: [string, PanelArea][] = [
     [`/admin/configuracoes/${section}`, "own_settings"],
     [`/api/admin/configuracoes/${section}`, "own_settings"],
   ]),
+  // F5b: o profissional com login pega o QR e o cartaz do próprio link (as rotas conferem de quem é).
+  ["/admin/configuracoes/portal/cartaz", "own_settings"],
+  ["/api/admin/configuracoes/portal/qr", "own_settings"],
   ["/admin/configuracoes", "settings"],
   ["/api/admin/configuracoes", "settings"],
   ["/admin/metricas", "metrics"],

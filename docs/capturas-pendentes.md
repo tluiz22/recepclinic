@@ -9,4 +9,5 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `conversas` — filtro "Aguardando" com contador, aguardando primeiro e "Com quem ele já consulta" no painel (12/11/2026)
+- `config-profissionais` — o cadastro do profissional ganhou o bloco "Link de agendamento" (com o Portal) (12/11/2026)
