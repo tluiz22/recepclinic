@@ -120,8 +120,8 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
   <div class="flex max-w-3xl flex-col gap-4">
     {
       portalLink && (
-        <div class={CARD}>
-          <h2 class={SECTION_TITLE}>Link de agendamento</h2>
+        <section class={`${CARD} min-w-0 p-4 sm:p-5`} aria-labelledby="link-agendamento-titulo">
+          <h2 id="link-agendamento-titulo" class={SECTION_TITLE}>Link de agendamento</h2>
           {portalLink.shown ? (
             <>
               <p class="mt-1 text-sm text-ink-soft">O paciente marca direto com {professional!.displayName}. Para pôr no Instagram, no site, no Google ou mandar em mensagem.</p>
@@ -138,7 +138,7 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
           ) : (
             <p class="mt-1 text-sm text-ink-soft">Fora do portal: o paciente não vê este profissional e o link não abre. {ownOnly ? "Para mostrar, fale com o Administrador da clínica." : "Para mostrar, use \"Mostrar no portal\" em Configurações › Portal."}</p>
           )}
-        </div>
+        </section>
       )
     }
     {/* Foto como primeiro item da tela (cliente, 11/nov/2026). */}
