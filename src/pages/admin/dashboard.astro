@@ -20,7 +20,7 @@ import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
 import { relacionamento } from "../../lib/ajuda/relacionamento";
 import { meuDia } from "../../lib/ajuda/meu-dia";
 import { createUserClient } from "../../lib/data/clients";
-import { getDashboardCounts, getProfessionalDay } from "../../lib/data/dashboard";
+import { getDashboardCounts } from "../../lib/data/dashboard";
 import { listBirthdateChecksToConfirm } from "../../lib/data/portalBirthdate";
 import { shortDate } from "../../lib/portalBooking";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
@@ -116,7 +116,7 @@ const load = async <T,>(label: string, run: () => Promise<T>): Promise<T | null>
     return null;
   }
 };
-const [pendingReminders, todayAppointments, pendingAttendanceList, numbersToFix, professionalDay, birthdateChecks] = await Promise.all([
+const [pendingReminders, todayAppointments, pendingAttendanceList, numbersToFix, birthdateChecks] = await Promise.all([
   has("reminders") ? load("lembretes sem resposta", () => listPendingReminders(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
   load("próximas consultas", async () => {
     const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });
@@ -126,13 +126,10 @@ const [pendingReminders, todayAppointments, pendingAttendanceList, numbersToFix,
   counts.pendingAttendance > 0 ? load("consultas a registrar", () => listPendingAttendance(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
   // Número sem WhatsApp (cliente, 05/nov/2026): a recepção corrige o cadastro ou diz que o número está certo.
   load("números sem WhatsApp", () => listNumbersWithoutWhatsapp(db, clinic.clinicId, nowAt)),
-  // F5b (cliente, 12/nov/2026): tabela "Por profissional" e datas de nascimento a conferir do portal.
-  load("por profissional", () => getProfessionalDay(db, clinic.clinicId, clinic.timezone, nowAt)),
+  // F5b (cliente, 12/nov/2026): datas de nascimento a conferir do portal.
   has("portal") ? load("datas a conferir", () => listBirthdateChecksToConfirm(db, clinic.clinicId)) : Promise.resolve([]),
 ]);
 const toCheck = birthdateChecks ?? [];
-const specialties = [...new Set((professionalDay ?? []).map((r) => r.specialty).filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, "pt-BR"));
-const withFilters = (professionalDay?.length ?? 0) > 7;
 const toFix = numbersToFix ?? [];
 const waiting = pendingReminders?.filter((r) => r.kind === "no_answer" && r.appointment.scheduledAt > nowAt && r.appointment.scheduledAt < tomorrowEnd).map((r) => ({ appointment: r.appointment, sentAt: r.sentAt })) ?? [];
 const upcoming = todayAppointments?.filter((a) => a.status === "scheduled" || a.status === "confirmed") ?? [];
@@ -539,65 +536,6 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
       </section>
     )
   }
-  {professionalDay === null && <Notice tone="warning">Não foi possível carregar a tabela por profissional. Tente atualizar a página.</Notice>}
-  {
-    professionalDay && professionalDay.length > 0 && (
-      <section aria-labelledby="por-profissional" class="overflow-hidden rounded-xl border border-line bg-white" data-by-professional>
-        <div class="flex flex-col gap-2 px-4 pt-4 pb-3 sm:px-[18px]">
-          <h2 id="por-profissional" class="font-display text-[21px] leading-tight font-bold text-ink">Por profissional</h2>
-          {
-            withFilters && (
-              <div class="flex flex-wrap gap-2">
-                <label class="sr-only" for="prof-busca">Buscar profissional</label>
-                <input id="prof-busca" type="search" placeholder="Buscar profissional" autocomplete="off" data-prof-search class="h-11 min-w-0 flex-[1_1_200px] rounded-lg border border-line bg-white px-3 text-base" />
-                {
-                  specialties.length > 0 && (
-                    <>
-                      <label class="sr-only" for="prof-especialidade">Especialidade</label>
-                      <select id="prof-especialidade" data-prof-specialty class="h-11 flex-[1_1_180px] rounded-lg border border-line bg-white px-3 text-base">
-                        <option value="">Todas as especialidades</option>
-                        {specialties.map((name) => <option value={name}>{name}</option>)}
-                      </select>
-                    </>
-                  )
-                }
-              </div>
-            )
-          }
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full border-t border-[#e7eeeb] text-left text-[15px]">
-            <thead class="text-[13px] text-ink-soft sm:text-sm">
-              <tr>
-                <th scope="col" class="px-3 py-2 font-semibold sm:px-[18px]">Profissional</th>
-                <th scope="col" class="px-0.5 py-2 text-right font-semibold sm:px-2">Hoje</th>
-                <th scope="col" class="px-0.5 py-2 text-right font-semibold sm:px-2">A confirmar</th>
-                <th scope="col" class="px-0.5 py-2 text-right font-semibold sm:px-2">Cancelados</th>
-                {has("portal") && <th scope="col" class="px-3 py-2 text-right font-semibold sm:px-[18px]">Conferir</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {
-                professionalDay.map((row) => (
-                  <tr class="border-t border-[#e7eeeb]" data-prof-row data-name={row.name.toLowerCase()} data-specialty={row.specialty ?? ""}>
-                    <th scope="row" class="px-3 py-2.5 font-semibold text-ink sm:px-[18px]">
-                      {row.name}
-                      {row.specialty && <span class="block text-sm font-normal text-ink-soft">{row.specialty}</span>}
-                    </th>
-                    <td class="px-0.5 py-2.5 text-right tabular-nums sm:px-2">{row.today}</td>
-                    <td class="px-0.5 py-2.5 text-right tabular-nums sm:px-2">{row.toConfirm}</td>
-                    <td class="px-0.5 py-2.5 text-right tabular-nums sm:px-2">{row.canceled}</td>
-                    {has("portal") && <td class="px-3 py-2.5 text-right tabular-nums sm:px-[18px]">{row.toCheck}</td>}
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
-        </div>
-        <p hidden data-prof-empty class="border-t border-[#e7eeeb] px-4 py-3.5 text-[15px] text-ink-soft sm:px-[18px]">Nenhum profissional encontrado.</p>
-      </section>
-    )
-  }
   </div>
 
   <aside aria-labelledby="proximas" class="flex flex-col gap-2">
@@ -654,31 +592,6 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     };
     hidePast();
     setInterval(hidePast, 15_000);
-  </script>
-
-  <script>
-    // Tabela "Por profissional" (F5b): busca por nome e filtro de especialidade, só no navegador.
-    const box = document.querySelector<HTMLElement>("[data-by-professional]");
-    if (box) {
-      const search = box.querySelector<HTMLInputElement>("[data-prof-search]");
-      const specialty = box.querySelector<HTMLSelectElement>("[data-prof-specialty]");
-      const rows = [...box.querySelectorAll<HTMLElement>("[data-prof-row]")];
-      const empty = box.querySelector<HTMLElement>("[data-prof-empty]");
-      const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const apply = () => {
-        const term = normalize(search?.value.trim() ?? "");
-        const area = specialty?.value ?? "";
-        let shown = 0;
-        for (const row of rows) {
-          const ok = (!term || normalize(row.dataset.name ?? "").includes(term)) && (!area || row.dataset.specialty === area);
-          row.hidden = !ok;
-          if (ok) shown += 1;
-        }
-        if (empty) empty.hidden = shown > 0;
-      };
-      search?.addEventListener("input", apply);
-      specialty?.addEventListener("change", apply);
-    }
   </script>
 
   {/* Um só diálogo de confirmação para todas as ações da tela. */}
