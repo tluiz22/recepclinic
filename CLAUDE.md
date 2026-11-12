@@ -45,6 +45,10 @@ registre o detalhe no plano da frente ou no `historico.md`, nunca no README.
   no mesmo commit, avisar o cliente no fim da etapa e esperar a autorização; com ela, `npm run ajuda:capturas --
   --pendentes` (com o `npm run dev` no ar), conferir as imagens e atualizar o texto do artigo se citar o que mudou. Tela
   nova com artigo: acrescentar a linha em `scripts/capturas-ajuda.mjs` e em `imagens.ts`.
+- **Economia de tokens** (cliente, 10/nov/2026): Playwright por etapa só da tela que mudou (suíte inteira antes de
+  juntar na `main` e do staging); conferir tela pelo snapshot em texto, captura de imagem a 390/1280 só no fim da
+  etapa; sem subagentes nem workflows sem pedido do cliente; ler arquivos e saídas por trecho; no fim de etapa
+  confirmada, lembrar `/clear` antes da próxima frente e `/model sonnet` para tarefa mecânica.
 - As decisões de arquitetura estão em `docs/arquitetura.md` (D1–D11) e o plano em `docs/plano.md`.
   Mudança de decisão só com o cliente, e registrada lá.
 

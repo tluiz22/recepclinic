@@ -1,34 +1,42 @@
 ---
-// Agenda › Dia (F4.5): atendimentos, turmas e bloqueios do dia nas agendas
-// escolhidas (todas por padrão, com o nome da agenda em cada um; cliente,
-// 05/out/2026), com as ações de cada atendimento no cartão.
-// Opção B do redesign da Recepção (cliente, 02/nov/2026, muda a RX-D6): cada agenda é um cartão com linhas curtas
-// (hora, paciente, tipo, situação) e os horários livres; tocar numa linha abre, no painel ao lado, o atendimento
-// com as mesmas ações do cartão (AgendaPanel). A escolha fica no endereço (`sel`), então a atualização automática e
-// o "Voltar" das ações a mantêm; sem JavaScript, a linha é um link para o mesmo endereço.
+// Agenda › Dia (F4.5; F5a, R3, cliente, 08/nov/2026): a grade do dia por horário, uma coluna por agenda, com todas as
+// agendas a que a pessoa tem acesso (sem lembrar filtro). Até 7: colunas na largura toda e o filtro "Agenda". A partir
+// de 8: Especialidade ou Profissional (um de cada vez, com busca), colunas agrupadas por especialidade e a barra de
+// rolagem no topo. Filtro Situação (sem Origem). Na grade: atendimentos pela cor da situação, reserva do portal
+// tracejada, bloqueio hachurado, turma e os horários livres (levam à Marcar). Tocar num atendimento abre o painel ao lado
+// (R2: a agenda dele vai para a primeira coluna); a escolha fica no endereço (`sel`), para a atualização automática e o
+// "Voltar" das ações a manterem. No celular, uma agenda por vez (M4).
 import { withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../components/admin/agenda/AgendaHeader.astro";
+import AgendaGrid, { type GridItem } from "../../components/admin/agenda/AgendaGrid.astro";
+import AgendaPhoneList from "../../components/admin/agenda/AgendaPhoneList.astro";
+import ColumnPicker from "../../components/admin/agenda/ColumnPicker.astro";
 import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro";
 import AgendaPanel from "../../components/admin/agenda/AgendaPanel.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
-import { appointmentSituation } from "../../components/admin/agenda/situationStyle";
+import { SITUATIONS, appointmentSituation, type Situation } from "../../components/admin/agenda/situationStyle";
 import { serviceLook, serviceTints } from "../../components/admin/agenda/categoryStyle";
 import Icon from "../../components/admin/Icon.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import FixNumberDialog from "../../components/admin/FixNumberDialog.astro";
 import SendTracker from "../../components/admin/agenda/SendTracker.astro";
 import Button from "../../components/admin/ui/Button.astro";
-import StatusPill from "../../components/admin/ui/StatusPill.astro";
 import Tag from "../../components/admin/ui/Tag.astro";
-import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../lib/clinicTime";
+import { CONTROL } from "../../components/admin/ui/styles";
+import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, localTimeOf, todayIn, weekdayOf } from "../../lib/clinicTime";
 import { canAccessArea, isUuid } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
+import { loadActorLabels } from "../../lib/data/agenda/trail";
+import { listOpenBirthdateChecks } from "../../lib/data/portalBirthdate";
+import { bookingOriginText } from "../../lib/bookingOrigin";
 import { listFreeGaps, loadClinicHolidays } from "../../lib/data/agenda/slots";
+import { listPortalHolds, loadSpecialtiesByProfessional, loadWindowSpans } from "../../lib/data/agenda/grid";
 import { listNationalHolidays } from "../../lib/holidays";
 import Notice from "../../components/admin/ui/Notice.astro";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
+import { assignLanes, buildColumns, filterColumns, gridLines, gridRange, MANY_AGENDAS, specialtyOptions } from "../../lib/agendaGrid";
 import { listReturnReady } from "../../lib/data/agenda/returnReady";
 import { listServiceRefs } from "../../lib/data/config/services";
 import { listPaymentStates } from "../../lib/data/payments";
@@ -45,25 +53,57 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const now = new Date();
 const today = todayIn(clinic.timezone, now);
-const dateParam = Astro.url.searchParams.get("date");
+const params = Astro.url.searchParams;
+const dateParam = params.get("date");
 const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
 
-const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
-const range = { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: scope.agendaIds };
-// Horário livre (RX8): lacunas de cada agenda; se a leitura falhar, a Agenda abre sem as linhas "Livre".
-const [appointments, blocks, serviceRefs, gaps] = await Promise.all([
-  listAgendaAppointments(db, clinic.clinicId, range),
-  listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames: scope.agendaNames }),
-  listServiceRefs(db, clinic.clinicId),
-  listFreeGaps(db, clinic.clinicId, { date, agendaIds: scope.agendaIds, timeZone: clinic.timezone }, now).catch((error: unknown) => {
-    logError("agenda: horários livres não carregaram", error, { clinica: clinic.clinicId });
-    return [];
+// Colunas: todas as agendas que a pessoa vê, agrupadas por especialidade; o filtro estreita (um de cada vez).
+const [scope, specialtiesOf] = await Promise.all([
+  loadAgendaScope(db, clinic.clinicId, Astro.url),
+  loadSpecialtiesByProfessional(db, clinic.clinicId).catch((error: unknown) => {
+    logError("agenda: especialidades não carregaram", error, { clinica: clinic.clinicId });
+    return new Map<string, string[]>();
   }),
 ]);
-// Cor de cada serviço na faixa do cartão (cliente, 19/out/2026).
+const many = scope.selectable.length >= MANY_AGENDAS;
+const allColumns = buildColumns(scope.agendas, specialtiesOf);
+const filtered = filterColumns(allColumns, { specialty: many ? params.get("esp") : null, agendaId: scope.selectedAgendaId });
+const specialty = filtered.filter.specialty;
+const chosenAgendaId = filtered.filter.agendaId;
+const visibleIds = filtered.columns.map((c) => c.id);
+const agendaNames = scope.agendaNames;
+
+const SITUATION_FILTERS: Situation[] = ["pending", "confirmed", "attended", "no_show", "canceled"];
+const situationParam = params.get("situacao");
+const situation = SITUATION_FILTERS.find((s) => s === situationParam) ?? null;
+
+const range = { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: visibleIds };
+// Horário livre (RX8) e reservas do portal: se a leitura falhar, a Agenda abre sem eles.
+const [allAppointments, blocks, serviceRefs, gaps, holds, windowSpans] = await Promise.all([
+  listAgendaAppointments(db, clinic.clinicId, range),
+  listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames }),
+  listServiceRefs(db, clinic.clinicId),
+  situation
+    ? Promise.resolve([])
+    : listFreeGaps(db, clinic.clinicId, { date, agendaIds: visibleIds, timeZone: clinic.timezone }, now).catch((error: unknown) => {
+        logError("agenda: horários livres não carregaram", error, { clinica: clinic.clinicId });
+        return [];
+      }),
+  situation
+    ? Promise.resolve([])
+    : listPortalHolds(db, clinic.clinicId, range, now).catch((error: unknown) => {
+        logError("agenda: reservas do portal não carregaram", error, { clinica: clinic.clinicId });
+        return [];
+      }),
+  loadWindowSpans(db, clinic.clinicId, visibleIds, weekdayOf(date)).catch(() => []),
+]);
+const appointments = situation ? allAppointments.filter((a) => appointmentSituation(a) === situation) : allAppointments;
 const tints = serviceTints(serviceRefs);
-const items = buildDayItems(appointments, blocks, gaps.map((gap) => ({ ...gap, agendaName: scope.agendaNames.get(gap.agendaId) ?? "" })));
-const hasContent = items.some((item) => item.kind !== "free");
+// Horário em reserva: a reserva aparece no lugar do "Livre".
+// Na agenda de Exames a reserva só segura o mesmo exame (20270108140000): lá o "Livre" fica (os outros exames marcam).
+const teamAgendas = new Set(scope.agendas.filter((a) => a.kind === "resource").map((a) => a.id));
+const openGaps = gaps.filter((gap) => teamAgendas.has(gap.agendaId) || !holds.some((h) => h.agendaId === gap.agendaId && h.start < gap.end && h.end > gap.start));
+const items = buildDayItems(appointments, situation ? [] : blocks, openGaps.map((gap) => ({ ...gap, agendaName: agendaNames.get(gap.agendaId) ?? "" })));
 
 const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
 const examsFuture = appointments.filter((a) => a.category === "exam" && activeFuture.includes(a.id)).map((a) => a.id);
@@ -71,7 +111,7 @@ const waitlistOn = clinic.features.includes("waitlist");
 const consultationsFuture = appointments.filter((a) => a.category === "consultation" && activeFuture.includes(a.id)).map((a) => a.id);
 // Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
 const financeOn = canAccessArea(clinic, "finance");
-const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins, paymentStates, returnReady] = await Promise.all([
+const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins, paymentStates, returnReady, actors, birthdateChecks] = await Promise.all([
   listReminderActions(db, clinic.clinicId, activeFuture, now),
   clinic.features.includes("exams") ? listPreparationResendable(db, clinic.clinicId, examsFuture) : Promise.resolve(new Set<string>()),
   listGuidanceResendable(db, clinic.clinicId, consultationsFuture),
@@ -80,32 +120,136 @@ const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, n
   listOrigins(db, clinic.clinicId, appointments),
   financeOn ? listPaymentStates(db, clinic.clinicId, appointments.map((a) => a.id)) : Promise.resolve(null),
   listReturnReady(db, clinic.clinicId, appointments, clinic.timezone, now),
+  // Origem no atendimento aberto (R2; F2c): quem da equipe marcou e as datas de nascimento a conferir (portal).
+  loadActorLabels(db, clinic.clinicId, appointments.filter((a) => a.bookingChannel === "admin").map((a) => a.createdBy)),
+  listOpenBirthdateChecks(db, clinic.clinicId, appointments.map((a) => a.patientId)),
 ]);
+const actorName = (id: string | null) => {
+  const label = id ? actors.get(id) : undefined;
+  return label ? (label.isSupport ? "Suporte" : label.name.split(" ")[0]) : null;
+};
 
 const vocabulary = vocabularyFor(clinic.clinicProfile);
-// "Todas as agendas" com mais de uma: uma coluna por agenda, lado a lado
-// (cliente, 05/out/2026). Agenda desativada só aparece se tiver algo no dia.
-const byColumn = !scope.selectedAgendaId && scope.agendas.length > 1;
-const columns = byColumn
-  ? scope.agendas
-      .map((agenda) => ({ ...agenda, items: items.filter((item) => itemAgendaId(item) === agenda.id) }))
-      .filter((column) => column.isActive || column.items.length > 0)
-  : [{ id: scope.selectedAgendaId ?? "", name: "", isActive: true, items }];
-const returnTo = `/admin/agenda?date=${date}`;
-// Celular com "Todas as agendas": lista única por horário, com o nome da agenda
-// em cada cartão (cliente, 15/out/2026). As colunas viram uma lista só e cada
-// item leva a posição dele no dia (a lista `items` já vem por horário).
-const orderOf = (item: (typeof items)[number]) => (byColumn ? items.indexOf(item) : undefined);
+
+// Endereços: a mesma Agenda com o filtro trocado (o resto se mantém).
+type Link = { date?: string; agenda?: string | null; esp?: string | null; situacao?: string | null; ver?: string | null; sel?: string | null };
+const current: Required<Link> = { date, agenda: chosenAgendaId, esp: specialty, situacao: situation, ver: null, sel: null };
+const link = (change: Link = {}) => {
+  const next = { ...current, ...change };
+  const query = new URLSearchParams();
+  query.set("date", next.date);
+  for (const key of ["agenda", "esp", "situacao", "ver", "sel"] as const) if (next[key]) query.set(key, next[key]!);
+  return `/admin/agenda?${query}`;
+};
+const verParam = params.get("ver");
+const base = link({ ver: verParam && isUuid(verParam) ? verParam : null });
+const returnTo = base;
+const sel = params.get("sel") ?? "";
+// Depois de marcar, remarcar ou alterar (cliente, 05/nov/2026, opção C): o aviso do topo acompanha a confirmação.
+const envio = params.get("envio");
+const trackedAppointment = isUuid(envio) ? envio : null;
+const itemKey = (item: (typeof items)[number]) =>
+  item.kind === "appointment" ? item.appointment.id : item.kind === "group" ? `turma-${item.agendaId}-${item.start.getTime()}` : item.kind === "block" ? `bloqueio-${item.block.id}` : "";
+const selHref = (key: string) => `${base}&sel=${encodeURIComponent(key)}`;
+const selected = items.find((item) => item.kind !== "free" && itemKey(item) === sel);
+const selectedColumnId = selected ? itemAgendaId(selected) : null;
+
 // Bloqueio de vários dias: data junto do horário quando não é o dia aberto.
 const blockTime = (d: Date) => formatInstant(d, clinic.timezone, localDateOf(d, clinic.timezone) === date ? "HH:mm" : "dd/MM HH:mm");
 const time = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
+// Minutos do dia aberto (antes do dia = 0; depois = 24h).
+const minuteOf = (d: Date) => {
+  const day = localDateOf(d, clinic.timezone);
+  if (day < date) return 0;
+  if (day > date) return 24 * 60;
+  const [h, m] = localTimeOf(d, clinic.timezone).split(":").map(Number);
+  return h * 60 + m;
+};
+
+// Faixa de horas: o que aparece no dia (bloqueio de dia inteiro não estica a grade).
+const spanOf = (item: { start: Date; end: Date }) => ({ start: minuteOf(item.start), end: Math.max(minuteOf(item.end), minuteOf(item.start) + 15) });
+const mainSpans = [...items.filter((i) => i.kind !== "block").map(spanOf), ...holds.map(spanOf), ...windowSpans];
+const blockSpans = items.filter((i) => i.kind === "block").map(spanOf).map((s) => ({ start: Math.max(s.start, 7 * 60), end: Math.min(s.end, 20 * 60) }));
+const dayRange = gridRange(mainSpans.length ? mainSpans : blockSpans);
+const clip = (s: { start: number; end: number }) => ({ start: Math.max(s.start, dayRange.start), end: Math.min(s.end, dayRange.end) });
+
+const dayWord = date === today ? "hoje" : "no dia";
+const columns = filtered.columns
+  .map((column) => {
+    const mine = items.filter((item) => itemAgendaId(item) === column.id);
+    const mineHolds = holds.filter((h) => h.agendaId === column.id);
+    const count = mine.reduce((n, item) => n + (item.kind === "appointment" ? (item.appointment.status === "canceled" && situation !== "canceled" ? 0 : 1) : item.kind === "group" ? item.appointments.filter((a) => a.status !== "canceled" || situation === "canceled").length : 0), 0);
+    const raw: ((GridItem extends infer T ? (T extends GridItem ? Omit<T, "top" | "height" | "lane" | "lanes"> : never) : never) & { span: { start: number; end: number } })[] = [];
+    for (const item of mine) {
+      const span = clip(spanOf(item));
+      if (span.end <= span.start) continue;
+      if (item.kind === "free") {
+        raw.push({
+          kind: "free",
+          key: `livre-${column.id}-${item.time}`,
+          span,
+          time: item.time,
+          endTime: item.endTime,
+          detail: item.group ? `${item.group.serviceName}, ${item.group.spots} ${item.group.spots === 1 ? "vaga" : "vagas"}` : "",
+          href: withReturn(`/admin/agenda/marcar?date=${date}&agenda_id=${item.agendaId}&hora=${item.time}${item.group ? `&service_id=${item.group.serviceId}` : ""}`, returnTo),
+        });
+      } else if (item.kind === "appointment") {
+        const a = item.appointment;
+        const situationOf = appointmentSituation(a);
+        raw.push({
+          kind: "appointment",
+          key: a.id,
+          span,
+          time: time(a.scheduledAt),
+          title: a.patientName,
+          detail: `${serviceLook(a.category).label}${a.isHomeVisit ? " · em casa" : ""}`,
+          situation: situationOf,
+          label: SITUATIONS[situationOf].label,
+          href: selHref(a.id),
+        });
+      } else if (item.kind === "group") {
+        const live = item.appointments.filter((a) => a.status !== "canceled").length;
+        raw.push({ kind: "group", key: itemKey(item), span, time: time(item.start), title: `Turma · ${live} ${vocabulary.patients}`, detail: item.serviceName, href: selHref(itemKey(item)) });
+      } else {
+        raw.push({ kind: "block", key: itemKey(item), span, time: blockTime(item.start), title: `Bloqueado até ${blockTime(item.end)}`, detail: item.block.reason, href: selHref(itemKey(item)) });
+      }
+    }
+    for (const hold of mineHolds) {
+      const span = clip(spanOf(hold));
+      if (span.end > span.start) raw.push({ kind: "hold", key: `reserva-${column.id}-${hold.start.getTime()}`, span, time: time(hold.start), until: time(hold.expiresAt) });
+    }
+    const lanes = assignLanes(raw.map((r) => r.span));
+    const placed = raw.map(({ span, ...rest }, i) => ({ ...rest, top: span.start - dayRange.start, height: span.end - span.start, ...lanes[i] }) as GridItem);
+    return { ...column, countText: count === 0 ? `nenhum ${dayWord}` : `${count} ${dayWord}`, items: placed, hasContent: mine.some((i) => i.kind !== "free") };
+  })
+  // Agenda desativada só aparece se tiver algo no dia.
+  .filter((column) => column.isActive || column.hasContent);
+const hasContent = columns.some((c) => c.hasContent);
+const nowAt = date === today && minuteOf(now) >= dayRange.start && minuteOf(now) <= dayRange.end ? minuteOf(now) - dayRange.start : null;
+
+// Celular: uma agenda por vez (`ver`), senão a do atendimento aberto, senão a primeira.
+const phoneIndex = Math.max(0, columns.findIndex((c) => c.id === (verParam ?? selectedColumnId)));
+const phoneColumn = columns[phoneIndex] ?? null;
+const verLink = (id: string) => link({ ver: id });
+const groupsOf = (list: typeof allColumns, href: (id: string) => string, currentId: string | null) => {
+  const groups: { name: string | null; options: { label: string; terms?: string; href: string; current: boolean }[] }[] = [];
+  for (const column of list) {
+    let group = groups.find((g) => g.name === column.group);
+    if (!group) groups.push((group = { name: column.group, options: [] }));
+    // A busca também acha pelas outras especialidades do profissional.
+    group.options.push({ label: column.name, terms: column.specialties.join(" "), href: href(column.id), current: column.id === currentId });
+  }
+  return groups;
+};
+const selectableColumns = allColumns.filter((c) => c.isActive);
+
 const cardProps = (a: (typeof appointments)[number]) => ({
   appointment: a,
   tint: tints.get(a.serviceId),
   timeZone: clinic.timezone,
   now,
   showAgenda: false,
-  agendaOnPhone: byColumn,
+  agendaOnPhone: false,
   vocabulary,
   returnTo,
   reminderAction: reminderActions.get(a.id),
@@ -118,16 +262,6 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   payment: paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined,
   returnReady: returnReady.get(a.id),
 });
-// Painel (opção B): o item escolhido; as ações voltam com ele aberto.
-const base = `/admin/agenda?date=${date}`;
-const sel = Astro.url.searchParams.get("sel") ?? "";
-// Depois de marcar, remarcar ou alterar (cliente, 05/nov/2026, opção C): o aviso do topo acompanha a confirmação.
-const envio = Astro.url.searchParams.get("envio");
-const trackedAppointment = isUuid(envio) ? envio : null;
-const itemKey = (item: (typeof items)[number]) =>
-  item.kind === "appointment" ? item.appointment.id : item.kind === "group" ? `turma-${item.agendaId}-${item.start.getTime()}` : item.kind === "block" ? `bloqueio-${item.block.id}` : "";
-const selHref = (key: string) => `${base}&sel=${encodeURIComponent(key)}`;
-const selected = items.find((item) => item.kind !== "free" && itemKey(item) === sel);
 // Feriado: a Agenda não mostra horários livres (a mesma regra do bot e do Marcar); um aviso diz por quê.
 const holidayName =
   listNationalHolidays(Number(date.slice(0, 4))).find((h) => h.date === date)?.name ??
@@ -136,33 +270,129 @@ const panelItems = items.filter((item) => item.kind !== "free");
 const tomorrow = addDays(today, 1);
 const dayText = date === today ? "Hoje" : date === tomorrow ? "Amanhã" : capitalize(formatCalendarDate(date, "EEE dd/MM"));
 const title = `${formatCalendarDate(date, "EEEE").replace("-feira", "")}, ${formatCalendarDate(date, date.slice(0, 4) === today.slice(0, 4) ? "d 'de' MMMM" : "d 'de' MMMM 'de' yyyy")}`;
-const panelProps = (a: (typeof appointments)[number]) => ({ ...cardProps(a), returnTo: selHref(a.id), dayText, closeHref: base });
-const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px-3.5 py-2 no-underline first:border-t-0 sm:first:border-t";
+const panelProps = (a: (typeof appointments)[number]) => ({
+  ...cardProps(a),
+  returnTo: selHref(a.id),
+  dayText,
+  closeHref: base,
+  bookedBy: bookingOriginText(a, clinic.timezone, actorName(a.createdBy)),
+  birthdateToCheck: birthdateChecks.has(a.patientId),
+});
+const freeHref = withReturn(`/admin/agenda/livres?date=${date}${specialty ? `&esp=${encodeURIComponent(specialty)}` : ""}`, base);
+const LEGEND = [
+  { label: "Não confirmado", swatch: "border-pend-200 bg-pend-50" },
+  { label: "Confirmado", swatch: "border-conf-200 bg-conf-50" },
+  { label: "Compareceu", swatch: "border-att-200 bg-att-50" },
+  { label: "Faltou", swatch: "border-ns-200 bg-ns-50" },
+  { label: "Cancelado", swatch: "border-can-200 bg-can-50" },
+];
 ---
 
-<AdminLayout title="Agenda" autoRefresh>
-  <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} subtitle={title}>
+<AdminLayout title="Agenda" autoRefresh edge>
+  <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={chosenAgendaId} subtitle={title}>
     <div slot="nav" class="flex items-center gap-1.5">
-      <Button href={`/admin/agenda?date=${addDays(date, -1)}`} aria-label="Dia anterior" class="w-9 px-0">
+      <Button href={link({ date: addDays(date, -1), ver: phoneColumn?.id ?? null })} aria-label="Dia anterior" class="w-9 px-0">
         <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
       </Button>
-      <Button href="/admin/agenda" aria-current={date === today ? "date" : undefined} class="px-3">Hoje</Button>
-      <Button href={`/admin/agenda?date=${addDays(date, 1)}`} aria-label="Próximo dia" class="w-9 px-0">
+      <Button href={link({ date: today, ver: phoneColumn?.id ?? null })} aria-current={date === today ? "date" : undefined} class="px-3">Hoje</Button>
+      <Button href={link({ date: addDays(date, 1), ver: phoneColumn?.id ?? null })} aria-label="Próximo dia" class="w-9 px-0">
         <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
       </Button>
     </div>
     {/* O dia é o título; tocar nele abre o calendário do aparelho para ir a outro dia. */}
     <form slot="title" method="GET" action="/admin/agenda" class="relative">
+      {chosenAgendaId && <input type="hidden" name="agenda" value={chosenAgendaId} />}
+      {specialty && <input type="hidden" name="esp" value={specialty} />}
+      {situation && <input type="hidden" name="situacao" value={situation} />}
+      {verParam && isUuid(verParam) && <input type="hidden" name="ver" value={verParam} />}
       <h1 class="font-display text-[18px] leading-tight font-bold whitespace-nowrap text-ink first-letter:uppercase xl:text-[19px]">{title}</h1>
       <label class="absolute inset-0 cursor-pointer rounded-md focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand" title="Escolher o dia">
         <span class="sr-only">Escolher o dia</span>
         <input type="date" name="date" value={date} data-autosubmit class="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
       </label>
     </form>
+    <Fragment slot="filters">
+      {
+        many ? (
+          <div class="contents max-sm:hidden">
+            <ColumnPicker
+              id="filtro-especialidade"
+              label="Especialidade"
+              allText="todas"
+              allHref={link({ esp: null, agenda: null })}
+              groups={[{ name: null, options: specialtyOptions(allColumns).map((name) => ({ label: name, href: link({ esp: name, agenda: null }), current: name === specialty })) }]}
+              currentText={specialty}
+              searchPlaceholder="Buscar especialidade"
+            />
+            <ColumnPicker
+              id="filtro-profissional"
+              label="Profissional"
+              allText="todos"
+              allHref={link({ agenda: null, esp: null })}
+              groups={groupsOf(selectableColumns, (id) => link({ agenda: id, esp: null }), chosenAgendaId)}
+              currentText={chosenAgendaId ? (agendaNames.get(chosenAgendaId) ?? null) : null}
+              searchPlaceholder="Nome ou especialidade"
+            />
+          </div>
+        ) : (
+          scope.selectable.length > 1 && (
+            <form method="GET" action="/admin/agenda" class="max-sm:hidden">
+              <input type="hidden" name="date" value={date} />
+              {situation && <input type="hidden" name="situacao" value={situation} />}
+              <label for="agenda_choice" class="sr-only">
+                Agenda
+              </label>
+              <select id="agenda_choice" name="agenda" class={`${CONTROL} w-56`} data-autosubmit>
+                <option value="" selected={!chosenAgendaId}>
+                  Todas as agendas
+                </option>
+                {scope.selectable.map((agenda) => (
+                  <option value={agenda.id} selected={agenda.id === chosenAgendaId}>
+                    {agenda.name}
+                  </option>
+                ))}
+              </select>
+              <noscript>
+                <button type="submit" class="ml-2 text-sm text-brand">
+                  Ver
+                </button>
+              </noscript>
+            </form>
+          )
+        )
+      }
+      <form method="GET" action="/admin/agenda">
+        <input type="hidden" name="date" value={date} />
+        {chosenAgendaId && <input type="hidden" name="agenda" value={chosenAgendaId} />}
+        {specialty && <input type="hidden" name="esp" value={specialty} />}
+        {phoneColumn && verParam && <input type="hidden" name="ver" value={phoneColumn.id} />}
+        <label for="situacao" class="sr-only">
+          Situação
+        </label>
+        <select id="situacao" name="situacao" class={`${CONTROL} w-48 ${situation ? "border-brand bg-conf-50" : ""}`} data-autosubmit>
+          <option value="" selected={!situation}>
+            Situação: todas
+          </option>
+          {SITUATION_FILTERS.map((s) => (
+            <option value={s} selected={s === situation}>
+              {SITUATIONS[s].label}
+            </option>
+          ))}
+        </select>
+        <noscript>
+          <button type="submit" class="ml-2 text-sm text-brand">
+            Ver
+          </button>
+        </noscript>
+      </form>
+      <Button href={freeHref} class="border-brand text-brand-ink sm:ml-auto max-sm:w-full max-sm:bg-conf-50">
+        <Icon name="magnifying-glass" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Próximos horários livres
+      </Button>
+    </Fragment>
   </AgendaHeader>
 
   <HowItWorks id="situacoes-dia" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-2">
-    <p class="text-[14.5px] text-ink-soft">Toque numa linha para ver as ações do atendimento.</p>
+    <p class="text-[14.5px] text-ink-soft">Toque num atendimento para ver as ações. Nos horários livres, toque para marcar.</p>
   </HowItWorks>
   <FlashMessage />
   {trackedAppointment && <SendTracker appointmentId={trackedAppointment} />}
@@ -175,96 +405,51 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
     )
   }
 
-  <div class="mt-4 flex flex-wrap items-start gap-[18px]">
-    <div
-      class={`min-w-0 flex-[999_1_460px] ${byColumn ? "grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3.5 max-sm:flex max-sm:flex-col max-sm:gap-0 max-sm:overflow-hidden max-sm:rounded-xl max-sm:border max-sm:border-line max-sm:bg-white" : "grid"}`}
-    >
-      {
-        columns.map((column) => (
-          <section
-            class={`min-w-0 overflow-hidden rounded-xl border border-line bg-white ${byColumn ? "max-sm:contents" : ""}`}
-            aria-label={column.name || scope.agendaNames.get(scope.selectedAgendaId ?? "") || "Agenda"}
-          >
-            <strong class={`block border-b border-line px-3.5 py-3 text-[15.5px] ${byColumn ? "max-sm:hidden" : ""}`}>
-              {column.name || scope.agendaNames.get(scope.selectedAgendaId ?? "") || "Agenda"}
-            </strong>
-            {column.items.map((item) => {
-              const order = orderOf(item);
-              const style = order !== undefined ? `order: ${order}` : undefined;
-              const agendaOnPhone = byColumn && <span class="text-[12.5px] text-ink-soft sm:hidden"> · {item.kind === "appointment" ? item.appointment.agendaName : item.agendaName}</span>;
-              if (item.kind === "free") {
-                return (
-                  <a
-                    href={withReturn(`/admin/agenda/marcar?date=${date}&agenda_id=${item.agendaId}&hora=${item.time}${item.group ? `&service_id=${item.group.serviceId}` : ""}`, returnTo)}
-                    aria-label={`Livre das ${item.time} às ${item.endTime}${item.group ? `, ${item.group.serviceName}, ${item.group.spots} vagas` : ""}${byColumn ? `, ${item.agendaName}` : ""}: marcar`}
-                    class={`${rowBase} bg-conf-50 text-[14px] font-semibold text-brand-ink hover:bg-conf-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand`}
-                    style={style}
-                  >
-                    <span class="min-w-11 tabular-nums">{item.time}</span>
-                    <span class="flex-1">Livre{item.group ? ` · ${item.group.serviceName}, ${item.group.spots} ${item.group.spots === 1 ? "vaga" : "vagas"}` : ""}{agendaOnPhone}</span>
-                    <span>+ Marcar</span>
-                  </a>
-                );
-              }
-              const key = itemKey(item);
-              const isSel = key === sel;
-              const rowClass = `${rowBase} text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand data-[selected]:bg-conf-50 data-[selected]:shadow-[inset_3px_0_0_var(--color-brand)]`;
-              if (item.kind === "appointment") {
-                const a = item.appointment;
-                const canceled = a.status === "canceled";
-                return (
-                  <a href={selHref(key)} data-select={key} data-selected={isSel || undefined} aria-current={isSel ? "true" : undefined} class={rowClass} style={style}>
-                    <strong class={`min-w-11 text-[14.5px] tabular-nums ${canceled ? "text-ink-soft line-through" : ""}`}>{time(a.scheduledAt)}</strong>
-                    <span class="flex min-w-0 flex-1 flex-col">
-                      <span class={`truncate text-[15px] font-bold ${canceled ? "text-ink-soft line-through" : ""}`}>{a.patientName}</span>
-                      <span class="text-[13px] text-ink-soft">{serviceLook(a.category).label}{agendaOnPhone}</span>
-                    </span>
-                    <StatusPill situation={appointmentSituation(a)} />
-                  </a>
-                );
-              }
-              if (item.kind === "group") {
-                const live = item.appointments.filter((a) => a.status !== "canceled").length;
-                return (
-                  <a href={selHref(key)} data-select={key} data-selected={isSel || undefined} aria-current={isSel ? "true" : undefined} class={rowClass} style={style}>
-                    <strong class="min-w-11 text-[14.5px] tabular-nums">{time(item.start)}</strong>
-                    <span class="flex min-w-0 flex-1 flex-col">
-                      <span class="truncate text-[15px] font-bold">Turma · {live} {vocabulary.patients}</span>
-                      <span class="truncate text-[13px] text-ink-soft">{item.serviceName}{agendaOnPhone}</span>
-                    </span>
-                    <span class="inline-flex items-center rounded-md bg-[#f6e6da] px-1.5 text-[12px] leading-normal font-semibold text-[#7a3d12]">Turma</span>
-                  </a>
-                );
-              }
-              return (
-                <a href={selHref(key)} data-select={key} data-selected={isSel || undefined} aria-current={isSel ? "true" : undefined} class={`${rowClass} bg-blk-50`} style={style}>
-                  <strong class="min-w-11 text-[14.5px] tabular-nums">{blockTime(item.start)}</strong>
-                  <span class="flex min-w-0 flex-1 flex-col">
-                    <span class="truncate text-[15px] font-bold text-blk-800">Bloqueio até {blockTime(item.end)}</span>
-                    <span class="truncate text-[13px] text-ink-soft">{item.block.reason}{agendaOnPhone}</span>
-                  </span>
-                  <StatusPill situation="block" />
-                </a>
-              );
-            })}
-            {column.items.length === 0 && <p class={`px-3.5 py-4 text-[15px] text-ink-soft ${byColumn ? "max-sm:hidden" : ""}`}>Nenhum atendimento.</p>}
-          </section>
-        ))
-      }
-      {byColumn && !hasContent && <p class="px-3.5 py-4 text-[15px] text-ink-soft sm:hidden">Nenhum atendimento neste dia.</p>}
-    </div>
+  <ul class="mt-3 flex flex-wrap gap-x-3.5 gap-y-1.5 text-[13.5px] text-ink-mid max-sm:hidden" aria-label="Legenda das cores">
+    {
+      LEGEND.map((l) => (
+        <li class="flex items-center gap-1.5">
+          <span class={`h-3.5 w-3.5 rounded border ${l.swatch}`} />
+          {l.label}
+        </li>
+      ))
+    }
+    <li class="flex items-center gap-1.5"><span class="h-3.5 w-3.5 rounded border-2 border-dashed border-att-500"></span>Em reserva: paciente escolhendo no portal</li>
+    <li class="flex items-center gap-1.5">
+      <span class="h-3.5 w-3.5 rounded border border-blk-200" style="background-image:repeating-linear-gradient(135deg,var(--color-blk-100) 0 3px,var(--color-blk-50) 3px 6px)"></span>Bloqueado
+    </li>
+  </ul>
+
+  <div class="mt-3 flex items-start gap-4 max-sm:mt-4">
+    {
+      columns.length === 0 ? (
+        <p class="flex-1 rounded-xl border border-line bg-white px-4 py-5 text-[15px] text-ink-soft">Nenhuma agenda para mostrar.</p>
+      ) : (
+        <>
+          <AgendaGrid columns={columns} lines={gridLines(dayRange)} minutes={dayRange.end - dayRange.start} nowAt={nowAt} many={many} selectedKey={sel} selectedColumnId={selectedColumnId} />
+          <AgendaPhoneList
+            column={phoneColumn}
+            position={phoneIndex + 1}
+            total={columns.length}
+            prevHref={phoneIndex > 0 ? verLink(columns[phoneIndex - 1].id) : null}
+            nextHref={phoneIndex < columns.length - 1 ? verLink(columns[phoneIndex + 1].id) : null}
+            pickerGroups={groupsOf(columns, verLink, phoneColumn?.id ?? null)}
+            allHref={base}
+            clearHref={chosenAgendaId || specialty ? link({ agenda: null, esp: null, ver: phoneColumn?.id ?? null }) : null}
+            selectedKey={sel}
+          />
+        </>
+      )
+    }
+    {situation && !hasContent && <p class="sr-only" aria-live="polite">Nenhum atendimento com essa situação neste dia.</p>}
 
     <aside
       id="painel"
       aria-label="Atendimento selecionado"
       data-agenda-panel
       data-has-selection={selected ? "" : undefined}
-      class="min-w-0 flex-[1_1_330px] self-stretch overflow-hidden rounded-xl border-2 border-brand bg-white lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:max-h-[80vh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:shadow-[0_-10px_30px_rgba(18,48,42,.2)] max-lg:[&:not([data-has-selection])]:hidden"
+      class="min-w-0 overflow-hidden rounded-xl border-2 border-brand bg-white [&:not([data-has-selection])]:hidden lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-[372px] lg:shrink-0 lg:overflow-y-auto max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:max-h-[80vh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:shadow-[0_-10px_30px_rgba(18,48,42,.2)]"
     >
-      <div data-panel="" hidden={!!selected} class="flex h-full min-h-40 flex-col items-center justify-center gap-1 px-6 py-10 text-center">
-        <p class="text-[15px] font-semibold text-ink">Escolha um atendimento</p>
-        <p class="text-sm text-ink-soft">Toque numa linha para ver o paciente, o telefone e as ações aqui.</p>
-      </div>
       {
         panelItems.map((item) => {
           const key = itemKey(item);
@@ -333,8 +518,9 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
   <FixNumberDialog />
 
   <script>
-    // Opção B: tocar numa linha abre o atendimento no painel, sem recarregar; o endereço guarda a escolha
-    // (`sel`), para a atualização automática e o "Voltar" manterem o painel aberto. Fechar limpa a escolha.
+    // Tocar num atendimento abre o painel, sem recarregar; o endereço guarda a escolha (`sel`), para a atualização
+    // automática e o "Voltar" manterem o painel aberto. Fechar limpa a escolha. A grade ouve "agenda:select" para pôr
+    // a agenda do atendimento na primeira coluna (R2).
     const panel = document.querySelector<HTMLElement>("[data-agenda-panel]");
     if (panel) {
       const show = (key: string) => {
@@ -350,6 +536,7 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
         if (key) url.searchParams.set("sel", key);
         else url.searchParams.delete("sel");
         history.replaceState(null, "", url);
+        document.dispatchEvent(new CustomEvent("agenda:select", { detail: key }));
         if (key) panel.querySelector<HTMLElement>(`[data-panel="${CSS.escape(key)}"] [data-panel-title]`)?.focus({ preventScroll: window.matchMedia("(min-width: 1024px)").matches });
       };
       document.addEventListener("click", (event) => {
@@ -362,13 +549,17 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
           show(row.dataset.select ?? "");
         } else if (close) {
           event.preventDefault();
-          const key = new URL(location.href).searchParams.get("sel") ?? "";
-          show("");
-          document.querySelector<HTMLElement>(`[data-select="${CSS.escape(key)}"]`)?.focus();
+          closePanel();
         }
       });
+      // Fechar (botão ou Esc) devolve o foco ao atendimento na grade ou na lista do celular.
+      const closePanel = () => {
+        const key = new URL(location.href).searchParams.get("sel") ?? "";
+        show("");
+        [...document.querySelectorAll<HTMLElement>(`[data-select="${CSS.escape(key)}"]`)].find((el) => el.offsetParent !== null)?.focus();
+      };
       document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && panel.hasAttribute("data-has-selection") && !document.querySelector("dialog[open], :popover-open")) show("");
+        if (event.key === "Escape" && panel.hasAttribute("data-has-selection") && !document.querySelector("dialog[open], :popover-open")) closePanel();
       });
     }
   </script>

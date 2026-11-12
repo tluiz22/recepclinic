@@ -1,0 +1,191 @@
+---
+// P3 Seleção do médico (F2a): em ordem alfabética (RD7), com foto ou iniciais, registro, especialidades, selos de
+// particular e convênios e o próximo horário livre. Até 5: cartão completo; 6 ou mais: lista compacta (cliente, 08/nov).
+// Sem horário no prazo: o cartão aparece, sem toque. Filtro "Atende meu convênio" (só convênios atendidos por algum
+// deles). ?esp=<id> (da P2), ?esp=todos (busca pelo nome, "Já sei o nome do médico") ou sem esp ("Ver médicos,
+// convênios e valores", da P1).
+import PortalAvatar from "../../../components/portal/PortalAvatar.astro";
+import PortalLayout from "../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../components/portal/PortalSummary.astro";
+import { openPortalPage } from "../../../lib/data/portal/page";
+import { nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
+import { doctorsCount, matchesName, nextSlotLabel, plainText, portalHref, portalSteps, priceLine, priceTags, readFlow, stepPosition } from "../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+if (page.kind === "not_found") Astro.response.status = 404;
+const portal = page.kind === "open" ? page.portal : null;
+const base = page.kind === "open" ? page.base : "";
+const flow = readFlow(Astro.url.searchParams);
+const nameQuery = flow.name ?? "";
+const specialties = portal ? portalSpecialties(portal.professionals) : [];
+const specialty = flow.specialty && flow.specialty !== "todos" ? (specialties.find((s) => s.id === flow.specialty) ?? null) : null;
+const byName = flow.specialty === "todos";
+const all = portal ? (specialty ? professionalsOfSpecialty(portal.professionals, specialty.id) : portal.professionals) : [];
+const plans = portal
+  ? [...new Map(all.flatMap((p) => p.plans).map((plan) => [plan.id, plan])).values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+  : [];
+const plan = plans.find((p) => p.id === flow.plan) ?? null;
+const list = plan ? all.filter((p) => p.plans.some((pl) => pl.id === plan.id)) : all;
+const next = page.kind === "open" ? await nextFreeSlots(page.db, page.portal.clinicId, list, page.portal.timeZone) : new Map<string, Date | null>();
+const compact = list.length >= 6;
+const cardFlow = { de: "medicos", esp: flow.specialty, conv: plan?.id ?? null, nome: byName ? flow.name : null, origem: flow.place };
+const shownCount = list.filter((p) => !nameQuery || matchesName(p.name, nameQuery)).length;
+const steps = portalSteps({ specialty: !!flow.specialty && specialties.length > 1, professional: true, modality: true });
+const back = flow.specialty && specialties.length > 1 ? `${base}/especialidade` : base;
+const label = specialty ? `Médicos de ${specialty.name}` : "Escolha o médico";
+const nowDate = new Date();
+---
+
+<PortalLayout
+  title={portal ? label : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={portal?.receptionHours}
+  width="wide"
+>
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {
+    portal && (
+      <div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-4">
+          <PortalStepBar back={back} step={stepPosition(steps, "professional")} />
+          {specialty && specialties.length > 1 && (
+            <p class="-mx-4 flex items-center justify-between gap-2.5 bg-clinic-tint px-4 py-1 text-base sm:mx-0 sm:rounded-xl lg:hidden">
+              <span>Especialidade: <b>{specialty.name}</b></span>
+              <a href={`${base}/especialidade`} class="inline-flex min-h-11 items-center px-1 font-bold text-clinic-ink underline">Trocar</a>
+            </p>
+          )}
+          <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">{label}</h1>
+          <form method="GET" class="flex flex-col gap-3 sm:flex-row sm:items-end" data-portal-filter>
+            {flow.specialty && <input type="hidden" name="esp" value={flow.specialty} />}
+            {flow.place && <input type="hidden" name="origem" value={flow.place} />}
+            {byName && (
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label for="nome" class="text-base font-semibold text-gray-700">Nome do médico</label>
+                <input id="nome" name="nome" type="search" value={nameQuery} autocomplete="off" placeholder="Ex.: Ana" class="min-h-[52px] rounded-xl border-[1.5px] border-gray-300 bg-white px-3.5 text-lg focus:border-clinic-ink focus:outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink" data-portal-name />
+              </div>
+            )}
+            {plans.length > 0 && (
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label for="conv" class="text-base font-semibold text-gray-700">Atende meu convênio</label>
+                <select id="conv" name="conv" class="min-h-[52px] rounded-xl border-[1.5px] border-gray-300 bg-white px-3 text-lg focus:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink" data-portal-plan>
+                  <option value="">Todos (particular e convênios)</option>
+                  {plans.map((p) => (
+                    <option value={p.id} selected={p.id === plan?.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button type="submit" class="min-h-[52px] rounded-xl border-[1.5px] border-clinic-ink bg-white px-5 text-[17px] font-bold text-clinic-ink" data-portal-filter-submit>Filtrar</button>
+          </form>
+          {list.length > 0 && (
+            <div class="flex justify-between text-[15px] text-gray-600" aria-live="polite">
+              <span data-portal-count>{doctorsCount(shownCount)}, em ordem alfabética</span>
+              {compact && <span aria-hidden="true">Próximo horário</span>}
+            </div>
+          )}
+          {list.length === 0 && (
+            <div class="flex flex-col gap-3 rounded-[14px] border border-gray-200 bg-white px-4 py-4" role="status">
+              <p>Nenhum médico{specialty ? ` de ${specialty.name}` : ""} atende {plan?.name}.</p>
+              <a href={portalHref(`${base}/medicos`, { esp: flow.specialty, origem: flow.place })} class="self-start font-semibold text-clinic-ink">Ver todos</a>
+            </div>
+          )}
+          <p class="text-base text-gray-600" data-portal-name-empty hidden={!(nameQuery && shownCount === 0 && list.length > 0)}>Nenhum médico com esse nome. Confira a escrita ou fale com a recepção.</p>
+          <ul class={compact ? "overflow-hidden rounded-2xl border-[1.5px] border-gray-200 bg-white" : "grid gap-3 lg:grid-cols-2"}>
+            {list.map((p) => {
+              const slot = next.get(p.id) ?? null;
+              const href = slot ? portalHref(`${base}/${p.slug}/atendimento`, cardFlow) : null;
+              const Tag = href ? "a" : "div";
+              const visible = !nameQuery || matchesName(p.name, nameQuery);
+              // A especialidade escolhida primeiro.
+              const own = [...p.specialties].sort((a, b) => Number(b.id === specialty?.id) - Number(a.id === specialty?.id)).map((s) => s.name);
+              return compact ? (
+                <li class="border-b border-gray-100 last:border-b-0" hidden={!visible} data-portal-name-item={plainText(p.name)}>
+                  <Tag href={href ?? undefined} class={`flex min-h-[76px] items-center gap-3 px-3.5 py-2.5 text-gray-900 no-underline ${href ? "hover:bg-gray-50 focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-clinic-ink" : ""}`}>
+                    <PortalAvatar name={p.name} photoUrl={p.photoUrl} size="sm" />
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-lg leading-tight font-bold">{p.name}</span>
+                      <span class="block text-[15px] leading-snug text-gray-600">{priceLine(p)}</span>
+                      {!slot && <span class="block text-[15px] font-semibold text-amber-800">Sem horário nos próximos {p.horizonDays} dias</span>}
+                    </span>
+                    {slot && <span class="w-[76px] shrink-0 text-right text-[15px] leading-tight font-bold text-clinic-ink">{nextSlotLabel(slot, portal.timeZone, nowDate, true)}</span>}
+                  </Tag>
+                </li>
+              ) : (
+                <li hidden={!visible} data-portal-name-item={plainText(p.name)}>
+                  <Tag href={href ?? undefined} class={`flex h-full flex-col gap-2.5 rounded-2xl border-[1.5px] border-gray-200 bg-white p-4 text-gray-900 no-underline ${href ? "hover:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink" : ""}`}>
+                    <span class="flex items-center gap-3">
+                      <PortalAvatar name={p.name} photoUrl={p.photoUrl} />
+                      <span class="min-w-0">
+                        <span class="block text-[19px] leading-tight font-bold">{p.name}</span>
+                        <span class="block text-[15px] text-gray-600">{[p.registry, own.join(", ")].filter(Boolean).join(" · ")}</span>
+                      </span>
+                    </span>
+                    <span class="flex flex-wrap gap-1.5">
+                      {priceTags(p).map((tag) => (
+                        <span class={`rounded-full border px-2.5 py-0.5 text-[15px] ${tag.strong ? "border-clinic-ink font-semibold text-clinic-ink" : "border-gray-300 text-gray-700"}`}>{tag.label}</span>
+                      ))}
+                    </span>
+                    {slot ? (
+                      <span class="flex items-center gap-1.5 text-base font-semibold text-clinic-ink">
+                        <svg aria-hidden="true" class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                        Próximo horário: {nextSlotLabel(slot, portal.timeZone, nowDate).toLowerCase()}
+                      </span>
+                    ) : (
+                      <span class="text-base font-semibold text-amber-800">Sem horário nos próximos {p.horizonDays} dias</span>
+                    )}
+                  </Tag>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <PortalSummary
+          rows={[
+            { label: "Especialidade", value: specialty?.name ?? null, change: specialty && specialties.length > 1 ? `${base}/especialidade` : null },
+            { label: "Médico", value: null },
+            { label: "Atendimento", value: plan?.name ?? null },
+            { label: "Dia e horário", value: null },
+          ]}
+        />
+      </div>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // Filtro do convênio ao escolher (sem JavaScript, o botão "Filtrar"); busca pelo nome ao digitar.
+  const form = document.querySelector<HTMLFormElement>("[data-portal-filter]");
+  const plan = form?.querySelector<HTMLSelectElement>("[data-portal-plan]");
+  const name = form?.querySelector<HTMLInputElement>("[data-portal-name]");
+  const submit = form?.querySelector<HTMLButtonElement>("[data-portal-filter-submit]");
+  if (submit && !name) submit.hidden = true;
+  plan?.addEventListener("change", () => form?.requestSubmit());
+  const plain = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+  const empty = document.querySelector<HTMLElement>("[data-portal-name-empty]");
+  name?.addEventListener("input", () => {
+    const words = plain(name.value).split(/\s+/).filter(Boolean);
+    let shown = 0;
+    document.querySelectorAll<HTMLElement>("[data-portal-name-item]").forEach((item) => {
+      const target = item.dataset.portalNameItem ?? "";
+      item.hidden = !words.every((w) => target.includes(w));
+      if (!item.hidden) shown++;
+    });
+    if (empty) empty.hidden = shown > 0;
+    const count = document.querySelector<HTMLElement>("[data-portal-count]");
+    if (count) count.textContent = `${shown} ${shown === 1 ? "médico" : "médicos"}, em ordem alfabética`;
+    // O nome fica no endereço e nos cartões: o Voltar das telas seguintes volta com a busca.
+    const value = name.value.trim();
+    const set = (url: URL) => (value ? url.searchParams.set("nome", value) : url.searchParams.delete("nome"));
+    const page = new URL(location.href);
+    set(page);
+    history.replaceState(null, "", page);
+    document.querySelectorAll<HTMLAnchorElement>("[data-portal-name-item] a").forEach((a) => {
+      const url = new URL(a.href);
+      set(url);
+      a.href = url.pathname + url.search;
+    });
+  });
+</script>

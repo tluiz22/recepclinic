@@ -21,6 +21,11 @@ export type DefaultTemplate = {
   quickReplies?: string[];
   /** Documento (PDF) no topo da mensagem (F11.5): a Meta pede um PDF de exemplo na criação. */
   documentHeader?: boolean;
+  /**
+   * Template de autenticação (código do portal, F2b): categoria AUTHENTICATION, texto fixo da Meta com o aviso de
+   * segurança, validade no rodapé e o botão "Copiar código". `body` é só como o paciente vê.
+   */
+  authentication?: { codeExpirationMinutes: number };
 };
 
 export const TEMPLATE_LANGUAGE = "pt_BR";
@@ -149,7 +154,35 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: "Olá! Aqui é {{1}}.\nVi que a nossa conversa de {{2}} ficou pendente.\nQuer continuar de onde paramos?",
     examples: ["da Clínica Sorriso", "04/11"],
   },
+  {
+    // VR4 (D14; textos do cliente, 11/nov/2026): para quem marcou, quando outro responsável remarca ou cancela.
+    // {{3}} quem mexeu ("Ana (mãe)"); {{4}} o paciente; {{5}} serviço com o profissional; {{6}} data e hora.
+    key: "rescheduled_by_other",
+    name: "rc_remarcada_por_outro_v1",
+    body: `${GREETING}\n*Consulta remarcada*\n{{3}} remarcou o atendimento de {{4}} ({{5}}) para *{{6}}*.\n\nDúvidas? Responda aqui.`,
+    examples: ["Carlos", "da Clínica Sorriso", "Ana (mãe)", "João Pedro", "Consulta com Dra. Helena Rocha", "qui 20/11 às 10:00"],
+  },
+  {
+    key: "canceled_by_other",
+    name: "rc_cancelada_por_outro_v1",
+    body: `${GREETING}\n*Consulta cancelada*\n{{3}} cancelou o atendimento de {{4}} ({{5}}) de {{6}}.\n\nSe quiser marcar outro horário, é só responder esta mensagem.`,
+    examples: ["Carlos", "da Clínica Sorriso", "Ana (mãe)", "João Pedro", "Consulta com Dra. Helena Rocha", "ter 18/11 às 09:30"],
+  },
 ];
+
+/**
+ * Código do portal de agendamento (recepção digital, F2b; RD2): entrada direta, o paciente comprova o celular.
+ * Template de autenticação: a Meta fixa o texto (código, aviso de segurança e validade) e o botão "Copiar código".
+ * Não é das clínicas (cliente, 09/nov/2026, seção 14 do plano): sai do número do RecepClinic, na conta dele (empresa
+ * verificada), já aprovado; "Criar na Meta" não o pede às clínicas.
+ */
+export const PORTAL_CODE_TEMPLATE: DefaultTemplate = {
+  key: "portal_code",
+  name: "rc_codigo_portal_v1",
+  body: "*{{1}}* é seu código de verificação. Para sua segurança, não o compartilhe.\nEste código expira em 10 minutos.",
+  examples: ["123456"],
+  authentication: { codeExpirationMinutes: 10 },
+};
 
 /** Texto da v2 do preparo (com o link), para quem ainda só tem ela aprovada (C7.4). */
 export const LEGACY_PREPARATION_BODY = `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`;
@@ -168,7 +201,9 @@ export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate
       (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
       (t.key !== "waitlist_offer" || has("waitlist")) &&
       (t.key !== "nfse_document" || has("finance")) &&
-      (t.key !== "conversation_resume" || has("central_attendance")),
+      (t.key !== "conversation_resume" || has("central_attendance")) &&
+      // VR4: por enquanto só o portal remarca e cancela por outro responsável (o bot, depois da F3f).
+      ((t.key !== "rescheduled_by_other" && t.key !== "canceled_by_other") || has("portal")),
   );
 }
 
@@ -291,6 +326,18 @@ export function appointmentParams(clinic: string, a: AppointmentForMessage): str
  * `headerHandle`: o PDF de exemplo já enviado à Meta (template com documento).
  */
 export function templateCreationPayload(template: DefaultTemplate, headerHandle?: string): Record<string, unknown> {
+  if (template.authentication) {
+    return {
+      name: template.name,
+      language: TEMPLATE_LANGUAGE,
+      category: "AUTHENTICATION",
+      components: [
+        { type: "BODY", add_security_recommendation: true },
+        { type: "FOOTER", code_expiration_minutes: template.authentication.codeExpirationMinutes },
+        { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copiar código" }] },
+      ],
+    };
+  }
   const components: Record<string, unknown>[] = [];
   if (template.documentHeader) components.push({ type: "HEADER", format: "DOCUMENT", example: { header_handle: [headerHandle ?? ""] } });
   // Sem variáveis (ex.: "Retomar conversa"), a Meta não aceita exemplo.

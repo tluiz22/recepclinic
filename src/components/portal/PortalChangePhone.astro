@@ -1,0 +1,14 @@
+---
+// "Trocar número" depois do celular comprovado (F2d, retorno): esquece o celular desta sessão e a página pede de novo
+// (identityStep.ts, ação "trocar"). Sem ele, quem digitou outro número ficaria preso até a sessão vencer.
+interface Props {
+  action: string;
+}
+
+const { action } = Astro.props;
+---
+
+<form method="POST" action={action} class="inline">
+  <input type="hidden" name="acao" value="trocar" />
+  <button type="submit" class="inline-flex min-h-11 items-center px-1 font-bold text-clinic-ink underline">Trocar número</button>
+</form>

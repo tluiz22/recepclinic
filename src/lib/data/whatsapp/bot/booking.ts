@@ -15,6 +15,7 @@ import { askHandoffSubject, attachContact, end, go, offerReception, repeatYesNo,
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu, showSubmenu } from "./menus";
 import * as t from "./texts";
+import { offerPortalLink } from "./portalLink";
 import { logError } from "../../../log";
 
 // Marcar pelo bot (F6.3), com as regras do piloto (Fases 3b, 6, 16, 17, 21)
@@ -149,6 +150,8 @@ export async function startBooking(
 ): Promise<void> {
   await open(b, category === "exam" ? "exam" : "booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
+  // Uma jornada só (F3b): o link do portal; o chat só onde o portal ainda não marca (portalLink.ts).
+  if (await offerPortalLink(b, category, { joinWaitlist })) return;
   const services = servicesOf(await b.catalog(), category);
   if (!services.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
   const ctx: BookingContext = { category, ...(joinWaitlist ? { joinWaitlist } : {}) };
@@ -344,8 +347,9 @@ const MAX_PLANS_IN_LIST = t.MAX_LIST_ROWS - 2;
 
 /**
  * Planos ativos que o caminho escolhido atende (MC, 07/nov/2026): os ligados a
- * algum profissional das agendas do caminho; agenda sem profissional (exames)
- * atende todos. Sem nenhum (profissional só particular), o bot não pergunta.
+ * algum profissional das agendas do caminho; agenda sem profissional (exames),
+ * os marcados no exame (CE, cliente, 10/nov/2026). Sem nenhum (só particular),
+ * o bot não pergunta.
  */
 async function activePlans(b: Bot, ctx: BookingContext): Promise<Plan[]> {
   if (!b.features.includes("insurance")) return [];
@@ -354,7 +358,14 @@ async function activePlans(b: Bot, ctx: BookingContext): Promise<Plan[]> {
   if (!plans.length || !service) return plans;
   const ids = new Set(pathAgendas(service, ctx));
   const agendas = service.agendas.filter((a) => ids.has(a.id));
-  if (agendas.some((a) => !a.professionalId)) return plans;
+  if (agendas.some((a) => !a.professionalId)) {
+    const examLinks = unwrap(
+      await b.db.from("service_insurance_plans").select("insurance_plan_id").eq("clinic_id", b.clinicId).eq("service_id", service.id),
+      "Convênios do exame",
+    );
+    const examAccepted = new Set(examLinks.map((l) => l.insurance_plan_id));
+    return plans.filter((p) => examAccepted.has(p.id));
+  }
   const professionalIds = agendas.map((a) => a.professionalId!);
   if (!professionalIds.length) return [];
   const links = unwrap(
@@ -373,8 +384,40 @@ function pathAgendas(service: BotService, ctx: BookingContext): string[] {
     .map((a) => a.id);
 }
 
+/**
+ * Algum profissional do caminho atende particular (F1 da recepção digital, 08/nov/2026: "Atende particular" no
+ * cadastro); agenda sem profissional (exames), o "Aceita particular" do exame (CE). Sem o item Convênios, sempre.
+ */
+async function pathAcceptsPrivate(b: Bot, ctx: BookingContext): Promise<boolean> {
+  if (!b.features.includes("insurance")) return true;
+  const service = await serviceOf(b, ctx);
+  if (!service) return true;
+  const ids = new Set(pathAgendas(service, ctx));
+  const agendas = service.agendas.filter((a) => ids.has(a.id));
+  if (!agendas.length) return true;
+  if (agendas.some((a) => !a.professionalId)) {
+    const row = unwrap(await b.db.from("services").select("accepts_private").eq("clinic_id", b.clinicId).eq("id", service.id).maybeSingle(), "Aceita particular");
+    return row?.accepts_private ?? true;
+  }
+  const rows = unwrap(
+    await b.db.from("professionals").select("accepts_private").eq("clinic_id", b.clinicId).in("id", agendas.map((a) => a.professionalId!)),
+    "Atende particular",
+  );
+  return rows.some((row) => row.accepts_private);
+}
+
 async function enterCoverage(b: Bot, ctx: BookingContext): Promise<void> {
-  if (!(await activePlans(b, ctx)).length) return choosePrivate(b, ctx);
+  const acceptsPrivate = await pathAcceptsPrivate(b, ctx);
+  if (!(await activePlans(b, ctx)).length) {
+    if (acceptsPrivate) return choosePrivate(b, ctx);
+    // Só convênio e nenhum plano ativo (ex.: planos desativados): não há como marcar por aqui.
+    return handOver(b, "bot_book_no_coverage", t.NO_COVERAGE_OPTION, "no_coverage_option", "requested");
+  }
+  // Só convênio: não pergunta "particular ou convênio", vai direto ao plano.
+  if (!acceptsPrivate) {
+    await step(b, "coverage", { answer: "insurance" });
+    return askPlan(b, ctx);
+  }
   await sendButtons(b, "bot_book_coverage", t.COVERAGE_QUESTION, t.COVERAGE_BUTTONS);
   await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "coverage" });
 }
@@ -405,7 +448,7 @@ async function askPlan(b: Bot, ctx: BookingContext): Promise<void> {
 }
 
 async function acceptPlan(b: Bot, ctx: BookingContext, service: BotService, plan: Plan): Promise<void> {
-  const accepting = await agendasAcceptingPlan(b.db, b.clinicId, pathAgendas(service, ctx), plan.id);
+  const accepting = await agendasAcceptingPlan(b.db, b.clinicId, pathAgendas(service, ctx), plan.id, service.id);
   if (!accepting.length) return refusePlan(b, ctx, plan.name, true);
   await step(b, "insurance_accepted");
   await say(b, "bot_book_plan_accepted", t.planAccepted(plan.name));
@@ -414,6 +457,10 @@ async function acceptPlan(b: Bot, ctx: BookingContext, service: BotService, plan
 
 async function refusePlan(b: Bot, ctx: BookingContext, planName: string | null, forThisService: boolean): Promise<void> {
   await step(b, "insurance_not_accepted");
+  // Só convênio: não oferece particular; a recepção ajuda (item 8 da jornada).
+  if (!(await pathAcceptsPrivate(b, ctx))) {
+    return handOver(b, "bot_book_plan_not_accepted", t.planNotAcceptedNoPrivate(planName, b.clinic.designation, forThisService), "insurance_not_accepted", "requested");
+  }
   await sendButtons(b, "bot_book_plan_not_accepted", t.planNotAccepted(planName, b.clinic.designation, forThisService), t.YES_NO_BUTTONS);
   await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "private_offer", planCandidates: undefined, refusedPlan: { name: planName, forThisService } });
 }
@@ -902,6 +949,7 @@ async function restart(b: Bot): Promise<void> {
 export async function startReturn(b: Bot, { joinWaitlist = false } = {}): Promise<void> {
   await open(b, "return_booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
+  if (await offerPortalLink(b, "return_visit", { joinWaitlist })) return;
   // Cada cópia do retorno com a agenda dela (MS): a origem é a consulta naquela agenda.
   const services = (await b.catalog()).copies.filter((s) => s.category === "return_visit");
   const deadline = services[0]?.returnDeadlineDays ?? null;

@@ -116,6 +116,11 @@ describe("mensagens do bot (cliente, 05/nov/2026)", () => {
     expect(isRetryable("appointment_reminder", {})).toBe(true);
   });
 
+  it("aviso a quem marcou quando outro responsável remarca ou cancela (VR4): reenvia", () => {
+    expect(isRetryable("appointment_rescheduled_by_other", {})).toBe(true);
+    expect(isRetryable("appointment_canceled_by_other", {})).toBe(true);
+  });
+
   it("valem por 5 minutos", () => {
     expect(botRetryContext(failedAt)).toEqual({ bot: true, until: "2026-11-05T17:39:00.000Z" });
   });

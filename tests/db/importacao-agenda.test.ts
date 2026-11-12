@@ -41,6 +41,8 @@ const patient = (over: Partial<ImportPatient> = {}): ImportPatient => ({
   birthdate: "1980-05-10",
   phone: "(84) 98188-0777",
   guardianName: "",
+  secondName: "",
+  secondPhone: "",
   insurancePlanId: "",
   cardNumber: "",
   appointments: [],
@@ -286,7 +288,7 @@ describe("carga (F10.1c)", () => {
   it("grava tudo, sem aviso de marcação, fora do Uso e com a trilha de importado", async () => {
     const usageBefore = await usage();
     const loaded = await authorizeAgendaImport(asDb(support.client), fx.clinicId, requestId, NOW);
-    expect(loaded).toEqual({ contacts: 2, patients: 3, appointments: 3, reactivated: 1 });
+    expect(loaded).toEqual({ contacts: 2, patients: 3, appointments: 3, reactivated: 1, links: 0 });
 
     const { data: appointments } = await adminClient()
       .from("appointments")

@@ -1,0 +1,49 @@
+---
+// Ações de um link do portal (F3d; especificação R7): "Copiar link para…" pergunta onde o link vai ser usado
+// (Instagram, Site, Google, Mensagem, Outro lugar) e copia com a marca (`?de=instagram`), com o aviso "Link para o
+// Instagram copiado"; no celular, abre o Compartilhar do aparelho. "QR code" abre a janela da página
+// (PortalQrDialog), que leva o link do cartaz. Sem QR fixo na tela.
+import Icon from "../Icon.astro";
+import { buttonClass } from "../ui/styles";
+import { linkForPlace, PORTAL_PLACE_LABELS, type PortalPlaceParam } from "../../../lib/portal";
+
+interface Props {
+  /** Único na página (o menu usa o `popover` do navegador). */
+  id: string;
+  url: string;
+  /** "Link da clínica", "Dra. Ana Lima". */
+  label: string;
+  /** `p` do QR: "clinica" ou o id do profissional. */
+  qrKey: string;
+  posterUrl: string;
+}
+
+const { id, url, label, qrKey, posterUrl } = Astro.props;
+const places = (["instagram", "site", "google", "mensagem", "outro"] as PortalPlaceParam[]).map((place) => ({
+  place,
+  label: PORTAL_PLACE_LABELS[place],
+  url: linkForPlace(url, place),
+}));
+const item = "flex min-h-10 w-full items-center rounded-md px-3 text-left text-[15px] text-ink hover:bg-canvas focus-visible:bg-canvas";
+---
+
+<div class="flex flex-wrap items-center gap-2" data-portal-link-actions>
+  <button type="button" popovertarget={`${id}-menu`} class={`${buttonClass("secondary", "sm")} rc-copy-trigger`} aria-label={`Copiar link para…: ${label}`}>
+    <Icon name="link" class="h-4 w-4" strokeWidth={2} />
+    Copiar link para…
+  </button>
+  <div id={`${id}-menu`} popover class="m-0 w-56 rounded-lg border border-line bg-white p-1.5 shadow-lg" data-copy-menu>
+    <p class="px-3 pt-1.5 pb-1 text-[13px] font-semibold text-ink-soft">Onde você vai usar?</p>
+    {
+      places.map((p) => (
+        <button type="button" class={item} data-copy-url={p.url} data-copy-label={p.label}>
+          {p.label}
+        </button>
+      ))
+    }
+  </div>
+  <button type="button" class={buttonClass("secondary", "sm")} data-qr-open={qrKey} data-qr-label={label} data-qr-poster={posterUrl} aria-label={`QR code: ${label}`}>
+    <Icon name="qr-code" class="h-4 w-4" strokeWidth={2} />
+    QR code
+  </button>
+</div>

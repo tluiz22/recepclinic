@@ -87,6 +87,18 @@ export async function resolveClinicByBookingLink(
   );
 }
 
+/** Link do portal mandado pelo bot (F3a, /s/{token}): a clínica do link. */
+export async function resolveClinicByPortalLink(linkId: string, env: ServiceEnv = platformEnv()): Promise<string | null> {
+  if (!isUuid(linkId)) return null;
+  return clinicIdOrNull("link do portal", await platformClient(env).rpc("resolve_portal_link_clinic", { p_link_id: linkId }));
+}
+
+/** Portal de agendamento (F2a): clínica do apelido do endereço (agendar.recepclinic.com.br/{apelido}). */
+export async function resolveClinicByPortalSlug(slug: string, env: ServiceEnv = platformEnv()): Promise<string | null> {
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || slug.length > 60) return null;
+  return clinicIdOrNull("portal de agendamento", await platformClient(env).rpc("resolve_portal_clinic", { p_slug: slug }));
+}
+
 /** /preparo/[id]: clínica do serviço (exame) cujo preparo é mostrado. */
 export async function resolveClinicByService(
   serviceId: string,

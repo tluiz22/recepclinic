@@ -1,0 +1,140 @@
+---
+// Exames, passo 1 (F2d; D4; canvas EX1): "Qual exame você vai fazer?", um cartão por exame (valor particular ou
+// convênio, duração e a etiqueta do preparo), busca a partir de 8 exames, "Ver valores e convênios aceitos" de todos
+// os exames (cliente, 11/nov/2026) e "Falar com a recepção" no fim. Depois, as
+// telas da consulta servem ao exame: particular ou convênio (todos os convênios), dias e horários da agenda da equipe
+// (o preparo só em "Exame marcado", cliente, 11/nov/2026), celular e código, quem será atendido, revisão e "Exame marcado".
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import { openPortalPage } from "../../../../lib/data/portal/page";
+import { examProfessional, nextFreeSlots } from "../../../../lib/data/portal/portal";
+import { examValuesText, formatPrice, portalHref, portalSteps, readPlace, receptionWhatsappHref, stepPosition } from "../../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+if (page.kind === "not_found") Astro.response.status = 404;
+const portal = page.kind === "open" ? page.portal : null;
+const base = page.kind === "open" ? page.base : "";
+// Só os exames com horário livre no prazo (como os médicos no início); nenhum (item da Matriz desligado, sem
+// horário): o início.
+const examPros = portal ? portal.exams.map((e) => examProfessional(portal, e)).filter((p): p is NonNullable<typeof p> => !!p) : [];
+const next = portal && page.kind === "open" && examPros.length ? await nextFreeSlots(page.db, portal.clinicId, examPros, portal.timeZone) : new Map<string, Date | null>();
+const exams = portal ? portal.exams.filter((e) => next.get(e.serviceId)) : [];
+if (portal && !exams.length) return Astro.redirect(base || "/");
+// Algum exame com convênio: a etapa "Particular ou convênio" conta no passo (CE-3: cada exame com os seus).
+const withPlans = (portal?.examBase?.plans.length ?? 0) > 0;
+const step = stepPosition(portalSteps({ specialty: false, professional: true, modality: withPlans }), "professional");
+const priceLine = (exam: { priceCents: number | null; acceptsPrivate: boolean; plans: readonly unknown[] }) => {
+  const cents = exam.priceCents;
+  const price = cents && cents > 0 ? formatPrice(cents) : null;
+  if (!exam.acceptsPrivate) return "Só convênio.";
+  if (exam.plans.length) return price ? `Particular ${price} ou convênio.` : "Particular ou convênio.";
+  return price ? `Só particular, ${price}.` : "Só particular.";
+};
+const priceOf = (exam: { priceCents: number | null; priceVaries: boolean; acceptsPrivate: boolean; plans: readonly unknown[] }) => {
+  const line = priceLine(exam);
+  // Valor que muda com o local: "a partir de".
+  return exam.priceVaries ? line.replace(/R\$/, "a partir de R$") : line;
+};
+const searchable = exams.length >= 8;
+const waPhone = portal?.brand.whatsappPhone ?? null;
+const waHref = waPhone ? receptionWhatsappHref(waPhone, "Olá! Quero marcar um exame e preciso de ajuda.") : null;
+---
+
+<PortalLayout
+  title={page.kind === "not_found" ? "Link não encontrado" : page.kind === "unavailable" ? "Agendamento indisponível" : "Qual exame você vai fazer?"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={portal?.receptionHours ?? null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {
+    portal && (
+      <div class="flex max-w-[760px] flex-col gap-[18px]">
+        <PortalStepBar back={base || "/"} step={step} />
+        <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Qual exame você vai fazer?</h1>
+        {searchable && (
+          <div class="flex flex-col gap-1.5">
+            <label for="busca-exame" class="text-base font-semibold text-gray-700">Buscar exame</label>
+            <input
+              id="busca-exame"
+              type="search"
+              placeholder="Nome do exame"
+              autocomplete="off"
+              data-portal-exam-search
+              class="min-h-14 w-full rounded-xl border-[1.5px] border-gray-300 bg-white px-3.5 text-xl text-gray-900 focus:border-clinic-ink focus:outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink"
+            />
+          </div>
+        )}
+        <ul class="flex flex-col gap-2.5" data-portal-exam-list>
+          {exams.map((exam) => (
+            <li data-name={exam.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")}>
+              <a
+                href={portalHref(`${base}/${exam.slug}/atendimento`, { de: "exames", origem: readPlace(Astro.url.searchParams) })}
+                class="flex min-h-16 w-full items-center gap-3.5 rounded-xl border-[1.5px] border-gray-300 bg-white px-4 py-3 text-left text-gray-900 no-underline hover:border-clinic-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink"
+              >
+                <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <b class="text-lg text-clinic-ink">{exam.name}</b>
+                  <span class="text-base text-gray-700">
+                    {priceOf(exam)} Cerca de {exam.durationMinutes} min.
+                  </span>
+                  <span class="mt-1 flex flex-wrap gap-1.5">
+                    <span
+                      class={`rounded-full px-2.5 py-0.5 text-[15px] font-semibold ${exam.preparation || exam.hasPreparationFile ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-700"}`}
+                    >
+                      {exam.preparation || exam.hasPreparationFile ? "Tem preparo" : "Sem preparo"}
+                    </span>
+                    {exam.isGroup && <span class="rounded-full bg-sky-100 px-2.5 py-0.5 text-[15px] font-semibold text-sky-900">Em grupo, horário fixo</span>}
+                  </span>
+                </span>
+                <svg aria-hidden="true" class="h-6 w-6 shrink-0 text-clinic-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+              </a>
+            </li>
+          ))}
+        </ul>
+        {exams.some((e) => e.isGroup) && <p class="text-base text-gray-600">"Em grupo": várias pessoas fazem o exame juntas, no mesmo horário.</p>}
+        {searchable && (
+          <p class="text-base text-gray-600" data-portal-exam-empty hidden role="status">
+            Nenhum exame com esse nome.
+          </p>
+        )}
+        <details class="rounded-[14px] border border-gray-200 bg-white px-4" data-portal-exam-values>
+          <summary class="flex min-h-[52px] cursor-pointer items-center font-bold text-clinic-ink">Ver valores e convênios aceitos</summary>
+          <ul class="flex flex-col gap-2 pb-3.5 text-base">
+            {exams.map((exam) => (
+              <li>
+                <b>{exam.name}:</b> {examValuesText(exam)}
+              </li>
+            ))}
+          </ul>
+        </details>
+        <div class="flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5">
+          <span class="text-base text-gray-600">Não achou o exame do seu pedido médico?</span>
+          {waHref ? (
+            <a href={waHref} target="_blank" rel="noopener" class="flex min-h-11 items-center text-[17px] font-bold text-clinic-ink">Falar com a recepção</a>
+          ) : (
+            <span class="text-[17px]">Toque em "Recepção", no topo, para falar com a clínica.</span>
+          )}
+        </div>
+      </div>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // Busca pelo nome (sem acento, em qualquer parte), só a partir de 8 exames.
+  const input = document.querySelector<HTMLInputElement>("[data-portal-exam-search]");
+  const items = Array.from(document.querySelectorAll<HTMLElement>("[data-portal-exam-list] > li"));
+  const empty = document.querySelector<HTMLElement>("[data-portal-exam-empty]");
+  input?.addEventListener("input", () => {
+    const query = input.value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    let shown = 0;
+    for (const item of items) {
+      const match = !query || (item.dataset.name ?? "").includes(query);
+      item.hidden = !match;
+      if (match) shown += 1;
+    }
+    if (empty) empty.hidden = shown > 0;
+  });
+</script>

@@ -22,8 +22,9 @@ import { createUserClient } from "../../../lib/data/clients";
 import { platformEnv } from "../../../lib/env";
 import { getWhatsappConnection, listWhatsappTemplates, pendingCoexistenceSync } from "../../../lib/data/whatsapp/connection";
 import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
-import { DEFAULT_TEMPLATES, templateApproval, templatesInUse, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
+import { DEFAULT_TEMPLATES, PORTAL_CODE_TEMPLATE, templateApproval, templatesInUse, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
 import { listUnusedTemplates, namesInWaba } from "../../../lib/data/whatsapp/templateSync";
+import { portalCodeTemplateState } from "../../../lib/data/whatsapp/codeSender";
 import { listLatestWhatsappMessages } from "../../../lib/data/whatsapp/messages";
 import { getLatestConnectionTest } from "../../../lib/data/whatsapp/connectionTest";
 import { latestAutomaticEcho } from "../../../lib/data/whatsapp/conversations";
@@ -84,6 +85,8 @@ const TEMPLATE_LABELS: Record<string, string> = {
   confirmation: "Confirmação",
   reschedule: "Remarcação",
   cancellation: "Cancelamento",
+  rescheduled_by_other: "Remarcada por outro responsável",
+  canceled_by_other: "Cancelada por outro responsável",
   clinic_cancellation: "Cancelamento pela clínica (com link)",
   reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
@@ -94,6 +97,8 @@ const TEMPLATE_LABELS: Record<string, string> = {
 const unused = connection && Astro.url.searchParams.has("sem-uso")
   ? await listUnusedTemplates(createClinicServiceClient(clinic.clinicId), clinic.clinicId, namesInWaba())
   : null;
+// Código do portal (seção 14 do plano): sai do número do RecepClinic; o Suporte vê a situação na conta dele.
+const portalCode = isSupport && clinic.features.includes("portal") ? await portalCodeTemplateState().catch(() => null) : null;
 const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key && t.version === 1) ?? null }));
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
@@ -188,6 +193,29 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
           <p class="mt-1 text-sm text-ink-soft">
             Textos padrão do RecepClinic. Só o aprovado pela Meta é enviado; sem ele, o envio fica registrado como "não enviado".
           </p>
+          {portalCode && (
+            <div class="mt-3 rounded border border-line bg-canvas p-3 text-sm">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-medium text-ink">Código do portal</span>
+                <span class="text-ink-soft">{PORTAL_CODE_TEMPLATE.name}</span>
+                {portalCode.status === "unconfigured" ? (
+                  <Badge variant="danger">Número não configurado</Badge>
+                ) : portalCode.status === "error" ? (
+                  <Badge variant="warning">Sem resposta da Meta</Badge>
+                ) : portalCode.status === "missing" ? (
+                  <Badge variant="danger">Não criado</Badge>
+                ) : (
+                  <Badge variant={templateStatus[portalCode.status].variant}>{templateStatus[portalCode.status].label}</Badge>
+                )}
+              </div>
+              <p class="mt-0.5 text-ink-soft">
+                Sai do número do RecepClinic, para todas as clínicas: não depende do WhatsApp da clínica nem do "Criar na Meta".
+              </p>
+              {portalCode.status === "unconfigured" && <p class="mt-0.5 text-danger">Faltam as variáveis WHATSAPP_CODE_* na Vercel: o portal fica sem a entrada pelo celular.</p>}
+              {portalCode.status === "error" && <p class="mt-0.5 text-pend-800">{portalCode.message}</p>}
+              {"rejectionReason" in portalCode && portalCode.rejectionReason && <p class="mt-0.5 text-danger">Motivo da recusa: {portalCode.rejectionReason}</p>}
+            </div>
+          )}
           <ul class="mt-3 divide-y divide-[#e6ecea] text-sm">
             {templateRows.map(({ template, saved }) => (
               <li class="py-2">

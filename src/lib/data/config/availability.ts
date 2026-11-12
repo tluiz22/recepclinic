@@ -136,17 +136,14 @@ function validateWindowShape(input: AvailabilityWindowInput): void {
   v.throwIfInvalid("Horário de atendimento");
 }
 
-/** O local que o horário marcou no serviço ("Consultório A" em "Prick test"). */
-export type LocationAdded = { service: string; location: string } | null;
-
 /**
- * Serviço da janela: precisa ser atendido na agenda; turma exige vagas,
- * individual não aceita. Devolve o local a marcar no serviço, se ele ainda não é oferecido ali.
+ * Serviço da janela: precisa ser atendido na agenda e no local (cliente, 10/nov/2026: a tela só mostra os serviços do
+ * local escolhido; sai a C5 de 28/out, que marcava o local no serviço); turma exige vagas, individual não aceita.
  */
-async function checkWindowService(db: DbClient, clinicId: string, input: AvailabilityWindowInput): Promise<{ serviceId: string; locationId: string } | null> {
+async function checkWindowService(db: DbClient, clinicId: string, input: AvailabilityWindowInput): Promise<void> {
   if (input.serviceId === null) {
     if (input.capacity !== null) throw new DataError("invalid", "Horário de atendimento: vagas só em horário de turma", { capacity: "Vagas só para serviço em turma" });
-    return null;
+    return;
   }
   const service = unwrapOne(
     await db
@@ -160,26 +157,14 @@ async function checkWindowService(db: DbClient, clinicId: string, input: Availab
 
   const v = new Validation();
   v.check(service.service_agendas.some((link) => link.agenda_id === input.agendaId), "serviceId", "O serviço não é atendido nesta agenda");
+  v.check(
+    service.service_locations.some((link) => link.location_id === input.locationId),
+    "serviceId",
+    "O serviço não é atendido neste local. Para usar este local, marque-o no cadastro do serviço",
+  );
   if (service.scheduling_mode === "group") v.check(input.capacity !== null, "capacity", "Informe as vagas da turma");
   else v.check(input.capacity === null, "capacity", "Vagas só para serviço em turma");
   v.throwIfInvalid("Horário de atendimento");
-  return service.service_locations.some((link) => link.location_id === input.locationId) ? null : { serviceId: input.serviceId, locationId: input.locationId };
-}
-
-/** Marca o local no serviço (valor do serviço), depois de o horário ser salvo. */
-async function addServiceLocation(db: DbClient, clinicId: string, missing: { serviceId: string; locationId: string } | null): Promise<LocationAdded> {
-  if (!missing) return null;
-  unwrap(
-    await db
-      .from("service_locations")
-      .upsert({ clinic_id: clinicId, service_id: missing.serviceId, location_id: missing.locationId, price_cents: null }, { onConflict: "service_id,location_id", ignoreDuplicates: true }),
-    "Locais do serviço",
-  );
-  const [service, location] = await Promise.all([
-    db.from("services").select("name").eq("clinic_id", clinicId).eq("id", missing.serviceId).maybeSingle().then((r) => unwrapOne(r, "Serviço")),
-    db.from("locations").select("name").eq("clinic_id", clinicId).eq("id", missing.locationId).maybeSingle().then((r) => unwrapOne(r, "Local")),
-  ]);
-  return { service: service.name, location: location.name };
 }
 
 export const WEEKDAY_NAMES = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -218,12 +203,12 @@ export async function addAvailabilityWindows(
   clinicId: string,
   input: Omit<AvailabilityWindowInput, "weekday">,
   weekdays: number[],
-): Promise<{ windows: AvailabilityWindow[]; locationAdded: LocationAdded }> {
+): Promise<{ windows: AvailabilityWindow[] }> {
   const days = [...new Set(weekdays)].sort();
   if (!days.length) throw new DataError("invalid", "Horário de atendimento: escolha ao menos um dia", { weekday: "Escolha ao menos um dia da semana" });
   const inputs = days.map((weekday) => ({ ...input, weekday }));
   for (const one of inputs) validateWindowShape(one);
-  const missing = await checkWindowService(db, clinicId, inputs[0]);
+  await checkWindowService(db, clinicId, inputs[0]);
   const [existing, exams] = await Promise.all([windowsThatCount(db, clinicId, input.agendaId), examServiceIds(db, clinicId)]);
   for (const one of inputs) {
     const conflict = findWindowConflict(one, existing, exams);
@@ -247,7 +232,7 @@ export async function addAvailabilityWindows(
       .select(COLUMNS),
     "Horário de atendimento",
   ).map(toWindow);
-  return { windows, locationAdded: await addServiceLocation(db, clinicId, missing) };
+  return { windows };
 }
 
 /**
@@ -260,13 +245,13 @@ export async function updateAvailabilityWindow(
   clinicId: string,
   id: string,
   input: Omit<AvailabilityWindowInput, "agendaId">,
-): Promise<{ window: AvailabilityWindow; locationAdded: LocationAdded }> {
+): Promise<{ window: AvailabilityWindow }> {
   const current = toWindow(
     unwrapOne(await db.from("availability_windows").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Horário de atendimento"),
   );
   const next = { ...input, agendaId: current.agendaId };
   validateWindowShape(next);
-  const missing = await checkWindowService(db, clinicId, next);
+  await checkWindowService(db, clinicId, next);
   if (current.isActive) {
     const conflict = findWindowConflict({ ...next, id }, await windowsThatCount(db, clinicId, current.agendaId), await examServiceIds(db, clinicId));
     if (conflict) throw conflictError(conflict);
@@ -292,7 +277,7 @@ export async function updateAvailabilityWindow(
       "Horário de atendimento",
     ),
   );
-  return { window, locationAdded: await addServiceLocation(db, clinicId, missing) };
+  return { window };
 }
 
 /** Horários ativos de um serviço (a tela do serviço avisa antes de tirar um local que eles usam). */

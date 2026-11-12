@@ -1,4 +1,5 @@
 import { safeReturnPath } from "../../../../../lib/returnPath";
+import { listPatientContacts, setAppointmentsBooker } from "../../../../../lib/data/patientContacts";
 import type { APIRoute } from "astro";
 import { localDateOf, localTimeOf } from "../../../../../lib/clinicTime";
 import { parseSlot } from "../../../../../lib/agendaSlot";
@@ -29,6 +30,7 @@ import { snapshotChanges, snapshotOf } from "../../../../../lib/appointmentChang
 import { listAgendas } from "../../../../../lib/data/config/agendas";
 import { pastLimit } from "../../../../../lib/data/agenda/slots";
 import { listInsurancePlans } from "../../../../../lib/data/config/insurance";
+import { examPlanFor } from "../../../../../lib/data/config/serviceInsurance";
 import { listLocations } from "../../../../../lib/data/config/locations";
 import { listServices, servicePriceAt } from "../../../../../lib/data/config/services";
 import { getPatient } from "../../../../../lib/data/patients";
@@ -73,6 +75,19 @@ export const POST: APIRoute = async (context) => {
         case "marcar": {
           const slot = parseSlot(formText(form, "slot"));
           if (!slot) throw new DataError("invalid", "Atendimento: escolha o horário", { start: "Escolha o horário." });
+          // Exame com o convênio do paciente que ele não aceita: particular, ou recusado (CE-5, cliente, 11/nov/2026).
+          const patientId = formText(form, "patient_id");
+          const serviceId = formText(form, "service_id");
+          const patientPlanId = isUuid(patientId) ? ((await getPatient(db, clinic.clinicId, patientId)).insurance?.planId ?? null) : null;
+          const examPlan = isUuid(serviceId) ? await examPlanFor(db, clinic.clinicId, serviceId, patientPlanId) : { planId: patientPlanId, asPrivate: false };
+          const asPrivateNote = examPlan.asPrivate ? " O exame não aceita o convênio do paciente: ficou como particular." : "";
+          // Com 2 ou mais responsáveis, para quem vão a confirmação e o lembrete (UI-6, VR-1); sem escolha, o principal.
+          const booker = formOptionalText(form, "booked_by_contact_id");
+          const bookerId = booker && isUuid(booker) ? booker : null;
+          // Confere antes de marcar (depois, um erro deixaria a consulta marcada com a mensagem de falha).
+          if (bookerId && isUuid(patientId) && !(await listPatientContacts(db, clinic.clinicId, patientId)).some((c) => c.contactId === bookerId)) {
+            throw new DataError("invalid", "Atendimento: este número não é responsável pelo paciente", { booked_by_contact_id: "Escolha um responsável ligado ao paciente." });
+          }
           if (formChecked(form, "repetir")) {
             // Série só começa no futuro (cliente, 28/out/2026).
             if (slot.start.getTime() <= Date.now()) {
@@ -80,8 +95,9 @@ export const POST: APIRoute = async (context) => {
             }
             const fim = formText(form, "fim");
             const created = await createSeries(db, clinic.clinicId, {
-              patientId: formText(form, "patient_id"),
-              serviceId: formText(form, "service_id"),
+              patientId,
+              serviceId,
+              ...(examPlan.asPrivate ? { insurancePlanId: null } : {}),
               agendaId: slot.agendaId,
               locationId: slot.locationId,
               intervalWeeks: formInt(form, "interval_weeks"),
@@ -90,15 +106,18 @@ export const POST: APIRoute = async (context) => {
               endsOn: fim === "data" ? formText(form, "ends_on") || "invalida" : null,
               maxSessions: fim === "sessoes" ? formInt(form, "max_sessions") : null,
               homeVisitAddress: formOptionalText(form, "home_visit_address"),
+              // As sessões geradas depois (agendador, "alterar daqui em diante") seguem com o mesmo responsável.
+              bookedByContactId: bookerId,
               actorId,
             });
             const skipped = created.skipped.length ? ` ${created.skipped.length} data(s) pulada(s): veja abaixo.` : "";
             const notice = await notify("confirmation", firstByDate(created.created));
-            return done(`Série criada: ${created.created.length} sessão(ões) marcada(s).${skipped}${notice}`, `/admin/agenda/serie/${created.series.id}`);
+            return done(`Série criada: ${created.created.length} sessão(ões) marcada(s).${skipped}${asPrivateNote}${notice}`, `/admin/agenda/serie/${created.series.id}`);
           }
           const result = await bookAppointment(db, clinic.clinicId, {
-            patientId: formText(form, "patient_id"),
-            serviceId: formText(form, "service_id"),
+            patientId,
+            serviceId,
+            asPrivate: examPlan.asPrivate,
             agendaId: slot.agendaId,
             start: slot.start,
             locationId: slot.locationId,
@@ -111,9 +130,10 @@ export const POST: APIRoute = async (context) => {
             // Data passada, até 90 dias (cliente, 28/out/2026): sem aviso ao paciente (notify só avisa o futuro).
             pastFrom: pastLimit(clinic.timezone),
           });
+          await setAppointmentsBooker(db, clinic.clinicId, [result.appointment.id], bookerId);
           const date = localDateOf(result.appointment.scheduledAt, clinic.timezone);
           const notice = await notify("confirmation", result.appointment);
-          return done(["Atendimento marcado.", ...result.returnWarnings].join(" ") + notice, `/admin/agenda?date=${date}`);
+          return done(["Atendimento marcado.", ...result.returnWarnings].join(" ") + asPrivateNote + notice, `/admin/agenda?date=${date}`);
         }
         case "remarcar": {
           const slot = parseSlot(formText(form, "slot"));
@@ -161,7 +181,10 @@ export const POST: APIRoute = async (context) => {
           const patient = await getPatient(db, clinic.clinicId, current.patientId);
           const serviceId = formText(form, "service_id");
           const service = services.find((s) => s.id === serviceId);
-          const insurancePlanId = insuranceOn ? formOptionalText(form, "insurance_plan_id") || null : current.insurancePlanId;
+          const chosenPlanId = insuranceOn ? formOptionalText(form, "insurance_plan_id") || null : current.insurancePlanId;
+          // Exame: só os convênios dele; fora deles, particular ou recusado (CE-5, cliente, 11/nov/2026).
+          const examPlan = isUuid(serviceId) ? await examPlanFor(db, clinic.clinicId, serviceId, chosenPlanId) : { planId: chosenPlanId, asPrivate: false };
+          const insurancePlanId = examPlan.planId;
           const plan = (planId: string | null) => (planId ? (plans.find((p) => p.id === planId)?.name ?? "Convênio") : "Particular");
           const agendaName = (agendaId: string) => agendas.find((a) => a.id === agendaId)?.name;
           const locationName = (locationId: string) => locations.find((l) => l.id === locationId)?.name;

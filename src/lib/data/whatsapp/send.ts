@@ -68,7 +68,7 @@ export function interactiveBody(body: string, options: { title: string; descript
   return `${body}\n\n${options.map((o) => (o.description ? `${o.title} (${o.description})` : o.title)).join("\n")}`;
 }
 
-const failure = (error: unknown): SendOutcome => ({
+export const sendFailure = (error: unknown): SendOutcome => ({
   sent: false,
   reason: error instanceof GraphRequestError ? error.message : error instanceof Error ? error.message : String(error),
   failure: classifySendError(error),
@@ -112,7 +112,7 @@ export async function createClinicSender(
       return { sent: true, messageId, body, request: message };
     } catch (error) {
       logError("whatsapp envio", error, { clinica: clinicId });
-      return { ...failure(error), body, request: message };
+      return { ...sendFailure(error), body, request: message };
     }
   };
 

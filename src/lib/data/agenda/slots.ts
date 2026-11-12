@@ -3,7 +3,7 @@ import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { unwrap, unwrapAll, unwrapOne } from "../errors";
-import { computeFreeGaps, computeFreeSlots, type BusyInterval, type FreeGap, type FreeSlot, type SlotWindow } from "./freeSlots";
+import { computeFreeGaps, computeFreeSlots, groupStartTimes, type BusyInterval, type FreeGap, type FreeSlot, type SlotWindow } from "./freeSlots";
 
 // Horários livres por agenda, serviço, local e dia (F3.6a), lidos com o login
 // (ou a credencial do bot) de quem pergunta: o RLS limita às agendas que ele
@@ -142,12 +142,50 @@ export async function loadBusy(
   to: Date,
   ignoreAppointmentId?: string | null,
   forExam = false,
+  holds?: PortalHolds,
 ): Promise<BusyInterval[]> {
-  const [appointments, blocks] = await Promise.all([
+  const [appointments, blocks, held] = await Promise.all([
     forExam ? [] : loadAppointmentIntervals(db, clinicId, agendaId, from, to, ignoreAppointmentId),
     loadBlocks(db, clinicId, agendaId, from, to),
+    holds ? loadHolds(db, clinicId, agendaId, from, to, holds) : [],
   ]);
-  return [...appointments, ...blocks].filter((interval) => interval.end > from);
+  return [...appointments, ...blocks, ...held].filter((interval) => interval.end > from);
+}
+
+/**
+ * Reservas do portal (F2b): o horário que outro paciente está confirmando não aparece no portal. `exceptSession`: a
+ * sessão de quem pergunta (a própria reserva não ocupa). Bot e Marcar não passam este parâmetro (por ora, a reserva só
+ * vale entre pacientes do portal; a confirmação confere de novo).
+ */
+export type PortalHolds = {
+  exceptSession: string | null;
+  /** Exame (cliente, 10/nov/2026): só a reserva do mesmo exame ocupa (exames diferentes não se bloqueiam). */
+  serviceId?: string;
+};
+
+/** Equipe (F5a, R3): toda reserva do portal ocupa o horário (no exame, só a do mesmo exame). */
+export const TEAM_HOLDS: PortalHolds = { exceptSession: null };
+export const HELD_REASON = "Horário em reserva: alguém está confirmando este horário no portal. Escolha outro ou tente de novo em alguns minutos.";
+
+/** As reservas que ocupam o horário deste serviço: no exame, só as do mesmo exame (migração 20270108140000). */
+const holdsFor = (holds: PortalHolds | undefined, category: string, serviceId: string): PortalHolds | undefined =>
+  holds && category === "exam" ? { ...holds, serviceId } : holds;
+
+async function loadHolds(db: DbClient, clinicId: string, agendaId: string, from: Date, to: Date, holds: PortalHolds): Promise<BusyInterval[]> {
+  // A validade da reserva é do relógio de agora (o banco confere igual), não do instante da consulta de horários.
+  let query = db
+    .from("slot_holds")
+    .select("starts_at, ends_at")
+    .eq("clinic_id", clinicId)
+    .eq("agenda_id", agendaId)
+    .is("released_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .lt("starts_at", to.toISOString())
+    .gt("ends_at", from.toISOString());
+  if (holds.exceptSession) query = query.neq("session_id", holds.exceptSession);
+  if (holds.serviceId) query = query.eq("service_id", holds.serviceId);
+  const rows = unwrap(await query, "Reservas do portal");
+  return rows.map((h) => ({ start: new Date(h.starts_at), end: new Date(h.ends_at) }));
 }
 
 /** Atendimentos ativos da agenda (sem os exames) entre dois instantes. */
@@ -222,7 +260,7 @@ function slotsOn(plan: SchedulingPlan, date: string, busy: BusyInterval[], holid
   });
 }
 
-export type SlotQuery = { serviceId: string; agendaId: string; locationId?: string | null; ignoreAppointmentId?: string | null };
+export type SlotQuery = { serviceId: string; agendaId: string; locationId?: string | null; ignoreAppointmentId?: string | null; holds?: PortalHolds };
 
 /** Horários livres de um dia (serviço individual). */
 export async function getFreeSlots(
@@ -235,7 +273,7 @@ export async function getFreeSlots(
   if (!plan) return [];
   const { start, end } = dayBounds(query.date, plan.timeZone);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId, plan.category === "exam"),
+    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId, plan.category === "exam", holdsFor(query.holds, plan.category, query.serviceId)),
     loadClinicHolidays(db, clinicId, query.date, query.date),
   ]);
   return slotsOn(plan, query.date, busy, holidays, now);
@@ -290,7 +328,16 @@ export type FreeTimeCheck =
 export async function checkFreeTime(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; agendaId: string; locationId: string; start: Date; ignoreAppointmentId?: string | null; pastFrom?: Date | null },
+  query: {
+    serviceId: string;
+    agendaId: string;
+    locationId: string;
+    start: Date;
+    ignoreAppointmentId?: string | null;
+    pastFrom?: Date | null;
+    /** Equipe (F5a, R3): horário em reserva do portal não pode ser marcado até a reserva acabar. */
+    respectHolds?: boolean;
+  },
   now: Date = new Date(),
 ): Promise<FreeTimeCheck> {
   const plan = await loadSchedulingPlan(db, clinicId, { serviceId: query.serviceId, agendaId: query.agendaId });
@@ -304,13 +351,15 @@ export async function checkFreeTime(
   const isExam = plan.category === "exam";
   const date = localDateOf(start, plan.timeZone);
   const day = dayBounds(date, plan.timeZone);
-  const [appointments, blocks, holidays] = await Promise.all([
+  const [appointments, blocks, holidays, held] = await Promise.all([
     isExam ? [] : loadAppointmentIntervals(db, clinicId, query.agendaId, new Date(day.start.getTime() - MAX_APPOINTMENT_SPAN_MS), day.end, query.ignoreAppointmentId),
     loadBlocks(db, clinicId, query.agendaId, day.start, new Date(day.end.getTime() + MAX_APPOINTMENT_SPAN_MS)),
     loadClinicHolidays(db, clinicId, date, date),
+    query.respectHolds && !isPast ? loadHolds(db, clinicId, query.agendaId, start, end, holdsFor(TEAM_HOLDS, plan.category, query.serviceId)!) : [],
   ]);
   const overlaps = (i: BusyInterval, margin = 0) => i.start.getTime() - margin < end.getTime() && start.getTime() < i.end.getTime() + margin;
   if (blocks.some((b) => overlaps(b))) return { ok: false, reason: "Horário bloqueado na agenda." };
+  if (held.some((h) => overlaps(h))) return { ok: false, reason: HELD_REASON };
   if (appointments.some((a) => overlaps(a))) return { ok: false, reason: "Horário ocupado por outro atendimento nesta agenda." };
 
   const warnings: string[] = isPast ? [PAST_WARNING] : [];
@@ -356,7 +405,7 @@ export async function getNextAvailableDates(
   const firstDate = todayIn(plan.timeZone, now);
   const finalDate = searchEnd(firstDate, query);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam"),
+    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam", holdsFor(query.holds, plan.category, query.serviceId)),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
   ]);
   const result: DateWithSlots[] = [];
@@ -399,7 +448,7 @@ export async function agendasForService(db: DbClient, clinicId: string, serviceI
 export async function getFreeSlotsAnyAgenda(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; date: string; locationId?: string | null; ignoreAppointmentId?: string | null },
+  query: { serviceId: string; date: string; locationId?: string | null; ignoreAppointmentId?: string | null; holds?: PortalHolds },
   now: Date = new Date(),
 ): Promise<AgendaSlot[]> {
   const agendaIds = await agendasForService(db, clinicId, query.serviceId);
@@ -419,7 +468,7 @@ export async function getFreeSlotsAnyAgenda(
 export async function getNextAvailableDatesAnyAgenda(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; locationId?: string | null; count?: number; maxDaysAhead?: number; lastDate?: string | null; ignoreAppointmentId?: string | null },
+  query: { serviceId: string; locationId?: string | null; count?: number; maxDaysAhead?: number; lastDate?: string | null; ignoreAppointmentId?: string | null; holds?: PortalHolds },
   now: Date = new Date(),
 ): Promise<DateWithSlots[]> {
   const agendaIds = await agendasForService(db, clinicId, query.serviceId);
@@ -439,7 +488,7 @@ export async function getNextAvailableDatesAnyAgenda(
 export async function getGroupSessions(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; agendaId: string; count?: number; maxDaysAhead?: number; lastDate?: string | null },
+  query: { serviceId: string; agendaId: string; count?: number; maxDaysAhead?: number; lastDate?: string | null; holds?: PortalHolds },
   now: Date = new Date(),
 ): Promise<GroupSession[]> {
   const plan = await loadSchedulingPlan(db, clinicId, query);
@@ -450,7 +499,22 @@ export async function getGroupSessions(
   const from = dayBounds(firstDate, plan.timeZone).start;
   const to = dayBounds(finalDate, plan.timeZone).end;
 
-  const [booked, blocks, holidays] = await Promise.all([
+  const loadGroupHolds = async (holds: PortalHolds) => {
+    let held = db
+      .from("slot_holds")
+      .select("starts_at")
+      .eq("clinic_id", clinicId)
+      .eq("agenda_id", query.agendaId)
+      .eq("service_id", query.serviceId)
+      .is("released_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .gte("starts_at", from.toISOString())
+      .lt("starts_at", to.toISOString());
+    if (holds.exceptSession) held = held.neq("session_id", holds.exceptSession);
+    return unwrap(await held, "Reservas do portal");
+  };
+
+  const [booked, blocks, holidays, held] = await Promise.all([
     // Em páginas: uma linha por participante, 60 dias de turmas cheias passam das 1000 linhas da API.
     unwrapAll(
       (pageFrom, pageTo) =>
@@ -478,10 +542,16 @@ export async function getGroupSessions(
       .gt("ends_at", from.toISOString())
       .then((r) => unwrap(r, "Bloqueios da agenda")),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
+    query.holds ? loadGroupHolds(query.holds) : [],
   ]);
   const bookedAt = new Map<number, number>();
   for (const row of booked) {
     const key = new Date(row.scheduled_at).getTime();
+    bookedAt.set(key, (bookedAt.get(key) ?? 0) + 1);
+  }
+  // Portal (F3e-2): a vaga que outro paciente está confirmando também conta (a própria reserva, não).
+  for (const row of held) {
+    const key = new Date(row.starts_at).getTime();
     bookedAt.set(key, (bookedAt.get(key) ?? 0) + 1);
   }
 
@@ -489,15 +559,20 @@ export async function getGroupSessions(
   for (let date = firstDate; date <= finalDate && sessions.length < count; date = addDays(date, 1)) {
     if (isNationalHoliday(date) || holidays.has(date)) continue;
     const windows = [...(plan.windowsByWeekday.get(weekdayOf(date)) ?? [])].sort((a, b) => a.startTime.localeCompare(b.startTime));
-    for (const window of windows) {
-      if (window.capacity === null || sessions.length >= count) continue;
-      const start = toInstant(date, window.startTime, plan.timeZone);
-      if (start <= now || localTimeOf(start, plan.timeZone) !== window.startTime) continue;
+    // Uma turma a cada duração do exame, dentro da faixa (cliente, 11/nov/2026).
+    const daySessions = windows
+      .filter((w) => w.capacity !== null)
+      .flatMap((w) => groupStartTimes(w.startTime, w.endTime, plan.durationMinutes).map((time) => ({ window: w, time })))
+      .sort((a, b) => a.time.localeCompare(b.time));
+    for (const { window, time } of daySessions) {
+      if (sessions.length >= count) break;
+      const start = toInstant(date, time, plan.timeZone);
+      if (start <= now || localTimeOf(start, plan.timeZone) !== time) continue;
       const end = new Date(start.getTime() + plan.durationMinutes * 60_000);
       if (blocks.some((b) => new Date(b.starts_at) < end && new Date(b.ends_at) > start)) continue;
-      const remaining = window.capacity - (bookedAt.get(start.getTime()) ?? 0);
+      const remaining = window.capacity! - (bookedAt.get(start.getTime()) ?? 0);
       if (remaining > 0) {
-        sessions.push({ date, time: window.startTime, start, locationId: window.locationId, capacity: window.capacity, remaining });
+        sessions.push({ date, time, start, locationId: window.locationId, capacity: window.capacity!, remaining });
       }
     }
   }
@@ -540,6 +615,18 @@ export async function getFreeSlotsBefore(
   return result;
 }
 
+/** Onde é o atendimento da janela livre: no consultório (`clinic`) ou em casa (`home_visit`). */
+export type GapPlace = Enums<"location_type">;
+
+/** Uma linha "Livre" da Agenda: o horário, a agenda, o dia e onde se atende nesse horário. */
+export type AgendaFreeGap = FreeGap & {
+  agendaId: string;
+  date: string;
+  /** Tipos de local das janelas que cobrem o horário (filtro "Atendimento" dos Próximos horários livres). */
+  places: GapPlace[];
+  group?: { serviceId: string; serviceName: string; spots: number };
+};
+
 /**
  * Horários livres de cada agenda num dia, uma linha "Livre · + Marcar" por horário na Agenda › Dia (RX8 e opção B;
  * cliente, 02/nov/2026). Só leitura, com o login de quem olha (o RLS limita às agendas que ele vê). Regras: de hoje em
@@ -554,18 +641,38 @@ export async function listFreeGaps(
   clinicId: string,
   { date, agendaIds, timeZone }: { date: string; agendaIds: string[]; timeZone: string },
   now: Date = new Date(),
-): Promise<(FreeGap & { agendaId: string; group?: { serviceId: string; serviceName: string; spots: number } })[]> {
-  if (agendaIds.length === 0 || date < todayIn(timeZone, now) || isNationalHoliday(date)) return [];
-  const { start, end } = dayBounds(date, timeZone);
+): Promise<AgendaFreeGap[]> {
+  return listFreeGapsRange(db, clinicId, { fromDate: date, toDate: date, agendaIds, timeZone }, now);
+}
+
+/**
+ * As mesmas linhas "Livre" de `listFreeGaps`, de `fromDate` a `toDate` (inclusive): a ocupação de cada agenda é lida
+ * uma vez para o período e as agendas em paralelo (F5a: 18 agendas no dia e os Próximos horários livres).
+ */
+export async function listFreeGapsRange(
+  db: DbClient,
+  clinicId: string,
+  { fromDate, toDate, agendaIds, timeZone }: { fromDate: string; toDate: string; agendaIds: string[]; timeZone: string },
+  now: Date = new Date(),
+): Promise<AgendaFreeGap[]> {
+  const today = todayIn(timeZone, now);
+  const first = fromDate < today ? today : fromDate;
+  if (agendaIds.length === 0 || first > toDate) return [];
+  const dates: string[] = [];
+  for (let date = first; date <= toDate; date = addDays(date, 1)) if (!isNationalHoliday(date)) dates.push(date);
+  if (dates.length === 0) return [];
+  const start = dayBounds(dates[0], timeZone).start;
+  const end = dayBounds(dates[dates.length - 1], timeZone).end;
+  const weekdays = [...new Set(dates.map(weekdayOf))];
   const [holidays, agendas, windows, services] = await Promise.all([
-    loadClinicHolidays(db, clinicId, date, date),
+    loadClinicHolidays(db, clinicId, dates[0], dates[dates.length - 1]),
     db.from("agendas").select("id, buffer_minutes").eq("clinic_id", clinicId).eq("is_active", true).in("id", agendaIds).then((r) => unwrap(r, "Agendas")),
     db
       .from("availability_windows")
-      .select("agenda_id, service_id, start_time, end_time, capacity")
+      .select("agenda_id, service_id, weekday, start_time, end_time, capacity, locations ( type )")
       .eq("clinic_id", clinicId)
       .eq("is_active", true)
-      .eq("weekday", weekdayOf(date))
+      .in("weekday", weekdays)
       .in("agenda_id", agendaIds)
       .then((r) => unwrap(r, "Horários de atendimento")),
     db
@@ -575,7 +682,17 @@ export async function listFreeGaps(
       .eq("is_active", true)
       .then((r) => unwrap(r, "Serviços")),
   ]);
-  if (holidays.has(date)) return [];
+  const openDates = dates.filter((date) => !holidays.has(date));
+  if (openDates.length === 0) return [];
+  const windowRows = windows as unknown as {
+    agenda_id: string;
+    service_id: string | null;
+    weekday: number;
+    start_time: string;
+    end_time: string;
+    capacity: number | null;
+    locations: { type: GapPlace } | null;
+  }[];
   const rows = services as unknown as { id: string; name: string; duration_minutes: number; scheduling_mode: string; category: string; service_agendas: { agenda_id: string }[] }[];
   // Turma tem horário próprio (a sessão): as janelas dela não viram "Livre".
   const groupIds = new Set(rows.filter((service) => service.scheduling_mode === "group").map((service) => service.id));
@@ -587,76 +704,101 @@ export async function listFreeGaps(
     if (service.scheduling_mode === "group") continue;
     for (const link of service.service_agendas) individualOf.set(link.agenda_id, [...(individualOf.get(link.agenda_id) ?? []), service]);
   }
-  const result: (FreeGap & { agendaId: string; group?: { serviceId: string; serviceName: string; spots: number } })[] = [];
-  for (const agenda of agendas) {
-    const services = individualOf.get(agenda.id) ?? [];
-    const nonExam = services.filter((service) => service.category !== "exam");
-    const onlyExams = nonExam.length === 0;
-    const fallback = Math.min(...(onlyExams ? services : nonExam).map((service) => service.duration_minutes));
-    // Janela de serviço desativado ou de turma não vira linha.
-    const own = windows
-      .filter((w) => w.agenda_id === agenda.id && !(w.service_id && (groupIds.has(w.service_id) || !byId.has(w.service_id))))
-      .map((w) => {
-        const service = w.service_id ? byId.get(w.service_id) : undefined;
-        return {
-          startTime: w.start_time.slice(0, 5),
-          endTime: w.end_time.slice(0, 5),
-          stepMinutes: service ? service.duration_minutes : fallback,
-          isExam: service ? service.category === "exam" : onlyExams,
-        };
-      })
-      .filter((w) => Number.isFinite(w.stepMinutes) && w.stepMinutes > 0);
-    // Turma (cliente, 02/nov/2026): a sessão sem ninguém marcado vira uma linha "Livre · N vagas" (com gente, a turma já
-    // aparece como item do dia). Só os bloqueios a ocupam.
-    const groupWindows = windows.filter((w) => w.agenda_id === agenda.id && w.service_id && groupIds.has(w.service_id));
-    if (own.length === 0 && groupWindows.length === 0) continue;
-    // Exame corre em paralelo (28/out): só os bloqueios o ocupam; os demais, também os atendimentos.
-    const [busyAll, busyBlocksOnly] = await Promise.all([loadBusy(db, clinicId, agenda.id, start, end), loadBusy(db, clinicId, agenda.id, start, end, null, true)]);
-    const seen = new Set<number>();
-    if (groupWindows.length > 0) {
-      const taken = unwrap(
-        await db
-          .from("appointments")
-          .select("service_id, scheduled_at")
-          .eq("clinic_id", clinicId)
-          .eq("agenda_id", agenda.id)
-          .in("status", ["scheduled", "confirmed"])
-          .eq("is_group_session", true)
-          .gte("scheduled_at", start.toISOString())
-          .lt("scheduled_at", end.toISOString()),
-        "Atendimentos da turma",
-      );
-      for (const w of groupWindows) {
-        const service = byId.get(w.service_id!);
-        const capacity = (w as { capacity?: number | null }).capacity;
-        if (!service || !capacity) continue;
-        const from = toInstant(date, w.start_time.slice(0, 5), timeZone);
-        if (from <= now || localTimeOf(from, timeZone) !== w.start_time.slice(0, 5)) continue;
-        const to = new Date(from.getTime() + service.duration_minutes * 60_000);
-        if (busyBlocksOnly.some((b) => b.start < to && b.end > from)) continue;
-        const booked = taken.filter((t) => t.service_id === service.id && new Date(t.scheduled_at).getTime() === from.getTime()).length;
-        if (booked > 0 || seen.has(from.getTime())) continue;
-        seen.add(from.getTime());
-        result.push({
-          start: from,
-          end: to,
-          time: w.start_time.slice(0, 5),
-          endTime: localTimeOf(to, timeZone),
-          agendaId: agenda.id,
-          group: { serviceId: service.id, serviceName: service.name, spots: capacity },
-        });
+  const perAgenda = await Promise.all(
+    agendas.map(async (agenda) => {
+      const services = individualOf.get(agenda.id) ?? [];
+      const nonExam = services.filter((service) => service.category !== "exam");
+      const onlyExams = nonExam.length === 0;
+      const fallback = Math.min(...(onlyExams ? services : nonExam).map((service) => service.duration_minutes));
+      const mine = windowRows.filter((w) => w.agenda_id === agenda.id);
+      // Janela de serviço desativado ou de turma não vira linha.
+      const own = mine
+        .filter((w) => !(w.service_id && (groupIds.has(w.service_id) || !byId.has(w.service_id))))
+        .map((w) => {
+          const service = w.service_id ? byId.get(w.service_id) : undefined;
+          return {
+            weekday: w.weekday,
+            startTime: w.start_time.slice(0, 5),
+            endTime: w.end_time.slice(0, 5),
+            place: w.locations?.type ?? "clinic",
+            stepMinutes: service ? service.duration_minutes : fallback,
+            isExam: service ? service.category === "exam" : onlyExams,
+          };
+        })
+        .filter((w) => Number.isFinite(w.stepMinutes) && w.stepMinutes > 0);
+      // Turma (cliente, 02/nov/2026): a sessão sem ninguém marcado vira uma linha "Livre · N vagas" (com gente, a turma
+      // já aparece como item do dia). Só os bloqueios a ocupam.
+      const groupWindows = mine.filter((w) => w.service_id && groupIds.has(w.service_id));
+      if (own.length === 0 && groupWindows.length === 0) return [];
+      // Exame corre em paralelo (28/out): só os bloqueios o ocupam; os demais, também os atendimentos.
+      const [busyAll, busyBlocksOnly, taken] = await Promise.all([
+        loadBusy(db, clinicId, agenda.id, start, end),
+        loadBusy(db, clinicId, agenda.id, start, end, null, true),
+        groupWindows.length === 0
+          ? Promise.resolve([] as { service_id: string; scheduled_at: string }[])
+          : // Em páginas: 30 dias de turmas cheias passam das 1000 linhas da API.
+            unwrapAll(
+              (pageFrom, pageTo) =>
+                db
+                  .from("appointments")
+                  .select("service_id, scheduled_at")
+                  .eq("clinic_id", clinicId)
+                  .eq("agenda_id", agenda.id)
+                  .in("status", ["scheduled", "confirmed"])
+                  .eq("is_group_session", true)
+                  .gte("scheduled_at", start.toISOString())
+                  .lt("scheduled_at", end.toISOString())
+                  .order("scheduled_at")
+                  .order("id")
+                  .range(pageFrom, pageTo),
+              "Atendimentos da turma",
+            ),
+      ]);
+      const result: AgendaFreeGap[] = [];
+      for (const date of openDates) {
+        const weekday = weekdayOf(date);
+        const seen = new Set<number>();
+        for (const w of groupWindows) {
+          if (w.weekday !== weekday) continue;
+          const service = byId.get(w.service_id!);
+          const capacity = w.capacity;
+          if (!service || !capacity) continue;
+          // Uma turma a cada duração do exame, dentro da faixa (cliente, 11/nov/2026).
+          for (const time of groupStartTimes(w.start_time.slice(0, 5), w.end_time.slice(0, 5), service.duration_minutes)) {
+            const from = toInstant(date, time, timeZone);
+            if (from <= now || localTimeOf(from, timeZone) !== time) continue;
+            const to = new Date(from.getTime() + service.duration_minutes * 60_000);
+            if (busyBlocksOnly.some((b) => b.start < to && b.end > from)) continue;
+            const booked = taken.filter((t) => t.service_id === service.id && new Date(t.scheduled_at).getTime() === from.getTime()).length;
+            if (booked > 0 || seen.has(from.getTime())) continue;
+            seen.add(from.getTime());
+            result.push({
+              start: from,
+              end: to,
+              time,
+              endTime: localTimeOf(to, timeZone),
+              agendaId: agenda.id,
+              date,
+              places: [w.locations?.type ?? "clinic"],
+              group: { serviceId: service.id, serviceName: service.name, spots: capacity },
+            });
+          }
+        }
+        const today = own.filter((w) => w.weekday === weekday);
+        for (const [isExam, busy] of [[false, busyAll], [true, busyBlocksOnly]] as const) {
+          const group = today.filter((w) => w.isExam === isExam);
+          if (group.length === 0) continue;
+          const gaps = computeFreeGaps({ date, timeZone, windows: group, busy, bufferMinutes: agenda.buffer_minutes, stepMinutes: fallback, now });
+          for (const gap of gaps) {
+            if (seen.has(gap.start.getTime())) continue;
+            seen.add(gap.start.getTime());
+            const places = [...new Set(group.filter((w) => w.startTime <= gap.time && w.endTime >= gap.endTime).map((w) => w.place))];
+            result.push({ ...gap, agendaId: agenda.id, date, places: places.length ? places : [...new Set(group.map((w) => w.place))] });
+          }
+        }
       }
-    }
-    for (const [isExam, busy] of [[false, busyAll], [true, busyBlocksOnly]] as const) {
-      const group = own.filter((w) => w.isExam === isExam);
-      if (group.length === 0) continue;
-      const gaps = computeFreeGaps({ date, timeZone, windows: group, busy, bufferMinutes: agenda.buffer_minutes, stepMinutes: fallback, now });
-      for (const gap of gaps) {
-        if (seen.has(gap.start.getTime())) continue;
-        seen.add(gap.start.getTime());
-        result.push({ ...gap, agendaId: agenda.id });
-      }
-    }
-  }
-  return result;
+      return result;
+    }),
+  );
+  return perAgenda.flat();
 }

@@ -243,6 +243,23 @@ describe("clínica com convênios", () => {
     }
   });
 
+  it("profissional só convênio (F1 da recepção digital, 08/nov/2026): vai direto ao plano; plano não atendido não oferece particular", async () => {
+    const { data: agenda } = await adminClient().from("agendas").select("professional_id").eq("id", f.ids.agendaDra2).single();
+    await adminClient().from("professionals").update({ accepts_private: false }).eq("id", agenda!.professional_id);
+    try {
+      let reply = await upToProfessional(phone, "Dr. Segundo");
+      expect(reply.at(-1)!.body).toBe("Qual é o seu convênio?");
+      expect(titles(reply)).toEqual(["1. Unimed", "2. Outro convênio", "3. Voltar ao menu"]);
+      reply = await say(phone, { id: "plan_other" });
+      expect(bodies(reply)).toEqual([
+        "Infelizmente a clínica não atende por esse convênio, e o atendimento é só por convênio.\n\nVocê quer que a clínica entre em contato por aqui?",
+      ]);
+      expect(transcript.join("\n")).not.toContain("R$");
+    } finally {
+      await adminClient().from("professionals").update({ accepts_private: true }).eq("id", agenda!.professional_id);
+    }
+  });
+
   it("sem \"Primeiro horário\" entre profissionais (MS, 07/nov/2026): o paciente escolhe com quem", async () => {
     await reset(phone);
     await say(phone, "Oi");
@@ -277,12 +294,22 @@ describe("clínica com convênios", () => {
     expect(await handoff(phone)).toBe(false);
   });
 
-  it("exame particular: \"valor do exame\"; agenda sem profissional atende o plano", async () => {
+  it("exame (CE, 10/nov/2026): sem convênio marcado, só particular; com Amil marcado no exame, só o Amil", async () => {
+    // Sem convênio no exame (os de antes ficaram só particular): não pergunta, mostra o valor.
     await reset(phone);
     await say(phone, "Oi");
     await say(phone, "2"); // Exames
     await say(phone, "1"); // Marcar exame
     let reply = await say(phone, "1"); // Exame (só consultório)
+    expect(bodies(reply)).toContain("O valor do exame é R$ 150,00.\n\nFormas de pagamento: PIX, dinheiro ou transferência bancária.");
+    expect(bodies(reply)).not.toContain("O atendimento será particular ou por convênio?");
+
+    await adminClient().from("service_insurance_plans").insert({ clinic_id: f.clinicId, service_id: f.ids.exame, insurance_plan_id: plans.Amil });
+    await reset(phone);
+    await say(phone, "Oi");
+    await say(phone, "2");
+    await say(phone, "1");
+    reply = await say(phone, "1");
     expect(reply.at(-1)!.body).toBe("O atendimento será particular ou por convênio?");
     reply = await say(phone, "1");
     expect(reply[0].body).toBe("O valor do exame é R$ 150,00.\n\nFormas de pagamento: PIX, dinheiro ou transferência bancária.");
@@ -292,8 +319,11 @@ describe("clínica com convênios", () => {
     await say(phone, "1");
     await say(phone, "1");
     reply = await say(phone, "2");
+    // Só o Amil, marcado no exame (o Unimed é da clínica, não do exame).
+    expect(titles(reply)).toEqual(["1. Amil", "2. Outro convênio", "3. Voltar ao menu"]);
     reply = await say(phone, { id: optionId(reply, "Amil") });
     expect(reply[0].body).toBe("Atendemos pelo convênio *Amil*.");
+    await adminClient().from("service_insurance_plans").delete().eq("service_id", f.ids.exame);
   });
 });
 

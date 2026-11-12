@@ -111,7 +111,7 @@ export const configuracoesArtigos = [
     module: "Configurações › Serviços",
     where: "Configurações › Serviços",
     screen: C("/admin/configuracoes/servicos"),
-    keywords: ["serviço", "duração", "valor", "preço", "retorno", "prazo do retorno", "exame", "turma", "preparo", "valor por local", "profissional", "serviço da equipe"],
+    keywords: ["serviço", "duração", "valor", "preço", "retorno", "prazo do retorno", "exame", "turma", "preparo", "valor por local", "profissional", "serviço da equipe", "convênio do exame", "aceita particular"],
     synonyms: ["cadastrar consulta", "tipo de atendimento", "tabela de preços", "preparo do exame"],
     related: ["config-agendas", "config-locais", "config-horarios", "marcar-retorno"],
     order: 64,
@@ -125,6 +125,7 @@ export const configuracoesArtigos = [
       { name: "Preparo", text: "Texto e/ou arquivo. Vai uma vez só pelo WhatsApp, logo depois que a confirmação da marcação chega ao paciente; o bot também manda quando ele pede. Se não chegou, use Reenviar preparo na Agenda." },
       { name: "Profissional", text: "Dono do serviço: duração, valor e locais valem só para ele. Exame é sempre da \"Equipe (exames)\", na agenda de Exames: a equipe e os profissionais se organizam juntos nos exames (o profissional que tenta cadastrar exame recebe o aviso). Não muda depois de criado; para outro profissional, cadastre um serviço novo. O profissional com login cadastra e edita os serviços dele." },
       { name: "Locais", text: "O serviço aparece para marcar na agenda do profissional dele, nos locais marcados aqui." },
+      { name: "Particular e convênios (exame)", text: "No exame já criado, com o item Convênios: \"Aceita particular\" e os convênios aceitos, cada um com uma observação (ex.: \"Com o pedido médico\"). Precisa de um dos dois. Exame novo começa só particular, e convênio novo não entra sozinho nos exames. No portal e no WhatsApp, o paciente só vê o que o exame aceita; na Agenda, o exame que não aceita o convênio do paciente fica particular. Muda quem é Administrador ou tem a permissão de convênios." },
     ],
     notes: [
       "Serviço sem horário de atendimento numa agenda e num local dele não aparece no bot nem no link de agendar; o selo diz o que falta.",
@@ -145,7 +146,7 @@ export const configuracoesArtigos = [
     related: ["config-agendas", "config-servicos", "config-locais", "config-feriados"],
     order: 65,
     intro: "Cada horário é de uma agenda, com os dias da semana, o início e o fim, o local e o serviço (um só ou todos os da agenda).",
-    steps: ["Escolha o profissional em \"De qual profissional?\" (com mais de uma agenda, a escolha é obrigatória; busque pelo nome ou pela especialidade).", "No dia da semana, toque em adicionar (ou marque vários dias: o mesmo horário entra em cada um).", "Informe início, fim, local e, se for só de um serviço, o serviço (ex.: exame só na terça de manhã). Em exame em turma, as vagas.", "Salve."],
+    steps: ["Escolha o profissional em \"De qual profissional?\" (com mais de uma agenda, a escolha é obrigatória; busque pelo nome ou pela especialidade).", "No dia da semana, toque em adicionar (ou marque vários dias: o mesmo horário entra em cada um).", "Informe início, fim, local e, se for só de um serviço, o serviço (ex.: exame só na terça de manhã). Depois de escolher o local, só aparecem os serviços atendidos nele; para usar outro local, marque-o no cadastro do serviço. Em exame em turma, as vagas: o horário abre uma turma a cada duração do exame, do início ao fim (08:00 às 12:00 com exame de 60 min: turmas às 08:00, 09:00, 10:00 e 11:00), cada uma com essas vagas.", "Salve."],
     notes: [
       "O período é dividido do início em diante no tamanho da duração do serviço. Atendimentos e bloqueios ocupam o tempo, com o intervalo da agenda antes e depois.",
       "Feriados (nacionais e da clínica) e bloqueios tiram os horários do dia.",
@@ -188,7 +189,7 @@ export const configuracoesArtigos = [
     fields: [
       { name: "Outros nomes", text: "Um por linha: como o paciente pode escrever o plano no WhatsApp (ajuda o bot a reconhecer)." },
       { name: "Código ANS (opcional)", text: "Número de registro do plano na ANS. Por enquanto só aparece aqui." },
-      { name: "Profissionais que atendem este plano", text: "Marque quem atende. Plano novo começa sem ninguém; profissional sem nenhum plano atende só particular. No WhatsApp, o paciente só vê os planos que o profissional escolhido atende. Também dá para marcar no cadastro do profissional, em Convênios atendidos." },
+      { name: "Profissionais que atendem este plano", text: "Marque quem atende. Plano novo começa sem ninguém; profissional sem nenhum plano atende só particular. No WhatsApp, o paciente só vê os planos que o profissional escolhido atende. Também dá para marcar no cadastro do profissional, em Convênios atendidos. Os exames têm a lista própria, no cadastro de cada exame (Configurações › Serviços)." },
       { name: "Pedir carteirinha e validade", text: "Opção da tela: pede os dois dados na marcação por plano, na página de data e horário e no painel." },
     ],
     notes: ["Só planos ativos aparecem no bot.", "Além do Administrador, pode cadastrar e associar convênios quem tiver a permissão marcada em Configurações › Equipe."],

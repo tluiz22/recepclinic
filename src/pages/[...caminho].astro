@@ -1,0 +1,10 @@
+---
+// Caminho sem página (prioridade mais baixa de todas as rotas): a 404 de sempre, mas pelo servidor. Sem esta rota, um
+// caminho sem página iria direto à 404 pronta do build, sem passar pelo middleware; com ela, no endereço do portal
+// (agendar., agendar-teste.) o middleware leva "/{clínica}/…" para /portal/{clínica}/… antes de chegar aqui.
+import NotFoundPage from "../components/NotFoundPage.astro";
+
+Astro.response.status = 404;
+---
+
+<NotFoundPage />

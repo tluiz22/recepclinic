@@ -37,6 +37,9 @@ const professional = (id: string, displayName: string, extra: Partial<Profession
   phone: null,
   receivesDailySummary: false,
   isActive: true,
+  acceptsPrivate: true,
+  portalSlug: id,
+  showInPortal: true,
   ...extra,
 });
 
@@ -160,6 +163,20 @@ describe("respostas com os dados da clínica", () => {
     const textOnly = { ...clinicB(), insuranceInfo: "Atendemos Cassi." };
     expect(textOf(answer("quais convênios vocês aceitam?", textOnly))).toBe("Atendemos Cassi.");
     expect(answer("quais convênios vocês aceitam?", clinicB())).toBeNull();
+  });
+
+  it("convênios do exame (CE, 10/nov/2026): a pergunta sobre o exame responde pelo cadastro dele", () => {
+    const withExams = (exams: { serviceId: string; acceptsPrivate: boolean; planIds: string[] }[]) => ({ ...clinicA(), insurance: { ...clinicA().insurance, exams } });
+    const usUnimed = withExams([{ serviceId: "s-us", acceptsPrivate: true, planIds: ["u"] }]);
+    expect(textOf(answer("a ultrassonografia aceita unimed?", usUnimed))).toBe("Sim, *Ultrassonografia* aceita *Unimed*.");
+    expect(textOf(answer("a ultrassonografia aceita bradesco saúde?", usUnimed))).toBe("*Ultrassonografia* não aceita *Bradesco Saúde*. Pode ser feito particular ou pelo convênio Unimed.");
+    expect(textOf(answer("ultrassonografia pelo convênio?", usUnimed))).toBe("*Ultrassonografia* aceita o convênio: Unimed. Também pode ser feito particular.");
+    const usPrivate = withExams([{ serviceId: "s-us", acceptsPrivate: true, planIds: [] }]);
+    expect(textOf(answer("a ultrassonografia aceita unimed?", usPrivate))).toBe("*Ultrassonografia* não aceita *Unimed*. Pode ser feito particular.");
+    // Convênio só no exame (nenhum profissional atende): diz em quais exames.
+    const examOnly = { ...usUnimed, insurance: { ...usUnimed.insurance, links: usUnimed.insurance.links.filter((l) => l.planId !== "u") } };
+    expect(textOf(answer("vocês aceitam unimed?", examOnly))).toBe("Aceitamos *Unimed* nos exames: *Ultrassonografia*. Nas consultas, não.");
+    expect(textOf(answer("quais convênios vocês aceitam?", examOnly))).toBe("Atendemos os convênios: Unimed e Bradesco Saúde.");
   });
 
   it("especialidades: encontrada, lista quando não encontra (nunca \"não temos\")", () => {

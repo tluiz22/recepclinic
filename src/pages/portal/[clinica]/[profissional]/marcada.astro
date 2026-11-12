@@ -1,0 +1,107 @@
+---
+// P10 Confirmação final (F2c): "Consulta marcada!" com o resumo, "Enviamos a confirmação no WhatsApp" (a tela não
+// depende do envio, cenário 15: a fila manda), "Adicionar à agenda do celular" (.ics) e "Ver no mapa". Recarregar mostra
+// a mesma confirmação (a reserva guarda o atendimento); nada é marcado de novo.
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalPreparation from "../../../../components/portal/PortalPreparation.astro";
+import { portalCta, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
+import { bookedSummary, type BookedSummary } from "../../../../lib/data/portal/booking";
+import { openHoldPage } from "../../../../lib/data/portal/holdPage";
+import { capitalize } from "../../../../lib/vocabulary";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { helpForOf, mapsHref, portalHref, visitWords, whoLabel } from "../../../../lib/portal";
+import { phoneEnding } from "../../../../lib/portalIdentity";
+
+const view = await openHoldPage(Astro);
+const { page, professional, hold, timeZone, modality } = view;
+if (professional && hold && hold.state !== "booked") return Astro.redirect(view.href("revisao"));
+
+let booked: BookedSummary | null = null;
+if (page.kind === "open" && professional && hold?.appointmentId) booked = await bookedSummary(page.db, page.portal.clinicId, hold.appointmentId);
+if (professional && !booked && page.kind === "open") Astro.response.status = 404;
+
+const location = professional && booked ? (professional.locations.find((l) => l.id === booked!.locationId) ?? null) : null;
+const when = booked ? capitalize(formatInstant(booked.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "";
+const canceled = booked?.status === "canceled";
+const calendar = professional && hold ? portalHref(`${view.base}/${professional.slug}/calendario`, { reserva: hold.id }) : "";
+// Minhas consultas: pelo link do profissional, só as dele (cliente, 11/nov); pela clínica, a lista da clínica.
+const mineHref = professional && view.entry === "professional_link" ? `${view.base}/${professional.slug}/minhas-consultas` : `${view.base}/minhas-consultas`;
+// Exame (F2d): "Exame marcado!" e o preparo.
+const words = visitWords(professional);
+const row = "flex flex-col gap-px border-b border-gray-100 py-3 last:border-b-0";
+---
+
+<PortalLayout
+  title={booked ? (canceled ? words.canceled : words.marked) : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? helpForOf(professional) : null}
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !booked && <PortalNotice kind="not_found" brand={page.portal.brand} home={view.base} />}
+  {
+    professional && booked && hold && (
+      <div class="flex flex-col gap-5">
+        {canceled ? (
+          <>
+            <h1 class={portalTitle}>{words.thisCanceled}</h1>
+            <p class="text-lg text-gray-700">Para marcar de novo, escolha outro horário.</p>
+            <a href={view.timesHref()} class={portalCta}>Ver horários</a>
+          </>
+        ) : (
+          <>
+            <div class="flex items-center gap-3">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-clinic text-clinic-text" aria-hidden="true">
+                <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              </span>
+              <h1 class={`${portalTitle} outline-none`} tabindex="-1" data-portal-done>{words.marked}!</h1>
+            </div>
+            <p class={`${portalNotice} border-emerald-200 bg-emerald-50 text-emerald-900`} role="status">
+              {professional.exam?.preparation || professional.exam?.hasPreparationFile
+                ? `A confirmação e o preparo chegam no WhatsApp do celular ${phoneEnding(hold.phone)}.`
+                : `Enviamos a confirmação no WhatsApp do celular ${phoneEnding(hold.phone)}.`}
+            </p>
+            <dl class="flex flex-col rounded-2xl border border-gray-200 bg-white px-4 sm:px-5">
+              <div class={row}><dt class="text-[15px] text-gray-600">Dia e horário</dt><dd class="text-lg font-bold">{when}</dd></div>
+              <div class={row}><dt class="text-[15px] text-gray-600">Paciente</dt><dd class="font-bold break-words">{booked.patientName}</dd></div>
+              <div class={row}><dt class="text-[15px] text-gray-600">{whoLabel(professional)}</dt><dd>{professional.name}</dd></div>
+              {modality && <div class={row}><dt class="text-[15px] text-gray-600">Atendimento</dt><dd>{view.modalityText}</dd></div>}
+              {location && (
+                <div class={row}>
+                  <dt class="text-[15px] text-gray-600">Onde</dt>
+                  {location.type === "home_visit" ? (
+                    <dd>Em casa<span class="block text-[16px] break-words text-gray-700">{booked.homeVisitAddress}</span></dd>
+                  ) : (
+                    <dd>{location.name}{location.address && <span class="block text-[16px] text-gray-700">{location.address}</span>}</dd>
+                  )}
+                </div>
+              )}
+            </dl>
+            {professional.exam && <PortalPreparation exam={professional.exam} title="Antes do exame" fileLabel="Baixar orientações completas (PDF)" />}
+            <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+              <a href={calendar} class={portalCta}>Adicionar à agenda do celular</a>
+              {location?.address && (
+                <a href={mapsHref(location.address)} target="_blank" rel="noopener" class={portalSecondary}>
+                  Ver no mapa
+                </a>
+              )}
+            </div>
+            <p class="text-[17px] text-gray-700">
+              Precisa remarcar ou cancelar?{" "}
+              <a href={mineHref} class="font-bold text-clinic-ink underline">
+                Minhas consultas
+              </a>
+            </p>
+          </>
+        )}
+      </div>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // Leitores de tela: o foco vai para o título ao abrir a confirmação.
+  document.querySelector<HTMLElement>("[data-portal-done]")?.focus();
+</script>

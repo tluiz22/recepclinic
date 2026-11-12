@@ -1,0 +1,19 @@
+---
+// A reserva venceu, foi solta ou não é desta sessão (P9: "O tempo para confirmar acabou"): volta aos horários do mesmo
+// dia; se o horário ainda estiver livre, ele aparece na lista.
+import PortalStepBar from "./PortalStepBar.astro";
+import { portalCta, portalTitle } from "./styles";
+
+interface Props {
+  timesHref: string;
+}
+
+const { timesHref } = Astro.props;
+---
+
+<div class="flex flex-col gap-5">
+  <PortalStepBar back={timesHref} />
+  <h1 class={portalTitle}>O tempo para confirmar acabou</h1>
+  <p class="text-lg text-gray-700">O horário foi liberado. Escolha de novo: se ainda estiver livre, ele aparece na lista.</p>
+  <a href={timesHref} class={portalCta}>Ver horários de novo</a>
+</div>

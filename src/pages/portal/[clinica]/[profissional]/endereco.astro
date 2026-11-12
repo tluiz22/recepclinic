@@ -1,0 +1,166 @@
+---
+// Endereço do atendimento em casa (F3e-1; D5, DM2b): depois de quem será atendido, com o celular já comprovado e o
+// horário em reserva. Com visita anterior, "Mesmo endereço da última visita" (o padrão do contato, como o bot) ou
+// "Outro endereço"; sem ela, os campos direto. Campos separados (rua e número, complemento, bairro e ponto de
+// referência), guardados num texto só. Erro: os campos ficam como foram digitados. Depois, a revisão.
+import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
+import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { portalCta, portalError, portalInput, portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { lastHomeAddress, phonePatients, setHoldAddress } from "../../../../lib/data/portal/booking";
+import { openHoldPage } from "../../../../lib/data/portal/holdPage";
+import { changeProfessionalHref, helpForOf, shortName, whoLabel } from "../../../../lib/portal";
+import { HOME_ADDRESS_INPUTS, HOME_ADDRESS_MAX, joinHomeAddress, type HomeAddressField, type HomeAddressFields } from "../../../../lib/portalBooking";
+
+const view = await openHoldPage(Astro);
+const { page, professional, hold, session, when } = view;
+if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
+const aviso = Astro.url.searchParams.get("aviso");
+if (professional && hold?.state === "active" && !view.atHome) return Astro.redirect(view.href("revisao", { aviso }));
+if (professional && hold?.state === "active" && !hold.patientId && !hold.newPatient) return Astro.redirect(view.href("reserva"));
+
+type Choice = "ultimo" | "atual" | "outro";
+let last: string | null = null;
+let patientName = hold?.newPatient?.name ?? "";
+let choice: Choice = "outro";
+let fields: HomeAddressFields = { street: "", complement: "", district: "", reference: "" };
+let errors: Partial<Record<HomeAddressField, string>> = {};
+let problem: string | null = null;
+
+if (page.kind === "open" && professional && session && hold?.state === "active") {
+  const { db, portal } = page;
+  const [saved, { patients }] = await Promise.all([lastHomeAddress(db, portal.clinicId, hold.phone), phonePatients(db, portal.clinicId, hold.phone)]);
+  last = saved;
+  if (hold.patientId) patientName = patients.find((p) => p.id === hold.patientId)?.fullName ?? patientName;
+  // Voltou pelo "Alterar": marcado o endereço que já está na reserva.
+  choice = hold.homeVisitAddress ? (hold.homeVisitAddress === last ? "ultimo" : "atual") : last ? "ultimo" : "outro";
+
+  if (Astro.request.method === "POST") {
+    const form = await Astro.request.formData().catch(() => null);
+    const value = (name: string) => String(form?.get(name) ?? "");
+    const picked = value("escolha");
+    choice = picked === "ultimo" && last ? "ultimo" : picked === "atual" && hold.homeVisitAddress ? "atual" : "outro";
+    let address: string | null = choice === "ultimo" ? last : choice === "atual" ? hold.homeVisitAddress : null;
+    if (choice === "outro") {
+      const joined = joinHomeAddress({ street: value("rua"), complement: value("complemento"), district: value("bairro"), reference: value("referencia") });
+      fields = joined.fields;
+      if (joined.ok) address = joined.text;
+      else errors = joined.errors;
+    }
+    if (address) {
+      if (await setHoldAddress(db, portal.clinicId, session.id, hold.id, address)) return Astro.redirect(view.href("revisao", { aviso }));
+      return Astro.redirect(view.href("endereco", { aviso }));
+    }
+    problem = "Confira o endereço: faltou alguma informação.";
+  }
+}
+
+const changeDoctor = page.kind === "open" ? changeProfessionalHref(view.base, view.flow) : null;
+const active = !!professional && hold?.state === "active";
+const back = hold?.patientId ? view.href("reserva") : view.href("cadastro");
+const options: { value: Choice; title: string; text: string }[] = [
+  ...(last ? [{ value: "ultimo" as const, title: "Mesmo endereço da última visita", text: last }] : []),
+  ...(hold?.homeVisitAddress && hold.homeVisitAddress !== last ? [{ value: "atual" as const, title: "O endereço informado agora", text: hold.homeVisitAddress }] : []),
+];
+const card =
+  "flex min-h-16 cursor-pointer items-start gap-3.5 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-3.5 text-lg has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink";
+const label = "text-base font-semibold text-gray-700";
+const inputs = HOME_ADDRESS_INPUTS;
+---
+
+<PortalLayout
+  title={active ? "Endereço do atendimento" : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? helpForOf(professional) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={view.base} />}
+  {professional && !active && <PortalHoldExpired timesHref={view.timesHref()} />}
+  {
+    active && professional && hold && (
+      <div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-[18px]">
+          <PortalStepBar back={back} step={view.step("address")} />
+          <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("endereco")} />
+          <div class="flex flex-col gap-2">
+            <h1 class={portalTitle}>Qual é o endereço do atendimento?</h1>
+            <p class="text-base text-gray-700">
+              {shortName(professional.name)} vai atender {patientName ? <b>{patientName}</b> : "o paciente"} em casa. Usamos o endereço só para chegar até vocês neste atendimento.
+            </p>
+          </div>
+          {problem && (
+            <p class={`${portalNotice} border-red-200 bg-red-50 text-red-800`} role="alert">
+              {problem}
+            </p>
+          )}
+          <form method="POST" action={view.href("endereco", { aviso })} class="group flex max-w-[620px] flex-col gap-3" novalidate>
+            {options.length > 0 && (
+              <fieldset class="flex flex-col gap-2.5">
+                <legend class="sr-only">Endereço do atendimento</legend>
+                {options.map((o) => (
+                  <label class={card}>
+                    <input type="radio" name="escolha" value={o.value} checked={choice === o.value} class="mt-0.5 h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                    <span class="flex min-w-0 flex-col">
+                      <span class="font-bold">{o.title}</span>
+                      <span class="text-base break-words text-gray-700">{o.text}</span>
+                    </span>
+                  </label>
+                ))}
+                <label class={card}>
+                  <input type="radio" name="escolha" value="outro" id="endereco-outro" checked={choice === "outro"} class="mt-0.5 h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                  <span class="flex min-w-0 flex-col">
+                    <span class="font-bold">Outro endereço</span>
+                    <span class="text-base text-gray-700">Rua e número, complemento, bairro e ponto de referência.</span>
+                  </span>
+                </label>
+              </fieldset>
+            )}
+            {options.length === 0 && <input type="hidden" name="escolha" value="outro" />}
+            <div class={`flex-col gap-4 ${options.length ? "hidden group-has-[#endereco-outro:checked]:flex" : "flex"}`} data-endereco-campos>
+              {inputs.map((i) => (
+                <div class="flex flex-col gap-1.5">
+                  <label for={`endereco-${i.name}`} class={label}>
+                    {i.label}
+                    {i.optional && <span class="font-normal text-gray-600"> (se tiver)</span>}
+                  </label>
+                  <input
+                    id={`endereco-${i.name}`}
+                    name={i.name}
+                    value={fields[i.field]}
+                    maxlength={HOME_ADDRESS_MAX[i.field]}
+                    autocomplete={i.autocomplete}
+                    class={portalInput}
+                    aria-invalid={errors[i.field] ? "true" : undefined}
+                    aria-describedby={errors[i.field] ? `endereco-${i.name}-erro` : undefined}
+                  />
+                  {errors[i.field] && (
+                    <p id={`endereco-${i.name}-erro`} class={portalError} aria-live="polite">
+                      {errors[i.field]}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button type="submit" class={`${portalCta} mt-2`} data-sending-label="Conferindo…">
+              Continuar
+            </button>
+          </form>
+        </div>
+        <PortalSummary
+          rows={[
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
+            { label: "Atendimento", value: view.modalityText ?? "Em casa" },
+            { label: "Dia e horário", value: when, change: view.timesHref(true) },
+            { label: "Paciente", value: patientName || null, change: back },
+          ]}
+        />
+      </div>
+    )
+  }
+</PortalLayout>

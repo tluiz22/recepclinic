@@ -67,7 +67,8 @@ export const MANUAL_ITEMS: ManualDefinition[] = [
   {
     key: "business_verification",
     group: "WhatsApp e Meta",
-    label: "Verificação da empresa iniciada na Meta (sem ela, ~250 conversas iniciadas pela clínica por dia)",
+    // Cliente (09/nov/2026): o Suporte guia o dono da clínica a pedir a verificação na sessão de conexão.
+    label: "Verificação da empresa pedida na Meta, com o dono da clínica na sessão de conexão (sem ela, ~250 pacientes por dia em lembretes e avisos)",
     required: false,
     link: { label: "Guia", href: `${GUIDE_BEFORE_CONNECT_PATH}#verificacao` },
   },

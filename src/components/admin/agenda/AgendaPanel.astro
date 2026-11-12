@@ -45,6 +45,10 @@ interface Props {
   payment?: PaymentState;
   tint?: ServiceTint;
   returnReady?: ReturnReady;
+  /** Origem (R2; F2c): "Portal · …", "WhatsApp · bot" ou "Recepção · {nome}". Só aqui, não na grade. */
+  bookedBy?: string | null;
+  /** Data de nascimento informada no portal diferente da cadastrada (R4): aviso com o link para a ficha. */
+  birthdateToCheck?: boolean;
 }
 
 const {
@@ -65,6 +69,8 @@ const {
   payment,
   tint,
   returnReady,
+  bookedBy = null,
+  birthdateToCheck = false,
 } = Astro.props;
 const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
@@ -156,6 +162,17 @@ const phoneOk = !isAnonymizedPhone(a.contactPhone);
     </div>
     {a.homeVisitAddress && <p class="text-sm text-ink-soft">Endereço: {a.homeVisitAddress}</p>}
     {originText && <p class="text-sm text-ink-soft">{originText}</p>}
+    {bookedBy && <p class="text-sm text-ink-soft" data-booked-by>{bookedBy}</p>}
+    {
+      birthdateToCheck && (
+        <a
+          href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)}
+          class="inline-flex min-h-8 items-center gap-1.5 self-start rounded-[9px] bg-pend-50 px-2.5 text-[13.5px] font-semibold text-pend-800 no-underline hover:underline"
+        >
+          <Icon name="warning" class="h-4 w-4" strokeWidth={2} /> Data de nascimento a conferir
+        </a>
+      )
+    }
   </div>
 
   <div class="flex flex-col gap-2 px-[18px] py-4">

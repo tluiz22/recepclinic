@@ -1,0 +1,22 @@
+---
+// Celular da conversa na P8 e na P8b (F3a; especificação P7 "com link do bot", cliente 08/nov): quem veio pelo link do
+// bot não passa pela P7; o topo diz para onde vai a confirmação e oferece "Usar outro número", que posta "trocar" na
+// P7 do mesmo horário (solta a reserva, esquece o celular e pede o celular e o código).
+import { phoneEnding } from "../../lib/portalIdentity";
+
+interface Props {
+  phone: string;
+  /** A P7 com o mesmo horário. */
+  action: string;
+}
+
+const { phone, action } = Astro.props;
+---
+
+<div class="-mx-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-clinic-tint px-4 py-1.5 text-base leading-snug sm:mx-0 sm:rounded-xl" data-portal-link-phone>
+  <span>Confirmação no WhatsApp, celular {phoneEnding(phone)}</span>
+  <form method="POST" action={action} class="inline">
+    <input type="hidden" name="acao" value="trocar" />
+    <button type="submit" class="inline-flex min-h-11 items-center px-1 font-bold text-clinic-ink underline">Usar outro número</button>
+  </form>
+</div>

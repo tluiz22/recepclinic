@@ -64,7 +64,12 @@ import { addDays, formatCalendarDate, formatInstant, localDateOf, todayIn } from
 import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
-import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
+import { getContact, getPatient, listContactPatients, previewAnonymization } from "../../../lib/data/patients";
+import { listOpenBirthdateChecks } from "../../../lib/data/portalBirthdate";
+import { duplicateSuspects, listPatientContacts, responsibleLabel } from "../../../lib/data/patientContacts";
+import { portalPhoneBlock } from "../../../lib/data/portalPhone";
+import { MAX_HOLDS_PER_DAY } from "../../../lib/portalIdentity";
+import { shortDate } from "../../../lib/portalBooking";
 import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
 import { listPatientNotes, NOTE_MAX } from "../../../lib/data/patientNotes";
 import { listPatientReminders, REMINDER_MAX } from "../../../lib/data/patientReminders";
@@ -79,12 +84,16 @@ const id = Astro.params.id!;
 const patient = isUuid(id) ? await getPatient(db, clinic.clinicId, id).catch(() => null) : null;
 if (!patient) return Astro.redirect("/admin/pacientes");
 const insuranceOn = clinic.features.includes("insurance");
-const [contact, history, noShows, plans] = await Promise.all([
+const [contact, history, noShows, plans, birthdateChecks, responsibles] = await Promise.all([
   getContact(db, clinic.clinicId, patient.contactId),
   listPatientAppointments(db, clinic.clinicId, patient.id),
   listNoShowStats(db, clinic.clinicId, [patient.id]),
   insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
+  listOpenBirthdateChecks(db, clinic.clinicId, [patient.id]),
+  listPatientContacts(db, clinic.clinicId, patient.id),
 ]);
+// Portal (F2c, R4): a data informada diferente da cadastrada, para a recepção conferir com o paciente.
+const birthdateCheck = birthdateChecks.get(patient.id) ?? null;
 const now = new Date();
 const today = todayIn(clinic.timezone);
 const upcoming = history.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).reverse();
@@ -103,12 +112,15 @@ const canAnonymize = !anonymized && (clinic.isPlatformStaff || clinic.roles.incl
 const preview = canAnonymize ? await previewAnonymization(db, clinic.clinicId, patient.id, now) : null;
 const anonymizeMessage = preview
   ? [
-      `Só a pedido do ${vocabulary.patient} (LGPD). Nome, nascimento, anotações, documentos e carteirinha de ${patient.fullName} serão apagados, e o ${vocabulary.contact} (${contact.fullName}) perde nome, telefone, endereço e as mensagens do WhatsApp. O histórico de atendimentos fica, sem identificação.`,
+      `Só a pedido do ${vocabulary.patient} (LGPD). Nome, nascimento, anotações, documentos e carteirinha de ${patient.fullName} serão apagados. O histórico de atendimentos fica, sem identificação.`,
+      // VR-6 (cliente, 10/nov/2026): só o responsável que fica sem paciente é anonimizado junto.
+      ...preview.contacts.map((c) =>
+        c.anonymized
+          ? `O ${vocabulary.contact} ${c.fullName} perde nome, telefone, endereço e as mensagens do WhatsApp.`
+          : `O ${vocabulary.contact} ${c.fullName} continua, porque também cuida de ${c.otherPatients.join(", ")}.`,
+      ),
       preview.futureAppointments > 0
         ? `${preview.futureAppointments} ${preview.futureAppointments === 1 ? "atendimento futuro será cancelado" : "atendimentos futuros serão cancelados"}, sem aviso ao paciente.`
-        : "",
-      preview.otherPatients.length > 0
-        ? `Também ficam sem telefone: ${preview.otherPatients.map((p) => p.fullName).join(", ")} (cadastre um telefone novo no ${vocabulary.contact} depois).`
         : "",
       // Os pagamentos ficam pelo prazo fiscal (F11.2); ajuda contextual, 23/out/2026.
       canAccessArea(clinic, "finance") ? "Os pagamentos continuam guardados, pelo prazo fiscal." : "",
@@ -197,12 +209,50 @@ const createdAt = await db
   .maybeSingle()
   .then((r) => r.data?.created_at ?? null, () => null);
 const sinceText = createdAt ? `${vocabulary.patient === "paciente" ? "paciente" : "na clínica"} desde ${createdAt.slice(0, 4)}` : null;
-const phoneOk = !isAnonymizedPhone(contact.phone);
 // C26: conversa do contato no atendimento humano (aguardando ou em atendimento), para dar andamento daqui.
-const humanConversation =
-  clinic.features.includes("whatsapp_bot") && !anonymized && phoneOk
-    ? await listHumanAttention(db, clinic.clinicId, contact.phone).then((items) => items[0], () => undefined)
-    : undefined;
+// Com vários responsáveis (VR2), a conversa aberta de qualquer um deles.
+const humanConversations =
+  clinic.features.includes("whatsapp_bot") && !anonymized
+    ? await Promise.all(
+        responsibles
+          .filter((r) => !isAnonymizedPhone(r.phone))
+          .map((r) => listHumanAttention(db, clinic.clinicId, r.phone).then((items) => (items[0] ? { item: items[0], name: r.fullName } : null), () => null)),
+      ).then((found) => found.filter((x) => x !== null))
+    : [];
+// Celular bloqueado no portal (validação da F3, cliente, 10/nov/2026; faixa no alto, opção A): código pedido demais ou o
+// limite do dia; "Liberar agora" solta os dois. Só Administrador e Recepção; o bloqueio vale para todos os pacientes do celular.
+const canReleasePortal = clinic.features.includes("portal") && !anonymized && (clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+// Vários responsáveis (VR2, VR-5): a faixa mostra qual celular está bloqueado (o primeiro bloqueado, pela ordem da lista).
+const portalBlocks = canReleasePortal
+  ? (
+      await Promise.all(
+        responsibles
+          .filter((r) => !isAnonymizedPhone(r.phone))
+          .map(async (r) => ({ responsible: r, block: await portalPhoneBlock(db, clinic.clinicId, r.phone).catch(() => null) })),
+      )
+    ).filter((x) => x.block !== null)
+  : [];
+const portalBlock = portalBlocks[0]?.block ?? null;
+const blockedResponsible = portalBlocks[0]?.responsible ?? null;
+const blockedPhone = blockedResponsible?.phone ?? contact.phone;
+const portalBlockPatients = blockedResponsible ? await listContactPatients(db, clinic.clinicId, blockedResponsible.contactId, { linked: true }).catch(() => [patient]) : [];
+// "às 15:40" hoje; "amanhã às 09:10"; senão "dd/MM às HH:mm".
+const whenFree = (date: Date) => {
+  const day = localDateOf(date, clinic.timezone);
+  const time = formatInstant(date, clinic.timezone, "HH:mm");
+  return day === today ? `às ${time}` : day === addDays(today, 1) ? `amanhã às ${time}` : `${formatInstant(date, clinic.timezone, "dd/MM")} às ${time}`;
+};
+const portalBlockReasons = portalBlock
+  ? [
+      portalBlock.blockedUntil ? `Pediu código demais · libera sozinho ${whenFree(portalBlock.blockedUntil)}` : null,
+      portalBlock.limitUntil ? `Marcou ${MAX_HOLDS_PER_DAY} consultas em 24 h · libera sozinho ${whenFree(portalBlock.limitUntil)}` : null,
+    ].filter((r): r is string => r !== null)
+  : [];
+const portalBlockOthers = portalBlockPatients.filter((p) => p.id !== patient.id).map((p) => p.fullName);
+const blockedWho = blockedResponsible && responsibles.length > 1 ? ` (${responsibleLabel(blockedResponsible, `o próprio ${vocabulary.patient}`)})` : "";
+const portalBlockWho = portalBlockOthers.length
+  ? `Celular ${formatPhoneBR(blockedPhone)}${blockedWho}; vale também para ${portalBlockOthers.join(", ")}.`
+  : `Celular ${formatPhoneBR(blockedPhone)}${blockedWho}.`;
 
 // Nota de cada pagamento: a ativa (emitida, emitindo ou cancelando); sem ela, "Sem nota".
 const INVOICE_PILL: Partial<Record<InvoiceStatus, { tone: PillTone; text: (n: string | null) => string }>> = {
@@ -227,6 +277,43 @@ const fieldLabel = "text-[14.5px] font-semibold text-ink";
 const hint = "text-sm text-ink-soft";
 const radio = "flex items-center gap-2.5 text-[15px] text-ink";
 const canBook = patient.isActive && !anonymized;
+// Responsáveis (VR2, UI-1): Administrador, Recepção e Suporte ligam, desligam e tornam principal.
+const canManageResponsibles = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+const selfLabel = `O próprio ${vocabulary.patient}`;
+// Possível ficha repetida (cliente, 11/nov/2026, validação da VR): mesmo nome e nascimento em outra ficha ativa (o
+// portal e o bot não ligam ninguém sozinho). A mais antiga fica: o número da mais nova é ligado a ela pelo Adicionar
+// responsável, que desativa a repetida.
+const suspects = canManageResponsibles && patient.isActive ? await duplicateSuspects(db, clinic.clinicId, patient).catch(() => []) : [];
+const VIA: Record<string, string> = { portal: "pelo portal", whatsapp: "pelo bot", admin: "pela equipe" };
+const suspectLink = (s: (typeof suspects)[number]) =>
+  s.keep === "other"
+    ? withReturn(`/admin/pacientes/${s.id}/responsavel?${new URLSearchParams({ contato: patient.contactId })}`, here)
+    : s.primary
+      ? withReturn(`/admin/pacientes/${patient.id}/responsavel?${new URLSearchParams({ contato: s.primary.contactId })}`, here)
+      : null;
+const whoLabel = (r: (typeof responsibles)[number]) => responsibleLabel(r, selfLabel);
+// "Marcada por … · avisos para …" (UI-1, VR-1): só com mais de um responsável (com um só, é sempre ele). Quem marcou e
+// já foi desligado continua nas consultas passadas: o nome vem do contato.
+const multipleResponsibles = responsibles.length > 1;
+const unlinkedBookers = multipleResponsibles
+  ? [...new Set(history.map((a) => a.bookedByContactId).filter((id): id is string => id !== null && !responsibles.some((r) => r.contactId === id)))]
+  : [];
+const bookerNames = new Map(
+  await Promise.all(unlinkedBookers.map((id) => getContact(db, clinic.clinicId, id).then((c) => [id, c.fullName.split(/\s+/)[0]] as const, () => [id, ""] as const))),
+);
+const bookedText = (a: (typeof history)[number]) => {
+  if (!multipleResponsibles || !a.bookedByContactId) return null;
+  const linked = responsibles.find((r) => r.contactId === a.bookedByContactId);
+  const name = linked
+    ? linked.isSelf
+      ? `${linked.fullName.split(/\s+/)[0]} (o próprio ${vocabulary.patient})`
+      : whoLabel(linked)
+    : bookerNames.get(a.bookedByContactId) || null;
+  if (!name) return null;
+  const active = (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now;
+  if (a.bookingChannel === "admin") return active ? `Marcada pela recepção · avisos para ${name}` : `Marcada pela recepção para ${name}`;
+  return active ? `Marcada por ${name}, que recebe os avisos` : `Marcada por ${name}`;
+};
 ---
 
 <AdminLayout title={patient.fullName}>
@@ -244,39 +331,11 @@ const canBook = patient.isActive && !anonymized;
           {anonymized ? <Pill tone="warning">Anonimizado</Pill> : !patient.isActive && <Pill tone="neutral">Desativado</Pill>}
           {stats && <Pill tone="alert" icon="user-x">Faltou {stats.noShows} de {stats.total}</Pill>}
           {contact.botBlockedAt && <Pill tone="danger" icon="lock">{capitalize(vocabulary.contact)} bloqueado</Pill>}
+          {patient.createdVia === "portal" && <Pill tone="info">Cadastrado pelo portal</Pill>}
         </div>
         {!anonymized && (
           <span class="text-[15px] text-ink-mid">{[formatAge(patient.birthdate, today), insuranceOn ? planLabel : null, sinceText].filter(Boolean).join(" · ")}</span>
         )}
-        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[15.5px] text-ink">
-          {!patient.isContactSelf && (
-            <span>
-              {capitalize(vocabulary.contact)}:{" "}
-              <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="font-semibold text-brand no-underline hover:underline">{contact.fullName}</a> ·
-            </span>
-          )}
-          {phoneOk ? (
-            <>
-              <span class="tabular-nums">{formatPhoneBR(contact.phone)}</span>
-              <a
-                href={whatsappHref(contact.phone)}
-                target="_blank"
-                rel="noopener"
-                aria-label={`Abrir conversa no WhatsApp com ${contact.fullName}`}
-                class="inline-flex min-h-8 items-center rounded-[9px] border border-conf-500 bg-conf-500 px-2.5 text-[13.5px] font-semibold text-white no-underline hover:bg-conf-800"
-              >
-                WhatsApp
-              </a>
-            </>
-          ) : (
-            <span class="text-ink-soft">telefone anonimizado</span>
-          )}
-          {patient.isContactSelf && !anonymized && (
-            <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="text-[15px] font-semibold text-brand no-underline hover:underline">
-              Editar o telefone
-            </a>
-          )}
-        </div>
       </div>
       {
         !anonymized && (
@@ -323,6 +382,46 @@ const canBook = patient.isActive && !anonymized;
       }
     </div>
     {
+      birthdateCheck && !anonymized && (
+        <div class="flex flex-col gap-2.5 rounded-[12px] border border-pend-200 bg-pend-50 px-4 py-3.5 text-pend-800 sm:max-w-[640px]" role="region" aria-label="Data de nascimento a conferir">
+          <p class="flex items-center gap-2 text-[15.5px] font-bold">
+            <Icon name="warning" class="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+            Data de nascimento a conferir
+          </p>
+          <p class="text-[15px] leading-snug text-ink">
+            No cadastro: <b class="tabular-nums">{shortDate(birthdateCheck.registered)}</b>. Informada no portal em{" "}
+            {formatInstant(birthdateCheck.createdAt, clinic.timezone, "dd/MM")}: <b class="tabular-nums">{shortDate(birthdateCheck.informed)}</b>. Confira com o{" "}
+            {vocabulary.patient} ou o {vocabulary.contact}.
+          </p>
+          <form method="POST" action={withReturn(`/api/admin/pacientes/${patient.id}/data-a-conferir`, volta)} class="flex flex-wrap gap-2">
+            <input type="hidden" name="pendencia" value={birthdateCheck.id} />
+            <button
+              type="submit"
+              name="acao"
+              value="corrigir"
+              class={`${buttonClass("primary", "sm")} js-confirm-delete`}
+              data-confirm-title={`Corrigir para ${shortDate(birthdateCheck.informed)}?`}
+              data-confirm-message={`A data de nascimento do cadastro passa de ${shortDate(birthdateCheck.registered)} para ${shortDate(birthdateCheck.informed)}.`}
+              data-confirm-label="Corrigir"
+            >
+              Corrigir para {shortDate(birthdateCheck.informed)}
+            </button>
+            <button
+              type="submit"
+              name="acao"
+              value="manter"
+              class={`${buttonClass("secondary", "sm")} js-confirm-delete`}
+              data-confirm-title={`Manter ${shortDate(birthdateCheck.registered)}?`}
+              data-confirm-message="A data do cadastro fica como está e o aviso some."
+              data-confirm-label="Manter"
+            >
+              Manter {shortDate(birthdateCheck.registered)}
+            </button>
+          </form>
+        </div>
+      )
+    }
+    {
       anonymized && (
         <p class={`${notice} border-line bg-canvas text-ink`}>
           <Icon name="information-circle" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
@@ -334,6 +433,93 @@ const canBook = patient.isActive && !anonymized;
       )
     }
   </section>
+
+  {
+    portalBlock && (
+      <section aria-labelledby="portal-bloqueado" class="mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-2.5 rounded-xl border border-pend-500 bg-pend-50 px-4 py-3.5 sm:px-[18px]">
+        <div class="flex min-w-0 flex-[1_1_320px] items-start gap-2.5">
+          <Icon name="lock" class="mt-0.5 h-5 w-5 shrink-0 text-pend-800" strokeWidth={2} />
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <h2 id="portal-bloqueado" class="text-[12.5px] font-bold tracking-[.05em] text-pend-800 uppercase">Portal bloqueado para este celular</h2>
+            {portalBlockReasons.map((reason) => (
+              <strong class="text-[16.5px] text-ink">{reason}</strong>
+            ))}
+            <span class="text-sm text-ink-mid">{portalBlockWho}</span>
+          </div>
+        </div>
+        <form method="POST" action={action} class="w-full sm:w-auto">
+          <input type="hidden" name="acao" value="liberar_portal" />
+          <input type="hidden" name="contact_id" value={blockedResponsible?.contactId ?? contact.id} />
+          <button
+            type="submit"
+            class={`${buttonClass("secondary", "sm")} js-confirm-delete w-full sm:w-auto`}
+            data-sending-label="Liberando…"
+            data-confirm-title={`Liberar o portal para ${formatPhoneBR(blockedPhone)}?`}
+            data-confirm-message={`O celular volta a receber o código e a marcar pelo portal agora, sem esperar.${portalBlockOthers.length ? ` Vale também para ${portalBlockOthers.join(", ")}.` : ""} Se pedir código demais de novo, o portal bloqueia outra vez sozinho.`}
+            data-confirm-label="Liberar agora"
+            data-confirm-tone="primary"
+          >
+            Liberar agora
+          </button>
+        </form>
+      </section>
+    )
+  }
+
+  {
+    suspects.length > 0 && (
+      <section aria-labelledby="ficha-repetida" class="mt-4 flex flex-col gap-3 rounded-xl border border-pend-500 bg-pend-50 px-4 py-3.5 sm:px-[18px]" data-duplicate-suspects>
+        <div class="flex items-start gap-2.5">
+          <Icon name="warning" class="mt-0.5 h-5 w-5 shrink-0 text-pend-800" strokeWidth={2} />
+          <h2 id="ficha-repetida" class="text-[12.5px] font-bold tracking-[.05em] text-pend-800 uppercase">Possível ficha repetida</h2>
+        </div>
+        {suspects.map((s) => {
+          const href = suspectLink(s);
+          const newerVia = s.keep === "other" ? VIA[patient.createdVia ?? ""] : VIA[s.createdVia];
+          const newerWhen = formatInstant(new Date(s.keep === "other" ? (createdAt ?? s.createdAt) : s.createdAt), clinic.timezone, "dd/MM/yyyy");
+          return (
+            <div class="flex flex-col gap-2.5 border-t border-pend-200 pt-3 first-of-type:border-t-0 first-of-type:pt-0">
+              <p class="text-[15.5px] leading-snug text-ink">
+                <strong>{s.fullName}</strong> ({formatCalendarDate(s.birthdate, "dd/MM/yyyy")}) também tem ficha
+                {s.primary ? ` com ${s.primary.fullName}${s.primary.kinship ? ` (${s.primary.kinship.toLowerCase()})` : ""} · ${formatPhoneBR(s.primary.phone)}` : ""}.
+              </p>
+              <p class="text-sm text-ink-mid">
+                {s.keep === "other" ? "Esta ficha é a mais nova" : "A outra ficha é a mais nova"}
+                {newerVia ? ` (criada ${newerVia} em ${newerWhen})` : ` (criada em ${newerWhen})`}. Fica a mais antiga; o histórico, as anotações e
+                os documentos da repetida não passam, e as consultas futuras dela a recepção remarca na que fica.
+              </p>
+              {s.alreadyLinked && <p class="text-sm text-ink-mid">O responsável da mais nova já está na mais antiga: falta só desativar a repetida (Mais › Desativar).</p>}
+              <div class="flex flex-wrap gap-2">
+                {href && !s.alreadyLinked && (
+                  <a href={href} class={`${buttonClass("primary", "sm")} w-full sm:w-auto`}>
+                    Ligar o número e desativar a repetida
+                  </a>
+                )}
+                <a href={withReturn(`/admin/pacientes/${s.id}`, here)} class={`${buttonClass("secondary", "sm")} w-full sm:w-auto`}>
+                  Abrir a outra ficha
+                </a>
+                <form method="POST" action={action} class="w-full sm:w-auto">
+                  <input type="hidden" name="acao" value="nao_repetida" />
+                  <input type="hidden" name="other_id" value={s.id} />
+                  <button
+                    type="submit"
+                    class={`${buttonClass("secondary", "sm")} js-confirm-delete w-full sm:w-auto`}
+                    data-sending-label="Salvando…"
+                    data-confirm-title="Não é a mesma pessoa?"
+                    data-confirm-message={`As duas fichas de ${s.fullName} ficam separadas e o aviso não volta.`}
+                    data-confirm-label="Não é a mesma"
+                    data-confirm-tone="primary"
+                  >
+                    Não é a mesma
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+    )
+  }
 
   {
     nextAppointment && (() => {
@@ -431,6 +617,7 @@ const canBook = patient.isActive && !anonymized;
               <span class={`min-w-0 flex-[1_1_200px] text-[15px] ${a.status === "canceled" ? "text-ink-soft" : "text-ink"}`}>
                 {serviceLook(a.category).label} · {a.agendaName}
                 {a.seriesId && <Tag class="ml-1.5">série</Tag>}
+                {bookedText(a) && <span class="block text-[13.5px] text-ink-soft">{bookedText(a)}</span>}
               </span>
               <span class="flex flex-wrap items-center gap-1.5">
                 {pending(a) ? (
@@ -779,6 +966,8 @@ const canBook = patient.isActive && !anonymized;
         !anonymized && (
           <EditCard id="dados" title="Dados" summary={`Nasc. ${formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}`}>
             {/* Cartões curtos, como na ficha A do protótipo: um resumo de uma linha; "Editar" abre o formulário completo. */}
+            {/* Nome no cartão (cliente, 10/nov): deixa claro que o "Editar" daqui muda o nome. */}
+            <p class="text-[14.5px] leading-snug font-semibold text-ink">{patient.fullName}</p>
             <p class="text-[14.5px] leading-snug text-ink-mid">Nascimento {formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}{finance ? " · CPF no Financeiro" : ""}</p>
             {/* Conferência antes de salvar (C19): o diálogo mostra o que muda, com a idade. */}
             <form slot="edit" method="POST" action={action} class="flex flex-col gap-4" data-confirm-data data-today={today}>
@@ -813,15 +1002,88 @@ const canBook = patient.isActive && !anonymized;
 
       {
         !anonymized && (
-          <section aria-labelledby="quem-fala-titulo" class="flex flex-col gap-1 rounded-xl border border-line bg-white px-3.5 py-3.5 lg:px-5 lg:py-[18px]">
+          <section aria-labelledby="responsaveis-titulo" class="flex flex-col gap-1 rounded-xl border border-line bg-white px-3.5 py-3.5 lg:px-5 lg:py-[18px]">
             <div class="flex items-center justify-between gap-3">
-              <h2 id="quem-fala-titulo" class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Quem fala com a clínica</h2>
-              <Button href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} size="sm">Editar</Button>
+              <h2 id="responsaveis-titulo" class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+                Responsáveis <span class="font-sans text-[15px] font-semibold text-ink-soft">({responsibles.length})</span>
+              </h2>
+              {canManageResponsibles && (
+                <Button href={withReturn(`/admin/pacientes/${patient.id}/responsavel`, volta)} size="sm">
+                  <Icon name="plus" class="h-4 w-4" strokeWidth={2.2} /> Adicionar
+                </Button>
+              )}
             </div>
-            <p class="text-[14.5px] leading-snug text-ink-mid">
-              {patient.isContactSelf ? `O próprio ${vocabulary.patient}` : `${contact.fullName} (${vocabulary.contact})`} · {phoneOk ? formatPhoneBR(contact.phone) : "telefone anonimizado"}
-            </p>
-            <HumanConversation item={humanConversation} timeZone={clinic.timezone} returnTo={here} name={contact.fullName} />
+            <ul class="flex flex-col">
+              {responsibles.map((r) => {
+                const phoneShown = !isAnonymizedPhone(r.phone);
+                const label = r.isSelf ? selfLabel : r.fullName;
+                return (
+                  <li class="flex flex-col gap-1.5 border-t border-line py-2.5 first:border-t-0 first:pt-1.5 last:pb-0" data-responsible={r.contactId}>
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <a href={withReturn(`/admin/pacientes/contato/${r.contactId}`, here)} class="text-[15px] font-semibold text-brand no-underline hover:underline">
+                        {label}
+                      </a>
+                      {r.kinship && !r.isSelf && <span class="text-[14.5px] text-ink-mid">{r.kinship}</span>}
+                      {r.isPrimary && multipleResponsibles && <Pill tone="info">Principal</Pill>}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      {phoneShown ? (
+                        <>
+                          <span class="text-[14.5px] text-ink tabular-nums">{formatPhoneBR(r.phone)}</span>
+                          <a
+                            href={whatsappHref(r.phone)}
+                            target="_blank"
+                            rel="noopener"
+                            aria-label={`Abrir conversa no WhatsApp com ${r.fullName}`}
+                            class="inline-flex min-h-8 items-center rounded-[9px] border border-conf-500 bg-conf-500 px-2.5 text-[13.5px] font-semibold text-white no-underline hover:bg-conf-800"
+                          >
+                            WhatsApp
+                          </a>
+                        </>
+                      ) : (
+                        <span class="text-[14.5px] text-ink-soft">telefone anonimizado</span>
+                      )}
+                      {canManageResponsibles && !r.isPrimary && (
+                        <MoreMenu id={`responsavel-${r.contactId}`} label={`Mais ações: ${r.fullName}`} size="sm">
+                          <form method="POST" action={action}>
+                            <input type="hidden" name="acao" value="tornar_principal" />
+                            <input type="hidden" name="contact_id" value={r.contactId} />
+                            <button
+                              type="submit"
+                              class={`${menuItemClass()} js-confirm-delete`}
+                              data-sending-label="Salvando…"
+                              data-confirm-title={`Tornar ${r.fullName} o principal?`}
+                              data-confirm-message={`${r.fullName} passa a aparecer primeiro, vira o responsável financeiro e recebe os avisos quando a recepção marcar. As consultas já marcadas continuam com quem marcou.`}
+                              data-confirm-label="Tornar principal"
+                              data-confirm-tone="primary"
+                            >
+                              Tornar principal
+                            </button>
+                          </form>
+                          <form method="POST" action={action}>
+                            <input type="hidden" name="acao" value="desligar_responsavel" />
+                            <input type="hidden" name="contact_id" value={r.contactId} />
+                            <button
+                              type="submit"
+                              class={`${menuItemClass(true)} js-confirm-delete`}
+                              data-sending-label="Desligando…"
+                              data-confirm-title={`Desligar ${r.fullName} de ${patient.fullName}?`}
+                              data-confirm-message={`${r.fullName} deixa de ver ${patient.fullName} no portal e no WhatsApp. Os avisos das consultas futuras que ${r.fullName} marcou passam ao principal. O cadastro de ${r.fullName} continua.`}
+                              data-confirm-label="Desligar"
+                            >
+                              Desligar
+                            </button>
+                          </form>
+                        </MoreMenu>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {humanConversations.map((c) => (
+              <HumanConversation item={c.item} timeZone={clinic.timezone} returnTo={here} name={c.name} />
+            ))}
           </section>
         )
       }

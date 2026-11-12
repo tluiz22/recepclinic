@@ -1,0 +1,40 @@
+---
+// "Reservamos este horário por 4:32" (F2b; P8 a P9): visível em toda tela da reserva, anunciado no último minuto
+// (leitores de tela); no fim, abre `expiredHref` ("O tempo para confirmar acabou").
+import { clock } from "../../lib/portalIdentity";
+
+interface Props {
+  expiresAt: Date;
+  expiredHref: string;
+}
+
+const { expiresAt, expiredHref } = Astro.props;
+const seconds = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+---
+
+<div data-portal-hold data-seconds={seconds} data-expired-href={expiredHref} class="self-start">
+  <p class="flex items-center gap-2.5 rounded-full bg-clinic-tint px-4 py-2 text-[17px] font-semibold text-clinic-ink">
+    <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+    <span>Reservamos este horário por <span class="tabular-nums" data-portal-hold-clock>{clock(seconds)}</span></span>
+  </p>
+  <p class="sr-only" aria-live="assertive" data-portal-hold-alert></p>
+</div>
+
+<script>
+  const box = document.querySelector<HTMLElement>("[data-portal-hold]");
+  const clockEl = box?.querySelector<HTMLElement>("[data-portal-hold-clock]");
+  const alertEl = box?.querySelector<HTMLElement>("[data-portal-hold-alert]");
+  const total = Number(box?.dataset.seconds ?? 0);
+  if (box && clockEl && total > 0) {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const left = Math.max(0, total - Math.floor((Date.now() - started) / 1000));
+      clockEl.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+      if (left === 60 && alertEl) alertEl.textContent = "Falta 1 minuto para a reserva acabar.";
+      if (left <= 0) {
+        clearInterval(timer);
+        window.location.href = box.dataset.expiredHref ?? window.location.href;
+      }
+    }, 1000);
+  }
+</script>

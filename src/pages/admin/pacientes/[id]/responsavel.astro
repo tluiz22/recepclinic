@@ -1,0 +1,242 @@
+---
+// Pacientes › paciente › Adicionar responsável (VR2, UI-2; cliente, 10/nov/2026). A recepção liga outro número à ficha
+// (D14): busca pelo celular ou pelo nome de um contato já cadastrado → se o número já cuida de uma ficha parecida (mesmo
+// nome e nascimento), aviso com "Desativar a outra ficha" já marcado (VR-4: nada passa de uma ficha para a outra) →
+// parentesco opcional → "Ligar …", com confirmação. Administrador, Recepção e Suporte (o banco confere de novo).
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import Button from "../../../../components/admin/ui/Button.astro";
+import { CONTROL } from "../../../../components/admin/ui/styles";
+import { isUuid } from "../../../../lib/clinicAccess";
+import { formatCalendarDate } from "../../../../lib/clinicTime";
+import { createUserClient } from "../../../../lib/data/clients";
+import { findContactByPhone, getContact, getPatient, searchContacts, type Contact } from "../../../../lib/data/patients";
+import { KINSHIPS, listPatientContacts, similarRecordsOfContact } from "../../../../lib/data/patientContacts";
+import { formatPhoneBR, normalizePhone } from "../../../../lib/phone";
+import { parseSearch } from "../../../../lib/patientSearch";
+import { receivedReturn, withReturn } from "../../../../lib/returnPath";
+import { vocabularyFor } from "../../../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const id = Astro.params.id!;
+const patient = isUuid(id) ? await getPatient(db, clinic.clinicId, id).catch(() => null) : null;
+if (!patient) return Astro.redirect("/admin/pacientes");
+const volta = receivedReturn(Astro.url);
+const fichaHref = withReturn(`/admin/pacientes/${patient.id}`, volta);
+const canManage = patient.anonymizedAt === null && (clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+if (!canManage) return Astro.redirect(fichaHref);
+
+const linked = await listPatientContacts(db, clinic.clinicId, patient.id);
+const isLinked = (contactId: string) => linked.some((c) => c.contactId === contactId);
+const params = Astro.url.searchParams;
+const pageHref = (query: Record<string, string>) => withReturn(`/admin/pacientes/${patient.id}/responsavel?${new URLSearchParams(query)}`, volta);
+
+// Passo 2: o número escolhido (um contato já cadastrado ou um celular novo).
+const chosenId = params.get("contato");
+const chosenPhone = normalizePhone(params.get("celular") ?? "");
+let chosen: Contact | null = chosenId && isUuid(chosenId) ? await getContact(db, clinic.clinicId, chosenId).catch(() => null) : null;
+if (!chosen && chosenPhone) chosen = await findContactByPhone(db, clinic.clinicId, chosenPhone);
+const newPhone = !chosen && chosenPhone ? chosenPhone : null;
+const step = chosen || newPhone ? "confirm" : "search";
+const similar = chosen && !isLinked(chosen.id) ? await similarRecordsOfContact(db, clinic.clinicId, chosen.id, patient) : [];
+
+// Passo 1: a busca (celular completo ou nome de um contato).
+const query = (params.get("q") ?? "").trim();
+const term = step === "search" && query ? parseSearch(query) : null;
+const typedPhone = term?.kind === "phone" ? normalizePhone(query) : null;
+const phoneMatch = typedPhone ? await findContactByPhone(db, clinic.clinicId, typedPhone) : null;
+const results = term && !typedPhone ? await searchContacts(db, clinic.clinicId, query) : phoneMatch ? [phoneMatch] : [];
+
+const who = chosen?.fullName ?? "o responsável";
+const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
+const action = withReturn(`/api/admin/pacientes/${patient.id}`, volta);
+const card = "flex flex-col gap-4 rounded-xl border border-line bg-white p-3.5 sm:px-6 sm:py-5";
+const field = "flex flex-col gap-1.5";
+const fieldLabel = "text-[14.5px] font-semibold text-ink";
+const hint = "text-sm text-ink-soft";
+const confirmKeep = `${chosen?.fullName ?? "O novo responsável"} passa a ver ${patient.fullName} no portal e no WhatsApp, e pode marcar, remarcar e cancelar. A outra ficha continua ativa.`;
+const confirmMessage = [
+  `${chosen?.fullName ?? "O novo responsável"} passa a ver ${patient.fullName} no portal e no WhatsApp, e pode marcar, remarcar e cancelar.`,
+  similar.length ? "A outra ficha, se marcada, é desativada: o histórico, as anotações e os documentos dela não passam para esta." : "",
+].join(" ");
+---
+
+<AdminLayout title="Adicionar responsável">
+  <a href={fichaHref} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+    Voltar
+  </a>
+  <FlashMessage />
+
+  <div class="mt-3 flex max-w-[640px] flex-col gap-4">
+    <header class="flex flex-col gap-1">
+      <h1 class="font-display text-[26px] leading-[1.1] font-bold text-ink sm:text-[30px]">Adicionar responsável</h1>
+      <p class="text-[15px] text-ink-mid">
+        Para {patient.fullName}. Quem for ligado vê {patient.fullName} no portal e no WhatsApp pelo próprio celular.
+      </p>
+    </header>
+
+    {
+      step === "search" && (
+        <section aria-labelledby="busca-titulo" class={card}>
+          <h2 id="busca-titulo" class="sr-only">Buscar o responsável</h2>
+          <form method="GET" class="flex flex-col gap-1.5" role="search">
+            {volta && <input type="hidden" name="volta" value={volta} />}
+            <label for="q" class={fieldLabel}>Celular ou nome</label>
+            <div class="flex flex-wrap gap-2">
+              <input id="q" name="q" value={query} required minlength="2" autocomplete="off" inputmode="search" class={`${CONTROL} min-w-0 flex-[1_1_240px]`} aria-describedby="q-hint" />
+              <Button type="submit" variant="primary">Buscar</Button>
+            </div>
+            <p id="q-hint" class={hint}>Com DDD, ex.: (61) 99999-1234. Pelo nome, só acha quem já tem cadastro na clínica.</p>
+          </form>
+
+          {
+            query && (
+              <div class="flex flex-col gap-2" aria-live="polite">
+                {results.length > 0 && (
+                  <ul class="flex flex-col">
+                    {results.map((c) => (
+                      <li class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-line py-2.5 first:border-t-0">
+                        <span class="flex min-w-0 flex-col">
+                          <strong class="text-[15px] text-ink">{c.fullName}</strong>
+                          <span class="text-[14px] text-ink-mid tabular-nums">{formatPhoneBR(c.phone)}</span>
+                        </span>
+                        {isLinked(c.id) ? (
+                          <span class="text-[14px] text-ink-soft">Já é responsável</span>
+                        ) : (
+                          <Button href={pageHref({ contato: c.id })} size="sm">Escolher</Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {typedPhone && !phoneMatch && (
+                  <div class="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-line bg-canvas px-3.5 py-3">
+                    <span class="text-[15px] text-ink">
+                      <b class="tabular-nums">{formatPhoneBR(typedPhone)}</b> ainda não tem cadastro.
+                    </span>
+                    <Button href={pageHref({ celular: typedPhone })} size="sm" variant="primary">Cadastrar e ligar</Button>
+                  </div>
+                )}
+                {term?.kind === "phone" && !typedPhone && <p class={hint}>Número incompleto: digite o celular com DDD.</p>}
+                {!typedPhone && term?.kind !== "phone" && results.length === 0 && (
+                  <p class={hint}>Nenhum {vocabulary.contact} com esse nome. Se for um número novo, busque pelo celular.</p>
+                )}
+              </div>
+            )
+          }
+        </section>
+      )
+    }
+
+    {
+      step === "confirm" && (
+        <form method="POST" action={action} class={card} data-link-form>
+          <input type="hidden" name="acao" value="ligar_responsavel" />
+          {chosen ? <input type="hidden" name="contact_id" value={chosen.id} /> : <input type="hidden" name="phone" value={newPhone} />}
+
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex min-w-0 flex-col">
+              {chosen && <strong class="text-[17px] text-ink">{chosen.fullName}</strong>}
+              <span class="text-[15px] text-ink-mid tabular-nums">{formatPhoneBR(chosen?.phone ?? newPhone!)}{newPhone ? " · número novo" : ""}</span>
+            </div>
+            <Button href={pageHref({})} size="sm" variant="quiet">Trocar</Button>
+          </div>
+
+          {chosen && isLinked(chosen.id) && (
+            <p class="rounded-[10px] border border-line bg-canvas px-3.5 py-3 text-[15px] text-ink">{chosen.fullName} já é responsável por {patient.fullName}.</p>
+          )}
+
+          {newPhone && (
+            <div class={field}>
+              <label for="full_name" class={fieldLabel}>Nome do responsável</label>
+              <input id="full_name" name="full_name" required autocomplete="off" class={CONTROL} />
+            </div>
+          )}
+
+          {similar.map((r) => (
+            <div class="flex flex-col gap-2.5 rounded-[12px] border border-pend-200 bg-pend-50 px-4 py-3.5" role="region" aria-label="Ficha parecida">
+              <p class="flex items-start gap-2 text-[15px] leading-snug text-ink">
+                <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-pend-800" strokeWidth={2} />
+                <span>
+                  {firstName(chosen!.fullName)} já cuida de outra ficha de <b>{r.fullName}</b> (nasc. {formatCalendarDate(r.birthdate, "dd/MM/yyyy")}), provavelmente repetida.
+                  {r.futureAppointments > 0
+                    ? ` Ela tem ${r.futureAppointments} ${r.futureAppointments === 1 ? "consulta futura" : "consultas futuras"}: remarque nesta ficha antes.`
+                    : ""}{" "}
+                  O histórico dela não passa para esta.
+                </span>
+              </p>
+              <label class="flex items-center gap-2.5 text-[15px] font-semibold text-ink">
+                <input type="checkbox" name="desativar" value={r.id} checked class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                Desativar a outra ficha
+              </label>
+              <a href={withReturn(`/admin/pacientes/${r.id}`, pageHref({ contato: chosen!.id }))} class="text-[14.5px] font-semibold text-brand no-underline hover:underline">
+                Abrir a outra ficha
+              </a>
+            </div>
+          ))}
+
+          {!(chosen && isLinked(chosen.id)) && (
+            <>
+              <div class={field}>
+                <label for="kinship" class={fieldLabel}>
+                  Parentesco <span class="font-normal text-ink-soft">(opcional)</span>
+                </label>
+                <input id="kinship" name="kinship" list="kinships" maxlength="40" autocomplete="off" class={`${CONTROL} w-full sm:w-64`} aria-describedby="kinship-hint" />
+                <datalist id="kinships">
+                  {KINSHIPS.map((k) => (
+                    <option value={k} />
+                  ))}
+                </datalist>
+                <p id="kinship-hint" class={hint}>Ex.: mãe, pai, avó. Aparece na ficha e no portal.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  class="js-confirm-delete"
+                  data-sending-label="Ligando…"
+                  data-confirm-title={
+                    similar.length
+                      ? `Ligar ${chosen ? firstName(chosen.fullName) : "o responsável"} a ${patient.fullName} e desativar a outra ficha?`
+                      : `Ligar ${chosen ? firstName(chosen.fullName) : "o responsável"} a ${patient.fullName}?`
+                  }
+                  data-title-keep={`Ligar ${chosen ? firstName(chosen.fullName) : "o responsável"} a ${patient.fullName}?`}
+                  data-message-keep={confirmKeep}
+                  data-confirm-message={confirmMessage}
+                  data-confirm-label="Ligar"
+                  data-confirm-tone="primary"
+                >
+                  Ligar {chosen ? firstName(who) : "responsável"}
+                </Button>
+                <Button href={fichaHref}>Cancelar</Button>
+              </div>
+            </>
+          )}
+        </form>
+      )
+    }
+  </div>
+  <ConfirmDeleteDialog />
+</AdminLayout>
+
+<script>
+  // Com "Desativar a outra ficha" desmarcado, a confirmação não fala em desativar (UI-2).
+  for (const form of document.querySelectorAll<HTMLFormElement>("[data-link-form]")) {
+    const submit = form.querySelector<HTMLButtonElement>("button[data-title-keep]");
+    const boxes = [...form.querySelectorAll<HTMLInputElement>('input[name="desativar"]')];
+    if (!submit || boxes.length === 0) continue;
+    const full = { title: submit.dataset.confirmTitle ?? "", message: submit.dataset.confirmMessage ?? "" };
+    const sync = () => {
+      const any = boxes.some((b) => b.checked);
+      submit.dataset.confirmTitle = any ? full.title : (submit.dataset.titleKeep ?? full.title);
+      submit.dataset.confirmMessage = any ? full.message : (submit.dataset.messageKeep ?? full.message);
+    };
+    for (const box of boxes) box.addEventListener("change", sync);
+    sync();
+  }
+</script>

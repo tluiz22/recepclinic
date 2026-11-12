@@ -29,15 +29,19 @@ interface Props {
   fill?: boolean;
   /** Nome da área cujas seções vêm no slot "side" (ex.: "Configurações"), no lugar do menu principal. */
   sideTitle?: string;
+  /** Telas da Agenda (Dia, Semana e Próximos horários livres; cliente, 11/nov/2026): a largura toda ao lado do menu,
+   * sem o limite de 1104 px, com 24 px nas laterais e 20 px no topo (16 px e 16 px no celular; cliente, 11/nov/2026:
+   * os 16/14 px da primeira versão ficaram apertados). */
+  edge?: boolean;
 }
 
 // Uma largura só para todas as telas (cliente, 16/out/2026: a Agenda e o Resumo do Dia
 // deixaram a largura de 1600px da R1 para ficar como as outras).
-const { title, platform = false, autoRefresh = false, wide = false, fill = false, sideTitle } = Astro.props;
+const { title, platform = false, autoRefresh = false, wide = false, fill = false, sideTitle, edge = false } = Astro.props;
 // Seções de uma área na lateral (M5, Configurações; cliente, 30/out/2026): elas aparecem no lugar do menu
 // principal, que volta pelo "‹ Menu principal" sem sair da tela.
 const hasSide = Astro.slots.has("side");
-const frame = wide ? "max-w-[1760px]" : "max-w-6xl";
+const frame = edge ? "px-4 pt-4 sm:px-6 sm:pt-5" : `px-4 pt-6 sm:pt-8 lg:px-6 ${wide ? "max-w-[1760px]" : "max-w-6xl"}`;
 
 // `match`: outras rotas que deixam o item marcado (o Atendimento é do Meu dia; o Relatório do dia, da Agenda; o
 // Relacionamento antigo, de Pacientes).
@@ -444,7 +448,7 @@ const sideLinkClass = (active: boolean) =>
       <main
         id="conteudo"
         tabindex="-1"
-        class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pt-8 lg:px-6 ${fill ? "lg:flex lg:min-h-0 lg:flex-col lg:pb-6" : "lg:pb-12"} ${frame}`}
+        class={`mx-auto w-full flex-1 pb-28 outline-none ${fill ? "lg:flex lg:min-h-0 lg:flex-col lg:pb-6" : "lg:pb-12"} ${frame}`}
       >
         <slot />
       </main>

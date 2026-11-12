@@ -67,6 +67,8 @@ export type SeriesInput = {
   homeVisitAddress?: string | null;
   /** Sem ele, o convênio do paciente (Alterar "esta e as próximas" passa o escolhido). */
   insurancePlanId?: string | null;
+  /** Quem recebe a confirmação e o lembrete (D14); sem ele, o principal. Alterar "esta e as próximas" passa o da sessão. */
+  bookedByContactId?: string | null;
   actorId: string | null;
 };
 
@@ -167,12 +169,25 @@ export async function listSeriesSkips(db: DbClient, clinicId: string, seriesId: 
   return rows.map((row) => ({ date: row.skipped_on, reason: row.reason }));
 }
 
+/**
+ * Quem marcou as sessões novas (D14): o da última sessão da série (o escolhido no Marcar), se ainda é responsável pelo
+ * paciente; senão null (o banco põe o principal).
+ */
+async function sessionBooker(db: DbClient, clinicId: string, patientId: string, contactId: string | null): Promise<string | null> {
+  if (!contactId) return null;
+  const linked = unwrap(
+    await db.from("patient_contacts").select("id").eq("clinic_id", clinicId).eq("patient_id", patientId).eq("contact_id", contactId).limit(1),
+    "Responsáveis do paciente",
+  );
+  return linked.length ? contactId : null;
+}
+
 /** Cria as sessões que faltam até o limite (horizonte, fim por data ou por número). */
 async function generateSessions(
   db: DbClient,
   clinicId: string,
   series: AppointmentSeries,
-  { actorId, trailChannel }: { actorId: string | null; trailChannel: TrailChannel },
+  { actorId, trailChannel, bookedByContactId = null }: { actorId: string | null; trailChannel: TrailChannel; bookedByContactId?: string | null },
   now: Date,
 ): Promise<GenerationResult> {
   const result: GenerationResult = { created: [], skipped: [] };
@@ -183,7 +198,13 @@ async function generateSessions(
   const today = todayIn(timeZone, now);
 
   const [sessions, skips] = await Promise.all([
-    db.from("appointments").select("scheduled_at").eq("clinic_id", clinicId).eq("series_id", series.id).then((r) => unwrap(r, "Sessões da série")),
+    db
+      .from("appointments")
+      .select("scheduled_at, booked_by_contact_id")
+      .eq("clinic_id", clinicId)
+      .eq("series_id", series.id)
+      .order("scheduled_at")
+      .then((r) => unwrap(r, "Sessões da série")),
     listSeriesSkips(db, clinicId, series.id),
   ]);
   let count = sessions.length;
@@ -209,6 +230,7 @@ async function generateSessions(
       .gt("ends_at", toInstant(date, "00:00", timeZone).toISOString())
       .then((r) => unwrap(r, "Bloqueios da agenda")),
   ]);
+  const booker = await sessionBooker(db, clinicId, series.patientId, sessions.at(-1)?.booked_by_contact_id ?? bookedByContactId);
 
   const step = series.intervalWeeks * 7;
   for (; date <= limit && (series.maxSessions === null || count < series.maxSessions); date = addDays(date, step)) {
@@ -235,6 +257,7 @@ async function generateSessions(
         booking_channel: "admin",
         insurance_plan_id: series.insurancePlanId,
         home_visit_address: series.homeVisitAddress,
+        booked_by_contact_id: booker,
         created_by: actorId,
         trail_context: trailContext({ channel: trailChannel }),
       });
@@ -243,6 +266,10 @@ async function generateSessions(
         reason = "conflict";
       } else {
         count += 1;
+        // Série particular (CE-5): o gatilho app.appointment_defaults põe o convênio do paciente quando vem vazio.
+        if (series.insurancePlanId === null) {
+          unwrap(await db.from("appointments").update({ insurance_plan_id: null }).eq("clinic_id", clinicId).eq("id", id).not("insurance_plan_id", "is", null), "Sessão da série");
+        }
         result.created.push(await getAppointment(db, clinicId, id));
       }
     }
@@ -313,7 +340,10 @@ export async function createSeries(
     "Série",
   );
   const series = await getSeries(db, clinicId, id);
-  return { series, ...(await generateSessions(db, clinicId, series, { actorId: input.actorId, trailChannel: "admin" }, now)) };
+  return {
+    series,
+    ...(await generateSessions(db, clinicId, series, { actorId: input.actorId, trailChannel: "admin", bookedByContactId: input.bookedByContactId ?? null }, now)),
+  };
 }
 
 /** Horizonte móvel: cria as sessões que entraram nos 3 meses à frente (agendador, F7). */
@@ -454,6 +484,11 @@ export async function changeSeriesFrom(
     maxSessions: remaining,
     homeVisitAddress: change.homeVisitAddress !== undefined ? change.homeVisitAddress : old.homeVisitAddress,
     insurancePlanId: change.insurancePlanId,
+    // A série nova segue com quem recebia os avisos da sessão alterada (D14).
+    bookedByContactId: unwrap(
+      await db.from("appointments").select("booked_by_contact_id").eq("clinic_id", clinicId).eq("id", appointmentId).maybeSingle(),
+      "Sessão da série",
+    )?.booked_by_contact_id ?? null,
     actorId,
   };
   if (remaining === null || remaining > 0) validateSeriesInput(input, todayIn((await loadTimezone(db, clinicId)), now));

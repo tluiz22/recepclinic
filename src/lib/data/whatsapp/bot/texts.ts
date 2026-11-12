@@ -140,8 +140,11 @@ export const CHANGE_SPECIALTY_LABEL = "Outra especialidade";
 export const professionalChosen = (name: string, specialty: string | null) => `Atendimento com *${name}*${specialty ? ` (${specialty})` : ""}.`;
 export const EXAMS_CHOSEN = "Certo, vamos ver os exames.";
 /** Informações gerais › Convênios (MC + MI): os planos que o profissional atende e o texto dele. */
-export function insuranceInfoText(name: string, plans: string[], text: string | null): string {
-  const list = plans.length ? `Convênios atendidos por *${name}*: ${plans.join(", ")}.` : `*${name}* atende só particular.`;
+export function insuranceInfoText(name: string, plans: string[], text: string | null, acceptsPrivate = true): string {
+  // Só convênio ("Atende particular" desmarcado; pendência da F1, fechada na F3): diz que não atende particular.
+  const list = plans.length
+    ? `Convênios atendidos por *${name}*: ${plans.join(", ")}.${acceptsPrivate ? "" : " Não atende particular."}`
+    : `*${name}* atende só particular.`;
   return text ? `${list}\n\n${text}` : list;
 }
 
@@ -242,6 +245,11 @@ export const planAccepted = (planName: string) => `Atendemos pelo convênio *${p
 /** Plano fora da lista, não encontrado ou não atendido pelo(s) profissional(is) do caminho escolhido. */
 export const planNotAccepted = (planName: string | null, d: Designation, forThisService: boolean) =>
   `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}.\n\nQuer seguir com o atendimento particular?`;
+/** Só convênio e nenhum plano ativo do profissional: a recepção ajuda. */
+export const NO_COVERAGE_OPTION = "Para este atendimento, a marcação é feita com a recepção.";
+/** O mesmo, quando o caminho atende só por convênio: sem oferecer particular. */
+export const planNotAcceptedNoPrivate = (planName: string | null, d: Designation, forThisService: boolean) =>
+  `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}, e o atendimento é só por convênio.`;
 export function priceInfo(category: "consultation" | "exam", cents: number, paymentInfo: string | null): string {
   const value = `O valor ${category === "exam" ? "do exame" : "da consulta"} é ${formatCentsBRL(cents)}.`;
   return paymentInfo ? `${value}\n\nFormas de pagamento: ${paymentInfo}` : value;
@@ -301,6 +309,14 @@ export const SELF_MINOR = "Para menores de 18 anos, o agendamento precisa ser fe
 
 export const bookingLink = (serviceName: string, patientName: string, url: string) =>
   `Prontinho! Escolha o melhor dia e horário para *${serviceName}* de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
+
+/**
+ * Link do portal (F3b; proposta 3.4): o que vai marcar, a validade e que é só deste número. Do "Encaixe ou antecipar"
+ * sem nada marcado (F3-2): ao marcar, entra na lista de espera.
+ */
+export const portalLink = (what: string, url: string, joinWaitlist = false) =>
+  `Para escolher o dia e o horário ${what === "retorno" ? "do" : "de"} *${what}*, toque no link abaixo. Ele vale por 30 minutos e é só para este número:\n${url}` +
+  (joinWaitlist ? "\n\nAo marcar, você entra na lista de espera: se vagar um horário mais cedo, avisamos aqui." : "");
 
 /** Acima da idade limite, com o profissional escolhido ou a clínica (cliente, 31/out/2026). */
 export const ageLimit = (professionalName: string | null, d: Designation, limitYears: number, w: Words) =>
@@ -413,6 +429,9 @@ export const keptAskPresence = (phrase: string, end: "a" | "o") => `${cancelKept
 export const PRESENCE_NOT_UNDERSTOOD = "Não entendi. Deseja confirmar sua presença? Toque em Sim ou Não.";
 export const KEPT_PRESENCE_DECLINED = 'Tudo bem! Se quiser confirmar depois, é só tocar em "Confirmar presença" no lembrete.';
 
+/** Remarcar pelo portal (F3c; I7). */
+export const portalRescheduleLink = (phrase: string, patientName: string, url: string) =>
+  `Para escolher o novo dia e horário para ${phrase} de *${patientName}*, toque no link abaixo. Ele vale por 30 minutos e é só para este número:\n${url}`;
 export const rescheduleLink = (phrase: string, patientName: string, url: string) =>
   `Prontinho! Escolha o novo dia e horário para ${phrase} de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
 export const returnDeadlinePassed = (patientName: string, lastDate: string, receptionAvailable: boolean, d: Designation) =>
@@ -579,6 +598,12 @@ export const notCompletedButtons = (kind: NotCompletedKind, receptionAvailable: 
   ...(receptionAvailable ? [button(NOT_COMPLETED_IDS.reception, "Falar com a recepção")] : []),
   button(NOT_COMPLETED_IDS.giveUp, "Desistir"),
 ];
+
+/** Link do portal vencido sem marcar (F3b): o portal pergunta o paciente depois, então a mensagem não tem nome. */
+export const NOT_COMPLETED_PORTAL = "Não concluímos a sua marcação. Como prefere seguir?";
+
+/** Novo link do portal no pedido não concluído. */
+export const notCompletedPortalLink = (url: string) => `Aqui está um novo link para marcar:\n${url}\n\nEle vale por 30 minutos e é só para este número.`;
 
 /** Novo link do pedido não concluído. */
 export const notCompletedNewLink = (kind: NotCompletedKind, patientName: string, url: string) =>

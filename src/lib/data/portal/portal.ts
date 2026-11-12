@@ -1,0 +1,545 @@
+import { localDateOf, todayIn } from "../../clinicTime";
+import { describeReceptionHours } from "../../receptionHours";
+import type { PortalPlan, PriceInfo } from "../../portal";
+import type { DbClient } from "../clients";
+import { listAgendas } from "../config/agendas";
+import type { ClinicProfile } from "../config/clinic";
+import { getPublicClinicBrand, type PublicClinicBrand } from "../config/brand";
+import { listInsurancePlans } from "../config/insurance";
+import { listServiceInsuranceLinks } from "../config/serviceInsurance";
+import { listLocations, type LocationType } from "../config/locations";
+import { listProfessionalBotInfo } from "../config/professionalBotInfo";
+import { professionalRegistry, listProfessionals } from "../config/professionals";
+import { PHOTO_BUCKET } from "../config/profilePhotos";
+import { getReceptionHours } from "../config/receptionHours";
+import { listServices, servicePriceAt } from "../config/services";
+import { unwrap, unwrapOne } from "../errors";
+import { getClinicFeatures } from "../features";
+import { getFreeSlots, getGroupSessions, getNextAvailableDates, horizonLastDate, isAgendaOpenOn, type GroupSession } from "../agenda/slots";
+import type { FreeSlot } from "../agenda/freeSlots";
+import { logError } from "../../log";
+
+// Portal de agendamento, F2a (recepção digital, 08/nov/2026): o que a clínica mostra ao paciente antes de marcar.
+// Tudo com a credencial limitada à clínica (D1), achada pelo apelido do endereço.
+//
+// Quem aparece (mesma regra do catálogo do bot, catalog.ts): profissional ativo, marcado para o portal, com um serviço
+// de Consulta individual ativo na agenda dele e horário de atendimento cadastrado num local da clínica onde o serviço é
+// oferecido, que atende particular ou algum convênio ativo. Domiciliar (F3e-1, D5): o local "em casa" entra nos locais
+// do profissional, com o valor de lá. Turma (F3e-2): exame em grupo da agenda da equipe, por vaga (retorno e exames: F2d). Perfil e idade limite da agenda valem quando o paciente for informado (P8, F2c).
+// Os horários saem das mesmas funções do bot, do Marcar e do link de agendar (agenda/slots.ts): prazo do profissional,
+// feriados, bloqueios, intervalo e atendimentos marcados.
+
+/** Local de atendimento; "home_visit" = em casa (o endereço vem do paciente, F3e-1). */
+export type PortalLocation = { id: string; name: string; address: string | null; type: LocationType };
+
+/** Um tipo de Consulta do profissional (cópia do serviço dele, MS). */
+export type PortalConsultation = {
+  serviceId: string;
+  name: string;
+  durationMinutes: number;
+  priceCents: number | null;
+  /** O menor valor no consultório e em casa (F3e-1: a escolha "No consultório R$ 350 / Em casa R$ 550"). */
+  prices: Partial<Record<LocationType, number | null>>;
+  /** O valor em cada local (a revisão e a tela final mostram o do local escolhido, cliente 10/nov). */
+  pricesByLocation: Record<string, number | null>;
+};
+
+/** O valor no local do horário escolhido; sem o local, o menor (o "a partir de"). */
+export const priceAt = (consultation: Pick<PortalConsultation, "priceCents" | "pricesByLocation">, locationId: string | null | undefined) =>
+  (locationId ? consultation.pricesByLocation[locationId] : null) ?? consultation.priceCents;
+
+export type PortalSpecialty = { id: string; name: string; terms: string[] };
+
+export type PortalProfessional = PriceInfo & {
+  id: string;
+  slug: string;
+  name: string;
+  /** "CRM 12345 RN | RQE 6271" (vazio sem registro). */
+  registry: string;
+  /** A principal primeiro. */
+  specialties: PortalSpecialty[];
+  photoUrl: string | null;
+  plans: PortalPlan[];
+  consultations: PortalConsultation[];
+  agendaId: string;
+  /** Prazo para oferecer horários, em dias (do profissional). */
+  horizonDays: number;
+  /** Locais onde ele atende Consulta: os da clínica e, se atende em casa, o domiciliar (F3e-1). */
+  locations: PortalLocation[];
+  /** Observações do profissional (as mesmas que o bot responde em Informações gerais). */
+  orientation: string | null;
+  /** Perfil da agenda (Pediátrica: a consulta é sempre de outra pessoa, como no bot). */
+  profile: ClinicProfile;
+  /** Idade a partir da qual não marca Consulta (da agenda); null = sem limite. */
+  ageLimitYears: number | null;
+  /** Exame (F2d): o "profissional" é o exame na agenda da equipe (examProfessional). */
+  exam?: PortalExam;
+};
+
+/**
+ * Exame no portal (F2d; D4): serviço do tipo Exame, individual, na agenda da equipe (só nela, migração
+ * 20270101150000), com horário de atendimento num local da clínica. Particular sempre; convênio com o item Convênios,
+ * todos os planos ativos (como o bot: agenda sem profissional aceita todos).
+ */
+export type PortalExam = {
+  serviceId: string;
+  /** "exame-1a2b3c4d" (o começo do id): o endereço das telas do exame. */
+  slug: string;
+  name: string;
+  durationMinutes: number;
+  priceCents: number | null;
+  /** O valor muda com o local ("a partir de"). */
+  priceVaries: boolean;
+  /** Locais da clínica onde o exame tem horário. */
+  locationIds: string[];
+  /** O valor em cada local. */
+  pricesByLocation: Record<string, number | null>;
+  /** Preparo, na formatação do WhatsApp; null = sem preparo. */
+  preparation: string | null;
+  /** Tem o arquivo com as orientações (o link público /preparo/…). */
+  hasPreparationFile: boolean;
+  /** Em turma (F3e-2): horário fixo, várias pessoas juntas; o paciente escolhe o dia numa lista, sem o número de vagas. */
+  isGroup: boolean;
+  /** Particular e convênios do exame (CE-3, cliente, 10/nov/2026): o que a clínica marcou no cadastro dele. */
+  acceptsPrivate: boolean;
+  plans: PortalPlan[];
+};
+
+export const EXAM_SLUG_PREFIX = "exame-";
+export const examSlug = (serviceId: string) => `${EXAM_SLUG_PREFIX}${serviceId.slice(0, 8)}`;
+
+export type PortalUnavailable = { status: "unavailable"; brand: PublicClinicBrand };
+
+export type PortalClinic = {
+  status: "open";
+  clinicId: string;
+  slug: string;
+  timeZone: string;
+  brand: PublicClinicBrand;
+  /** "Seg a Sex 07:00–19:00 · Sáb 08:00–12:00", ou null sem horário cadastrado. */
+  receptionHours: string | null;
+  /** Locais da clínica (sem o domiciliar) com algum profissional do portal. */
+  locations: PortalLocation[];
+  /** Em ordem alfabética (RD7). */
+  professionals: PortalProfessional[];
+  /** Exames marcáveis pelo portal (F2d), em ordem alfabética; vazio sem o item "Exames e procedimentos". */
+  exams: PortalExam[];
+  /** A agenda da equipe e o que vale para todo exame (locais, convênios, prazo). */
+  examBase: Omit<PortalProfessional, "id" | "slug" | "name" | "consultations" | "privatePriceCents" | "privatePriceVaries" | "exam"> | null;
+};
+
+/** Profissionais sem especialidade (cadastro pendente) ficam em "Outros profissionais", como no bot. */
+export const OTHER_SPECIALTY: PortalSpecialty = { id: "outros", name: "Outros profissionais", terms: [] };
+
+/**
+ * A clínica no portal. Item "Portal de agendamento" desligado na Matriz ou clínica suspensa: indisponível (a página
+ * mostra só o WhatsApp da clínica, sem falar de cobrança).
+ */
+export async function loadPortal(db: DbClient, clinicId: string, slug: string): Promise<PortalClinic | PortalUnavailable> {
+  const [brand, features] = await Promise.all([getPublicClinicBrand(db, clinicId), getClinicFeatures(db, clinicId)]);
+  if (brand.suspended || !features.includes("portal")) return { status: "unavailable", brand };
+
+  const [settings, professionals, agendas, services, locations, plans, links, examLinks, botInfo, photos, windows, hours] = await Promise.all([
+    db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
+    listProfessionals(db, clinicId),
+    listAgendas(db, clinicId),
+    listServices(db, clinicId),
+    listLocations(db, clinicId),
+    listInsurancePlans(db, clinicId),
+    db
+      .from("professional_insurance_plans")
+      .select("professional_id, insurance_plan_id, note")
+      .eq("clinic_id", clinicId)
+      .then((r) => unwrap(r, "Convênios do profissional")),
+    listServiceInsuranceLinks(db, clinicId),
+    listProfessionalBotInfo(db, clinicId),
+    db.from("professionals").select("id, photo_path").eq("clinic_id", clinicId).then((r) => unwrap(r, "Fotos dos profissionais")),
+    db
+      .from("availability_windows")
+      .select("agenda_id, location_id, service_id")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .then((r) => unwrap(r, "Horários de atendimento")),
+    getReceptionHours(db, clinicId).catch((error) => {
+      logError("portal: horário da recepção não lido", error, { clinica: clinicId });
+      return null;
+    }),
+  ]);
+
+  const clinicLocations = new Map(locations.filter((l) => l.type === "clinic").map((l) => [l.id, l]));
+  // Consulta: também o domiciliar (F3e-1); exames seguem só nos locais da clínica.
+  const consultationLocations = new Map(locations.map((l) => [l.id, l]));
+  const toPortalLocation = (l: { id: string; name: string; address: string | null; type: LocationType }): PortalLocation => ({ id: l.id, name: l.name, address: l.address, type: l.type });
+  const planById = new Map(plans.map((p) => [p.id, p]));
+  const agendaByProfessional = new Map(agendas.filter((a) => a.professionalId).map((a) => [a.professionalId!, a]));
+  const specialtyIds = [...new Set(professionals.flatMap((p) => p.specialties.map((s) => s.id)))];
+  const terms = specialtyIds.length
+    ? new Map(
+        unwrap(await db.from("kb_specialties").select("id, terms").in("id", specialtyIds), "Especialidades").map((row) => [row.id, row.terms ?? []]),
+      )
+    : new Map<string, string[]>();
+
+  const consultationServices = services.filter((s) => s.category === "consultation");
+  const result: PortalProfessional[] = [];
+  for (const professional of professionals) {
+    if (!professional.showInPortal) continue;
+    const agenda = agendaByProfessional.get(professional.id);
+    if (!agenda?.isActive) continue;
+    const consultations: PortalConsultation[] = [];
+    const used = new Set<string>();
+    for (const service of consultationServices) {
+      if (service.schedulingMode === "group" || !service.agendaIds.includes(agenda.id)) continue;
+      const offered = new Set(service.locations.map((l) => l.locationId).filter((id) => consultationLocations.has(id)));
+      const here = windows.filter((w) => w.agenda_id === agenda.id && offered.has(w.location_id) && (w.service_id === null || w.service_id === service.id));
+      if (!here.length) continue;
+      const ids = [...new Set(here.map((w) => w.location_id))];
+      const minAt = (filter: (id: string) => boolean) => {
+        const values = ids.filter(filter).map((id) => servicePriceAt(service, id)).filter((p): p is number => p !== null);
+        return values.length ? Math.min(...values) : null;
+      };
+      const byType: PortalConsultation["prices"] = {};
+      for (const type of ["clinic", "home_visit"] as const) {
+        if (ids.some((id) => consultationLocations.get(id)!.type === type)) byType[type] = minAt((id) => consultationLocations.get(id)!.type === type) ?? service.priceCents;
+      }
+      for (const id of ids) used.add(id);
+      consultations.push({
+        serviceId: service.id,
+        name: service.name,
+        durationMinutes: service.durationMinutes,
+        priceCents: minAt(() => true) ?? service.priceCents,
+        prices: byType,
+        pricesByLocation: Object.fromEntries(ids.map((id) => [id, servicePriceAt(service, id) ?? service.priceCents])),
+      });
+    }
+    if (!consultations.length) continue;
+
+    const accepted = links
+      .filter((link) => link.professional_id === professional.id && planById.has(link.insurance_plan_id))
+      .map((link) => ({ id: link.insurance_plan_id, name: planById.get(link.insurance_plan_id)!.name, note: link.note?.trim() || null }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    // Sem particular e sem convênio ativo não há como marcar (o bot manda à recepção): fica fora do portal.
+    if (!professional.acceptsPrivate && !accepted.length) continue;
+    // Os valores de cada lugar contam (em casa pode custar outro valor: "a partir de", F3e-1).
+    const priced = consultations.flatMap((c) => [c.priceCents, ...Object.values(c.prices)]).filter((p): p is number => typeof p === "number" && p > 0);
+    const photoPath = photos.find((row) => row.id === professional.id)?.photo_path ?? null;
+    result.push({
+      id: professional.id,
+      slug: professional.portalSlug,
+      name: professional.displayName,
+      registry: professionalRegistry(professional),
+      specialties: professional.specialties.filter((s) => s.isActive).map((s) => ({ id: s.id, name: s.name, terms: terms.get(s.id) ?? [] })),
+      photoUrl: photoPath,
+      acceptsPrivate: professional.acceptsPrivate,
+      privatePriceCents: priced.length ? Math.min(...priced) : null,
+      privatePriceVaries: new Set(priced).size > 1,
+      plans: accepted,
+      consultations: consultations.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+      agendaId: agenda.id,
+      horizonDays: agenda.bookingHorizonDays,
+      // Consultório antes do domiciliar (como o bot).
+      locations: [...used]
+        .map((id) => toPortalLocation(consultationLocations.get(id)!))
+        .sort((a, b) => Number(a.type === "home_visit") - Number(b.type === "home_visit") || a.name.localeCompare(b.name, "pt-BR")),
+      orientation: botInfo.get(professional.id)?.notes?.trim() || null,
+      profile: agenda.profile,
+      ageLimitYears: agenda.consultationAgeLimitYears,
+    });
+  }
+  result.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  await signPhotos(db, clinicId, result);
+
+  // Exames (F2d): a agenda da equipe, os exames dela (individuais e, desde a F3e-2, em turma) com horário num local da
+  // clínica (a turma, nas janelas dela).
+  const exams: PortalExam[] = [];
+  let examBase: PortalClinic["examBase"] = null;
+  const team = agendas.find((a) => a.kind === "resource" && a.isActive);
+  if (team && features.includes("exams")) {
+    const examLocations = new Set<string>();
+    for (const service of services) {
+      if (service.category !== "exam" || !service.agendaIds.includes(team.id)) continue;
+      const offered = new Set(service.locations.map((l) => l.locationId).filter((id) => clinicLocations.has(id)));
+      const here = windows.filter((w) => w.agenda_id === team.id && offered.has(w.location_id) && (w.service_id === null || w.service_id === service.id));
+      if (!here.length) continue;
+      for (const w of here) examLocations.add(w.location_id);
+      const locationIds = [...new Set(here.map((w) => w.location_id))];
+      const prices = locationIds.map((id) => servicePriceAt(service, id)).filter((p): p is number => p !== null);
+      // Convênios do exame (CE-3): os ativos marcados no cadastro dele; sem o item Convênios, só particular.
+      const examPlans = features.includes("insurance")
+        ? examLinks
+            .filter((link) => link.serviceId === service.id && planById.has(link.planId))
+            .map((link) => ({ id: link.planId, name: planById.get(link.planId)!.name, note: link.note?.trim() || null }))
+            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+        : [];
+      // Sem particular e sem convênio ativo não há como marcar: fica fora do portal (como o profissional).
+      if (!service.acceptsPrivate && !examPlans.length) continue;
+      exams.push({
+        serviceId: service.id,
+        slug: examSlug(service.id),
+        name: service.name,
+        durationMinutes: service.durationMinutes,
+        priceCents: prices.length ? Math.min(...prices) : service.priceCents,
+        priceVaries: new Set(prices).size > 1,
+        locationIds,
+        pricesByLocation: Object.fromEntries(locationIds.map((id) => [id, servicePriceAt(service, id) ?? service.priceCents])),
+        preparation: service.preparationInstructions?.trim() || null,
+        hasPreparationFile: !!service.preparationFile,
+        isGroup: service.schedulingMode === "group",
+        acceptsPrivate: service.acceptsPrivate,
+        plans: examPlans,
+      });
+    }
+    exams.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    if (exams.length) {
+      examBase = {
+        registry: "",
+        specialties: [],
+        photoUrl: null,
+        // Cada exame tem os seus (examProfessional); aqui, a soma deles (há convênio em algum exame?).
+        acceptsPrivate: exams.some((e) => e.acceptsPrivate),
+        plans: [...new Map(exams.flatMap((e) => e.plans).map((p) => [p.id, { ...p, note: null }])).values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+        agendaId: team.id,
+        horizonDays: team.bookingHorizonDays,
+        locations: [...examLocations].map((id) => toPortalLocation(clinicLocations.get(id)!)),
+        orientation: null,
+        profile: team.profile,
+        ageLimitYears: null,
+      };
+    }
+  }
+
+  const usedLocations = new Set([...result.flatMap((p) => p.locations.map((l) => l.id)), ...(examBase?.locations.map((l) => l.id) ?? [])]);
+  return {
+    status: "open",
+    clinicId,
+    slug,
+    timeZone: settings.timezone,
+    brand,
+    receptionHours: hours && hours.hours.some(Boolean) ? describeReceptionHours(hours.hours) : null,
+    locations: [...clinicLocations.values()].filter((l) => usedLocations.has(l.id)).map(toPortalLocation),
+    professionals: result,
+    exams,
+    examBase,
+  };
+}
+
+/**
+ * O exame como um "profissional" do portal (F2d): as telas da consulta (P5 a P10) servem ao exame, com o nome, o valor
+ * e a duração dele, a agenda da equipe e todos os convênios. Sem idade limite e sem orientações do profissional (o
+ * preparo é do exame).
+ */
+export function examProfessional(portal: Pick<PortalClinic, "examBase">, exam: PortalExam): PortalProfessional | null {
+  if (!portal.examBase) return null;
+  const price = exam.priceCents && exam.priceCents > 0 ? exam.priceCents : null;
+  return {
+    ...portal.examBase,
+    id: exam.serviceId,
+    slug: exam.slug,
+    name: exam.name,
+    privatePriceCents: price,
+    privatePriceVaries: exam.priceVaries,
+    acceptsPrivate: exam.acceptsPrivate,
+    plans: exam.plans,
+    // Só os locais deste exame (o cartão e os horários não mostram onde ele não é feito).
+    locations: portal.examBase.locations.filter((l) => exam.locationIds.includes(l.id)),
+    consultations: [{ serviceId: exam.serviceId, name: exam.name, durationMinutes: exam.durationMinutes, priceCents: exam.priceCents, prices: { clinic: exam.priceCents }, pricesByLocation: exam.pricesByLocation }],
+    exam,
+  };
+}
+
+/** Troca o caminho da foto por um link de 1 hora; sem o link, a página mostra as iniciais. */
+async function signPhotos(db: DbClient, clinicId: string, professionals: PortalProfessional[]): Promise<void> {
+  const withPhoto = professionals.filter((p) => p.photoUrl);
+  if (!withPhoto.length) return;
+  const { data, error } = await db.storage.from(PHOTO_BUCKET).createSignedUrls(withPhoto.map((p) => p.photoUrl!), 3600);
+  if (error) logError("portal: fotos sem link", error, { clinica: clinicId });
+  const byPath = new Map((data ?? []).filter((item) => item.signedUrl && !item.error).map((item) => [item.path, item.signedUrl]));
+  for (const professional of professionals) professional.photoUrl = professional.photoUrl ? (byPath.get(professional.photoUrl) ?? null) : null;
+}
+
+/** Especialidades com algum profissional do portal, em ordem alfabética; "Outros profissionais" no fim. */
+export function portalSpecialties(professionals: readonly PortalProfessional[]): PortalSpecialty[] {
+  const byId = new Map<string, PortalSpecialty>();
+  for (const p of professionals) for (const s of p.specialties) byId.set(s.id, s);
+  const list = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return professionals.some((p) => !p.specialties.length) ? [...list, OTHER_SPECIALTY] : list;
+}
+
+export function professionalsOfSpecialty(professionals: readonly PortalProfessional[], specialtyId: string): PortalProfessional[] {
+  return professionals.filter((p) => (specialtyId === OTHER_SPECIALTY.id ? !p.specialties.length : p.specialties.some((s) => s.id === specialtyId)));
+}
+
+// ---------------------------------------------------------------------------
+// Horários
+
+/** Onde ele atende Consulta (F3e-1): consultório, em casa ou os dois (consultório primeiro). */
+export function placesOf(professional: Pick<PortalProfessional, "locations">): ("clinic" | "home_visit")[] {
+  return (["clinic", "home_visit"] as const).filter((type) => professional.locations.some((l) => l.type === type));
+}
+
+/** Os locais do lugar escolhido (F3e-1: "No consultório" × "Em casa"); sem escolha, todos. */
+export const locationsAt = (professional: Pick<PortalProfessional, "locations">, type: LocationType | null) =>
+  type ? professional.locations.filter((l) => l.type === type) : professional.locations;
+
+/** Último dia que o profissional oferece (o prazo dele; hoje conta como o 1º). */
+export const lastBookableDate = (professional: Pick<PortalProfessional, "horizonDays">, timeZone: string, now: Date = new Date()) =>
+  horizonLastDate(todayIn(timeZone, now), professional.horizonDays);
+
+export type PortalSlot = FreeSlot & { serviceId: string };
+
+/**
+ * Outro recorte dos horários do profissional (retorno, F2d): só os locais onde o serviço é oferecido e o último dia
+ * (o fim do prazo do retorno, sem passar do prazo do profissional).
+ */
+export type SlotScope = { locations?: readonly PortalLocation[]; lastDate?: string | null };
+
+export const scopeLastDate = (professional: Pick<PortalProfessional, "horizonDays">, timeZone: string, now: Date, scope: SlotScope) => {
+  const own = lastBookableDate(professional, timeZone, now);
+  return scope.lastDate && scope.lastDate < own ? scope.lastDate : own;
+};
+
+/**
+ * Turma (F3e-2): as próximas sessões com vaga, nos locais do exame e no prazo da agenda, sem as vagas que outros
+ * pacientes do portal estão confirmando (`sessionId`: a de quem pergunta).
+ */
+export async function groupSessions(
+  db: DbClient,
+  clinicId: string,
+  professional: PortalProfessional,
+  timeZone: string,
+  { count = 60, now = new Date(), sessionId = null }: { count?: number; now?: Date; sessionId?: string | null } = {},
+): Promise<GroupSession[]> {
+  const serviceId = professional.consultations[0]?.serviceId;
+  if (!serviceId) return [];
+  const sessions = await getGroupSessions(
+    db,
+    clinicId,
+    { serviceId, agendaId: professional.agendaId, count, lastDate: lastBookableDate(professional, timeZone, now), holds: { exceptSession: sessionId } },
+    now,
+  );
+  const here = new Set(professional.locations.map((l) => l.id));
+  return sessions.filter((s) => here.has(s.locationId));
+}
+
+/** Próximas datas com horário livre do tipo de Consulta, nos locais da clínica (até `count`, no prazo). */
+export async function professionalDates(
+  db: DbClient,
+  clinicId: string,
+  professional: PortalProfessional,
+  serviceId: string,
+  timeZone: string,
+  { count = 60, now = new Date(), sessionId = null, scope = {} }: { count?: number; now?: Date; sessionId?: string | null; scope?: SlotScope } = {},
+): Promise<string[]> {
+  if (professional.exam?.isGroup) {
+    const sessions = await groupSessions(db, clinicId, professional, timeZone, { now, sessionId });
+    return [...new Set(sessions.map((s) => s.date))].slice(0, count);
+  }
+  const lastDate = scopeLastDate(professional, timeZone, now, scope);
+  const holds = { exceptSession: sessionId };
+  const perLocation = await Promise.all(
+    (scope.locations ?? professional.locations).map((location) =>
+      getNextAvailableDates(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, count, lastDate, holds }, now),
+    ),
+  );
+  return [...new Set(perLocation.flat().map((d) => d.date))].sort().slice(0, count);
+}
+
+/**
+ * Horários livres de um dia, nos locais da clínica, em ordem (o mesmo horário em dois locais aparece nos dois). Sem os
+ * horários reservados por outras sessões do portal (`sessionId`: a de quem pergunta).
+ */
+export async function professionalSlots(
+  db: DbClient,
+  clinicId: string,
+  professional: PortalProfessional,
+  serviceId: string,
+  date: string,
+  timeZone: string,
+  now: Date = new Date(),
+  sessionId: string | null = null,
+  scope: SlotScope = {},
+): Promise<PortalSlot[]> {
+  if (date > scopeLastDate(professional, timeZone, now, scope)) return [];
+  if (professional.exam?.isGroup) {
+    const sessions = await groupSessions(db, clinicId, professional, timeZone, { now, sessionId });
+    return sessions.filter((s) => s.date === date).map((s) => ({ start: s.start, time: s.time, locationId: s.locationId, serviceId }));
+  }
+  const holds = { exceptSession: sessionId };
+  const perLocation = await Promise.all(
+    (scope.locations ?? professional.locations).map((location) =>
+      getFreeSlots(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, date, holds }, now),
+    ),
+  );
+  return perLocation
+    .flat()
+    .map((slot) => ({ ...slot, serviceId }))
+    .sort((a, b) => a.start.getTime() - b.start.getTime() || a.locationId.localeCompare(b.locationId));
+}
+
+/** O dia tem agenda aberta (para o aviso "não tem mais horário livre" × "não há agenda"). */
+export async function isProfessionalDayOpen(
+  db: DbClient,
+  clinicId: string,
+  professional: PortalProfessional,
+  serviceId: string,
+  date: string,
+  timeZone: string,
+  now: Date = new Date(),
+  scope: SlotScope = {},
+): Promise<boolean> {
+  if (date > scopeLastDate(professional, timeZone, now, scope)) return false;
+  const open = await Promise.all(
+    (scope.locations ?? professional.locations).map((location) => isAgendaOpenOn(db, clinicId, { serviceId, agendaId: professional.agendaId, locationId: location.id, date }, now)),
+  );
+  return open.some(Boolean);
+}
+
+/** Próximo horário livre do profissional, em qualquer tipo de Consulta (cartão da P3 e início do profissional). */
+export async function nextFreeSlot(
+  db: DbClient,
+  clinicId: string,
+  professional: PortalProfessional,
+  timeZone: string,
+  now: Date = new Date(),
+): Promise<Date | null> {
+  const firsts = await Promise.all(
+    professional.consultations.map(async (consultation) => {
+      const [date] = await professionalDates(db, clinicId, professional, consultation.serviceId, timeZone, { count: 1, now });
+      if (!date) return null;
+      const [slot] = await professionalSlots(db, clinicId, professional, consultation.serviceId, date, timeZone, now);
+      return slot?.start ?? null;
+    }),
+  );
+  const times = firsts.filter((d): d is Date => d !== null).map((d) => d.getTime());
+  return times.length ? new Date(Math.min(...times)) : null;
+}
+
+/** Próximo horário de cada profissional (por id; null = sem horário no prazo). */
+export async function nextFreeSlots(
+  db: DbClient,
+  clinicId: string,
+  professionals: readonly PortalProfessional[],
+  timeZone: string,
+  now: Date = new Date(),
+): Promise<Map<string, Date | null>> {
+  const entries = await Promise.all(professionals.map(async (p) => [p.id, await nextFreeSlot(db, clinicId, p, timeZone, now)] as const));
+  return new Map(entries);
+}
+
+/**
+ * O horário escolhido ainda está livre (antes de seguir para a identificação): confere de novo no servidor, porque
+ * outra pessoa pode ter marcado entre a escolha e o Continuar.
+ */
+export async function isSlotStillFree(
+  db: DbClient,
+  clinicId: string,
+  professional: PortalProfessional,
+  choice: { serviceId: string; locationId: string; start: Date },
+  timeZone: string,
+  now: Date = new Date(),
+  sessionId: string | null = null,
+): Promise<boolean> {
+  if (!professional.consultations.some((c) => c.serviceId === choice.serviceId)) return false;
+  if (!professional.locations.some((l) => l.id === choice.locationId)) return false;
+  const slots = await professionalSlots(db, clinicId, professional, choice.serviceId, localDateOf(choice.start, timeZone), timeZone, now, sessionId);
+  return slots.some((slot) => slot.locationId === choice.locationId && slot.start.getTime() === choice.start.getTime());
+}

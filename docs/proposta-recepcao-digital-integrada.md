@@ -1,16 +1,22 @@
 # Proposta: recepção digital integrada (WhatsApp, Portal e Painel)
 
-> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 (planejamento) escrita, **aguardando a aprovação do cliente**.
-> Nenhum código, migração, RLS, integração ou configuração mudou; nada foi enviado nem publicado. Decisões abertas na
-> seção 17 (RD1 a RD14), uma por vez com o cliente. Etapa 2 (design) e Etapa 3 (implementação) só com aprovação
-> específica de cada uma.
+> **Estado atual (retomar daqui), 08/nov/2026.** Etapa 1 aprovada, RD1 a RD14 decididas (seção 17; RD12 e RD14
+> revistas). **Etapa 2 (design) fechada:** portal (P1 a P13, celular e computador), link do profissional e **painel da
+> recepção (rodada 3, revisada tela por tela e aprovada)**, no canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb
+> (seção 18). Decisões da rodada 3 que mudam a proposta: conversa **sem profissional** (só com quem está); **vários
+> números de WhatsApp fora desta entrega** (seção 10, F4, RD11: pendentes); link no Meu dia e no perfil do profissional;
+> aba Métricas › Portal e origens em Desempenho; links marcados por lugar. Especificação das telas
+> atualizada (08/nov). **Etapa 3: plano da implementação em [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)**
+> (08/nov), **aprovado**; retomar por lá. **Revisões do cliente no plano (08/nov):** regra da Matriz (o item Portal só
+> decide os links; o bot depende dele e tem uma jornada só, levando ao portal; telas da recepção para todas as clínicas),
+> RD3 (remarcar no portal, I7), RD5 (retorno e exames também no portal, I8) e prazo do retorno sem dias bloqueados (I9).
 
 Base: [`diagnostico-evolucao-recepclinic.md`](diagnostico-evolucao-recepclinic.md) (o que existe hoje). Telas:
 [`especificacao-telas-portal-e-recepcao.md`](especificacao-telas-portal-e-recepcao.md). Apresentação:
 [`roteiro-apresentacao-clinica-18-profissionais.md`](roteiro-apresentacao-clinica-18-profissionais.md).
 
 Marcas: **[Existe]** já no produto (produção ou staging, como no diagnóstico); **[Evolui]** existe e muda; **[Novo]** a
-desenvolver; **[Decisão RDn]** depende de resposta do cliente (seção 17); **[Pendência]** depende de terceiro (Meta,
+desenvolver; **(RDn)** decisão do cliente (seção 17); **[Pendência]** depende de terceiro (Meta,
 advogado). **Sem inteligência artificial**: tudo é fluxo determinístico, regra de negócio e consulta ao banco.
 
 ## 1. Visão do produto
@@ -27,7 +33,7 @@ da Matriz de acesso (D11)**, ligado pelo Suporte clínica a clínica:
 | **Portal de agendamento** | bot | Pode ligar: o portal pula especialidade e profissional | Ligado |
 | **Vários números de WhatsApp** | bot | Desligado (um número, como hoje) | Ligado |
 | **Acesso da Recepção por profissional nas conversas** | Central | Desligado | Ligado, se a clínica quiser |
-| **Horários por modalidade** [Decisão RD6] | Portal | Desligado | Conforme a clínica |
+| **Horários por modalidade** (RD6) | Portal | Desligado | Conforme a clínica |
 
 Regra de ouro: **com os itens desligados, a clínica não vê diferença nenhuma** (mesmo bot, mesmo link, mesmas telas).
 O que se adapta ao porte sem configuração: telas com busca e filtro a partir de 6 profissionais (já é o padrão da
@@ -102,7 +108,7 @@ em vez de uma mensagem enorme. [Novo]
 
 ### 3.4 Encaminhamento para o portal
 
-Ao tocar em **Agendar consulta** (com o item Portal ligado, [Decisão RD3]):
+Ao tocar em **Agendar consulta** (com o item Portal ligado, (RD3)):
 
 > Para escolher o médico e o horário, toque no link abaixo. Ele vale por 30 minutos e é só para este número.
 > https://agendar.recepclinic.com.br/s/{token}
@@ -126,7 +132,7 @@ Ao tocar em **Agendar consulta** (com o item Portal ligado, [Decisão RD3]):
 | Entrada | Endereço | Telefone comprovado? |
 |---|---|---|
 | Link do bot | `agendar.recepclinic.com.br/s/{token}` | Sim (veio do chat) |
-| Site, Instagram, Google, direto | `agendar.recepclinic.com.br/{apelido-da-clinica}` [Decisão RD1] | Não: pede o código no passo 7 |
+| Site, Instagram, Google, direto | `agendar.recepclinic.com.br/{apelido-da-clinica}` (RD1) | Não: pede o código no passo 7 |
 | Link de remarcar/cancelar (lembrete) | `…/s/{token}` com finalidade própria | Sim |
 
 A origem do acesso vem de um parâmetro sem dado pessoal (`?origem=instagram`, `site`, `google`) ou do token, e só serve
@@ -138,7 +144,7 @@ para métricas (seção 14).
 2. **Profissional** (pulado se a especialidade só tem um).
 3. **Modalidades do profissional** (o que ele atende: particular com valor; convênios aceitos; observações).
 4. **Particular ou um dos convênios dele** (pulado se só atende uma modalidade; nunca mostra convênio que ele não aceita).
-5. **Datas disponíveis** para aquela modalidade (e para o tipo de consulta, se houver mais de um, [Decisão RD5]).
+5. **Datas disponíveis** para aquela modalidade (e para o tipo de consulta, se houver mais de um, (RD5)).
 6. **Horário**.
 7. **Telefone** (já vem do link; na entrada direta, o paciente digita e recebe o código).
 8. **Quem será atendido**: um dos pacientes do telefone, "Outra pessoa" ou cadastro novo.
@@ -156,7 +162,7 @@ dicionário]. Atalho **"Já sei o nome do médico"**: busca direta por nome.
 
 Cartão por profissional: foto (ou iniciais), nome, registro (ex.: CRM 12345/RN), especialidade principal (e outras),
 modalidades em selos ("Particular R$ 350", "Unimed", "+2 convênios"), próximo dia livre ("Próximo horário: amanhã").
-Ordem: [Decisão RD7] (recomendação: por próximo horário livre, com opção "ordem alfabética"). Filtro "Atende meu
+Ordem: alfabética (RD7). Filtro "Atende meu
 convênio" quando a clínica atende convênios.
 
 ### 4.5 Modalidades e convênios
@@ -184,7 +190,7 @@ o que falta:
 Só horários realmente livres, consultados no servidor a cada mudança, considerando: agenda do profissional, serviço e
 duração, bloqueios, feriados, horário da agenda, intervalo entre atendimentos, antecedência mínima (2 h, D4b), prazo
 para oferecer horários da agenda (por profissional, staging), idade limite (no passo 8, ao escolher o paciente),
-retorno (fora do portal no MVP, [Decisão RD5]) e **modalidade** [Decisão RD6]. Cache: nenhum; a lista é sempre
+retorno (fora do portal no MVP, (RD5)) e **modalidade** (RD6). Cache: nenhum; a lista é sempre
 consultada e o horário é revalidado na reserva e na confirmação.
 
 ## 5. Identificação do paciente e dos responsáveis
@@ -196,7 +202,7 @@ consultada e o horário é revalidado na reserva e na confirmação.
 - **Pelo link do WhatsApp**: comprovado (quem abriu recebeu no chat daquele número).
 - **Entrada direta**: o paciente digita o celular; o RecepClinic envia **código de 6 dígitos pelo WhatsApp** (template
   de autenticação da Meta, botão "Copiar código"), válido por 10 min, 5 tentativas, reenvio após 60 s, no máximo 3
-  envios por telefone por hora [Decisão RD2]. Sem SMS no MVP (custo e outro fornecedor). O código prova a posse do
+  envios por telefone por hora (RD2). Sem SMS no MVP (custo e outro fornecedor). O código prova a posse do
   número; só depois disso o portal mostra cadastros.
 - Telefone sem WhatsApp: "Não recebeu? Fale com a recepção" (telefone da clínica). Não marca sem comprovar.
 
@@ -209,7 +215,7 @@ Telefone comprovado → contato localizado → lista dos pacientes ativos dele:
 > ( ) **João S.**
 > ( ) Outra pessoa
 
-- Nome exibido: primeiro nome + inicial do sobrenome [Decisão RD12]. Sem data de nascimento, convênio ou histórico.
+- Nome exibido: primeiro nome + inicial do sobrenome (RD12). Sem data de nascimento, convênio ou histórico.
 - O titular do telefone **não é presumido** paciente: sempre se pergunta "para quem".
 - Pedido de dado extra só se faltar algo indispensável (ex.: carteirinha, se a clínica exige, D10).
 - Idade limite do profissional (staging): paciente fora do limite vê "Este profissional atende até {n} anos" e volta
@@ -218,7 +224,7 @@ Telefone comprovado → contato localizado → lista dos pacientes ativos dele:
 ### 5.3 Paciente novo
 
 - **Para mim**: nome completo + data de nascimento (obrigatória no banco hoje e usada para idade limite e perfil,
-  [Decisão RD8]).
+  (RD8)).
 - **Para outra pessoa** (filho, dependente): nome do responsável (se o contato ainda não existe) + nome e nascimento do
   paciente. O contato é o responsável; o paciente fica com `is_contact_self = false`. [Existe o modelo]
 - Convênio: vem do passo 4; carteirinha só se a clínica exigir.
@@ -270,7 +276,7 @@ nunca desfaz o atendimento**; ela aparece na Agenda como hoje (FE).
 | Identidade | Telefone comprovado (link do chat ou código) antes de ver cadastros ou marcar | Servidor |
 | Limites de uso | Por telefone: os limites do bot (atendimentos futuros, pacientes novos em 30 dias, faltas em 90 dias, padrão 5) passam a valer também no portal [Existe, Evolui] | `botLimits.ts` |
 | Limite de requisições | Por IP, por sessão e por telefone: consultas de horários, pedidos de código, reservas e confirmações, com janela deslizante (valores na seção 7.2) [Novo] | Postgres (contador por chave e janela) ou Vercel Firewall [Investigação] |
-| Robôs | CAPTCHA **adaptativo** (Cloudflare Turnstile, invisível na maioria dos casos), exigido só na entrada direta ao pedir o código, ou quando um sinal de risco aparece [Decisão RD9] | Servidor valida o token do CAPTCHA |
+| Robôs | CAPTCHA **adaptativo** (Cloudflare Turnstile, invisível na maioria dos casos), exigido só na entrada direta ao pedir o código, ou quando um sinal de risco aparece (RD9) | Servidor valida o token do CAPTCHA |
 | Sessão | Token opaco, validade curta, finalidade única, revogável; cookie `HttpOnly`, `Secure`, `SameSite=Lax` para a sessão do portal | Servidor |
 | Repetição | Chave de idempotência em cada "Reservar" e "Confirmar" (o duplo toque não cria dois) [Existe parecido: `sendOnce.ts`] | Servidor + banco |
 | Reserva | Só na revisão, curta, uma por sessão/telefone (seção 7.2) | Banco |
@@ -285,14 +291,14 @@ nunca desfaz o atendimento**; ela aparece na Agenda como hoje (FE).
 | Consultar horários | 60 por sessão em 10 min; 300 por IP em 10 min |
 | Pedir código | 3 por telefone por hora; 10 por IP por hora |
 | Errar o código | 5 por código; depois, novo código |
-| Reservar | 1 reserva ativa por sessão e por telefone; 5 reservas por telefone por dia |
+| Reservar | 1 reserva ativa por sessão e por telefone; 5 consultas marcadas por telefone em 24 h (só a reserva que vira consulta conta; cliente, 10/nov/2026) |
 | Confirmar | Limites do bot por telefone (atendimentos futuros) |
 
 ### 7.3 Reserva temporária
 
 - **Não** reserva ao abrir a página nem ao ver horários.
 - Reserva ao tocar em **"Continuar"** depois de escolher o horário **e** comprovar o telefone (passo 7), isto é, na
-  entrada da revisão. Prazo **5 min** [Decisão RD4], com contador visível ("Reservamos este horário por 4:59").
+  entrada da revisão. Prazo **5 min** (RD4), com contador visível ("Reservamos este horário por 4:59").
 - Liberada ao vencer, ao trocar de horário, ao voltar ou ao confirmar. Sem rotina obrigatória: a reserva vencida
   simplesmente não conta (a consulta de horários ignora `expires_at < now()`); uma limpeza diária apaga as velhas.
 - **Modelo técnico** [Novo]: tabela `slot_holds` (clínica, agenda, período, sessão, telefone, `expires_at`). A função
@@ -319,8 +325,8 @@ nunca desfaz o atendimento**; ela aparece na Agenda como hoje (FE).
 - Validação sempre no servidor; o navegador só exibe.
 - Minimização: o portal grava só o que a marcação precisa; métricas sem telefone nem nome (seção 14).
 - Retenção: sessões e reservas apagadas em 30 dias; IP truncado; trilha do atendimento segue a política atual.
-- Fotos do profissional no portal: URL assinada curta gerada pelo servidor, ou cópia pública só da foto marcada
-  "mostrar no portal" [Decisão RD13].
+- Fotos do profissional no portal: toda foto do cadastro aparece (RD13), servida pelo servidor por URL assinada curta
+  ou cópia pública; o cadastro avisa que a foto é pública.
 
 ## 8. Recuperação de agendamentos abandonados
 
@@ -343,13 +349,16 @@ nunca desfaz o atendimento**; ela aparece na Agenda como hoje (FE).
   modalidade) ou **Cancelar** (com "Tem certeza?").
 - Links do lembrete: token com finalidade única (`remarcar` ou `cancelar` daquele atendimento), uso único, vencido
   depois do horário da consulta.
-- **Antecedência** [Decisão RD10]: hoje não há antecedência mínima para cancelar pelo bot [Hipótese: conferir
+- **Antecedência** (RD10): hoje não há antecedência mínima para cancelar pelo bot [Hipótese: conferir
   `bot/manage.ts` na Etapa 3]. Proposta: a clínica define (padrão 24 h para cancelar e remarcar pelo portal); dentro do
   prazo, o portal oferece "Falar com a recepção".
 - Na Recepção: remarcação e cancelamento pelo portal entram na trilha com canal "portal", no Início ("Cancelados hoje")
   e na lista de espera (vaga liberada é oferecida como hoje, D2).
 
 ## 10. Vários profissionais e vários números de WhatsApp
+
+> **Vários números de WhatsApp: fora desta entrega (cliente, 08/nov).** Fica pendente para planejamento e
+> implementação depois desta entrega ou quando o cliente decidir. O que vale agora: um número por clínica, como hoje.
 
 ### 10.1 Modelo conceitual
 
@@ -391,7 +400,7 @@ ninguém, outra pessoa) e "aguardando atendimento humano". Cada conversa mostra 
 
 - A resposta da recepção **sempre** sai pela `connection_id` da conversa. Não existe "escolher número" ao responder.
 - Confirmações e lembretes de um atendimento saem pela conexão da conversa que o originou; sem conversa (portal direto
-  ou marcado pela recepção), pela conexão do profissional; sem ela, pela padrão da clínica [Decisão RD11].
+  ou marcado pela recepção), pela conexão do profissional; sem ela, pela padrão da clínica (RD11).
 - Janela de 24 h é **por número**: a conversa com o número A não abre janela no número B.
 
 ### 10.4 Requisitos da Meta (a conferir na documentação atual, [Pendência])
@@ -412,13 +421,13 @@ ninguém, outra pessoa) e "aguardando atendimento humano". Cada conversa mostra 
 | Perfil | Vê | Faz |
 |---|---|---|
 | Administrador da clínica | Tudo | Conecta números, define destino, equipe e acessos |
-| Recepção | Agendas e conversas dos profissionais liberados (padrão: todos) [Decisão RD14]; conversas de números da clínica toda | Atende, marca, transfere |
+| Recepção | Agendas e conversas dos profissionais liberados (padrão: todos) (RD14); conversas de números da clínica toda | Atende, marca, transfere |
 | Profissional | A própria agenda; conversas em que está em foco ou com ele (como hoje) | Configura o que é dele (S1) |
 | Suporte RecepClinic | Tudo, com cada leitura registrada (D6) | Diagnóstico |
 
 Base técnica: `member_agenda_grants` já restringe agendas por pessoa; a proposta usa a mesma lista para as conversas
 com `professional_id` em foco (RLS nas funções da Central). **Equipes de recepção** (grupos de secretárias) não entram
-no MVP: com 3 secretárias, o acesso por pessoa basta [Decisão RD14].
+no MVP: com 3 secretárias, o acesso por pessoa basta (RD14).
 
 ## 11. Experiência da secretária
 
@@ -445,17 +454,17 @@ profissional e por semana. Agregados diários (`portal_funnel_daily`) e eventos 
 ## 13. Fases de evolução
 
 Reorganizei a sequência sugerida: **o portal sai antes dos vários números**, porque (a) é o que mais aparece na
-demonstração, (b) reaproveita quase tudo do staging (multiprofissional) e (c) os vários números dependem de
+demonstração, (b) reaproveita quase tudo do bloco multiprofissional (na produção desde 08/nov) e (c) os vários números dependem de
 conferências na Meta. A identificação e a segurança entram **junto** do portal (portal aberto sem segurança não vai
 para a produção).
 
 | Fase | Objetivo | Entregas | Depende de | Riscos | Complexidade | Aceite | Demonstrável |
 |---|---|---|---|---|---|---|---|
-| **F0 Base** | Publicar o que já existe | Validar e publicar o bloco multiprofissional (ME, MC, MI, MB, MS, item 4, fotos) | Validação do cliente | Regressão em clínica de um profissional | Baixa (já feito) | Roteiros de `frente-validacao.md` | Bot com especialidade → médico; convênios por médico |
+| **F0 Base** | Publicar o que já existe | **Feito (08/nov, `64ec6b1`)**: bloco multiprofissional (ME, MC, MI, MB, MS, itens 1 a 4, fotos) validado e na produção | — | — | — | Validado pelo cliente | Bot com especialidade → médico; convênios por médico |
 | **F1 Fundação** | Modelo pronto para vários números e portal | Conexões com `id`, `connection_id` em conversas/mensagens/templates; canal `portal`; observação por convênio; "só convênio"; consultas únicas do motor; fila de notificações | F0 | Migração das conexões em produção | Média | Testes de banco: clínica de um número igual a antes; isolamento | Nada visível (base) |
 | **F2 Portal + segurança** | Paciente marca sozinho | Portal (passos 1–9), apelido da clínica, sessão/token com finalidade, código pelo WhatsApp, reserva 5 min, limites, CAPTCHA adaptativo, confirmação pela fila, canal "Portal" na Agenda | F1, RD1–RD9 | Abuso; template de autenticação aprovado | Alta | Cenários 1–12, 15–17 (seção 15) no staging com Playwright | **Jornada completa no celular** |
 | **F3 Bot → portal** | WhatsApp leva ao portal | "Agendar" envia o link; informações com "Ver no portal"; remarcar/cancelar e "Minhas consultas" no portal; antecedência | F2 | Mudar o caminho do bot em produção | Média | Jornada do bot atualizada; clínica sem o item igual a antes | WhatsApp → portal → confirmação no WhatsApp |
-| **F4 Vários números + caixa unificada** | Cada médico com o número dele | Conectar vários números, destino por profissional, roteamento, resposta pelo número certo, filtros da Central, acesso da Recepção por profissional | F1, conferência Meta | Limites e custo da Meta; coexistência | Alta | Cenários 13–14; resposta sempre pela conexão da conversa | Secretária atende 2 médicos de números diferentes numa tela |
+| **F4 Vários números + caixa unificada** — **fora desta entrega (cliente, 08/nov): pendente, para planejar depois da entrega ou quando o cliente decidir** | Cada médico com o número dele | Conectar vários números, destino por profissional, roteamento, resposta pelo número certo, filtros da Central, acesso da Recepção por profissional | F1, conferência Meta | Limites e custo da Meta; coexistência | Alta | Cenários 13–14; resposta sempre pela conexão da conversa | Secretária atende 2 médicos de números diferentes numa tela |
 | **F5 Agenda da clínica grande** | 18 profissionais sem 18 telas | Agenda em grade, "Próximos horários livres", Início com pendências por profissional | F0 | Desempenho com 18 agendas | Média | 18 agendas carregam em < 2 s no staging | Visão da manhã da clínica inteira |
 | **F6 Métricas e otimização** | Medir e recuperar | Funil do portal, aba Portal, recuperação de abandono em 15 min, horários por modalidade (se RD6), ajustes | F2–F3 | Excesso de mensagens | Média | Números conferidos com uma semana de uso | Painel de conversão |
 
@@ -467,7 +476,7 @@ relativo: F2 é a maior (telas novas + segurança); F1 e F4 mexem nas tabelas ma
 | Integração | Uso | Situação |
 |---|---|---|
 | Meta Cloud API | Mensagens, templates (inclui autenticação), Embedded Signup por número | Existe para um número |
-| Cloudflare Turnstile (ou similar) | CAPTCHA adaptativo | Novo [Decisão RD9] |
+| Cloudflare Turnstile (ou similar) | CAPTCHA adaptativo | Novo (RD9) |
 | Supabase Storage | Fotos públicas do portal | Bucket privado existe |
 | Calendário (.ics) | "Adicionar à agenda do celular" | Novo, sem serviço externo |
 | Google Maps | "Ver no mapa" (link, sem API) | Existe (EC) |
@@ -515,24 +524,162 @@ Sequência: Etapa 2 → `frontend-design` (telas) + Playwright MCP (capturas em 
 Etapa 3 → `frontend-design` (implementação visual) + `playwright-ui-form-best-practices` (testes por fase) +
 `security-review` (F2 e F4) + `code-review`.
 
-## 17. Decisões pendentes (uma por vez, com o cliente)
+## 17. Decisões do cliente (08/nov/2026)
 
-| # | Pergunta | Recomendação |
+Planejamento aprovado pelo cliente em 08/nov; RD1 a RD14 respondidas no mesmo dia, uma por vez.
+
+| # | Pergunta | Decisão |
 |---|---|---|
-| RD1 | Endereço do portal público (muda a D7: hoje a clínica só é achada pelo token) | `agendar.recepclinic.com.br/{apelido}` (subdomínio por função, como a D7 ajustada); apelido escolhido pelo Suporte |
-| RD2 | Como comprovar o telefone na entrada direta | Código de 6 dígitos pelo WhatsApp (template de autenticação), sem SMS |
-| RD3 | No WhatsApp, "Agendar" vai para o portal ou continua no chat? | Com o item Portal ligado: vai para o portal; sem ele, como hoje |
-| RD4 | Prazo da reserva temporária | 5 min, ajustável pelo Suporte (3 a 10) |
-| RD5 | Quais serviços o portal marca | MVP: Consulta (passo "tipo de consulta" só se o profissional tiver mais de uma); retorno e exames pelo bot/recepção |
-| RD6 | Horários diferentes por modalidade (ex.: Unimed só à tarde)? | Não no MVP; regra opcional por faixa de horário na F6, se a clínica de 18 precisar (perguntar na reunião) |
-| RD7 | Ordem dos médicos na lista | Pelo próximo horário livre, com opção "A–Z" |
-| RD8 | Data de nascimento no cadastro novo | Manter obrigatória (idade limite e perfil dependem dela) |
-| RD9 | CAPTCHA | Cloudflare Turnstile adaptativo, só na entrada direta e quando há risco |
-| RD10 | Antecedência para cancelar/remarcar pelo portal | Configurável pela clínica, padrão 24 h; dentro dela, "Falar com a recepção" |
-| RD11 | Por qual número sai a confirmação de quem marcou pelo portal direto | Número do profissional; sem ele, o padrão da clínica |
-| RD12 | Como mostrar os pacientes de um telefone | Primeiro nome + inicial do sobrenome |
-| RD13 | Foto do profissional no portal | Só com "Mostrar no portal" marcado no cadastro (cópia pública) |
-| RD14 | Recepção restrita por profissional nas conversas; equipes de recepção | Restrição por pessoa (reusa o acesso às agendas), padrão "todos"; sem equipes no MVP |
+| RD1 | Endereço do portal público (muda a D7: hoje a clínica só é achada pelo token) | **`agendar.recepclinic.com.br/{apelido}`** (subdomínio por função, como a D7 ajustada); apelido escolhido pelo Suporte. Registrar a revisão na D7 ao implementar |
+| RD2 | Como comprovar o telefone na entrada direta | **Código de 6 dígitos pelo WhatsApp** (template de autenticação), sem SMS. **Revisto (cliente, 09/nov/2026): o código sai de um número do RecepClinic** (empresa verificada uma vez), não do número da clínica: a Meta recusou o template de autenticação numa conta de empresa não verificada (implementação, seção 14) |
+| RD3 | No WhatsApp, "Agendar" vai para o portal ou continua no chat? | **Vai para o portal** com o item Portal ligado; sem ele, como hoje. Remarcar e cancelar seguem no chat |
+| RD4 | Prazo da reserva temporária | **5 min, ajustável pelo Suporte (3 a 10)** por clínica |
+| RD5 | Quais serviços o portal marca | **Só consultas** (passo "tipo de consulta" só se o profissional tiver mais de uma); retorno e exames pelo bot/recepção |
+| RD6 | Horários só para particular ou só para um convênio (ex.: Unimed só à tarde)? | **Começar sem**: todo horário livre vale para particular e para os convênios do médico (como hoje). Perguntar na reunião; se a clínica usar, regra opcional na F6 |
+| RD7 | Ordem dos médicos na lista | **Ordem alfabética** (sem ordenar por horário mais próximo) |
+| RD8 | Data de nascimento no cadastro novo | **Obrigatória** (idade limite e perfil dependem dela) |
+| RD9 | CAPTCHA | **Cloudflare Turnstile, só quando há risco**: entrada direta ao pedir o código ou com sinal de abuso; quem vem do link do WhatsApp não vê |
+| RD10 | Antecedência para cancelar/remarcar pelo portal | **A clínica define, padrão 0 h (sem prazo; revisto pelo cliente em 10/nov/2026, era 24 h)**; com prazo, dentro dele só "Falar com a recepção" |
+| RD11 | Por qual número sai a confirmação de quem marcou pelo portal direto | **Número do médico**; sem ele, o número principal da clínica **Sem efeito nesta entrega (um número só; vários números pendentes, 08/nov).** |
+| RD12 | Como mostrar os pacientes de um telefone | **Primeiro nome + inicial do sobrenome**. **Revista pelo cliente em 08/nov (Etapa 2):** nome completo nas telas depois do telefone comprovado (P8 a P10) |
+| RD13 | Foto do profissional no portal | **Sempre que houver foto** no cadastro (sem opção por médico). O cadastro avisa "Esta foto aparece no portal de agendamento"; sem foto, iniciais |
+| RD14 | Recepção restrita por profissional nas conversas; equipes de recepção | **Mesma restrição da agenda** (médicos liberados à pessoa, padrão todos; número geral: todas veem); sem equipes na 1ª versão. **Revista em 08/nov (rodada 3):** conversa sem profissional; toda a recepção vê todas as conversas; restrição por profissional só na Agenda |
+
+Em aberto para a reunião com a clínica: RD6 (se usam limitação de horário por convênio) e as perguntas do roteiro.
+Decidido (cliente, 09/nov): o prazo da RD10 vale **só no portal**; no WhatsApp o paciente cancela a qualquer hora, como hoje (saber tarde é melhor que a falta: a vaga é liberada e a lista de espera avisada).
 
 Fora do código: advogado (termo, política, menores), template de autenticação na Meta, conferência dos limites da Meta
 para vários números, preço do item "Portal" e "Vários números" no contrato.
+
+## 18. Etapa 2: design (rodadas)
+
+**Rodada 1 (08/nov/2026), portal no celular, P1 a P10.** Canvas https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb
+(skill `frontend-design`). Base: cores e fontes do link de hoje (verde `#0B7A62`, Bricolage Grotesque nos títulos,
+Source Sans 3 a 18 px). Desenho: uma pergunta grande por tela; cabeçalho com Voltar, "Recepção" (WhatsApp) e "Passo n
+de 6" com barra; **ficha** verde-clara no topo com as escolhas e "Trocar" (resume em uma linha a partir da P7); barra
+fixa embaixo com a escolha e o botão; faixa amarela do horário guardado a partir da P8; na P9 e P10 o cartão com data
+e hora em destaque. P3 em duas opções: A (cartão completo, com selos e próximo horário) e B (lista compacta, para
+especialidades com muitos médicos). Telas: P1, P2, P3 A/B, P4, P5, P6, P7 (veio do WhatsApp), P7 (celular + código,
+com erro), P8 (com carteirinha), P8b (com "Você quis dizer"), P9, P10. Clínica e médicos fictícios.
+Escolhas do cliente (08/nov): **P3 mista** (cartão A até 5 médicos na especialidade, lista B com 6 ou mais);
+**ficha aprovada** como está; visual geral: **ajustar antes** da próxima rodada. **Ajustes do cliente (08/nov), já no canvas:** P3 sem o botão
+"Avisar a recepção" (médico sem horário fica visível só com "Sem horário nos próximos 60 dias", sem toque); **P4
+retirada da jornada** (P3 → P5); os dados do profissional da P4 (foto, nome, CRM, especialidades, local com "Ver no
+mapa", orientações) entram no topo da P5 e da P6, com "Trocar"; a P6 também mostra a observação do convênio escolhido
+e "Ver valores e convênios aceitos" (fechado). **P1 a P6 aprovadas pelo cliente (08/nov).** P7 em diante: em avaliação.
+**P7, código (cliente, 08/nov):** link do WhatsApp não pede código (número já comprovado); entrada direta pede celular
+e código. "Usar outro número" no caminho do WhatsApp manda o código ao número novo, com a saída "Continuar com o
+final 4321" para quem não está com aquele celular (volta ao número da conversa sem perder as escolhas).
+**P7 do WhatsApp retirada (cliente, 08/nov):** quem vem pelo link vai da P6 direto à P8, que mostra no topo
+"Confirmação no WhatsApp final 4321" com "Usar outro número" (abre a tela do código para o número novo). A P7 com
+celular e código fica só para a entrada direta. **P7, "Outro número" e P8 aprovadas (08/nov).**
+**Ajustes de P8b a P10 (cliente, 08/nov):** nome completo do paciente nas telas (revisão da RD12); P8b confere
+duplicado por **nome parecido + data de nascimento** entre os pacientes do número: mesma data → "Já existe um
+cadastro neste número: {nome completo}, nascido em {data}. É ele?"; data diferente → mostra a data cadastrada e a
+digitada, "Sim, é ele (manter {data})" / "Não, é outra pessoa". Data errada: bloqueia data impossível (dia do mês,
+futura, ano com 4 números, mais de 110 anos), mostra a data por extenso com a idade abaixo dos campos e de novo na P9
+(com Alterar). "Seu nome" só aparece quando o número não tem cadastro. **Data diferente com "Sim, é ele" (cliente, 08/nov):** vale a
+data cadastrada; a consulta vai para o cadastro existente e a recepção vê o selo "Data informada diferente no portal"
+(R4) para conferir com o paciente. **Terceira opção (cliente, 08/nov):** "É ele, mas a data certa é {digitada}" → aviso
+"Vamos marcar a consulta no cadastro de {nome completo}. Para corrigir a data de nascimento do cadastro, fale com a
+recepção no dia da consulta. Avisamos a recepção que você informou {data}." (o portal não altera o cadastro; o selo
+leva a data informada). **Rodada 1 aprovada pelo cliente (08/nov): P1 a P10 no celular.**
+
+**Rodada 2 (08/nov/2026), portal no computador + P11 a P13 no celular.** Mesmo canvas. Computador (1280 px): P1, P3,
+P6 e P9 numa coluna de 1040 px; a ficha vira a coluna "Seu agendamento" à direita (itens a escolher em itálico), que
+leva também o botão de seguir (no lugar da barra fixa do celular); P3 em duas colunas de cartões; P6 com 7 dias na
+faixa e 6 horários por linha; P9 com o cartão de data e hora ao lado das linhas, e o tempo, as orientações e o
+Confirmar na coluna da direita. Celular: P11 em folha sobre a tela (mensagem pronta com o código da sessão, botão
+"Abrir conversa no WhatsApp", telefone da recepção em texto); P12 com as consultas do número (nome completo,
+Remarcar/Cancelar; dentro do prazo, só "Falar com a recepção") e a confirmação do cancelamento; P13 "já usado" (só
+primeiro nome e data, porque o telefone não foi comprovado) e "vencido". **Complemento pedido pelo cliente (08/nov),
+clínica de 18:** no computador, P2 com 12 especialidades em 3 colunas e busca que também acha o médico pelo nome; P3
+com 6 ou mais em lista (colunas Médico, Atendimento, Próximo horário; busca pelo nome e filtro de convênio); P7
+(celular no computador, código lido no WhatsApp do celular e digitado no computador); P8 (pacientes em 2 colunas;
+"Confirmação no WhatsApp final 4321 / Usar outro" na coluna da direita). A ordem é a mesma do celular: P6 → P7 (só sem
+link do WhatsApp) → P8/P8b → P9 → P10. **Cliente (08/nov): computador aprovado; P13 "já usado" não mostra nada da
+consulta** (só "Ele já foi usado para marcar uma consulta" e o caminho para Minhas consultas, que pede o telefone).
+**P11 e P12 aprovadas (08/nov). Desenho do portal fechado (rodadas 1 e 2).**
+
+**Link do profissional (pedido do cliente, 08/nov/2026).** Cada profissional tem um link próprio de agendamento, com a
+mesma jornada da clínica sem escolher especialidade e médico; pode ser posto no Instagram ou no site do profissional e
+mandado em mensagem de WhatsApp. Desenho no canvas: início do profissional (foto, nome, CRM, especialidades, próximo
+horário, "Agendar consulta com a Dra. Ana", valores e convênios, local, orientações) → P5 → P6 → P7 → P8 → P9 → P10,
+"Passo n de 4" (3 com um só atendimento), sem "Trocar médico". Clínica de um só profissional (como o piloto): o
+endereço da clínica abre direto nessa página. Link compartilhado (Instagram, site, mensagem de WhatsApp) é entrada
+direta: pede celular e código; só o link do bot na conversa dispensa o código. **Endereço (cliente, 08/nov): `agendar.recepclinic.com.br/{apelido-da-clínica}/{apelido-do-profissional}`** (ex.:
+`/vila-serena/dra-ana-lima`). **Apelido do profissional (cliente, 08/nov): automático e fixo**, montado pelo nome do cadastro na criação
+(Dra. Ana Lima → `dra-ana-lima`; nome repetido na clínica ganha `-2`); ninguém muda depois, para o link nunca quebrar.
+**Outros médicos (cliente, 08/nov): nunca** aparecem no link do profissional; sem horário, só "Falar com a recepção".
+O link (copiar e QR code) aparece no cadastro do profissional e em Configurações › Portal (desenho na rodada 3).
+
+**Rodada 3 (08/nov/2026), painel da recepção (R1 a R7) e onde copiar o link e o QR do profissional.** Mesmo canvas,
+mesma cara do painel de hoje (menu lateral, verde `#0B7A62`, Bricolage nos títulos, Source Sans 3), clínica fictícia de
+18 profissionais e 3 números. Novo no visual: **selo do número** (quadradinho com iniciais e cor do número + final do
+telefone: RG Recepção geral ·· 0001, PM Dr. Paulo Mendes ·· 1234, AL Dra. Ana Lima ·· 5678); **origem** em selo com
+contorno (Portal, WhatsApp, Recepção com o nome) e **situação** em selo preenchido, como hoje. Computador (1280 px):
+R5 Meu dia (pendências com o profissional, bloco "marcadas pelo portal" com Abrir/Revisado, tabela por profissional);
+R1 Conversas (filtros Profissional, Especialidade, Número, Situação, Responsável e "Aguardando"; linha com selo do
+número, profissional em foco e "Veio do portal"; faixa fixa "Respondendo pelo número do Dr. Paulo ·· 1234" sobre a
+resposta; painel do paciente com horários livres da especialidade e convênio); R1 filtro de profissional aberto
+(busca, grupos por especialidade, "com conversa aguardando"); R1 Direcionar a outro profissional (o número não muda);
+R3 Agenda em grade (18 colunas agrupadas por especialidade, rolagem só dentro da grade, reserva do portal tracejada
+"Em reserva até 10:42", bloqueio hachurado); R3 Próximos horários livres (especialidade, convênio, atendimento, a
+partir de; horário abre a Marcar preenchida); R2 Agenda com "Origem: Portal" e o atendimento aberto (origem, quando e
+por onde entrou, "Cadastro novo: completar dados", Marcar como revisado); R4 Pacientes, aba "Do portal", e contato com
+dependentes e o bloco "Data de nascimento a conferir" (Corrigir / Manter); R5 Métricas › Portal (funil por passo com a
+perda, origem, bloqueios, tabela por profissional); R6 Números de WhatsApp (para quem é, padrão, qualidade e limite da
+Meta, modelos; regra de qual número sai cada mensagem) e a confirmação de Desconectar com o impacto; R7 Configurações ›
+Portal (endereço da clínica com Copiar/QR/Abrir, **lista do link de cada profissional com busca e filtro**,
+antecedência, quem aparece, textos do início); folha do QR (Baixar imagem, Imprimir cartaz A4, Copiar link); cadastro
+do profissional com o bloco **"Link de agendamento"** no topo (Copiar, QR, Ver como o paciente vê, Mostrar no
+portal). Celular (390 px): Meu dia, Conversas, conversa aberta, Agenda de um profissional por vez com "Próximos
+horários livres" e o link no cadastro com "Compartilhar". **Aguardando a avaliação do cliente.**
+**Revisão da rodada 3, tela por tela (cliente, 08/nov):** **Meu dia:** consulta do portal só aparece quando precisa
+da recepção ("Consultas do portal para conferir": cadastro incompleto → Completar dados; data de nascimento diferente
+→ Conferir data), e some quando resolvida; **sem "Revisado"** (saiu também do atendimento na Agenda) e sem a coluna
+Portal na tabela; o volume do portal fica só em Métricas › Portal. Tabela "Por profissional": **mantida**. **Conversas:** aguardando primeiro (pela espera), depois pela última mensagem; horários
+livres da especialidade e do convênio **sempre** no painel do paciente; "Aguardando" como **botão com contador** junto
+dos filtros; abas de hoje mantidas (Abertas, Finalizadas, Pessoal e admin.). **Conversa sem profissional (cliente, 08/nov):** a conversa **não é
+ligada a profissional** ("profissional em foco" sai da proposta: filtros Profissional e Especialidade, "Direcionar a
+outro profissional" e a coluna "aguardando" por profissional no Meu dia); o único vínculo é **com quem está** (o
+responsável), além do número em que o paciente escreveu (a resposta sai por ele). Filtros: Responsável, Situação,
+Número e Aguardando. **Painel do paciente:** paciente cadastrado → horários dos **profissionais com quem ele já
+consulta** (com a última consulta), "Outro horário" em cada um e "Agendar com outro profissional"; sem cadastro →
+"Marcar consulta". Tabela "Por profissional" do Meu dia passa a ter: conferir (portal), cancelamentos, a confirmar e
+atendimentos de hoje. **RD14 revista (cliente, 08/nov):** sem profissional na conversa, **toda a recepção vê todas as conversas**
+de todos os números (o filtro Responsável separa o trabalho); a restrição por profissional fica só na Agenda. **Agenda em grade (cliente, 08/nov):** mostra **sempre todas as agendas a que a pessoa
+tem acesso**; para estreitar, a pessoa escolhe a especialidade ou o profissional (sem "só quem atende hoje" e sem
+lembrar filtro); **barra de rolagem em destaque** no topo da grade (setas, trilho largo, "Profissionais 1 a 7 de 18") e
+botão "Mais 11" na borda direita. Desenhada também a agenda de **clínica pequena** (2 profissionais e Exames): colunas
+na largura toda, sem rolagem, só o filtro "Agenda" como hoje. **Filtros da Agenda (cliente, 08/nov):** até 7 agendas (cabem sem
+rolagem), só o filtro "Agenda"; a partir de 8, Especialidade e Profissional, **um de cada vez** (ou todos), com a barra
+de rolagem. **Filtro "Origem" retirado:** a origem aparece no selo do atendimento (Portal, WhatsApp · bot, Recepção ·
+nome) e o volume fica em Métricas. Agenda da clínica pequena **aprovada**. **Próximos horários livres:** filtros Especialidade, Atendimento e "A partir de" (**sem
+convênio**; cada profissional mostra os convênios que atende); os **2 primeiros dias com vaga** de cada um, com "Ver
+mais dias"; horário em reserva do portal **aparece apagado**, sem marcar. **Atendimento aberto na grade (cliente, 08/nov):** clicar num atendimento abre
+uma **coluna à direita, como hoje**, com "Fechar"; a agenda dele passa para a **primeira coluna** (destacada) e as
+outras que couberem continuam visíveis (com a coluna aberta, 4 de 18). **Origem** (Portal · Instagram, WhatsApp · bot,
+Recepção · nome) **só nos dados do atendimento**, não na grade. **Sem "completar cadastro":** o portal pega os mesmos
+dados do WhatsApp (nome, data de nascimento, telefone e responsável quando precisa) e **não guarda endereço**; saem o
+aviso "Cadastro novo: completar dados" e o selo "Dados a completar". No Meu dia, consulta do portal para conferir é só a
+de **data de nascimento diferente**. Coluna do atendimento **aprovada**. **Pacientes:** sem a aba "Do portal" (fica como hoje); o selo
+"Cadastrado pelo portal" só na ficha; quadro "Data de nascimento a conferir" (Corrigir / Manter) **aprovado**. **Métricas (cliente, 08/nov):** as 5 abas de hoje
+ficam (Desempenho, Agendamento digital, Retomar contato, Faltosos, Financeiro; remarcação e cancelamento seguem no
+WhatsApp e no Agendamento digital); **aba nova "Portal"** com os números do portal, onde as pessoas param (filtro
+"Entrada": link do WhatsApp, link da clínica, link de profissional) e tentativas bloqueadas. **Percentuais de origem
+em Desempenho › "De onde vêm as marcações"**: Recepção (painel), WhatsApp (bot marcou), WhatsApp (link do portal na
+conversa), Link da clínica e Links dos profissionais, com o detalhe por lugar e a tabela "Pelos links dos
+profissionais". **Origem por link marcado:** "Copiar link para…" (Configurações › Portal, cadastro do profissional,
+celular) pergunta onde vai usar (Instagram, site, Google, mensagem, outro lugar) e o link leva a marca (`?de=…`); o QR
+sai marcado como cartaz; link sem marca conta como "origem não informada". Métricas **aprovadas**. **Vários números de WhatsApp fora desta entrega (cliente,
+08/nov):** pendente para planejar depois (seção 10, F4, RD11); saíram do desenho as telas Números de WhatsApp e
+Desconectar, o selo do número, o filtro Número e a faixa "Respondendo pelo número" em Conversas. **Onde pegar o link (cliente, 08/nov):** **atalho no Meu dia** para mandar no WhatsApp
+("Copiar link" e "Abrir o WhatsApp"): a recepção pega por padrão o **link da clínica** (todos os profissionais); o
+profissional, no Meu dia dele, o **próprio link**. Os links marcados para **redes sociais, site e Google** (e o QR)
+ficam no **perfil do profissional** ("Meu perfil"), e **cada profissional altera tudo o que é dele** (o Administrador
+também). O link da clínica para redes sociais fica em Configurações › Portal. **QR code só pelo botão** (sem QR fixo na tela; a janela tem Baixar imagem e
+Imprimir cartaz). **Configurações › Portal aprovada** (item em Atendimento, depois de Convênios). Janela do QR e **Meu perfil** do profissional
+**aprovados**. **Celular:** **barra embaixo** com Meu dia, Conversas, Agenda e Pacientes (o resto no menu); Meu dia,
+Conversas e conversa aberta **aprovados** (capturas da ajuda do celular a refazer, com autorização, na implementação). Agenda no celular e link no perfil pelo celular **aprovados**.
+**Rodada 3 aprovada pelo cliente (08/nov). Desenho da Etapa 2 fechado (portal e painel da recepção).**

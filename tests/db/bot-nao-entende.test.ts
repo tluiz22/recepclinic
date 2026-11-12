@@ -137,8 +137,11 @@ describe("bot que não entende (F8.5d)", () => {
     expect(await message(phone, "d")).toEqual([OFFER]);
     expect(await message(phone, "sim")).toEqual(["Vou pedir para alguém da clínica te atender por aqui. A clínica responde assim que possível.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     const other = "+5584991227704";
-    // Só na segunda-feira, das 8h às 9h: "a partir de …".
-    await setReceptionHours([null, { open: "08:00", close: "09:00" }, null, null, null, null, null]);
+    // Só num dia que não é hoje (daqui a dois dias), das 8h às 9h: "a partir de …". Com um dia fixo, o teste falhava
+    // quando rodava nesse dia, dentro do horário (CI de 09/nov, segunda às 8h11).
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Fortaleza" })).getDay();
+    const weekday = (today + 2) % 7;
+    await setReceptionHours(Array.from({ length: 7 }, (_, day) => (day === weekday ? { open: "08:00", close: "09:00" } : null)));
     await message(other, "oi");
     for (const text of ["a", "b", "c"]) await message(other, text);
     await message(other, "d");

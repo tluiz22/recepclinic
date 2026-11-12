@@ -2,6 +2,7 @@ import { listNationalHolidays } from "../../../../holidays";
 import { unwrap, unwrapOne } from "../../../errors";
 import { listClinicHolidays } from "../../../config/holidays";
 import { listInsurancePlans } from "../../../config/insurance";
+import { listServiceInsuranceLinks } from "../../../config/serviceInsurance";
 import { listProfessionals } from "../../../config/professionals";
 import { getReceptionHours } from "../../../config/receptionHours";
 import type { DbClient } from "../../../clients";
@@ -48,7 +49,7 @@ export async function kbSourceEnv(db: DbClient, clinicId: string, now: Date): Pr
 
 export async function loadKbClinicData(b: KbSourceEnv): Promise<KbClinicData> {
   const insuranceOn = b.features.includes("insurance");
-  const [catalog, professionals, plans, links, reception, holidays, settings] = await Promise.all([
+  const [catalog, professionals, plans, links, examLinks, examPrivate, reception, holidays, settings] = await Promise.all([
     b.catalog(),
     listProfessionals(b.db, b.clinicId),
     insuranceOn ? listInsurancePlans(b.db, b.clinicId) : Promise.resolve([]),
@@ -58,6 +59,15 @@ export async function loadKbClinicData(b: KbSourceEnv): Promise<KbClinicData> {
           .select("professional_id, insurance_plan_id")
           .eq("clinic_id", b.clinicId)
           .then((r) => unwrap(r, "Convênios atendidos"))
+      : Promise.resolve([]),
+    insuranceOn ? listServiceInsuranceLinks(b.db, b.clinicId) : Promise.resolve([]),
+    insuranceOn
+      ? b.db
+          .from("services")
+          .select("id, accepts_private")
+          .eq("clinic_id", b.clinicId)
+          .eq("category", "exam")
+          .then((r) => unwrap(r, "Exames"))
       : Promise.resolve([]),
     getReceptionHours(b.db, b.clinicId),
     listClinicHolidays(b.db, b.clinicId, b.clinic.today),
@@ -86,6 +96,13 @@ export async function loadKbClinicData(b: KbSourceEnv): Promise<KbClinicData> {
       enabled: insuranceOn,
       plans: plans.filter((p) => p.isActive).map((p) => ({ id: p.id, name: p.name, alternativeNames: p.alternativeNames })),
       links: links.map((x) => ({ professionalId: x.professional_id, planId: x.insurance_plan_id })),
+      exams: catalog.services
+        .filter((s) => s.category === "exam")
+        .map((s) => ({
+          serviceId: s.id,
+          acceptsPrivate: examPrivate.find((e) => e.id === s.id)?.accepts_private ?? true,
+          planIds: examLinks.filter((l) => l.serviceId === s.id && plans.some((p) => p.id === l.planId && p.isActive)).map((l) => l.planId),
+        })),
     },
     receptionHours: reception.hours.some(Boolean) ? reception.hours : null,
     holidayToday,

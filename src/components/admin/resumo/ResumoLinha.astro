@@ -1,0 +1,43 @@
+---
+// Uma linha do Resumo do dia (cliente, 11/nov/2026): no computador, 5 colunas alinhadas (hora, paciente, serviço,
+// quem marcou, situação); no celular, 2 linhas fixas (hora, paciente e situação; serviço e quem marcou).
+import { withReturn } from "../../../lib/returnPath";
+import { CANCELED_TEXT, appointmentSituation } from "../agenda/situationStyle";
+import StatusPill from "../ui/StatusPill.astro";
+import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
+import { serviceBesideCategory } from "../agenda/categoryStyle";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { AgendaAppointment } from "../../../lib/data/agenda/view";
+import { confirmedByReminder } from "../../../lib/reminderResponse";
+
+interface Props {
+  a: AgendaAppointment;
+  tag: ServiceTagInfo | undefined;
+  bookedBy: string;
+  timeZone: string;
+  /** Endereço desta tela, para o Voltar da ficha do paciente. */
+  here: string;
+}
+
+const { a, tag, bookedBy, timeZone, here } = Astro.props;
+const canceled = a.status === "canceled";
+// O "confirmo" do lembrete também grava a presença, por isso vem primeiro (só para leitor de tela; o selo já diz).
+const presence = a.status === "scheduled" || a.status === "confirmed" ? (confirmedByReminder(a.reminderResponse) ? "Confirmou pelo lembrete" : a.patientConfirmedAt ? "Presença confirmada" : null) : null;
+const tone = canceled ? CANCELED_TEXT : "text-ink";
+---
+
+<li class="grid grid-cols-[50px_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 border-t border-[#eef3f1] px-3.5 py-2.5 first:border-t-0 sm:grid-cols-[56px_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_150px] sm:gap-x-4 sm:pr-[18px] sm:pl-12">
+  <strong class={`col-start-1 row-start-1 text-[15px] tabular-nums ${tone}`}>{formatInstant(a.scheduledAt, timeZone, "HH:mm")}</strong>
+  <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class={`col-start-2 row-start-1 min-w-0 truncate text-[15px] font-bold no-underline hover:text-brand hover:underline ${tone}`}>
+    {a.patientName}{presence && <span class="sr-only"> · {presence}</span>}
+  </a>
+  <span class="col-span-2 col-start-2 row-start-2 min-w-0 text-[13.5px] text-ink-soft sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:text-[14.5px] sm:text-ink-mid">
+    <ServiceTag info={tag} />
+    {serviceBesideCategory(a.serviceName, a.category) && ` ${a.serviceName}`}
+    {bookedBy && <span class="sm:hidden"> · {bookedBy}</span>}
+  </span>
+  <span class="text-[13.5px] text-ink-soft max-sm:hidden sm:col-start-4 sm:row-start-1">{bookedBy}</span>
+  <span class="col-start-3 row-start-1 justify-self-end sm:col-start-5 sm:justify-self-start">
+    <StatusPill situation={appointmentSituation(a)} />
+  </span>
+</li>

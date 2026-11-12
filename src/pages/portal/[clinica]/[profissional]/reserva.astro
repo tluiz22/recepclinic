@@ -1,0 +1,139 @@
+---
+// P8 Quem será atendido (F2c; F2b reservou o horário depois do celular comprovado). "Para quem é a consulta?": os
+// pacientes do celular (nome completo, "(você)" no próprio; pela ligação, D14, com "também com Ana (mãe)" e o "Falta
+// alguém?", UI-3) e "Outra pessoa" (P8b). Sem cadastro no celular, vai
+// direto à P8b. Escolhido, confere a idade limite do médico, consulta já marcada com ele e os limites do telefone (os
+// do bot) e segue para a revisão. O contador da reserva fica visível; o Voltar solta a reserva (horários do dia).
+import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
+import PortalLinkPhone from "../../../../components/portal/PortalLinkPhone.astro";
+import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { portalCta, portalLink, portalNotice, portalTitle } from "../../../../components/portal/styles";
+import { bookingBlock, phonePatients, setHoldPatient, type PortalPatient } from "../../../../lib/data/portal/booking";
+import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
+import { bookingKind, changeProfessionalHref, helpForOf, theVisit, whoLabel } from "../../../../lib/portal";
+import { blockMessage } from "../../../../lib/portalBooking";
+import { formatAge } from "../../../../lib/age";
+import { todayIn } from "../../../../lib/clinicTime";
+
+const view = await openHoldPage(Astro);
+const { page, professional, hold, session, timeZone, modality, when } = view;
+if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
+
+let patients: PortalPatient[] = [];
+let problem: string | null = null;
+let ageProblem = false;
+// Já marcado (cliente, 10/nov/2026): o link leva a Minhas consultas, para remarcar ou cancelar.
+let alreadyProblem = false;
+let chosen: string | null = hold?.patientId ?? null;
+const today = todayIn(timeZone);
+/** "Ana (mãe)", "Ana (mãe) e Carlos (pai)", "Ana, Carlos e Rita". */
+const joinNames = (names: string[]) => (names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`);
+
+if (page.kind === "open" && professional && session && hold?.state === "active") {
+  const { db, portal } = page;
+  ({ patients } = await phonePatients(db, portal.clinicId, hold.phone));
+  if (!patients.length) return Astro.redirect(view.href("cadastro"));
+
+  if (Astro.request.method === "POST") {
+    const form = await Astro.request.formData().catch(() => null);
+    chosen = String(form?.get("paciente") ?? "");
+    const patient = patients.find((p) => p.id === chosen);
+    if (!patient) problem = `Escolha para quem é ${theVisit(professional)}.`;
+    else {
+      const block = await bookingBlock(db, portal.clinicId, { professional, phone: hold.phone, patient: { id: patient.id, birthdate: patient.birthdate }, isNew: false, timeZone });
+      if (block) {
+        problem = blockMessage(toBlockText(block, timeZone), professional.name, patient.fullName, bookingKind(professional));
+        ageProblem = block.kind === "age";
+        alreadyProblem = block.kind === "already";
+      } else if (await setHoldPatient(db, portal.clinicId, session.id, hold.id, { patientId: patient.id })) {
+        return Astro.redirect(view.href("revisao"));
+      } else return Astro.redirect(view.href("reserva"));
+    }
+  }
+}
+
+const changeDoctor = page.kind === "open" ? changeProfessionalHref(view.base, view.flow) : null;
+const active = !!professional && hold?.state === "active";
+const card =
+  "flex min-h-16 cursor-pointer items-center gap-3.5 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-3 text-lg has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink";
+---
+
+<PortalLayout
+  title={active ? `Para quem é ${theVisit(professional)}?` : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? helpForOf(professional) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={view.base} />}
+  {professional && !active && <PortalHoldExpired timesHref={view.timesHref()} />}
+  {
+    active && professional && hold && (
+      <div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-[18px]">
+          <PortalStepBar back={view.timesHref(true)} step={view.step("patient")} />
+          <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("reserva")} />
+          {view.viaBotLink && <PortalLinkPhone phone={hold.phone} action={view.phoneHref} />}
+          <h1 class={portalTitle}>Para quem é {theVisit(professional)}?</h1>
+          {problem && (
+            <div class={`${portalNotice} flex flex-col gap-1 border-red-200 bg-red-50 text-red-800`} role="alert">
+              <p>{problem}</p>
+              {ageProblem && changeDoctor && (
+                <a href={changeDoctor} class={`${portalLink} self-start`}>
+                  Escolher outro médico
+                </a>
+              )}
+              {alreadyProblem && (
+                <a href={`${view.base}/minhas-consultas`} class={`${portalLink} self-start`}>
+                  Ver minhas consultas
+                </a>
+              )}
+            </div>
+          )}
+          <form method="POST" action={view.href("reserva")} class="flex max-w-[620px] flex-col gap-3">
+            <fieldset class="flex flex-col gap-2.5">
+              <legend class="sr-only">Para quem é {theVisit(professional)}?</legend>
+              {patients.map((p) => (
+                <label class={card}>
+                  <input type="radio" name="paciente" value={p.id} checked={chosen === p.id} required class="h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                  <span class="flex min-w-0 flex-col">
+                    <span class="font-bold break-words">
+                      {p.fullName}
+                      {p.isContactSelf && <span class="font-normal text-gray-700"> (você)</span>}
+                    </span>
+                    <span class="text-[15px] text-gray-600">{formatAge(p.birthdate, today)}</span>
+                    {p.others.length > 0 && <span class="text-[15px] text-gray-600" data-others>também com {joinNames(p.others)}</span>}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <a href={view.href("cadastro")} class={`${card} font-bold text-clinic-ink no-underline`}>
+              <svg aria-hidden="true" class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              Outra pessoa
+            </a>
+            <p class="text-[15px] leading-snug text-gray-600" data-missing-hint>
+              Falta alguém? Peça à recepção para ligar o seu número à ficha. Assim não cria um cadastro repetido.
+            </p>
+            <button type="submit" class={`${portalCta} mt-2`} data-sending-label="Conferindo…">
+              Continuar
+            </button>
+          </form>
+        </div>
+        <PortalSummary
+          rows={[
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
+            { label: "Atendimento", value: view.modalityText },
+            { label: "Dia e horário", value: when, change: view.timesHref(true) },
+            { label: "Paciente", value: null },
+          ]}
+        />
+      </div>
+    )
+  }
+</PortalLayout>

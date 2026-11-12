@@ -1,0 +1,150 @@
+---
+// Formulários do celular e do código (F2b, P7; também antes da lista do retorno, F2d). O estado vem de
+// identityStep.ts (runIdentityStep): avisos de bloqueio, de envio indisponível e de erro, o código pendente e o CAPTCHA.
+import type { IdentityState } from "../../lib/data/portal/identityStep";
+import { formatPhoneBR } from "../../lib/phone";
+import { blockedText, clock, phoneEnding, resendWaitSeconds } from "../../lib/portalIdentity";
+import { TURNSTILE_SCRIPT } from "../../lib/turnstile";
+
+interface Props {
+  state: IdentityState;
+  /** Endereço dos formulários (a própria página, com o caminho). */
+  action: string;
+  /** Linha abaixo do campo do celular. */
+  phoneHelp?: string;
+}
+
+const { state, action, phoneHelp = "Vamos mandar um código de 6 números no WhatsApp deste celular. A mensagem chega do RecepClinic, o sistema de agendamento da clínica." } = Astro.props;
+const { problem, pending, devCode, blockedUntil, unavailable, turnstile } = state;
+const waitSeconds = pending ? resendWaitSeconds(pending.sentAt) : 0;
+// Celular já comprovado, mas o próximo passo parou (limite do dia, bloqueio): só o aviso e o "Trocar número", sem pedir
+// o celular nem o código de novo.
+const verifiedPhone = !pending && state.session?.verified && state.session.phone && (blockedUntil || problem?.field === "page") ? state.session.phone : null;
+const input =
+  "min-h-14 w-full rounded-xl border-[1.5px] border-gray-300 bg-white px-3.5 text-xl text-gray-900 focus:border-clinic-ink focus:outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink aria-[invalid=true]:border-red-700";
+const cta = "flex min-h-[58px] w-full items-center justify-center rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 disabled:opacity-45 sm:w-auto sm:min-w-[260px]";
+const link = "inline-flex min-h-11 items-center px-1 text-base font-bold text-clinic-ink underline";
+const errorText = "text-base font-semibold text-red-700";
+const notice = "rounded-[14px] border px-4 py-3 text-[17px]";
+---
+
+{
+  blockedUntil && (
+    <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="alert">
+      Muitas tentativas. Tente de novo {blockedText(blockedUntil)} ou toque em "Recepção", no topo, para falar com a clínica.
+    </p>
+  )
+}
+{
+  unavailable && (
+    <p class={`${notice} border-amber-200 bg-amber-50 text-amber-900`} role="alert">
+      Não conseguimos mandar o código agora. Toque em "Recepção", no topo, para marcar com a clínica.
+    </p>
+  )
+}
+{problem?.field === "page" && <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">{problem.text}</p>}
+
+{
+  verifiedPhone ? (
+    <form method="POST" action={action} class="flex max-w-[460px] flex-col gap-1.5">
+      <label for="celular-comprovado" class="text-base font-semibold text-gray-700">Celular com DDD</label>
+      <div class="flex items-center gap-2.5">
+        <input id="celular-comprovado" type="text" value={formatPhoneBR(verifiedPhone)} readonly class={input.replace("bg-white", "bg-gray-100").replace("text-gray-900", "text-gray-700")} />
+        <input type="hidden" name="acao" value="trocar" />
+        <button type="submit" class={`${link} whitespace-nowrap`}>Trocar número</button>
+      </div>
+    </form>
+  ) : pending ? (
+    <>
+      <form method="POST" action={action} class="flex max-w-[460px] flex-col gap-1.5">
+        <label for="celular-fixo" class="text-base font-semibold text-gray-700">Celular com DDD</label>
+        <div class="flex items-center gap-2.5">
+          <input id="celular-fixo" type="text" value={formatPhoneBR(pending.phone)} readonly class={input.replace("bg-white", "bg-gray-100").replace("text-gray-900", "text-gray-700")} />
+          <input type="hidden" name="acao" value="trocar" />
+          <button type="submit" class={`${link} whitespace-nowrap`}>Trocar número</button>
+        </div>
+      </form>
+      <form method="POST" action={action} class="flex max-w-[680px] flex-col gap-2.5 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+        <input type="hidden" name="acao" value="codigo" />
+        <p class="text-[17px]">Mandamos um código de 6 números no WhatsApp do celular {phoneEnding(pending.phone)}. A mensagem chega do RecepClinic, o sistema de agendamento da clínica. Abra a conversa e digite o código aqui.</p>
+        {devCode && (
+          <p class="rounded-lg border border-dashed border-gray-400 bg-gray-50 px-3 py-2 text-[15px] text-gray-700">
+            Só no computador local (sem WhatsApp de verdade): o código é <b>{devCode}</b>.
+          </p>
+        )}
+        <label for="codigo" class="text-base font-semibold text-gray-700">Código</label>
+        <input
+          id="codigo"
+          name="codigo"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="9"
+          required
+          placeholder="000000"
+          aria-invalid={problem?.field === "code" ? "true" : undefined}
+          aria-describedby={problem?.field === "code" ? "codigo-erro" : undefined}
+          autofocus
+          class={`${input} max-w-[260px] text-center font-display text-[28px] font-bold tracking-[0.4em]`}
+        />
+        {problem?.field === "code" && <p id="codigo-erro" class={errorText} role="alert">{problem.text}</p>}
+        <button type="submit" class={`${cta} mt-2`} data-sending-label="Conferindo…">Confirmar código</button>
+      </form>
+      <form method="POST" action={action} class="flex items-center gap-2">
+        <input type="hidden" name="acao" value="reenviar" />
+        <p class="text-base text-gray-600" data-portal-resend-wait hidden={waitSeconds === 0} aria-live="polite">
+          Reenviar código em <span data-portal-resend-clock data-seconds={waitSeconds}>{clock(waitSeconds)}</span>
+        </p>
+        <button type="submit" class={link} data-portal-resend hidden={waitSeconds > 0}>Reenviar código</button>
+      </form>
+    </>
+  ) : (
+    <form method="POST" action={action} class="flex max-w-[460px] flex-col gap-3">
+      <input type="hidden" name="acao" value="enviar" />
+      <div class="flex flex-col gap-1.5">
+        <label for="celular" class="text-base font-semibold text-gray-700">Celular com DDD</label>
+        <input
+          id="celular"
+          name="celular"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="tel"
+          required
+          value={state.typedPhone}
+          placeholder="(84) 99999-9999"
+          aria-invalid={problem?.field === "phone" ? "true" : undefined}
+          aria-describedby={problem?.field === "phone" ? "celular-erro celular-ajuda" : "celular-ajuda"}
+          class={input}
+        />
+        {problem?.field === "phone" && <p id="celular-erro" class={errorText} role="alert">{problem.text}</p>}
+        <p id="celular-ajuda" class="text-[15px] text-gray-600">{phoneHelp}</p>
+      </div>
+      {turnstile && <div class="cf-turnstile" data-sitekey={turnstile.siteKey} data-language="pt-br" data-size="flexible" />}
+      <button type="submit" class={`${cta} mt-1`} data-sending-label="Enviando…">Receber código no WhatsApp</button>
+    </form>
+  )
+}
+<p class="text-[15px] text-gray-600">
+  Usamos seu número só para o agendamento.{" "}
+  <a href="https://www.recepclinic.com.br/privacidade" target="_blank" rel="noopener" class="font-semibold text-clinic-ink">Privacidade</a>
+</p>
+{turnstile && !pending && !verifiedPhone && <script is:inline src={TURNSTILE_SCRIPT} async defer />}
+
+<script>
+  // "Reenviar código em 0:59": o contador e, no fim, o botão.
+  const clockEl = document.querySelector<HTMLElement>("[data-portal-resend-clock]");
+  const wait = document.querySelector<HTMLElement>("[data-portal-resend-wait]");
+  const resend = document.querySelector<HTMLElement>("[data-portal-resend]");
+  let left = Number(clockEl?.dataset.seconds ?? 0);
+  if (clockEl && left > 0) {
+    const timer = setInterval(() => {
+      left -= 1;
+      clockEl.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+      if (left <= 0) {
+        clearInterval(timer);
+        if (wait) wait.hidden = true;
+        if (resend) resend.hidden = false;
+      }
+    }, 1000);
+  }
+</script>

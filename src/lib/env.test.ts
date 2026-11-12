@@ -34,10 +34,27 @@ describe("variáveis da plataforma", () => {
       whatsappSignupConfigId: null,
       webPush: null,
       asaas: null,
+      turnstile: null,
+      whatsappCode: null,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
       "https://app.recepclinic.com.br",
     );
+  });
+
+  it("Turnstile do portal: as duas chaves juntas ou nenhuma", () => {
+    expect(parsePlatformEnv({ ...valid, PUBLIC_TURNSTILE_SITE_KEY: "site", TURNSTILE_SECRET_KEY: "secret" }).turnstile).toEqual({
+      siteKey: "site",
+      secretKey: "secret",
+    });
+    expect(() => parsePlatformEnv({ ...valid, PUBLIC_TURNSTILE_SITE_KEY: "site" })).toThrow(/TURNSTILE/);
+  });
+
+  it("número dos códigos do portal (seção 14): as três juntas ou nenhuma, IDs só com números", () => {
+    const code = { WHATSAPP_CODE_PHONE_NUMBER_ID: "1380810041790028", WHATSAPP_CODE_WABA_ID: "1608311683725577", WHATSAPP_CODE_TOKEN: "tok" };
+    expect(parsePlatformEnv({ ...valid, ...code }).whatsappCode).toEqual({ phoneNumberId: "1380810041790028", wabaId: "1608311683725577", token: "tok" });
+    expect(() => parsePlatformEnv({ ...valid, WHATSAPP_CODE_TOKEN: "tok" })).toThrow(/as três ou nenhuma/);
+    expect(() => parsePlatformEnv({ ...valid, ...code, WHATSAPP_CODE_WABA_ID: "abc" })).toThrow(/só os números/);
   });
 
   it("e-mail é opcional; com SMTP_HOST, porta e remetente são obrigatórios", () => {

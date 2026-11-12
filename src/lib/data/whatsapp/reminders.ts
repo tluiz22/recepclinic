@@ -8,6 +8,7 @@ import { logTrail } from "../agenda/appointments";
 import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { resetConversationAfterNotice } from "./conversations";
 import { recordOutboundMessage, type SendOutcome } from "./messages";
+import { appointmentRecipient, BOOKER_COLUMNS, phoneCaresForPatient, type RecipientContact } from "./recipient";
 
 // Lembrete ao paciente (Fases 19, 22 e 23 do piloto), F3.9b; reestruturado
 // pelo cliente em 09/out/2026. Só com o item "Lembrete automático" liberado
@@ -176,11 +177,11 @@ export type ReminderSender = (reminder: ReminderToSend) => Promise<SendOutcome>;
 // Leitura
 // ---------------------------------------------------------------------------
 
-const APPOINTMENT_COLUMNS =
-  "id, status, scheduled_at, reminder_sent_at, rescheduled_at, reminder_response, patient_confirmed_at, home_visit_address, services ( name, category ), agendas ( professionals ( display_name ) ), locations ( name, type, address ), patients ( full_name, contacts ( id, full_name, phone ) )";
+const APPOINTMENT_COLUMNS = `id, status, scheduled_at, reminder_sent_at, rescheduled_at, reminder_response, patient_confirmed_at, home_visit_address, services ( name, category ), agendas ( professionals ( display_name ) ), locations ( name, type, address ), patient_id, patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS}`;
 
 type AppointmentRow = {
   id: string;
+  patient_id: string;
   status: string;
   scheduled_at: string;
   reminder_sent_at: string | null;
@@ -191,7 +192,8 @@ type AppointmentRow = {
   services: { name: string; category: Enums<"service_category"> };
   agendas: { professionals: { display_name: string } | null };
   locations: { name: string; type: Enums<"location_type">; address: string | null };
-  patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
+  patients: { full_name: string; contacts: RecipientContact };
+  booker: RecipientContact | null;
 };
 
 const toState = (row: AppointmentRow): ReminderState => ({
@@ -294,7 +296,7 @@ async function deliverReminder(
   sender: ReminderSender,
   now: Date,
 ): Promise<boolean> {
-  const contact = row.patients.contacts;
+  const contact = appointmentRecipient(row);
   const reminder: ReminderToSend = {
     clinicId,
     timeZone: settings.timeZone,
@@ -520,13 +522,11 @@ export async function recordReminderTap(
     await db.from("appointments").select(APPOINTMENT_COLUMNS).eq("clinic_id", clinicId).eq("id", tap.appointmentId).maybeSingle(),
     "Atendimento",
   ) as unknown as AppointmentRow | null;
-  if (
-    !row ||
-    row.patients.contacts.phone !== tap.phone ||
-    !(ACTIVE as readonly string[]).includes(row.status) ||
-    Date.parse(row.scheduled_at) <= now.getTime() ||
-    !row.reminder_sent_at
-  ) {
+  if (!row || !(ACTIVE as readonly string[]).includes(row.status) || Date.parse(row.scheduled_at) <= now.getTime() || !row.reminder_sent_at) {
+    return { result: "inactive" };
+  }
+  // Quem recebeu o lembrete (quem marcou) ou qualquer outro responsável ligado ao paciente (UI-5).
+  if (appointmentRecipient(row).phone !== tap.phone && !(await phoneCaresForPatient(db, clinicId, row.patient_id, tap.phone))) {
     return { result: "inactive" };
   }
 

@@ -1,0 +1,28 @@
+---
+// Voltar + "Passo n de N" (F2a). O Voltar leva sempre à tela de onde o paciente veio, com as escolhas no endereço.
+interface Props {
+  back: string;
+  step?: { current: number; total: number } | null;
+}
+
+const { back, step = null } = Astro.props;
+---
+
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+  <a href={back} class="-ml-1 inline-flex min-h-12 items-center gap-0.5 pr-2 text-[17px] font-semibold text-clinic-ink no-underline hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink">
+    <svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+    Voltar
+  </a>
+  {
+    step && (
+      <div class="flex min-w-[200px] flex-1 items-center gap-2.5 sm:max-w-[360px]">
+        <span class="text-[15px] whitespace-nowrap text-gray-600">Passo {step.current} de {step.total}</span>
+        <span class="flex flex-1 gap-1" aria-hidden="true">
+          {Array.from({ length: step.total }, (_, i) => (
+            <span class={`h-[5px] flex-1 rounded-full ${i < step.current ? "bg-clinic" : "bg-gray-200"}`} />
+          ))}
+        </span>
+      </div>
+    )
+  }
+</div>

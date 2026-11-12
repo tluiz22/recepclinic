@@ -11,8 +11,9 @@ describe("planos", () => {
     expect([...keys].sort()).toEqual(FEATURES.map((f) => f.key).sort());
   });
 
-  it("Básico: bot, lembrete e resumo ao profissional", () => {
-    expect(BASIC).toEqual(["whatsapp_bot", "reminders", "daily_summary"]);
+  it("Básico: bot, Portal, lembrete e resumo ao profissional", () => {
+    expect(BASIC).toEqual(["portal", "whatsapp_bot", "reminders", "daily_summary"]);
+    expect(missingDependencies(BASIC)).toEqual([]);
     expect(clinicPlan(BASIC, 1)).toMatchObject({ kind: "basic", monthlyCents: 14_700 });
   });
 
@@ -55,7 +56,9 @@ describe("planos", () => {
     expect(featuresOfItems(["custom_messages", "inventado"])).toEqual(["custom_messages", "custom_templates"]);
     expect(itemDependsOn(ADDONS.find((a) => a.id === "metrics")!)).toEqual([]);
     expect(itemDependsOn(ADDONS.find((a) => a.id === "waitlist")!)).toEqual(["whatsapp_bot"]);
-    expect(BASIC_ITEMS.flatMap(itemDependsOn)).toEqual([]);
+    // O bot depende do Portal, que também está no Básico (cliente, 08/nov/2026, I10).
+    expect(BASIC_ITEMS.flatMap(itemDependsOn)).toEqual(["portal"]);
+    expect(BASIC_ITEMS.map((item) => item.id)).toContain("portal");
   });
 });
 

@@ -1,0 +1,267 @@
+---
+// Configurações › Portal (F3d; especificação R7, canvas da rodada 3): o link da clínica com "Copiar link para…", QR code
+// e "Abrir o portal" (mudar o endereço: Suporte); o link de cada profissional (busca e especialidade, para clínicas
+// com 10+ profissionais) com "Copiar link para…", QR e "Mostrar no portal" / "Tirar do portal"; a antecedência para
+// remarcar e cancelar pelo portal (RD10; padrão 0 h, sem prazo, desde 10/nov/2026). Só o Administrador, com o item "Portal" da Matriz.
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import Badge from "../../../components/admin/config/Badge.astro";
+import Card from "../../../components/admin/config/Panel.astro";
+import PortalLinkActions from "../../../components/admin/config/PortalLinkActions.astro";
+import { HINT, INPUT_INLINE, LABEL, SECTION_TITLE } from "../../../components/admin/config/formStyles";
+import Icon from "../../../components/admin/Icon.astro";
+import Notice from "../../../components/admin/ui/Notice.astro";
+import { buttonClass } from "../../../components/admin/ui/styles";
+import { createUserClient } from "../../../lib/data/clients";
+import { LEAD_HOURS_MAX, LEAD_HOURS_MIN, loadPortalSettings } from "../../../lib/data/config/portal";
+import { portalLinksOf } from "../../../lib/data/config/portalLinks";
+import { plainText } from "../../../lib/portal";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const settings = await loadPortalSettings(db, clinic.clinicId);
+const links = portalLinksOf(Astro.url, settings);
+const specialties = [...new Map(settings.professionals.flatMap((p) => p.specialties).map((s) => [s.id, s])).values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+const shown = settings.professionals.filter((p) => p.showInPortal).length;
+const action = "/api/admin/configuracoes/portal";
+const linkText = "min-w-0 break-all text-[15px] font-semibold text-brand-ink";
+---
+
+<ConfigShell current="portal" title="Portal" subtitle="Os links de agendamento da clínica e dos profissionais, o QR code e o prazo para remarcar e cancelar pelo portal.">
+  <div class="flex max-w-3xl flex-col gap-4">
+    {
+      !links.clinic ? (
+        <Notice tone="warning">
+          O endereço do portal desta clínica ainda não foi definido. {clinic.isPlatformStaff ? "Defina em Sistema › Clínicas › Portal de agendamento." : "Peça ao Suporte do RecepClinic."} Enquanto isso, o bot
+          continua marcando pela conversa.
+        </Notice>
+      ) : (
+        <Card>
+          <h2 class={SECTION_TITLE}>Link da clínica</h2>
+          <p class="mt-1 text-sm text-ink-soft">Leva a todos os profissionais e exames do portal. Para pôr no Instagram, no site, no Google ou mandar em mensagem.</p>
+          <p class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class={linkText} data-link-url>{links.clinic.url}</span>
+            <a href={links.clinic.url} target="_blank" rel="noopener" class="inline-flex min-h-10 items-center gap-1 text-[15px] font-semibold text-brand underline">
+              Abrir o portal
+            </a>
+          </p>
+          <div class="mt-3">
+            <PortalLinkActions id="link-clinica" url={links.clinic.url} label="Link da clínica" qrKey="clinica" posterUrl={links.clinic.posterUrl} />
+          </div>
+          {!clinic.isPlatformStaff && <p class={HINT}>Para mudar o endereço, fale com o Suporte.</p>}
+        </Card>
+      )
+    }
+
+    {
+      links.clinic && settings.professionals.length > 0 && (
+        <Card>
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class={SECTION_TITLE}>Links dos profissionais</h2>
+            <p class="text-sm text-ink-soft">{shown} de {settings.professionals.length} no portal</p>
+          </div>
+          <p class="mt-1 text-sm text-ink-soft">O link de cada profissional abre só a agenda dele, sem os outros profissionais da clínica.</p>
+          {settings.professionals.length > 5 && (
+            <div class="mt-3 flex flex-col gap-2 sm:flex-row" data-pro-filter>
+              <label class="flex flex-1 flex-col">
+                <span class={LABEL}>Buscar pelo nome</span>
+                <input type="search" class={`${INPUT_INLINE} mt-1.5`} data-pro-search autocomplete="off" />
+              </label>
+              {specialties.length > 1 && (
+                <label class="flex flex-col sm:w-64">
+                  <span class={LABEL}>Especialidade</span>
+                  <select class={`${INPUT_INLINE} mt-1.5`} data-pro-specialty>
+                    <option value="">Todas</option>
+                    {specialties.map((s) => (
+                      <option value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
+          <ul class="mt-3 flex flex-col divide-y divide-line" data-pro-list>
+            {settings.professionals.map((p) => {
+              const link = links.professionals.get(p.id)!;
+              return (
+                <li
+                  id={`profissional-${p.id}`}
+                  class="flex flex-col gap-2 py-3.5 first:pt-0 last:pb-0"
+                  data-pro-item
+                  data-name={plainText(p.name)}
+                  data-specialties={p.specialties.map((s) => s.id).join(" ")}
+                >
+                  <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <b class="text-[16px] text-ink">{p.name}</b>
+                    {p.specialties.length > 0 && <span class="text-sm text-ink-soft">{p.specialties.map((s) => s.name).join(", ")}</span>}
+                    <Badge variant={p.showInPortal ? "success" : "neutral"}>{p.showInPortal ? "No portal" : "Fora do portal"}</Badge>
+                  </div>
+                  {p.showInPortal ? (
+                    <>
+                      <span class={linkText}>{link.url}</span>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <PortalLinkActions id={`link-${p.id}`} url={link.url} label={p.name} qrKey={p.id} posterUrl={link.posterUrl} />
+                        <form method="POST" action={action} class="contents">
+                          <input type="hidden" name="acao" value="ocultar" />
+                          <input type="hidden" name="profissional" value={p.id} />
+                          <button type="submit" class={buttonClass("quiet", "sm")} aria-label={`Tirar do portal: ${p.name}`}>
+                            Tirar do portal
+                          </button>
+                        </form>
+                      </div>
+                    </>
+                  ) : (
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="text-sm text-ink-soft">Fora do portal: não aparece para o paciente e o link dele não abre.</p>
+                      <form method="POST" action={action}>
+                        <input type="hidden" name="acao" value="mostrar" />
+                        <input type="hidden" name="profissional" value={p.id} />
+                        <button type="submit" class={buttonClass("secondary", "sm")} aria-label={`Mostrar no portal: ${p.name}`}>
+                          Mostrar no portal
+                        </button>
+                      </form>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p class="mt-3 hidden text-[15px] text-ink-soft" data-pro-empty role="status">Nenhum profissional com esse nome ou especialidade.</p>
+        </Card>
+      )
+    }
+
+    <Card>
+      <h2 class={SECTION_TITLE}>Prazo para remarcar e cancelar pelo portal</h2>
+      <p class="mt-1 text-sm text-ink-soft">
+        Dentro desse prazo, "Minhas consultas" mostra só "Falar com a recepção". Pelo WhatsApp, o paciente remarca e cancela a qualquer hora.
+      </p>
+      <form method="POST" action={action} class="mt-3 flex flex-wrap items-end gap-3">
+        <input type="hidden" name="acao" value="antecedencia" />
+        <label class="flex flex-col">
+          <span class={LABEL}>Antecedência mínima</span>
+          <span class="mt-1.5 flex items-center gap-2">
+            <input type="number" name="lead_hours" value={settings.leadHours} min={LEAD_HOURS_MIN} max={LEAD_HOURS_MAX} step="1" required inputmode="numeric" class={`${INPUT_INLINE} w-24`} aria-describedby="lead-hint" />
+            <span class="text-[15px] text-ink">horas antes</span>
+          </span>
+        </label>
+        <button type="submit" class={buttonClass("primary", "md")}>Salvar</button>
+      </form>
+      <p id="lead-hint" class={HINT}>De {LEAD_HOURS_MIN} a {LEAD_HOURS_MAX} horas. Padrão: 0 (sem prazo).</p>
+    </Card>
+  </div>
+
+  <dialog id="portal-qr" class="m-auto w-[min(92vw,420px)] rounded-2xl border border-line bg-white p-5 backdrop:bg-black/40" aria-labelledby="portal-qr-title">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 id="portal-qr-title" class={SECTION_TITLE}>QR code</h2>
+        <p class="text-sm text-ink-soft" data-qr-label></p>
+      </div>
+      <form method="dialog">
+        <button type="submit" class={buttonClass("quiet", "sm")} aria-label="Fechar">
+          <Icon name="x-mark" class="h-5 w-5" strokeWidth={2} />
+        </button>
+      </form>
+    </div>
+    <img data-qr-image alt="" width="280" height="280" class="mx-auto mt-3 h-[280px] w-[280px]" />
+    <p class="mt-2 text-center text-sm text-ink-soft">Aponte a câmera para agendar. Quem agenda pelo QR conta como "cartaz" nas Métricas.</p>
+    <div class="mt-4 flex flex-col gap-2">
+      <a data-qr-download class={buttonClass("primary", "md")} download>
+        <Icon name="arrow-down-tray" class="h-4 w-4" strokeWidth={2} />
+        Baixar imagem
+      </a>
+      <a data-qr-poster-page target="_blank" rel="noopener" class={buttonClass("secondary", "md")}>Imprimir cartaz</a>
+      <button type="button" data-qr-copy class={buttonClass("secondary", "md")}>Copiar link do cartaz</button>
+    </div>
+  </dialog>
+  <p class="sr-only" role="status" aria-live="polite" data-copy-status></p>
+  <div class="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4" aria-hidden="true">
+    <p class="hidden rounded-full bg-ink px-4 py-2 text-[15px] font-semibold text-white shadow-lg" data-copy-toast></p>
+  </div>
+</ConfigShell>
+
+<script>
+  // Copiar link para… (R7): copia o link com a marca do lugar e avisa; no celular, abre o Compartilhar do aparelho.
+  const status = document.querySelector<HTMLElement>("[data-copy-status]");
+  const toast = document.querySelector<HTMLElement>("[data-copy-toast]");
+  let toastTimer: number | undefined;
+  const announce = (text: string) => {
+    if (status) status.textContent = text;
+    if (!toast) return;
+    toast.textContent = text;
+    toast.classList.remove("hidden");
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => toast.classList.add("hidden"), 2800);
+  };
+  const copy = async (url: string, what: string) => {
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    if (coarse && navigator.share) {
+      try {
+        await navigator.share({ url });
+        return;
+      } catch {
+        // Cancelado: copia.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      announce(`${what} copiado.`);
+    } catch {
+      window.prompt("Copie o link:", url);
+    }
+  };
+  document.querySelectorAll<HTMLButtonElement>("[data-copy-url]").forEach((button) => {
+    button.addEventListener("click", () => {
+      button.closest<HTMLElement>("[popover]")?.hidePopover();
+      void copy(button.dataset.copyUrl!, `Link para ${button.dataset.copyLabel === "Outro lugar" ? "outro lugar" : `o ${button.dataset.copyLabel}`}`);
+    });
+  });
+  // O menu abre junto ao botão (o popover fica por cima de tudo).
+  document.querySelectorAll<HTMLButtonElement>(".rc-copy-trigger").forEach((trigger) => {
+    const menu = document.getElementById(trigger.getAttribute("popovertarget") ?? "");
+    menu?.addEventListener("toggle", (event) => {
+      if ((event as ToggleEvent).newState !== "open") return;
+      const box = trigger.getBoundingClientRect();
+      const left = Math.min(box.left, window.innerWidth - menu.offsetWidth - 8);
+      menu.style.position = "fixed";
+      menu.style.left = `${Math.max(8, left)}px`;
+      menu.style.top = `${Math.min(box.bottom + 4, window.innerHeight - menu.offsetHeight - 8)}px`;
+    });
+  });
+
+  // QR code (R7): a janela com a imagem do link do cartaz, Baixar imagem, Imprimir cartaz e Copiar link do cartaz.
+  const dialog = document.getElementById("portal-qr") as HTMLDialogElement | null;
+  let poster = "";
+  document.querySelectorAll<HTMLButtonElement>("[data-qr-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!dialog) return;
+      const key = encodeURIComponent(button.dataset.qrOpen!);
+      poster = button.dataset.qrPoster ?? "";
+      dialog.querySelector<HTMLElement>("[data-qr-label]")!.textContent = button.dataset.qrLabel ?? "";
+      const image = dialog.querySelector<HTMLImageElement>("[data-qr-image]")!;
+      image.src = `/api/admin/configuracoes/portal/qr?p=${key}`;
+      image.alt = `QR code: ${button.dataset.qrLabel ?? ""}`;
+      dialog.querySelector<HTMLAnchorElement>("[data-qr-download]")!.href = `/api/admin/configuracoes/portal/qr?p=${key}&formato=png`;
+      dialog.querySelector<HTMLAnchorElement>("[data-qr-poster-page]")!.href = `/admin/configuracoes/portal/cartaz?p=${key}`;
+      dialog.showModal();
+    });
+  });
+  dialog?.querySelector<HTMLButtonElement>("[data-qr-copy]")?.addEventListener("click", () => void copy(poster, "Link do cartaz"));
+
+  // Busca e especialidade (clínica com muitos profissionais).
+  const search = document.querySelector<HTMLInputElement>("[data-pro-search]");
+  const specialty = document.querySelector<HTMLSelectElement>("[data-pro-specialty]");
+  const plain = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+  const filter = () => {
+    const words = plain(search?.value ?? "").split(/\s+/).filter(Boolean);
+    const wanted = specialty?.value ?? "";
+    let visible = 0;
+    document.querySelectorAll<HTMLElement>("[data-pro-item]").forEach((item) => {
+      const show = words.every((w) => (item.dataset.name ?? "").includes(w)) && (!wanted || (item.dataset.specialties ?? "").split(" ").includes(wanted));
+      item.hidden = !show;
+      if (show) visible++;
+    });
+    document.querySelector("[data-pro-empty]")?.classList.toggle("hidden", visible > 0);
+  };
+  search?.addEventListener("input", filter);
+  specialty?.addEventListener("change", filter);
+</script>

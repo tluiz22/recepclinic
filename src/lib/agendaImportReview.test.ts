@@ -58,6 +58,8 @@ const patient = (over: Partial<ImportPatient> = {}): ImportPatient => ({
   birthdate: "1980-05-10",
   phone: "(84) 98188-0777",
   guardianName: "",
+  secondName: "",
+  secondPhone: "",
   insurancePlanId: "",
   cardNumber: "",
   appointments: [appt()],
@@ -136,6 +138,22 @@ describe("conferência da agenda atual", () => {
     expect(review.patients[0]).toMatchObject({ kind: "existing_contact", contactId: "c1", patientId: null, warnings: ["O contato já cadastrado está inativo: volta a ficar ativo com a carga."] });
   });
 
+  it("2º responsável (VR-7): avisa quando o número já é de um contato e vai para o plano da carga", () => {
+    const contacts = [{ id: "c9", phone: "+5584981112233", name: "Carlos Lima", isActive: false, patients: [] }];
+    const patients = [patient({ name: "Pedro Souza", birthdate: "2018-01-01", guardianName: "Maria Souza", secondName: "Carlos Souza", secondPhone: "(84) 98111-2233" })];
+    const ctx = context({ contacts });
+    const review = reviewImport(patients, catalog, ctx);
+    expect(review.patients[0]).toMatchObject({ secondPhoneE164: "+5584981112233", secondContactId: "c9", errors: [] });
+    expect(review.patients[0].warnings).toEqual([
+      "2º responsável: WhatsApp já cadastrado em nome de Carlos Lima (no link: Carlos Souza). Fica o cadastro.",
+      "O 2º responsável já cadastrado está inativo: volta a ficar ativo com a carga.",
+    ]);
+    expect(buildLoadPlan(review, patients, catalog, ctx)[0]).toMatchObject({ secondContactId: "c9", secondPhone: "+5584981112233", secondName: "Carlos Souza" });
+    // Sem o 2º responsável: nada no plano.
+    const alone = [patient()];
+    expect(buildLoadPlan(reviewImport(alone, catalog, context()), alone, catalog, context())[0]).toMatchObject({ secondContactId: null, secondPhone: null, secondName: null });
+  });
+
   it("plano da carga: o já cadastrado pelo id, o próprio contato e só as consultas que entram", () => {
     const contacts = [{ id: "c1", phone: "+5584981880777", name: "Maria Souza", isActive: true, patients: [] }];
     const patients = [
@@ -153,6 +171,9 @@ describe("conferência da agenda atual", () => {
       name: "Maria Souza",
       birthdate: "1980-05-10",
       isContactSelf: true,
+      secondContactId: null,
+      secondPhone: null,
+      secondName: null,
       insurancePlanId: "plan-unimed",
       cardNumber: "9",
       appointments: [

@@ -25,11 +25,11 @@ export const agenda = {
     // src/components/admin/agenda/situationStyle.ts (appointmentSituation); botão "Confirmar presença" do
     // lembrete (src/lib/data/whatsapp/templates.ts) e do bot (bot/manage.ts, confirmPresence); cardActions.ts.
     situacoes: {
-      serve: "A cor e o selo de cada atendimento dizem em que pé ele está. Toque na linha para abrir as ações ao lado.",
+      serve: "A cor e o selo de cada atendimento dizem em que pé ele está. Toque no atendimento para abrir as ações ao lado.",
       como: [
         "Não confirmado: o paciente ainda não confirmou a presença.",
-        "Confirmado: o paciente tocou em \"Confirmar presença\" no lembrete do WhatsApp (ou confirmou pelo bot), ou a recepção usou \"Confirmar presença\" nas ações do atendimento (toque na linha).",
-        "Compareceu e Faltou: a recepção registra nas ações do atendimento (toque na linha) ou em Relatório do dia › A registrar.",
+        "Confirmado: o paciente tocou em \"Confirmar presença\" no lembrete do WhatsApp (ou confirmou pelo bot), ou a recepção usou \"Confirmar presença\" nas ações do atendimento (toque nele).",
+        "Compareceu e Faltou: a recepção registra nas ações do atendimento (toque nele) ou em Relatório do dia › A registrar.",
         "Cancelado: pela clínica, ou pelo paciente no WhatsApp.",
         "Bloqueio: período em que a agenda não recebe marcações.",
       ],

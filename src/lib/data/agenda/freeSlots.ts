@@ -183,3 +183,19 @@ export function computeFreeGaps({
   }
   return result;
 }
+
+/**
+ * Turmas de uma faixa (cliente, 11/nov/2026): uma a cada duração do exame, do início ao fim (08:00–12:00 com 60 min:
+ * 08:00, 09:00, 10:00 e 11:00). A primeira vale sempre (faixa mais curta que o exame, como antes). O banco confere
+ * igual (`app.group_starts_at`).
+ */
+export function groupStartTimes(startTime: string, endTime: string, durationMinutes: number): string[] {
+  const toMinutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  const times = [startTime.slice(0, 5)];
+  if (durationMinutes <= 0) return times;
+  for (let m = start + durationMinutes; m + durationMinutes <= end; m += durationMinutes) times.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`);
+  return times;
+}

@@ -107,6 +107,8 @@ const TEMPLATE_LABELS: Record<string, string> = {
   confirmation: "Confirmação",
   reschedule: "Remarcação",
   cancellation: "Cancelamento",
+  rescheduled_by_other: "Remarcada por outro responsável",
+  canceled_by_other: "Cancelada por outro responsável",
   clinic_cancellation: "Cancelamento pela clínica (com link)",
   reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
@@ -303,7 +305,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
               </form>
             ) : null}
             <p class="mt-2 text-sm text-ink-soft">
-              Vão uma vez, depois que a confirmação da marcação de uma consulta chega ao celular. Para quem não escreveu para a clínica nas
+              Vão uma vez, depois que a confirmação da marcação de uma consulta chega ao celular (na consulta em casa, não vão). Para quem não escreveu para a clínica nas
               últimas 24 horas, vai o aviso "Orientações gerais (fora das 24h)" com o link destas orientações.
             </p>
             {guidance ? (

@@ -2,7 +2,9 @@ import { addDays, localDateOf, localTimeOf, todayIn, weekdayOf } from "../../cli
 import type { Enums, Json } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
-import { checkFreeTime, getFreeSlots, loadSchedulingPlan, pastLimit } from "./slots";
+import { checkFreeTime, getFreeSlots, loadSchedulingPlan, pastLimit, TEAM_HOLDS } from "./slots";
+import { BLOCKED_DAYS_SLACK, loadWholeBlockedDays } from "./blockedDays";
+import { groupStartTimes } from "./freeSlots";
 import { logError } from "../../log";
 
 // Marcar, remarcar, cancelar, presença e comparecimento (F3.6a), para a tela
@@ -263,9 +265,30 @@ export type ReturnOrigin = {
   alreadyUsed: boolean;
 };
 
-/** Último dia do retorno: data da consulta + prazo do serviço (Fase 17). */
-export function returnLastDate(originDate: string, deadlineDays: number | null): string | null {
-  return deadlineDays === null ? null : addDays(originDate, deadlineDays);
+/**
+ * Último dia do retorno: data da consulta + prazo do serviço (Fase 17), sem contar os dias em que a agenda do
+ * profissional está bloqueada o dia inteiro (I9, cliente, 08/nov/2026). Ex.: 30 dias a partir de 01/12 com
+ * 10/12 a 14/12 bloqueados vai até 05/01 (e não 31/12).
+ */
+export function returnLastDate(originDate: string, deadlineDays: number | null, blockedDays: ReadonlySet<string> = new Set()): string | null {
+  if (deadlineDays === null) return null;
+  let date = originDate;
+  for (let counted = 0; counted < deadlineDays; ) {
+    date = addDays(date, 1);
+    if (!blockedDays.has(date)) counted++;
+  }
+  return date;
+}
+
+/** O último dia do retorno de uma consulta da agenda, já com os dias bloqueados inteiros. */
+export async function returnLastDateFor(
+  db: DbClient,
+  clinicId: string,
+  { agendaId, originDate, deadlineDays, timeZone }: { agendaId: string; originDate: string; deadlineDays: number | null; timeZone: string },
+): Promise<string | null> {
+  if (deadlineDays === null) return null;
+  const blocked = await loadWholeBlockedDays(db, clinicId, [agendaId], addDays(originDate, 1), addDays(originDate, deadlineDays + BLOCKED_DAYS_SLACK), timeZone);
+  return returnLastDate(originDate, deadlineDays, blocked.get(agendaId));
 }
 
 /**
@@ -292,7 +315,7 @@ export async function findReturnOrigin(
 
   let query = db
     .from("appointments")
-    .select("id, scheduled_at, locations ( type ), services!inner ( category )")
+    .select("id, agenda_id, scheduled_at, locations ( type ), services!inner ( category )")
     .eq("clinic_id", clinicId);
   if (originAppointmentId) {
     query = query.eq("id", originAppointmentId);
@@ -307,6 +330,7 @@ export async function findReturnOrigin(
   }
   const origin = unwrap(await query.order("scheduled_at", { ascending: false }).limit(1).maybeSingle(), "Consulta de origem") as unknown as {
     id: string;
+    agenda_id: string;
     scheduled_at: string;
     locations: { type: string } | null;
   } | null;
@@ -317,10 +341,16 @@ export async function findReturnOrigin(
   const usedRows = unwrap(await used.limit(1), "Retornos da consulta");
 
   const date = localDateOf(new Date(origin.scheduled_at), settings.timezone);
+  const lastDate = await returnLastDateFor(db, clinicId, {
+    agendaId: origin.agenda_id,
+    originDate: date,
+    deadlineDays: returnService.return_deadline_days,
+    timeZone: settings.timezone,
+  });
   return {
     id: origin.id,
     date,
-    lastDate: returnLastDate(date, returnService.return_deadline_days),
+    lastDate,
     isHomeVisit: origin.locations?.type === "home_visit",
     alreadyUsed: usedRows.length > 0,
   };
@@ -377,6 +407,10 @@ export type BookInput = {
   /** Origem na trilha, se diferente do canal (ex.: link de agendamento). */
   trailChannel?: TrailChannel;
   actorId: string | null;
+  /** Exame marcado como particular, apesar do convênio do paciente (CE-5, `examPlanFor`). */
+  asPrivate?: boolean;
+  /** Quem marcou (D14): recebe a confirmação e os avisos; sem valor, o banco põe o principal. */
+  bookedByContactId?: string | null;
 } & AnyTimeInput;
 
 /**
@@ -395,11 +429,12 @@ async function resolveIndividualSlot(
   input: AnyTimeInput,
   now: Date,
 ): Promise<string> {
-  const slots = await getFreeSlots(db, clinicId, query, now);
+  // Equipe (F5a, R3): o horário em reserva do portal não entra (nem pela lista nem pelo "Outro horário").
+  const slots = await getFreeSlots(db, clinicId, input.anyTime ? { ...query, holds: TEAM_HOLDS } : query, now);
   const slot = slots.find((s) => s.start.getTime() === query.start.getTime());
   if (slot) return slot.locationId;
   if (!input.anyTime || !query.locationId) throw new DataError("conflict", "Atendimento: horário não está mais livre", { start: "Horário não está mais livre" });
-  const check = await checkFreeTime(db, clinicId, { ...query, locationId: query.locationId, pastFrom: input.pastFrom }, now);
+  const check = await checkFreeTime(db, clinicId, { ...query, locationId: query.locationId, pastFrom: input.pastFrom, respectHolds: true }, now);
   if (!check.ok) throw new DataError("conflict", `Atendimento: ${check.reason}`, { start: check.reason });
   if (check.warnings.length && !input.acceptedWarnings) {
     throw new DataError("invalid", "Atendimento: confirme os avisos do horário", { start: check.warnings.join(" ") });
@@ -450,7 +485,7 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
   let locationId: string;
   if (plan.isGroup) {
     const time = localTimeOf(input.start, plan.timeZone);
-    const window = (plan.windowsByWeekday.get(weekdayOf(date)) ?? []).find((w) => w.startTime === time && w.capacity !== null);
+    const window = (plan.windowsByWeekday.get(weekdayOf(date)) ?? []).find((w) => w.capacity !== null && groupStartTimes(w.startTime, w.endTime, plan.durationMinutes).includes(time));
     if (!window) throw new DataError("conflict", "Atendimento: não há turma neste horário", { start: "Não há turma neste horário" });
     locationId = window.locationId;
   } else {
@@ -497,9 +532,13 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       throw fromDbError(error, "Atendimento");
     }
     id = data as string;
-    if (input.actorId || homeVisitAddress) {
+    if (input.actorId || homeVisitAddress || input.bookedByContactId) {
       unwrap(
-        await db.from("appointments").update({ created_by: input.actorId, home_visit_address: homeVisitAddress }).eq("clinic_id", clinicId).eq("id", id),
+        await db
+          .from("appointments")
+          .update({ created_by: input.actorId, home_visit_address: homeVisitAddress, ...(input.bookedByContactId ? { booked_by_contact_id: input.bookedByContactId } : {}) })
+          .eq("clinic_id", clinicId)
+          .eq("id", id),
         "Atendimento",
       );
     }
@@ -519,6 +558,7 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       home_visit_address: isHomeVisit ? homeVisitAddress : null,
       created_by: input.actorId,
       trail_context: trailContext({ channel: input.trailChannel }),
+      ...(input.bookedByContactId ? { booked_by_contact_id: input.bookedByContactId } : {}),
     });
     if (error) {
       if ((error as { code?: string }).code === "23P01") {
@@ -526,6 +566,11 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       }
       throw fromDbError(error, "Atendimento");
     }
+  }
+
+  // O gatilho app.appointment_defaults põe o convênio do paciente; o exame que não o aceita fica particular (CE-5).
+  if (input.asPrivate) {
+    unwrap(await db.from("appointments").update({ insurance_plan_id: null }).eq("clinic_id", clinicId).eq("id", id), "Atendimento");
   }
 
   // Links de agendamento pendentes do mesmo serviço perdem a validade (piloto, Fase 12). Serviços por profissional

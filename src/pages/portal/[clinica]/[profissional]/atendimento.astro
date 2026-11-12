@@ -1,0 +1,116 @@
+---
+// P5 Particular ou convênio (F2a), sempre depois do médico: o particular com o valor (se atende) e um convênio por
+// linha, com a observação dele. Com uma opção só, vai direto aos horários. Topo com quem atende (a P4 saiu da jornada).
+import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { openPortalPage, professionalOf, singleProfessional } from "../../../../lib/data/portal/page";
+import { readSession } from "../../../../lib/data/portal/identity";
+import { backFromProfessional, changeProfessionalHref, chosenModality, flowParams, helpForOf, modalityOptions, ofName, portalHref, professionalSteps, readFlow, shortName, stepPosition, whoLabel } from "../../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
+const flow = readFlow(Astro.url.searchParams);
+const options = professional ? modalityOptions(professional) : [];
+const base = page.kind === "open" ? page.base : "";
+const single = page.kind === "open" && !!singleProfessional(page.portal);
+const timesPath = professional ? `${base}/${professional.slug}/horarios` : "";
+// Uma opção só: a P5 é pulada (e o Voltar dos horários volta para antes dela).
+if (professional && options.length === 1) {
+  return Astro.redirect(portalHref(timesPath, { ...flowParams(flow), mod: options[0].value }));
+}
+const selected = chosenModality(options, Astro.url.searchParams.get("mod")) ?? chosenModality(options, flow.plan);
+const planGone = Astro.url.searchParams.get("erro") === "plano";
+const back = professional ? backFromProfessional(base, professional.slug, flow, single) : base;
+const change = changeProfessionalHref(base, flow);
+// Pelo link do bot (F3a), sem o passo do celular.
+const viaBotLink = page.kind === "open" && !!professional && !!(await readSession(page.db, page.portal.clinicId, Astro.cookies))?.linkId;
+const step = stepPosition(professionalSteps(flow, true, viaBotLink), "modality");
+const specialtyName = professional?.specialties.find((s) => s.id === flow.specialty)?.name ?? null;
+---
+
+<PortalLayout
+  title={professional ? `Como será o atendimento? ${professional.name}` : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? helpForOf(professional) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={base} />}
+  {
+    professional && (
+      <div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <form method="GET" action={timesPath} class="flex min-w-0 flex-col gap-4" data-portal-modality>
+          <PortalStepBar back={back} step={step} />
+          <PortalDoctor professional={professional} change={change} specialtyId={flow.specialty} />
+          {Object.entries(flowParams(flow)).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
+          {options.length === 0 ? (
+            <p class="rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-[17px] text-amber-900" role="status">
+              {professional.exam ? `Não dá para marcar ${professional.name} pela internet agora.` : `Não dá para marcar com ${shortName(professional.name)} pela internet agora.`} Toque em "Recepção", no topo, para falar com a clínica.
+            </p>
+          ) : (
+            <fieldset class="flex min-w-0 flex-col gap-2.5 pt-2">
+              <legend class="pb-3.5 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Como será o atendimento?</legend>
+              {planGone && (
+                <p class="mb-1 rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-[17px] text-red-800" role="alert">
+                  {professional.exam ? "O convênio escolhido não é mais aceito." : `O convênio escolhido não é mais atendido por ${shortName(professional.name)}.`} Escolha outra opção.
+                </p>
+              )}
+              {options.map((option) => (
+                <label class="flex cursor-pointer items-start gap-3.5 rounded-[14px] border-[1.5px] border-gray-200 bg-white px-4 py-3.5 hover:border-clinic-ink has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:checked]:shadow-[inset_0_0_0_1.5px_var(--clinic-ink)] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink">
+                  <input type="radio" name="mod" value={option.value} required checked={option.value === selected?.value} data-label={option.label} class="mt-0.5 h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                  <span>
+                    <b>{option.label}</b>
+                    {option.detail && <span class="mt-0.5 block text-base text-gray-700">{option.detail}</span>}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          )}
+          {professional.orientation && (
+            <div class="mt-2 flex flex-col gap-1 rounded-[14px] border border-gray-200 bg-white px-4 py-3.5">
+              <p class="text-[15px] text-gray-600">Orientações {ofName(shortName(professional.name))}</p>
+              <p class="text-[17px] whitespace-pre-line">{professional.orientation}</p>
+            </div>
+          )}
+          {options.length > 0 && (
+            <div class="sticky bottom-0 -mx-4 mt-4 flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
+              <p class="min-w-0 text-base leading-tight lg:hidden">
+                <span class="block text-gray-600">Escolhido</span>
+                <b class="block truncate text-lg" data-portal-chosen>{selected?.label ?? "Escolha uma opção"}</b>
+              </p>
+              <button type="submit" class="min-h-14 shrink-0 rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text hover:opacity-90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-clinic-ink">Ver horários</button>
+            </div>
+          )}
+        </form>
+        <PortalSummary
+          rows={[
+            ...(specialtyName ? [{ label: "Especialidade", value: specialtyName }] : []),
+            { label: whoLabel(professional), value: professional.name, change },
+            { label: "Atendimento", value: selected?.label ?? null, live: "modality" },
+            { label: "Dia e horário", value: null },
+          ]}
+        />
+      </div>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // O escolhido na barra de baixo e no resumo ao lado.
+  const form = document.querySelector<HTMLFormElement>("[data-portal-modality]");
+  form?.addEventListener("change", (event) => {
+    const input = event.target as HTMLInputElement;
+    if (input.name !== "mod") return;
+    document.querySelectorAll<HTMLElement>("[data-portal-chosen], [data-portal-live=modality]").forEach((el) => {
+      el.textContent = input.dataset.label ?? "";
+      el.classList.remove("italic", "text-gray-600");
+      el.classList.add("font-bold");
+    });
+  });
+</script>

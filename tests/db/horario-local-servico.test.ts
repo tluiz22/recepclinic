@@ -8,12 +8,13 @@ import {
 import { createLocation } from "../../src/lib/data/config/locations";
 import { getService, setServiceLocations } from "../../src/lib/data/config/services";
 import { getFreeSlots } from "../../src/lib/data/agenda/slots";
+import { DataError } from "../../src/lib/data/errors";
 import { asDb, MON1, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
 import type { TestUser } from "./helpers";
 
-// C5 (cliente, 28/out/2026; caso do Prick test na produção): horário de um
-// serviço num local que ele não usa marca o local no serviço; tirar o local
-// do serviço desativa os horários dele ali.
+// C5 (cliente, 28/out/2026; caso do Prick test na produção), revista em 10/nov/2026: horário de um serviço num local
+// que ele não usa é recusado (a tela só mostra os serviços do local); tirar o local do serviço desativa os horários
+// dele ali.
 let fixture: AgendaFixture;
 let clinicId: string;
 let admin: TestUser;
@@ -32,30 +33,23 @@ afterAll(async () => {
 });
 
 describe("horário do serviço e locais do serviço", () => {
-  it("horário do serviço num local que ele não usa: salva, marca o local e o horário passa a valer", async () => {
-    // O Exame só é oferecido no Consultório; o horário vai na Sala B, terça.
-    const saved = await addAvailabilityWindows(
-      db(admin),
-      clinicId,
-      { agendaId: ids.agendaExams, locationId: roomB, serviceId: ids.exame, startTime: "14:00", endTime: "15:00", capacity: null },
-      [2],
-    );
-    expect(saved.locationAdded).toEqual({ service: "Exame", location: "Sala B" });
-    const service = await getService(db(admin), clinicId, ids.exame);
-    expect(service.locations).toContainEqual({ locationId: roomB, priceCents: null });
-    const slots = await getFreeSlots(db(admin), clinicId, { serviceId: ids.exame, agendaId: ids.agendaExams, date: "2031-03-11" }, NOW);
-    expect(slots.length).toBeGreaterThan(0);
+  it("horário do serviço num local que ele não usa: recusado (cliente, 10/nov; sai a C5 de 28/out)", async () => {
+    // O Exame só é oferecido no Consultório; o horário na Sala B é recusado, e o local não entra no serviço.
+    const input = { agendaId: ids.agendaExams, locationId: roomB, serviceId: ids.exame, startTime: "14:00", endTime: "15:00", capacity: null };
+    const error = await addAvailabilityWindows(db(admin), clinicId, input, [2]).catch((e: DataError) => e);
+    expect(error).toBeInstanceOf(DataError);
+    expect((error as DataError).fields?.serviceId).toMatch(/não é atendido neste local/);
+    expect((await getService(db(admin), clinicId, ids.exame)).locations.map((l) => l.locationId)).not.toContain(roomB);
 
-    // Editar para um local já marcado: nada a marcar.
-    const edited = await updateAvailabilityWindow(db(admin), clinicId, saved.windows[0].id, {
-      locationId: roomB,
-      serviceId: ids.exame,
-      weekday: 2,
-      startTime: "14:00",
-      endTime: "16:00",
-      capacity: null,
-    });
-    expect(edited.locationAdded).toBeNull();
+    // Com o local marcado no serviço, salva e passa a valer; editar segue a mesma regra.
+    await setServiceLocations(db(admin), clinicId, ids.exame, [
+      { locationId: ids.office, priceCents: null },
+      { locationId: roomB, priceCents: null },
+    ]);
+    const saved = await addAvailabilityWindows(db(admin), clinicId, input, [2]);
+    expect(await getFreeSlots(db(admin), clinicId, { serviceId: ids.exame, agendaId: ids.agendaExams, date: "2031-03-11" }, NOW)).not.toHaveLength(0);
+    const edited = await updateAvailabilityWindow(db(admin), clinicId, saved.windows[0].id, { locationId: ids.home, serviceId: ids.exame, weekday: 2, startTime: "14:00", endTime: "16:00", capacity: null }).catch((e: DataError) => e);
+    expect(edited).toBeInstanceOf(DataError);
   });
 
   it("tirar o local do serviço desativa os horários dele ali; os de outros locais ficam", async () => {

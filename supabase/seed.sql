@@ -51,6 +51,7 @@ declare
   v_secret uuid;
   -- Clínica B
   p_dent uuid; l_b uuid; ag_b uuid; s_b uuid; ct_b uuid; pt_b uuid;
+  ps_a uuid;
 begin
   -- -------------------------------------------------------------------------
   -- Logins (Auth local)
@@ -203,6 +204,9 @@ begin
     (c_a, p_ped, ip_unimed), (c_a, p_ped, ip_bradesco), (c_a, p_ped, ip_hapvida),
     (c_a, p_psi, ip_unimed), (c_a, p_psi, ip_bradesco), (c_a, p_psi, ip_hapvida),
     (c_a, p_fis, ip_unimed), (c_a, p_fis, ip_bradesco);
+  -- Convênios de cada exame (CE-1, 10/nov/2026): a Espirometria aceita Unimed, com observação.
+  insert into public.service_insurance_plans (clinic_id, service_id, insurance_plan_id, note) values
+    (c_a, s_espiro, ip_unimed, 'Com o pedido médico.');
 
   insert into public.contacts (clinic_id, full_name, phone, default_home_address)
     values (c_a, 'Maria Souza', '+5584988880001', 'Rua A, 10 – Nova Betânia') returning id into ct_maria;
@@ -220,6 +224,13 @@ begin
     values (c_a, ct_carlos, 'Carlos Pereira', '1985-04-12', true, ip_bradesco) returning id into pt_carlos;
   insert into public.patients (clinic_id, contact_id, full_name, birthdate, is_contact_self)
     values (c_a, ct_julia, 'Júlia Ramos', '1992-09-30', true) returning id into pt_julia;
+  -- Vários responsáveis (D14): o principal de cada paciente entra pelo gatilho; Carlos é o 2º responsável de Ana (pai).
+  insert into public.patient_contacts (clinic_id, patient_id, contact_id, kinship) values (c_a, pt_ana, ct_carlos, 'Pai');
+  insert into public.patient_contact_events (clinic_id, patient_id, contact_id, event, kinship)
+    values (c_a, pt_ana, ct_carlos, 'linked', 'Pai');
+  -- Possível ficha repetida (11/nov/2026): um par que a equipe marcou como "Não é a mesma" (para o isolamento).
+  insert into public.patient_not_duplicates (clinic_id, patient_a, patient_b)
+    values (c_a, least(pt_joao, pt_julia), greatest(pt_joao, pt_julia));
 
   -- Módulo financeiro (F11.1): o CPF de Maria (paga pelos filhos, o padrão) e,
   -- para Ana, o pai como outra pessoa. CPFs fictícios, com dígitos válidos.
@@ -441,9 +452,10 @@ begin
   -- Clínica B: Odonto Exemplo (perfil Adultos)
   -- -------------------------------------------------------------------------
   insert into public.clinics (id, name, max_professionals) values (c_b, 'Odonto Exemplo', 2);
+  -- Perfil antes da Matriz: a agenda de Exames, criada com o item, nasce com o perfil da clínica.
+  update public.clinic_settings set profile = 'adult', reminder_hour = 10 where clinic_id = c_b;
   -- Matriz de acesso (D11): a clínica de exemplo tem tudo liberado.
   insert into public.clinic_features (clinic_id, feature_key) select c_b, key from public.features;
-  update public.clinic_settings set profile = 'adult', reminder_hour = 10 where clinic_id = c_b;
 
   insert into public.clinic_members (clinic_id, user_id, roles) values
     (c_b, u_b_admin, '{admin,professional}'),
@@ -470,6 +482,31 @@ begin
     values (c_b, pt_b, s_b, ag_b, l_b, (monday + 1 + time '10:00') at time zone tz, 40, 'whatsapp_bot');
   insert into public.whatsapp_connections (clinic_id, phone_number_id, waba_id, display_phone, status)
     values (c_b, 'local-phone-number-id-b', 'local-waba-b', '+55 84 3333-0002', 'pending');
+
+  -- Portal de agendamento (recepção digital): os endereços das duas clínicas (F2a) e, na A, uma sessão com o celular
+  -- comprovado, o código já usado, uma contagem de uso, um bloqueio já liberado e uma reserva vencida (F2b).
+  update public.clinics set portal_slug = 'exemplo-saude' where id = c_a;
+  update public.clinics set portal_slug = 'odonto-exemplo' where id = c_b;
+  insert into public.portal_sessions (clinic_id, token_hash, phone, phone_verified_at, ip_prefix, expires_at)
+    values (c_a, repeat('0', 64), '+5584988880001', now(), '200.10.20', now() + interval '2 hours') returning id into ps_a;
+  insert into public.portal_codes (clinic_id, session_id, phone, code_hash, expires_at, used_at)
+    values (c_a, ps_a, '+5584988880001', repeat('1', 64), now() + interval '10 minutes', now());
+  insert into public.portal_rate_hits (clinic_id, key, action) values (c_a, 'ip:200.10.20', 'code');
+  insert into public.portal_blocks (clinic_id, key, action, level, blocked_until, released_at)
+    values (c_a, 'ip:200.10.99', 'code', 1, now() - interval '1 hour', now() - interval '2 hours');
+  -- Desbloqueio pela recepção (10/nov/2026): uma liberação antiga (fora das 24 h; não muda a contagem de hoje).
+  insert into public.portal_limit_resets (clinic_id, phone, created_at) values (c_a, '+5584988880001', now() - interval '3 days');
+  insert into public.slot_holds (clinic_id, agenda_id, service_id, location_id, starts_at, ends_at, session_id, phone, expires_at)
+    values (c_a, ag_ped, s_consulta, l_office, (monday + 2 + time '09:00') at time zone tz, (monday + 2 + time '09:30') at time zone tz,
+            ps_a, '+5584988880001', now() - interval '1 minute');
+  -- F3a: um link do bot (consulta) já vencido, na mesma sessão.
+  insert into public.portal_links (clinic_id, phone, purpose, expires_at)
+    values (c_a, '+5584988880001', 'book', now() - interval '1 minute');
+  -- F2c: a confirmação do primeiro atendimento já saiu pela fila e uma data de nascimento a conferir (João).
+  insert into public.notice_queue (clinic_id, appointment_id, kind, status, claimed_at, finished_at)
+    values (c_a, ap_first, 'confirmation', 'sent', now(), now());
+  insert into public.portal_birthdate_checks (clinic_id, patient_id, appointment_id, registered_birthdate, informed_birthdate)
+    values (c_a, pt_joao, ap_first, (monday - interval '6 years')::date, (monday - interval '7 years')::date);
 
   -- Leituras do Suporte (F3.2): uma em cada clínica.
   insert into public.platform_access_log (actor_user_id, clinic_id, method, path) values

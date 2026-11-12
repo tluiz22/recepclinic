@@ -6,11 +6,13 @@ import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { getGuidance } from "./customMessages";
 import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate, type SendOutcome } from "./messages";
 import { PREPARATION_TRIGGER_TYPES } from "./preparation";
+import { appointmentRecipient, BOOKER_COLUMNS, type RecipientContact } from "./recipient";
 
 // Orientações gerais da consulta (cliente, 08/out/2026), com as regras do
 // preparo do exame (preparation.ts): saem **uma única vez**, depois que a
 // confirmação da marcação de uma consulta (não retorno nem exame) chega ao
-// celular; nunca na remarcação nem no lembrete. O botão "Reenviar
+// celular; nunca na remarcação nem no lembrete. Nem na consulta em casa
+// (cliente, 10/nov/2026): as orientações falam do consultório. O botão "Reenviar
 // orientações" vale para consulta ativa e futura cuja última tentativa não
 // chegou. Só com o envio ligado e o texto escrito, os dois na aba Mensagens;
 // fora da matriz de acesso.
@@ -47,21 +49,25 @@ type ConsultationRow = {
   id: string;
   status: string;
   scheduled_at: string;
+  home_visit_address: string | null;
   services: { category: string };
-  patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
+  locations: { type: string } | null;
+  patients: { full_name: string; contacts: RecipientContact };
+  booker: RecipientContact | null;
 };
 
 async function loadConsultation(db: DbClient, clinicId: string, appointmentId: string, now: Date): Promise<ConsultationRow | null> {
   const row = unwrap(
     await db
       .from("appointments")
-      .select("id, status, scheduled_at, services ( category ), patients ( full_name, contacts ( id, full_name, phone ) )")
+      .select(`id, status, scheduled_at, home_visit_address, services ( category ), locations ( type ), patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS}`)
       .eq("clinic_id", clinicId)
       .eq("id", appointmentId)
       .maybeSingle(),
     "Atendimento",
   ) as unknown as ConsultationRow | null;
-  if (!row || row.services.category !== "consultation" || !ACTIVE.includes(row.status) || Date.parse(row.scheduled_at) <= now.getTime()) {
+  const atHome = !!row?.home_visit_address || row?.locations?.type === "home_visit";
+  if (!row || row.services.category !== "consultation" || atHome || !ACTIVE.includes(row.status) || Date.parse(row.scheduled_at) <= now.getTime()) {
     return null;
   }
   return row;
@@ -79,7 +85,7 @@ async function deliverGuidance(db: DbClient, clinicId: string, row: Consultation
   const connection = await getWhatsappConnection(db, clinicId);
   if (connection?.status !== "connected") return "not_connected";
 
-  const contact = row.patients.contacts;
+  const contact = appointmentRecipient(row);
   const windowOpen = await isCustomerServiceWindowOpen(db, clinicId, contact.phone, now);
   const template = windowOpen ? null : await getApprovedTemplate(db, clinicId, "consultation_guidance");
 

@@ -5,7 +5,6 @@ import {
   removeAvailabilityWindow,
   setAvailabilityWindowActive,
   updateAvailabilityWindow,
-  type LocationAdded,
 } from "../../../../lib/data/config/availability";
 import { DataError, Validation } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
@@ -16,9 +15,6 @@ import { formAll, formOptionalInt, formText } from "../../../../lib/forms";
 // Local e serviço são escolha obrigatória, sem valor padrão (cliente, 21/out/2026):
 // "Qualquer serviço desta agenda" vem como `todos`.
 const ANY_SERVICE = "todos";
-
-/** O local marcado no serviço pelo horário (C5; cliente, 28/out/2026). */
-const locationText = (added: LocationAdded) => (added ? ` ${added.location} foi marcado nos locais de ${added.service}.` : "");
 
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
@@ -59,13 +55,13 @@ export const POST: APIRoute = async (context) => {
           const weekdays = formAll(form, "weekday").map(Number);
           const created = await addAvailabilityWindows(db, clinicId, { agendaId, ...windowFields() }, weekdays);
           const saved = created.windows.length > 1 ? `${created.windows.length} horários adicionados.` : "Horário adicionado.";
-          return { redirectTo: page, message: `${saved}${locationText(created.locationAdded)}` };
+          return { redirectTo: page, message: saved };
         }
         case "editar": {
           const weekday = formText(form, "weekday");
           if (!weekday) throw new DataError("invalid", "Horário de atendimento: escolha o dia", { weekday: "Escolha o dia da semana." });
           const saved = await updateAvailabilityWindow(db, clinicId, windowId, { ...windowFields(), weekday: Number(weekday) });
-          return { redirectTo: page, message: `Horário salvo.${locationText(saved.locationAdded)}` };
+          return { redirectTo: page, message: "Horário salvo." };
         }
         case "desativar":
         case "reativar": {

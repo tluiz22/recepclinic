@@ -23,7 +23,7 @@ import { BOOKING_STATES, handleBookingState } from "./booking";
 import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, offerReception, RECEPTION_CONFIRM_KEY, repeatYesNo, say, sendButtons, textFor, type Bot, type BotEnv, type ReceptionOffer } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
 import { CHOOSE_STATES, handleChooseState } from "./chooseProfessional";
-import { asksForReception, extractSelection, type Selection, isBack, isBackToMenu, parseBirthdate, slashlessBirthdate, TALK_TO_RECEPTION_ID, yesNo } from "./input";
+import { asksForReception, extractSelection, type Selection, isBack, isBackToMenu, parseBirthdate, shortBirthdate, TALK_TO_RECEPTION_ID, yesNo } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu, showPreviousMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, handoffText, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import {
@@ -44,7 +44,7 @@ import {
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
-import { handleNotCompleted, NOT_COMPLETED, promptExpiredLinks, promptPendingCancel } from "./notCompleted";
+import { handleNotCompleted, NOT_COMPLETED, promptExpiredLinks, promptExpiredPortalLinks, promptPendingCancel } from "./notCompleted";
 import { askReceptionReason, firstMessageAnswer, handleKnowledgeReply, handleReceptionReason, knowledgeHookFor, pendingReasonOf, performTakeover, REASON_KEY } from "./knowledge/respond";
 import { logError } from "../../../log";
 
@@ -165,7 +165,7 @@ async function askTypedDate(b: Bot, convo: Conversation, selection: Selection): 
   let pending = ((convo.context ?? {}) as Record<string, unknown>)[TYPED_DATE_KEY] as string | undefined;
   if (pending) {
     // Outra data digitada vale no lugar da pendente.
-    if (!selection.id && (parseBirthdate(selection.text, b.clinic.today) || slashlessBirthdate(selection.text, b.clinic.today))) {
+    if (!selection.id && (parseBirthdate(selection.text, b.clinic.today) || shortBirthdate(selection.text, b.clinic.today))) {
       await mergeContext(b, { [TYPED_DATE_KEY]: undefined });
       pending = undefined;
     } else {
@@ -181,7 +181,7 @@ async function askTypedDate(b: Bot, convo: Conversation, selection: Selection): 
     }
   }
   if (selection.id) return null;
-  const date = slashlessBirthdate(selection.text, b.clinic.today);
+  const date = shortBirthdate(selection.text, b.clinic.today);
   if (!date) return null;
   await mergeContext(b, { [TYPED_DATE_KEY]: date });
   await sendButtons(b, "bot_typed_date_confirm", typedDateQuestion(date), YES_NO_BUTTONS);
@@ -361,6 +361,7 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
   // Pedido não concluído (PN2): links do bot que venceram sem uso.
   try {
     await promptExpiredLinks(db, clinicId, sender, now);
+    await promptExpiredPortalLinks(db, clinicId, sender, now);
   } catch (error) {
     logError("bot: pedido não concluído", error, { clinica: clinicId });
   }

@@ -16,12 +16,18 @@ describe("itens da matriz e dependências (D11)", () => {
 
   it("lista de espera depende do bot; o Agendamento digital não", () => {
     expect(missingDependencies(["waitlist", "metrics_funnel", "exams"])).toEqual([{ feature: "waitlist", needs: "whatsapp_bot" }]);
-    expect(missingDependencies(["whatsapp_bot", "waitlist"])).toEqual([]);
+    expect(missingDependencies(["portal", "whatsapp_bot", "waitlist"])).toEqual([]);
   });
 
-  it("desligar o bot desliga quem depende dele", () => {
-    expect(withoutDependents(["whatsapp_bot", "waitlist", "metrics_funnel", "reminders"], "whatsapp_bot")).toEqual(["metrics_funnel", "reminders"]);
-    expect(withoutDependents(["whatsapp_bot", "waitlist"], "waitlist")).toEqual(["whatsapp_bot"]);
+  it("o bot depende do Portal; o Portal vive sem o bot (cliente, 08/nov/2026)", () => {
+    expect(missingDependencies(["whatsapp_bot"])).toEqual([{ feature: "whatsapp_bot", needs: "portal" }]);
+    expect(missingDependencies(["portal"])).toEqual([]);
+  });
+
+  it("desligar o bot desliga quem depende dele; desligar o Portal desliga o bot", () => {
+    expect(withoutDependents(["portal", "whatsapp_bot", "waitlist", "metrics_funnel", "reminders"], "whatsapp_bot")).toEqual(["portal", "metrics_funnel", "reminders"]);
+    expect(withoutDependents(["portal", "whatsapp_bot", "waitlist"], "waitlist")).toEqual(["portal", "whatsapp_bot"]);
+    expect(withoutDependents(["portal", "whatsapp_bot", "central_attendance", "reminders"], "portal")).toEqual(["reminders"]);
   });
 });
 

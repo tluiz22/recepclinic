@@ -1,0 +1,36 @@
+---
+// "Seu agendamento" ao lado, no computador (P2, P3, P5, P6): o escolhido com "Trocar" e o que falta, "a escolher".
+interface Row {
+  label: string;
+  value: string | null;
+  detail?: string | null;
+  change?: string | null;
+  /** Atualizado pela página (o horário escolhido na P6). */
+  live?: string;
+}
+
+interface Props {
+  rows: Row[];
+  /** Título do quadro (padrão "Seu agendamento"; a remarcação da F3c usa "Remarcação"). */
+  title?: string;
+}
+
+const { rows, title = "Seu agendamento" } = Astro.props;
+---
+
+<aside aria-label={title} class="sticky top-6 hidden flex-col rounded-[18px] bg-clinic-tint px-5 py-[18px] lg:mt-16 lg:flex">
+  <p class="mb-1.5 font-display text-xl font-bold">{title}</p>
+  {
+    rows.map((row) => (
+      <div class="flex items-start justify-between gap-3 border-t border-black/10 py-3 first-of-type:border-t-0">
+        <div class="min-w-0">
+          <p class="text-[15px] text-gray-700">{row.label}</p>
+          <p class={row.value ? "font-bold" : "text-gray-600 italic"} data-portal-live={row.live}>{row.value ?? "a escolher"}</p>
+          {row.detail && <p class="text-[15px] text-gray-700">{row.detail}</p>}
+        </div>
+        {row.change && <a href={row.change} class="inline-flex min-h-11 shrink-0 items-center px-1 text-base font-bold text-clinic-ink underline">Trocar</a>}
+      </div>
+    ))
+  }
+  <slot />
+</aside>

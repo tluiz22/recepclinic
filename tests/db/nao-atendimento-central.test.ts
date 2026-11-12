@@ -27,14 +27,16 @@ const deps = (user: TestUser): SendDeps => ({ db: asDb(user), serviceDb: clinicS
 const phones = (items: { phone: string }[]) => items.map((item) => item.phone);
 const conversation = async (phone: string) =>
   (await db().from("conversation_state").select("human_handoff, handoff_status, assigned_to, classification").eq("clinic_id", clinicId).eq("contact_phone", phone).single()).data!;
-const inbound = (phone: string, minutesAgo: number, body = "Oi") => ({
+// minutesAgo null: a hora vem do banco (now()), como a da marcação; com o relógio do Node, uma VM do Docker
+// adiantada punha a mensagem "nova" antes da marcação e a contagem dava 0 (falha intermitente).
+const inbound = (phone: string, minutesAgo: number | null, body = "Oi") => ({
   clinic_id: clinicId,
   contact_phone: phone,
   direction: "inbound",
   message_type: "text",
   body,
   status: "received",
-  created_at: at(minutesAgo),
+  ...(minutesAgo === null ? {} : { created_at: at(minutesAgo) }),
 });
 
 beforeAll(async () => {
@@ -94,7 +96,7 @@ describe("NA4: aba Pessoal e admin. na Conversas", () => {
   });
 
   it("mensagens novas por pessoa: contam depois da marcação e zeram para quem abre a conversa", async () => {
-    await db().from("whatsapp_messages").insert([inbound(WAITING, 0, "Chego às 19h"), inbound(WAITING, 0, "Deixa a chave")]);
+    await db().from("whatsapp_messages").insert([inbound(WAITING, null, "Chego às 19h"), inbound(WAITING, null, "Deixa a chave")]);
     const unread = async (user: TestUser) => (await listConversations(asDb(user), clinicId, { classified: true })).find((i) => i.phone === WAITING)!.unread;
     expect(await unread(reception)).toBe(2);
     expect(await unread(admin)).toBe(2);

@@ -1,0 +1,205 @@
+---
+// P12 Minhas consultas (F3c; especificação P12; RD10). Sem o celular comprovado nesta sessão: "Qual é o seu celular com
+// WhatsApp?" e o código (o mesmo da P7). Depois: as próximas consultas dos pacientes do celular, cada uma com Remarcar
+// (mesmo profissional e tipo de local) e Cancelar ("Tem certeza?"). Dentro da antecedência da clínica (padrão 24 h),
+// só "Falar com a recepção". Turma e domiciliar: Remarcar com a recepção. Vazio: "Nenhuma consulta marcada neste
+// número" e "Agendar consulta". Pelo link do profissional (cliente, 10/nov): só as dele, com o cartão dele no alto e tudo no
+// endereço dele; pelo link da clínica: todas, separadas por profissional.
+import PortalMineGroup from "../../../../components/portal/PortalMineGroup.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalChangePhone from "../../../../components/portal/PortalChangePhone.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalPhoneCode from "../../../../components/portal/PortalPhoneCode.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import { portalCta, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { runIdentityStep, type IdentityState } from "../../../../lib/data/portal/identityStep";
+import { leadHoursOf, listMyAppointments, outsideLead, whatOf, whenOf, type MyAppointment } from "../../../../lib/data/portal/myAppointments";
+import { sessionLinkFor } from "../../../../lib/data/portal/links";
+import { mineScope, openPortalPage, type MineScope } from "../../../../lib/data/portal/page";
+import { mapsHref, portalHref, receptionWhatsappHref } from "../../../../lib/portal";
+import { phoneEnding } from "../../../../lib/portalIdentity";
+
+const page = await openPortalPage(Astro);
+if (page.kind === "not_found") Astro.response.status = 404;
+const base = page.kind === "open" ? page.base : "";
+const scope: MineScope | null = page.kind === "open" ? mineScope(Astro, page) : null;
+const professional = scope?.professional ?? null;
+const here = scope?.listHref ?? `${base}/minhas-consultas`;
+const home = scope?.home || "/";
+const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
+
+let identity: IdentityState | null = null;
+let items: MyAppointment[] | null = null;
+let phone: string | null = null;
+let leadHours = 24;
+let waivedId: string | null = null;
+const now = new Date();
+if (page.kind === "open") {
+  const { db, portal } = page;
+  identity = await runIdentityStep(Astro, {
+    db,
+    clinicId: portal.clinicId,
+    here,
+    // Código conferido: abre a lista (GET), para o Voltar e o recarregar não reenviarem o formulário.
+    onVerified: async () => (Astro.request.method === "POST" ? Astro.redirect(here) : null),
+  });
+  if (identity.response) return identity.response;
+  if (identity.session?.verified && identity.session.phone) {
+    phone = identity.session.phone;
+    [items, leadHours] = await Promise.all([listMyAppointments(db, portal.clinicId, phone, now), leadHoursOf(db, portal.clinicId)]);
+    if (professional) items = items.filter((i) => i.agendaId === professional.agendaId);
+    // Link do bot para remarcar um atendimento (F3-4): esse remarca mesmo dentro do prazo.
+    const session = identity.session;
+    const waived = await Promise.all(items.map(async (i) => ((await sessionLinkFor(db, portal.clinicId, session, i.id)).noLead ? i.id : null)));
+    waivedId = waived.find(Boolean) ?? null;
+  }
+}
+
+const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
+  remarcada: { text: "Pronto, remarcado. A confirmação chega no WhatsApp.", tone: "ok" },
+  marcada: { text: "Pronto, marcado de novo. A confirmação chega no WhatsApp.", tone: "ok" },
+  cancelada: { text: "Pronto, cancelado. A vaga foi liberada.", tone: "ok" },
+  prazo: { text: `Faltam menos de ${leadHours} horas para esse horário. Para remarcar ou cancelar, fale com a recepção.`, tone: "warn" },
+  duplicado: { text: "Não foi possível remarcar por aqui: já existe outro atendimento futuro igual para esse paciente. Fale com a recepção.", tone: "warn" },
+  mudou: { text: "Esse atendimento não pode mais ser alterado por aqui (já foi remarcado, cancelado ou passou). Veja abaixo.", tone: "warn" },
+};
+const notice = NOTICES[Astro.url.searchParams.get("aviso") ?? ""] ?? null;
+const waPhone = page.kind === "open" ? page.portal.brand.whatsappPhone : null;
+const waHref = (item: MyAppointment) =>
+  waPhone ? receptionWhatsappHref(waPhone, `Olá! Preciso remarcar ou cancelar o atendimento de ${item.patientName} em ${formatInstant(item.start, timeZone, "dd/MM 'às' HH:mm")}.`) : null;
+const whenText = (item: MyAppointment) => whenOf(item.start, timeZone);
+// Pelo link da clínica, separadas por profissional (na ordem da consulta mais próxima de cada um); exames juntos.
+type Group = { key: string; title: string; who: (typeof professionals)[number] | null; items: MyAppointment[] };
+const professionals = page.kind === "open" ? page.portal.professionals : [];
+const groups: Group[] = [];
+for (const item of items ?? []) {
+  const key = item.category === "exam" ? "exames" : item.agendaId;
+  let group = groups.find((g) => g.key === key);
+  if (!group) {
+    const who = key === "exames" ? null : (professionals.find((p) => p.agendaId === item.agendaId) ?? null);
+    group = { key, title: key === "exames" ? "Exames" : (who?.name ?? item.professionalName ?? "Outros atendimentos"), who, items: [] };
+    groups.push(group);
+  }
+  group.items.push(item);
+}
+// Pelo link do profissional, o mesmo cabeçalho (só o dele), também na lista vazia e na tela do celular.
+const grouped = groups.length > 0;
+const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 text-[17px] font-bold no-underline sm:flex-none sm:min-w-[150px]";
+---
+
+<PortalLayout
+  title={page.kind === "not_found" ? "Link não encontrado" : page.kind === "unavailable" ? "Agendamento indisponível" : items ? "Minhas consultas" : "Seu celular com WhatsApp"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {
+    page.kind === "open" && identity && !items && (
+      <div class="flex max-w-[680px] flex-col gap-[18px]">
+        <PortalStepBar back={home} />
+        {professional && <PortalMineGroup title={professional.name} who={professional} as="div" />}
+        <h1 class={portalTitle}>Qual é o seu celular com WhatsApp?</h1>
+        <p class="text-[17px] text-gray-700">Mostramos as consultas marcadas neste celular.</p>
+        <PortalPhoneCode state={identity} action={here} />
+      </div>
+    )
+  }
+  {
+    items && phone && (
+      <div class="flex flex-col gap-[18px]" data-portal-mine>
+        <PortalStepBar back={home} />
+        <div class="flex flex-col gap-1.5">
+          <h1 class={portalTitle}>Minhas consultas</h1>
+          <p class="text-base text-gray-600 lg:text-[17px]">
+            Marcadas no WhatsApp {phoneEnding(phone)}. <PortalChangePhone action={here} />
+          </p>
+        </div>
+        {notice && (
+          <p class={`${portalNotice} ${notice.tone === "ok" ? "border-clinic-ink/20 bg-clinic-tint text-gray-900" : "border-amber-200 bg-amber-50 text-amber-900"}`} role={notice.tone === "ok" ? "status" : "alert"}>
+            {notice.text}
+          </p>
+        )}
+        {items.length === 0 ? (
+          <section class="flex flex-col gap-3" aria-label={professional?.name}>
+            {professional && <PortalMineGroup title={professional.name} who={professional} />}
+            <div class="flex max-w-[620px] flex-col gap-4 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-5 lg:px-[18px]">
+              <p class="text-lg">{professional ? `Nenhuma consulta com ${professional.name} marcada neste número.` : "Nenhuma consulta marcada neste número."}</p>
+              <a href={home} class={portalCta}>Agendar consulta</a>
+            </div>
+          </section>
+        ) : (
+          <div class="flex flex-col gap-6">
+          {groups.map((group) => (
+          <section class="flex flex-col gap-3" aria-label={grouped ? group.title : undefined}>
+            {grouped && <PortalMineGroup title={group.title} who={group.who} />}
+          <ul class="grid gap-3.5 lg:grid-cols-2 lg:gap-[18px]">
+            {group.items.map((item) => {
+              const free = outsideLead(item.start, leadHours, now);
+              // Dentro do prazo, mas com o link do bot de remarcar este atendimento: só o Remarcar.
+              const waived = !free && item.id === waivedId && item.canReschedule;
+              const wa = waHref(item);
+              return (
+                <li class="flex flex-col overflow-hidden rounded-2xl border-[1.5px] border-gray-200 bg-white">
+                  <div class="flex flex-col gap-0.5 px-4 pt-3.5 pb-3 lg:px-[18px] lg:pt-4">
+                    <b class="text-[19px] lg:text-xl">{item.patientName}</b>
+                    <span class="text-base text-gray-700">{whatOf(item)}</span>
+                    <span class="text-[17px] font-semibold text-gray-900">{whenText(item)}</span>
+                    <span class="text-base text-gray-700">
+                      {item.locationName}
+                      {item.locationAddress && (
+                        <>
+                          {" · "}
+                          <a href={mapsHref(item.locationAddress)} target="_blank" rel="noopener" class="font-semibold text-clinic-ink underline">Ver no mapa</a>
+                        </>
+                      )}
+                    </span>
+                    {item.bookedByText && <span class="mt-1 text-[15px] text-gray-600" data-booked-by>{item.bookedByText}</span>}
+                  </div>
+                  <div class="mt-auto flex flex-col gap-2.5 border-t border-gray-100 px-4 py-3 lg:px-[18px]">
+                    {free ? (
+                      <>
+                        <div class="flex gap-2.5">
+                          {item.canReschedule && (
+                            <a href={portalHref(`${here}/remarcar`, { a: item.id })} class={`${small} bg-clinic text-clinic-text hover:opacity-90`} aria-label={`Remarcar: ${item.patientName}, ${whenText(item)}`}>
+                              Remarcar
+                            </a>
+                          )}
+                          <a href={portalHref(`${here}/cancelar`, { a: item.id })} class={`${small} border-[1.5px] border-clinic-ink bg-white text-clinic-ink hover:bg-clinic-tint`} aria-label={`Cancelar: ${item.patientName}, ${whenText(item)}`}>
+                            Cancelar
+                          </a>
+                        </div>
+                        {!item.canReschedule && <p class="text-[15px] text-gray-600">Para remarcar {item.isGroup ? "a turma" : "o atendimento em casa"}, fale com a recepção.</p>}
+                      </>
+                    ) : waived ? (
+                      <>
+                        <a href={portalHref(`${here}/remarcar`, { a: item.id })} class={`${small} bg-clinic text-clinic-text hover:opacity-90`} aria-label={`Remarcar: ${item.patientName}, ${whenText(item)}`}>
+                          Remarcar
+                        </a>
+                        <p class="text-[15px] text-gray-600">Para cancelar com menos de {leadHours} horas, responda no WhatsApp.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p class="text-[15px] text-gray-700">Faltam menos de {leadHours} horas. Para remarcar ou cancelar, fale com a recepção.</p>
+                        {wa && (
+                          <a href={wa} target="_blank" rel="noopener" class={portalSecondary}>
+                            Falar com a recepção
+                          </a>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          </section>
+          ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+</PortalLayout>

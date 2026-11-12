@@ -1,0 +1,125 @@
+---
+// "Particular e convênios" (MC, 07/nov/2026; F1 da recepção digital, 08/nov/2026): particular sim/não, os
+// convênios marcados e a observação de cada um (o paciente vê ao escolher o convênio). Usado no profissional
+// ("Atende particular", "Convênios atendidos") e no exame (CE-2, cliente, 10/nov/2026: "Aceita particular",
+// "Convênios aceitos"). Vai para `action` com acao=convenios, plan_id e note_{id}.
+import { PLAN_NOTE_MAX } from "../../../lib/data/config/insurance";
+import { CARD, CHECK, CHOICE, HINT, INPUT, LEGEND, SECONDARY_BUTTON, SECTION_TITLE } from "./formStyles";
+
+interface Props {
+  action: string;
+  plans: { id: string; name: string }[];
+  acceptedIds: string[];
+  notes: Map<string, string>;
+  acceptsPrivate: boolean;
+  privateLabel: string;
+  privateHint: string;
+  legend: string;
+  /** Sem convênio cadastrado: quem não cadastra (o profissional) vê "Peça ao Administrador". */
+  canRegisterPlans: boolean;
+}
+
+const { action, plans, acceptedIds, notes, acceptsPrivate, privateLabel, privateHint, legend, canRegisterPlans } = Astro.props;
+const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+// Muitos convênios (clínicas grandes): busca pelo nome, sem acento.
+const withSearch = plans.length > 8;
+const linked = acceptedIds.filter((pid) => plans.some((p) => p.id === pid)).length;
+---
+
+<form method="POST" action={action} class={`${CARD} flex flex-col gap-4 p-4 sm:p-5`} aria-labelledby="convenios-titulo" data-coverage>
+  <input type="hidden" name="acao" value="convenios" />
+  <div>
+    <h2 id="convenios-titulo" class={SECTION_TITLE}>Particular e convênios</h2>
+    <p class={HINT}>No WhatsApp e no agendamento online, o paciente só vê o que estiver marcado aqui.</p>
+  </div>
+  <label class={`${CHOICE} rounded-lg border border-line-strong px-3 py-3`}>
+    <input type="checkbox" name="accepts_private" value="1" checked={acceptsPrivate} class={CHECK} />
+    <span>
+      <span class="font-semibold text-ink">{privateLabel}</span>
+      <span class="block text-sm text-ink-soft">{privateHint}</span>
+    </span>
+  </label>
+  {
+    plans.length === 0 ? (
+      <p class={HINT}>
+        Nenhum convênio cadastrado.{" "}
+        {canRegisterPlans ? (
+          <>
+            Cadastre em <a href="/admin/configuracoes/convenios" class="text-brand hover:underline">Convênios</a>.
+          </>
+        ) : (
+          "Peça ao Administrador da clínica."
+        )}
+      </p>
+    ) : (
+      <fieldset class="min-w-0">
+        <legend class={LEGEND}>{legend}</legend>
+        <p id="nota-convenio-orientacao" class={HINT}>
+          A observação aparece para o paciente quando ele escolhe o convênio. Ex.: precisa de autorização prévia.
+        </p>
+        {withSearch && (
+          <div class="mt-2">
+            <label for="filtro-convenio" class="sr-only">
+              Buscar convênio
+            </label>
+            <input id="filtro-convenio" type="search" placeholder="Buscar convênio" autocomplete="off" class={INPUT} data-plan-filter />
+          </div>
+        )}
+        <ul class="mt-2 divide-y divide-[#e6ecea] rounded-lg border border-line-strong">
+          {plans.map((plan) => {
+            const checked = acceptedIds.includes(plan.id);
+            return (
+              <li class="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:gap-4" data-plan-row data-key={searchKey(plan.name)}>
+                <label class={`${CHOICE} py-1 sm:w-56 sm:shrink-0`}>
+                  <input type="checkbox" name="plan_id" value={plan.id} checked={checked} class={CHECK} />
+                  {plan.name}
+                </label>
+                <div class="min-w-0 flex-1" data-plan-note hidden={!checked}>
+                  <label for={`note_${plan.id}`} class="sr-only">
+                    Observação de {plan.name}
+                  </label>
+                  <input
+                    id={`note_${plan.id}`}
+                    name={`note_${plan.id}`}
+                    maxlength={PLAN_NOTE_MAX}
+                    value={notes.get(plan.id) ?? ""}
+                    placeholder="Observação (opcional)"
+                    aria-describedby="nota-convenio-orientacao"
+                    class={INPUT}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
+    )
+  }
+  <div class="flex flex-wrap items-center gap-3 border-t border-[#e6ecea] pt-4">
+    <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar particular e convênios</button>
+    <span class="text-sm text-ink-soft" role="status" data-coverage-summary>
+      {linked === 0 ? "Hoje: só particular." : acceptsPrivate ? "Hoje: particular e convênios." : "Hoje: só convênios."}
+    </span>
+  </div>
+</form>
+
+<script>
+  // A observação só aparece no convênio marcado (desmarcado, o valor some ao salvar).
+  const coverage = document.querySelector<HTMLFormElement>("[data-coverage]");
+  if (coverage) {
+    const sync = () => {
+      for (const row of coverage.querySelectorAll<HTMLElement>("[data-plan-row]")) {
+        const checked = row.querySelector<HTMLInputElement>("input[name='plan_id']")!.checked;
+        row.querySelector<HTMLElement>("[data-plan-note]")!.hidden = !checked;
+      }
+    };
+    coverage.addEventListener("change", sync);
+    const filter = coverage.querySelector<HTMLInputElement>("[data-plan-filter]");
+    filter?.addEventListener("input", () => {
+      const term = filter.value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+      for (const row of coverage.querySelectorAll<HTMLElement>("[data-plan-row]")) row.hidden = !!term && !row.dataset.key!.includes(term);
+    });
+    sync();
+    window.addEventListener("load", sync);
+  }
+</script>

@@ -1,4 +1,6 @@
-import { bookingPath } from "../../../publicId";
+import { bookingPath, shortId } from "../../../publicId";
+import { portalLinkUrl } from "../../../portal";
+import { renewPortalLink } from "../../portal/links";
 import { BOT_LINK_TTL_MS } from "../../agenda/links";
 import type { DbClient } from "../../clients";
 import { unwrap } from "../../errors";
@@ -31,6 +33,8 @@ type NotCompletedContext = {
   linkId?: string;
   /** Remarcação e cancelamento: o atendimento que segue marcado. */
   appointmentId?: string;
+  /** Link do portal vencido (F3b): o novo link copia dele. */
+  portalLinkId?: string;
 };
 
 const ACTIVE = ["scheduled", "confirmed"];
@@ -139,6 +143,113 @@ export async function promptExpiredLinks(db: DbClient, clinicId: string, sender:
   return sent;
 }
 
+type ExpiredPortalLink = { id: string; phone: string; contact_id: string | null; purpose: string; appointment_id: string | null; canceled_appointment_id: string | null; created_at: string };
+
+/** O link do portal vencido já não pede nada (o mesmo critério do link de agendar). */
+async function skipPortalReason(db: DbClient, clinicId: string, link: ExpiredPortalLink, convo: Conversation, now: Date): Promise<string | null> {
+  if (convo.humanHandoff) return "paused";
+  if (convo.state !== WELCOME) return "in_conversation";
+  const newer = unwrap(
+    await db.from("portal_links").select("id").eq("clinic_id", clinicId).eq("phone", link.phone).gt("created_at", link.created_at).limit(1),
+    "Links do portal",
+  );
+  if (newer.length) return "newer_link";
+  // Remarcar (F3c): o atendimento já foi remarcado ou cancelado por outro caminho.
+  if (link.purpose === "reschedule" && link.appointment_id && !link.canceled_appointment_id) {
+    const appointment = unwrap(
+      await db.from("appointments").select("status, rescheduled_at").eq("clinic_id", clinicId).eq("id", link.appointment_id).maybeSingle(),
+      "Atendimento",
+    );
+    if (!appointment || !ACTIVE.includes(appointment.status)) return "inactive";
+    if (appointment.rescheduled_at && appointment.rescheduled_at >= link.created_at) return "done";
+  }
+  // Marcado depois do link por qualquer caminho (o portal com o código, a recepção) para alguém deste celular.
+  // Número novo: o contato pode ter nascido no portal, depois do link.
+  const contactId =
+    link.contact_id ??
+    (unwrap(await db.from("contacts").select("id").eq("clinic_id", clinicId).eq("phone", link.phone).maybeSingle(), "Contato") as { id: string } | null)?.id ??
+    null;
+  if (contactId) {
+    const booked = unwrap(
+      await db.from("appointments").select("id, patients!inner ( contact_id )").eq("clinic_id", clinicId).eq("patients.contact_id", contactId).gte("created_at", link.created_at).limit(1),
+      "Atendimentos",
+    );
+    if (booked.length) return "done";
+  }
+  const last = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("created_at")
+      .eq("clinic_id", clinicId)
+      .eq("contact_phone", link.phone)
+      .eq("direction", "inbound")
+      .order("created_at", { ascending: false })
+      .limit(1),
+    "Mensagens do WhatsApp",
+  );
+  if (!last.length || now.getTime() - new Date(last[0].created_at).getTime() > WINDOW_MS) return "window_closed";
+  return null;
+}
+
+/** Rotina: link do portal (F3b) vencido sem marcar recebe "Não concluímos a sua marcação", uma vez. */
+export async function promptExpiredPortalLinks(db: DbClient, clinicId: string, sender: ClinicSender, now: Date = new Date()): Promise<number> {
+  const links = unwrap(
+    await db
+      .from("portal_links")
+      .select("id, phone, contact_id, purpose, appointment_id, canceled_appointment_id, created_at")
+      .eq("clinic_id", clinicId)
+      .in("purpose", ["book", "return", "exam", "reschedule"])
+      .is("used_at", null)
+      .is("revoked_at", null)
+      .is("not_completed_prompted_at", null)
+      .lte("expires_at", now.toISOString())
+      .gt("expires_at", new Date(now.getTime() - NOT_COMPLETED_LOOKBACK_MS).toISOString())
+      .order("expires_at"),
+    "Links do portal vencidos",
+  ) as ExpiredPortalLink[];
+  let sent = 0;
+  for (const link of links) {
+    try {
+      const claimed = unwrap(
+        await db
+          .from("portal_links")
+          .update({ not_completed_prompted_at: now.toISOString() })
+          .eq("clinic_id", clinicId)
+          .eq("id", link.id)
+          .is("not_completed_prompted_at", null)
+          .select("id"),
+        "Link do portal",
+      );
+      if (!claimed.length) continue;
+      const convo = await openConversation(db, clinicId, link.phone, link.contact_id);
+      if (await skipPortalReason(db, clinicId, link, convo, now)) continue;
+      const b = await createBot({ db, clinicId, sender, now }, convo);
+      if (link.purpose === "reschedule" && link.appointment_id) {
+        // Remarcar (o do bot ou o da clínica depois do cancelamento): a mensagem de sempre, com o nome do paciente.
+        const row = unwrap(
+          await db.from("appointments").select("patients ( full_name )").eq("clinic_id", clinicId).eq("id", link.appointment_id).maybeSingle(),
+          "Atendimento",
+        ) as { patients: { full_name: string } | null } | null;
+        const patientName = row?.patients?.full_name ?? "o paciente";
+        await sendButtons(b, "bot_not_completed", t.notCompleted("reschedule", patientName), t.notCompletedButtons("reschedule", b.receptionAvailable));
+        await go(b, NOT_COMPLETED, {
+          kind: "reschedule",
+          patientName,
+          portalLinkId: link.id,
+          appointmentId: link.canceled_appointment_id ? undefined : link.appointment_id,
+        } satisfies NotCompletedContext);
+      } else {
+        await sendButtons(b, "bot_not_completed", t.NOT_COMPLETED_PORTAL, t.notCompletedButtons("booking", b.receptionAvailable));
+        await go(b, NOT_COMPLETED, { kind: "booking", patientName: "", portalLinkId: link.id } satisfies NotCompletedContext);
+      }
+      sent++;
+    } catch (error) {
+      logError("bot: pedido não concluído (link do portal)", error, { clinica: clinicId, link: link.id });
+    }
+  }
+  return sent;
+}
+
 /**
  * Cancelamento parado no "Tem certeza?" (rotina da conversa parada): a mensagem no lugar do "encerramos". false = o
  * atendimento não está mais ativo (a rotina encerra como sempre).
@@ -175,7 +286,9 @@ export async function handleNotCompleted(b: Bot, selection: Selection): Promise<
 
   const appointment = ctx.appointmentId ? await loadActive(b, ctx.appointmentId) : null;
   if (id === t.NOT_COMPLETED_IDS.reception && b.receptionAvailable) {
-    await handoff(b, "not_completed", { subject: t.notCompletedSubject(ctx.kind, ctx.patientName) });
+    await handoff(b, "not_completed", {
+      subject: ctx.portalLinkId && ctx.kind === "booking" ? "Não concluiu a marcação pelo portal (link do WhatsApp)." : t.notCompletedSubject(ctx.kind, ctx.patientName),
+    });
     return true;
   }
   if (id === t.NOT_COMPLETED_IDS.retry) {
@@ -189,8 +302,14 @@ export async function handleNotCompleted(b: Bot, selection: Selection): Promise<
       return true;
     }
     try {
-      const url = await renewLink(b, ctx.linkId!);
-      await say(b, "bot_not_completed_new_link", t.notCompletedNewLink(ctx.kind, ctx.patientName, url));
+      if (ctx.portalLinkId) {
+        const link = await renewPortalLink(b.db, b.clinicId, ctx.portalLinkId, b.now);
+        const url = portalLinkUrl(b.sender.baseUrl, shortId(link.id));
+        await say(b, "bot_not_completed_new_link", ctx.kind === "reschedule" ? t.notCompletedNewLink("reschedule", ctx.patientName, url) : t.notCompletedPortalLink(url));
+      } else {
+        const url = await renewLink(b, ctx.linkId!);
+        await say(b, "bot_not_completed_new_link", t.notCompletedNewLink(ctx.kind, ctx.patientName, url));
+      }
     } catch (error) {
       logError("bot: novo link do pedido não concluído", error, { clinica: b.clinicId });
       await say(b, "bot_book_link_error", t.linkError(b.clinic.designation));

@@ -52,6 +52,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     senderFor: (clinicId) => clinicSenderFor(clinicId, url),
     push: pushContextFrom(platformEnv().webPush, platformEnv().siteUrl),
     defer: waitUntil,
+    codePhoneNumberId: platformEnv().whatsappCode?.phoneNumberId ?? null,
   });
   if (summary.errors || summary.unknownNumbers) logWarn("whatsapp webhook", { ...summary });
   return new Response(null, { status: 200 });

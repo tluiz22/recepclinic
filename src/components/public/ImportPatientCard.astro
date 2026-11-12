@@ -75,6 +75,38 @@ const blankAppointment: ImportAppointment = { key: "__A__", date: "", time: "", 
       />
       {error("guardianName") && <p id={`${id("guardianName")}-erro`} class={errorClass}>{error("guardianName")}</p>}
     </div>
+    <p class={`${HINT} sm:col-span-2`} id={`${id("secondName")}-dica`}>
+      Opcional: outra pessoa que também cuida do paciente, com o WhatsApp dela (ex.: o pai). Os avisos vão para quem marcar.
+    </p>
+    <div>
+      <label for={id("secondName")} class={LABEL}>Nome do 2º responsável</label>
+      <input
+        id={id("secondName")}
+        name={name("secondName")}
+        value={patient.secondName}
+        autocomplete="off"
+        class={field}
+        aria-describedby={error("secondName") ? `${id("secondName")}-erro ${id("secondName")}-dica` : `${id("secondName")}-dica`}
+        aria-invalid={error("secondName") ? "true" : undefined}
+      />
+      {error("secondName") && <p id={`${id("secondName")}-erro`} class={errorClass}>{error("secondName")}</p>}
+    </div>
+    <div>
+      <label for={id("secondPhone")} class={LABEL}>WhatsApp do 2º responsável</label>
+      <input
+        id={id("secondPhone")}
+        name={name("secondPhone")}
+        type="tel"
+        inputmode="tel"
+        placeholder="(84) 98188-0777"
+        value={patient.secondPhone}
+        autocomplete="off"
+        class={field}
+        aria-describedby={error("secondPhone") ? `${id("secondPhone")}-erro ${id("secondName")}-dica` : `${id("secondName")}-dica`}
+        aria-invalid={error("secondPhone") ? "true" : undefined}
+      />
+      {error("secondPhone") && <p id={`${id("secondPhone")}-erro`} class={errorClass}>{error("secondPhone")}</p>}
+    </div>
     {
       catalog.insurancePlans.length > 0 && (
         <>

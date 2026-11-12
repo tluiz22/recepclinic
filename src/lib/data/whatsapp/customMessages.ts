@@ -43,7 +43,8 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
  * perderia (F11.5). O "Retomar conversa" (CN4b) fica com o texto aprovado pelo cliente: a Meta só o aceita como
  * utilidade se falar do atendimento em andamento.
  */
-export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file", "conversation_resume"];
+// O código do portal (F2b) é um template de autenticação: a Meta fixa o texto.
+export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file", "conversation_resume", "portal_code", "rescheduled_by_other", "canceled_by_other"];
 
 export const MARKER_LABELS: Record<string, string> = {
   nome: "primeiro nome de quem recebe",
@@ -136,9 +137,11 @@ export const BOT_MESSAGES: BotMessageDef[] = [
   {
     key: "booking_link",
     label: "Link para marcar",
-    markers: ["servico", "paciente", "link"],
+    // Link do portal (F3b): o que vai marcar ("consulta com Dra. Ana", "retorno", o exame); {paciente} saiu (o portal
+    // pergunta para quem é). No link antigo (domiciliar, turma), {servico} é o serviço.
+    markers: ["servico", "link"],
     required: ["link"],
-    defaultText: "Prontinho! Escolha o melhor dia e horário para *{servico}* de {paciente} neste link:\n{link}\n\nO link vale por 30 minutos.",
+    defaultText: "Para escolher o dia e o horário de *{servico}*, toque no link abaixo. Ele vale por 30 minutos e é só para este número:\n{link}",
   },
   {
     key: "cancel_done",

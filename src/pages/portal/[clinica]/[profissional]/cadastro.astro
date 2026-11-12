@@ -1,0 +1,316 @@
+---
+// P8b Cadastro novo (F2c). "A consulta é para: Mim / Outra pessoa (filho, dependente)" (agenda Pediátrica: sempre
+// outra pessoa, como no bot); para mim, nome completo e nascimento; para outra pessoa, o seu nome (só com o celular
+// sem cadastro), o nome completo e o nascimento do paciente. Só o indispensável: sem CPF, e-mail ou endereço. Nome com
+// sobrenome; data real, não futura, ano com 4 números, até 110 anos, com a data por extenso e a idade abaixo do campo.
+// Nome parecido com um paciente do mesmo celular (cliente, 08/nov): "É a mesma pessoa?" com a mesma data; com a data
+// diferente, "Sim (manter a cadastrada)", "É, mas a data certa é a digitada" (a recepção confere; o portal não muda o
+// cadastro) ou "Não, é outra pessoa". O cadastro só é gravado na marcação (P9).
+import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
+import PortalLinkPhone from "../../../../components/portal/PortalLinkPhone.astro";
+import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { portalCta, portalError, portalInput, portalLink, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
+import { bookingBlock, contactHasSelf, findDuplicate, phonePatients, setHoldPatient, type DuplicateMatch, type NewPatientData } from "../../../../lib/data/portal/booking";
+import { openHoldPage, toBlockText } from "../../../../lib/data/portal/holdPage";
+import { bookingKind, changeProfessionalHref, helpForOf, theVisit, visitWords, whoLabel } from "../../../../lib/portal";
+import { capitalize } from "../../../../lib/vocabulary";
+import { BIRTHDATE_MESSAGES, birthdateText, blockMessage, cleanFullName, NAME_MAX, parseBirthdate, shortDate } from "../../../../lib/portalBooking";
+import { isAdult } from "../../../../lib/age";
+import { todayIn } from "../../../../lib/clinicTime";
+
+const view = await openHoldPage(Astro);
+const { page, professional, hold, session, timeZone, modality, when } = view;
+if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
+
+const today = todayIn(timeZone);
+const pediatric = professional?.profile === "pediatric";
+type Field = "for" | "name" | "birthdate" | "contactName";
+const errors: Partial<Record<Field, string>> = {};
+let pageProblem: string | null = null;
+let ageProblem = false;
+// Já marcado (cliente, 10/nov/2026): o link leva a Minhas consultas, para remarcar ou cancelar.
+let alreadyProblem = false;
+let duplicate: DuplicateMatch | null = null;
+let hasPatients = false;
+let hasSelf = false;
+let contactKnown = false;
+// Valores digitados (voltam ao campo depois de qualquer erro).
+let values = {
+  for: (pediatric ? "other" : (hold?.newPatient?.for ?? "")) as "" | "self" | "other",
+  name: hold?.newPatient?.name ?? "",
+  birthdate: hold?.newPatient ? shortDate(hold.newPatient.birthdate) : "",
+  contactName: hold?.newPatient?.contactName ?? "",
+};
+
+if (page.kind === "open" && professional && session && hold?.state === "active") {
+  const { db, portal } = page;
+  const clinicId = portal.clinicId;
+  const { contact, patients } = await phonePatients(db, clinicId, hold.phone);
+  hasPatients = patients.length > 0;
+  hasSelf = contact ? await contactHasSelf(db, clinicId, contact.id) : false;
+  contactKnown = contact !== null;
+  if (hasSelf && !values.for) values.for = "other";
+
+  if (Astro.request.method === "POST") {
+    const form = await Astro.request.formData().catch(() => null);
+    const text = (key: string, max = NAME_MAX + 20) => String(form?.get(key) ?? "").slice(0, max);
+    const action = text("acao", 20);
+    values = {
+      for: pediatric ? "other" : text("para", 10) === "self" ? "self" : text("para", 10) === "other" ? "other" : "",
+      name: text("nome"),
+      birthdate: text("nascimento", 20),
+      contactName: text("responsavel"),
+    };
+    if (hasSelf && values.for === "self") values.for = "other";
+    const name = cleanFullName(values.name);
+    const birth = parseBirthdate(values.birthdate, today);
+    const contactName = values.for === "other" && !contactKnown ? cleanFullName(values.contactName) : null;
+    if (!values.for) errors.for = `Escolha para quem é ${theVisit(professional)}.`;
+    if (!name) errors.name = "Escreva o nome e o sobrenome.";
+    if (!birth.ok) errors.birthdate = BIRTHDATE_MESSAGES[birth.problem];
+    else if (values.for === "self" && !isAdult(birth.date, today)) errors.birthdate = "Para menores de 18 anos, escolha “Outra pessoa” e informe o responsável.";
+    if (values.for === "other" && !contactKnown && !contactName) errors.contactName = "Escreva o seu nome e sobrenome.";
+
+    if (!Object.keys(errors).length && name && birth.ok) {
+      const data: NewPatientData = { for: values.for as "self" | "other", name, birthdate: birth.date, contactName };
+      const match = contact ? await findDuplicate(db, clinicId, contact.id, data, patients) : null;
+      const answer = action === "mesmo" || action === "corrigir" || (action === "outro" && match && !match.isContactSelf) ? action : null;
+
+      if (match && (answer === "mesmo" || answer === "corrigir")) {
+        // É o cadastro existente: vale a data cadastrada; a digitada, se diferente, vai para a recepção conferir.
+        const block = await bookingBlock(db, clinicId, { professional, phone: hold.phone, patient: { id: match.id, birthdate: match.birthdate }, isNew: false, timeZone });
+        if (block) {
+          pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, match.fullName, bookingKind(professional));
+          ageProblem = block.kind === "age";
+          alreadyProblem = block.kind === "already";
+        } else if (await setHoldPatient(db, clinicId, session.id, hold.id, { patientId: match.id, informedBirthdate: match.sameBirthdate ? null : birth.date })) {
+          return Astro.redirect(view.href("revisao", { aviso: answer === "corrigir" ? "data" : null }));
+        } else return Astro.redirect(view.href("cadastro"));
+      } else if (match && answer !== "outro") {
+        duplicate = match;
+      } else {
+        const block = await bookingBlock(db, clinicId, { professional, phone: hold.phone, patient: { id: null, birthdate: birth.date }, isNew: true, timeZone });
+        if (block) {
+          pageProblem = blockMessage(toBlockText(block, timeZone), professional.name, name, bookingKind(professional));
+          ageProblem = block.kind === "age";
+          alreadyProblem = block.kind === "already";
+        } else if (await setHoldPatient(db, clinicId, session.id, hold.id, { newPatient: data })) {
+          return Astro.redirect(view.href("revisao"));
+        } else return Astro.redirect(view.href("cadastro"));
+      }
+    }
+  }
+}
+
+const changeDoctor = page.kind === "open" ? changeProfessionalHref(view.base, view.flow) : null;
+const active = !!professional && hold?.state === "active";
+const back = hasPatients ? view.href("reserva") : view.timesHref(true);
+const typed = parseBirthdate(values.birthdate, today);
+const typedText = typed.ok ? birthdateText(typed.date, today) : "";
+const typedShort = typed.ok ? shortDate(typed.date) : values.birthdate;
+const askOther = values.for === "other" && !contactKnown;
+const choice =
+  "flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] border-gray-200 bg-white px-4 py-2.5 text-lg has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink";
+const label = "text-base font-semibold text-gray-700";
+---
+
+<PortalLayout
+  title={active ? (duplicate ? "Já existe um cadastro" : "Dados do paciente") : professional ? "O tempo para confirmar acabou" : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? helpForOf(professional) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={view.base} />}
+  {professional && !active && <PortalHoldExpired timesHref={view.timesHref()} />}
+  {
+    active && professional && hold && (
+      <div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-[18px]">
+          <PortalStepBar back={back} step={view.step("patient")} />
+          <PortalHoldClock expiresAt={hold.expiresAt} expiredHref={view.href("cadastro")} />
+          {view.viaBotLink && <PortalLinkPhone phone={hold.phone} action={view.phoneHref} />}
+          {pageProblem && (
+            <div class={`${portalNotice} flex flex-col gap-1 border-red-200 bg-red-50 text-red-800`} role="alert">
+              <p>{pageProblem}</p>
+              {ageProblem && changeDoctor && (
+                <a href={changeDoctor} class={`${portalLink} self-start`}>
+                  Escolher outro médico
+                </a>
+              )}
+              {alreadyProblem && (
+                <a href={`${view.base}/minhas-consultas`} class={`${portalLink} self-start`}>
+                  Ver minhas consultas
+                </a>
+              )}
+            </div>
+          )}
+
+          {duplicate ? (
+            <form method="POST" action={view.href("cadastro")} class="flex max-w-[620px] flex-col gap-3">
+              <h1 class={portalTitle}>Já existe um cadastro neste número</h1>
+              <p class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-lg">
+                <b>{duplicate.fullName}</b>, nascimento em <b>{shortDate(duplicate.birthdate)}</b>.
+              </p>
+              <p class="text-lg">{duplicate.sameBirthdate ? "É a mesma pessoa?" : `Você digitou a data ${typedShort}. É a mesma pessoa?`}</p>
+              <input type="hidden" name="para" value={values.for} />
+              <input type="hidden" name="nome" value={values.name} />
+              <input type="hidden" name="nascimento" value={values.birthdate} />
+              <input type="hidden" name="responsavel" value={values.contactName} />
+              <button type="submit" name="acao" value="mesmo" class={portalCta} data-sending-label="Conferindo…">
+                {duplicate.sameBirthdate ? "Sim, é a mesma pessoa" : `Sim, é a mesma (manter ${shortDate(duplicate.birthdate)})`}
+              </button>
+              {!duplicate.sameBirthdate && (
+                <button type="submit" name="acao" value="corrigir" class={portalSecondary} data-sending-label="Conferindo…">
+                  É a mesma, mas a data certa é {typedShort}
+                </button>
+              )}
+              {!duplicate.isContactSelf && (
+                <button type="submit" name="acao" value="outro" class={portalSecondary} data-sending-label="Conferindo…">
+                  Não, é outra pessoa
+                </button>
+              )}
+              {!duplicate.sameBirthdate && <p class="text-[15px] text-gray-600">A data do cadastro só muda com a recepção, no dia {visitWords(professional).ofThe}.</p>}
+            </form>
+          ) : (
+            <form method="POST" action={view.href("cadastro")} class="group flex max-w-[620px] flex-col gap-4" novalidate data-portal-new-patient>
+              <input type="hidden" name="acao" value="cadastro" />
+              <h1 class={portalTitle}>{pediatric ? "Dados do paciente" : `${capitalize(theVisit(professional))} é para:`}</h1>
+              {!pediatric && !hasSelf && (
+                <fieldset class="flex flex-col gap-2.5" aria-describedby={errors.for ? "para-erro" : undefined}>
+                  <legend class="sr-only">{capitalize(theVisit(professional))} é para</legend>
+                  <label class={choice}>
+                    <input type="radio" name="para" value="self" checked={values.for === "self"} class="h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                    Mim
+                  </label>
+                  <label class={choice}>
+                    <input type="radio" name="para" value="other" checked={values.for === "other"} class="h-6 w-6 shrink-0 accent-[var(--clinic-ink)]" />
+                    Outra pessoa (filho, dependente)
+                  </label>
+                  {errors.for && <p id="para-erro" class={portalError} role="alert">{errors.for}</p>}
+                </fieldset>
+              )}
+              {(pediatric || hasSelf) && <input type="hidden" name="para" value="other" />}
+
+              {!contactKnown && (
+                <div class={`flex-col gap-1.5 ${askOther ? "flex" : "hidden"} group-has-[input[value=other]:checked]:flex`} data-portal-contact>
+                  <label for="responsavel" class={label}>Seu nome completo</label>
+                  <input
+                    id="responsavel"
+                    name="responsavel"
+                    type="text"
+                    autocomplete="name"
+                    maxlength={NAME_MAX}
+                    value={values.contactName}
+                    aria-invalid={errors.contactName ? "true" : undefined}
+                    aria-describedby={errors.contactName ? "responsavel-erro" : undefined}
+                    class={portalInput}
+                  />
+                  {errors.contactName && <p id="responsavel-erro" class={portalError} role="alert">{errors.contactName}</p>}
+                </div>
+              )}
+
+              <div class="flex flex-col gap-1.5">
+                <label for="nome" class={label}>
+                  <span class="group-has-[input[value=self]:checked]:hidden">Nome completo do paciente</span>
+                  <span class="hidden group-has-[input[value=self]:checked]:inline">Seu nome completo</span>
+                </label>
+                <input
+                  id="nome"
+                  name="nome"
+                  type="text"
+                  maxlength={NAME_MAX}
+                  value={values.name}
+                  aria-invalid={errors.name ? "true" : undefined}
+                  aria-describedby={errors.name ? "nome-erro" : undefined}
+                  class={portalInput}
+                />
+                {errors.name && <p id="nome-erro" class={portalError} role="alert">{errors.name}</p>}
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="nascimento" class={label}>Data de nascimento</label>
+                <input
+                  id="nascimento"
+                  name="nascimento"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  maxlength="10"
+                  placeholder="dd/mm/aaaa"
+                  value={values.birthdate}
+                  aria-invalid={errors.birthdate ? "true" : undefined}
+                  aria-describedby={errors.birthdate ? "nascimento-erro nascimento-texto" : "nascimento-texto"}
+                  class={`${portalInput} max-w-[260px] tabular-nums`}
+                  data-portal-birthdate
+                  data-today={today}
+                />
+                {errors.birthdate && <p id="nascimento-erro" class={portalError} role="alert">{errors.birthdate}</p>}
+                <p id="nascimento-texto" class="min-h-6 text-[16px] text-gray-700" aria-live="polite" data-portal-birthdate-text>{typedText}</p>
+              </div>
+
+              <button type="submit" class={`${portalCta} mt-1`} data-sending-label="Conferindo…">
+                Continuar
+              </button>
+              <p class="text-[15px] text-gray-600">Pedimos só o necessário para {theVisit(professional)}. Os outros dados, a recepção completa no dia.</p>
+            </form>
+          )}
+        </div>
+        <PortalSummary
+          rows={[
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
+            { label: "Atendimento", value: view.modalityText },
+            { label: "Dia e horário", value: when, change: view.timesHref(true) },
+            { label: "Paciente", value: null },
+          ]}
+        />
+      </div>
+    )
+  }
+</PortalLayout>
+
+<script>
+  // Data de nascimento: as barras entram sozinhas (14032019 → 14/03/2019) e, abaixo, a data por extenso com a idade.
+  const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  const field = document.querySelector<HTMLInputElement>("[data-portal-birthdate]");
+  const out = document.querySelector<HTMLElement>("[data-portal-birthdate-text]");
+  const today = field?.dataset.today ?? "";
+
+  function age(y: number, m: number, d: number): string {
+    const [ty, tm, td] = today.split("-").map(Number);
+    let years = ty - y;
+    let months = tm - m;
+    if (td < d) months -= 1;
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+    if (years < 1) return months <= 1 ? (months === 1 ? "1 mês" : "menos de 1 mês") : `${months} meses`;
+    if (years < 3 && months > 0) return `${years === 1 ? "1 ano" : `${years} anos`} e ${months === 1 ? "1 mês" : `${months} meses`}`;
+    return years === 1 ? "1 ano" : `${years} anos`;
+  }
+
+  function describe(value: string): string {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+    if (!match) return "";
+    const [d, m, y] = [Number(match[1]), Number(match[2]), Number(match[3])];
+    const date = new Date(Date.UTC(y, m - 1, d));
+    if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return "";
+    const iso = `${match[3]}-${match[2]}-${match[1]}`;
+    if (iso > today) return "";
+    return `${d} de ${MONTHS[m - 1]} de ${y}, ${age(y, m, d)}`;
+  }
+
+  field?.addEventListener("input", () => {
+    const digits = field.value.replace(/\D/g, "").slice(0, 8);
+    const masked = digits.length > 4 ? `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}` : digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+    if (masked !== field.value) field.value = masked;
+    if (out) out.textContent = describe(masked);
+  });
+</script>

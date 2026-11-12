@@ -193,6 +193,11 @@ export type WebhookDeps = {
   defer?: (work: Promise<unknown>) => void;
   /** Busca na Meta usada no download imediato (testes). */
   mediaFetcher?: Fetcher;
+  /**
+   * Número do RecepClinic que manda o código do portal (seção 14 do plano da recepção digital). Não é de clínica: dele
+   * só interessa a falha de entrega, que vai para Sistema › Erros com o motivo da Meta (ex.: 131042, pagamento).
+   */
+  codePhoneNumberId?: string | null;
 };
 
 export type WebhookSummary = {
@@ -237,6 +242,15 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     const phoneNumberId = change.metadata?.phone_number_id ?? "";
     const events = (change.messages?.length ?? 0) + (change.statuses?.length ?? 0) + (change.message_echoes?.length ?? 0);
     if (!events) continue;
+    if (phoneNumberId && phoneNumberId === deps.codePhoneNumberId) {
+      for (const status of change.statuses ?? []) {
+        summary.statuses += 1;
+        if (status.status !== "failed") continue;
+        const reasons = (status.errors ?? []).map((e) => `${e.code ?? "?"} ${e.title ?? ""}${e.message ? `: ${e.message}` : ""}`.trim());
+        logError("código do portal não entregue", new Error(reasons.join(" · ") || "a Meta não disse o motivo"), { mensagem: status.id ?? null });
+      }
+      continue;
+    }
     const clinicId = phoneNumberId ? await deps.resolveClinic(phoneNumberId) : null;
     if (!clinicId) {
       summary.unknownNumbers += events;

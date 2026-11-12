@@ -1,0 +1,150 @@
+---
+// P7 Celular e código (F2b; proposta 5.1, RD2, RD9). Depois do "Continuar" da P6: o horário é conferido de novo
+// (ocupado: volta aos horários do mesmo dia, com o aviso). Com o celular já comprovado nesta sessão, reserva o horário
+// e segue. Senão: "Qual é o seu celular com WhatsApp?" com o CAPTCHA (Turnstile) → código de 6 números pelo WhatsApp
+// da clínica → reserva do horário (prazo da clínica, padrão 5 min) → tela da reserva. Limites de uso e bloqueio
+// progressivo no servidor. Formulários POST nesta mesma página (o endereço do portal não abre o /api).
+import PortalLayout from "../../../../components/portal/PortalLayout.astro";
+import PortalNotice from "../../../../components/portal/PortalNotice.astro";
+import PortalPhoneCode from "../../../../components/portal/PortalPhoneCode.astro";
+import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
+import PortalSummary from "../../../../components/portal/PortalSummary.astro";
+import { capitalize } from "../../../../lib/vocabulary";
+import { HOLD_LIMIT_TEXT } from "../../../../lib/portalIdentity";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
+import { openPortalPage, professionalOf } from "../../../../lib/data/portal/page";
+import { groupSessions, isSlotStillFree, priceAt } from "../../../../lib/data/portal/portal";
+import { holdGroupSlot, holdSlot, readSession } from "../../../../lib/data/portal/identity";
+import { holdBlocked, runIdentityStep, type IdentityState } from "../../../../lib/data/portal/identityStep";
+import { changeProfessionalHref, chosenModality, flowParams, helpForOf, modalityLabelAt, modalityOptions, portalHref, professionalSteps, readFlow, stepPosition, whoLabel } from "../../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
+const params = Astro.url.searchParams;
+const flow = readFlow(params);
+const base = page.kind === "open" ? page.base : "";
+const options = professional ? modalityOptions(professional) : [];
+const modality = chosenModality(options, params.get("mod"));
+const choice = parseSlotChoice(params.get("start"));
+const consultation = professional ? (professional.consultations.find((c) => c.serviceId === params.get("tipo")) ?? professional.consultations[0]) : null;
+const timesPath = professional ? `${base}/${professional.slug}/horarios` : "";
+const keep = { ...flowParams(flow), mod: modality?.value ?? null, tipo: params.get("tipo") };
+const here = portalHref(`${base}/${professional?.slug ?? ""}/continuar`, { ...keep, date: params.get("date"), start: params.get("start") });
+const timeZone = page.kind === "open" ? page.portal.timeZone : "America/Fortaleza";
+
+let identity: IdentityState | null = null;
+if (page.kind === "open" && professional && consultation) {
+  const { db, portal } = page;
+  const clinicId = portal.clinicId;
+  const current = await readSession(db, clinicId, Astro.cookies);
+  const free =
+    !!choice &&
+    !!modality &&
+    choice.agendaId === professional.agendaId &&
+    (await isSlotStillFree(
+      db,
+      clinicId,
+      professional,
+      { serviceId: consultation.serviceId, locationId: choice.locationId, start: choice.start },
+      timeZone,
+      new Date(),
+      current?.id ?? null,
+    ));
+  if (!free) return Astro.redirect(portalHref(timesPath, { ...keep, date: params.get("date"), erro: choice ? "horario" : null }));
+
+  const slot = {
+    agendaId: professional.agendaId,
+    serviceId: consultation.serviceId,
+    locationId: choice!.locationId,
+    start: choice!.start,
+    end: new Date(choice!.start.getTime() + consultation.durationMinutes * 60_000),
+  };
+  // Celular comprovado: reserva e segue para a tela da reserva.
+  identity = await runIdentityStep(Astro, {
+    db,
+    clinicId,
+    here,
+    session: current,
+    onVerified: async (session, state) => {
+      const blocked = await holdBlocked(db, clinicId, Astro);
+      if (blocked) {
+        state.blockedUntil = blocked;
+        return null;
+      }
+      // Turma (F3e-2): reserva uma vaga, com a capacidade da sessão escolhida.
+      const group = professional.exam?.isGroup
+        ? (await groupSessions(db, clinicId, professional, timeZone, { sessionId: session.id })).find(
+            (s) => s.start.getTime() === slot.start.getTime() && s.locationId === slot.locationId,
+          )
+        : null;
+      const hold = professional.exam?.isGroup
+        ? group
+          ? await holdGroupSlot(db, clinicId, session.id, { ...slot, capacity: group.capacity })
+          : ({ status: "taken" } as const)
+        : await holdSlot(db, clinicId, session.id, slot);
+      if (hold.status === "ok") return Astro.redirect(portalHref(`${base}/${professional.slug}/reserva`, { ...keep, date: params.get("date"), reserva: hold.holdId }));
+      if (hold.status === "taken") return Astro.redirect(portalHref(timesPath, { ...keep, date: params.get("date"), erro: "horario" }));
+      // Sessão vencida ou celular não mais comprovado: a página pede o celular de novo.
+      if (hold.status === "session") state.session = { ...session, verified: false };
+      state.problem = {
+        field: "page",
+        text: hold.status === "limit" ? HOLD_LIMIT_TEXT : "Confirme o seu celular de novo.",
+      };
+      return null;
+    },
+  });
+  if (identity.response) return identity.response;
+}
+
+const when = choice ? `${capitalize(formatInstant(choice.start, timeZone, "EEE")).slice(0, 3)}, ${formatInstant(choice.start, timeZone, "dd/MM 'às' HH:mm")}` : "";
+const back = portalHref(timesPath, { ...keep, date: params.get("date") });
+const chosenLocation = professional?.locations.find((l) => l.id === choice?.locationId) ?? null;
+const atHome = chosenLocation?.type === "home_visit";
+const modalityText = modalityLabelAt(modality, chosenLocation && consultation ? priceAt(consultation, chosenLocation.id) : null, atHome);
+const step = stepPosition(professionalSteps(flow, options.length > 1, false, atHome), "phone");
+const changeDoctor = changeProfessionalHref(base, flow);
+const link = "inline-flex min-h-11 items-center px-1 text-base font-bold text-clinic-ink underline";
+const changeModality = options.length > 1 && professional ? portalHref(`${base}/${professional.slug}/atendimento`, { ...flowParams(flow), mod: modality?.value }) : null;
+---
+
+<PortalLayout
+  title={professional ? (identity?.pending ? "Digite o código" : "Seu celular com WhatsApp") : page.kind === "unavailable" ? "Agendamento indisponível" : "Link não encontrado"}
+  brand={page.kind === "open" ? page.portal.brand : page.kind === "unavailable" ? page.brand : null}
+  receptionHours={page.kind === "open" ? page.portal.receptionHours : null}
+  helpFor={professional ? helpForOf(professional) : null}
+  width="wide"
+>
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "open" && !professional && <PortalNotice kind="not_found" brand={page.portal.brand} home={base} />}
+  {
+    professional && choice && (
+      <div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-[18px]">
+          <PortalStepBar back={back} step={step} />
+          <p class="-mx-4 flex items-center justify-between gap-2.5 bg-clinic-tint px-4 py-1.5 text-base leading-snug sm:mx-0 sm:rounded-xl lg:hidden">
+            <span>
+              <b>{professional.name}</b>, {modalityText}
+              <br />
+              {when}
+            </span>
+            <a href={back} class={link} aria-label="Trocar o horário">Trocar</a>
+          </p>
+          <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.01em] lg:text-[38px]">Qual é o seu celular com WhatsApp?</h1>
+
+          {identity && <PortalPhoneCode state={identity} action={here} />}
+        </div>
+        <PortalSummary
+          rows={[
+            { label: whoLabel(professional), value: professional.name, change: changeDoctor },
+            { label: "Atendimento", value: modalityText, change: changeModality },
+            { label: "Dia e horário", value: when, change: back },
+          ]}
+        />
+      </div>
+    )
+  }
+</PortalLayout>
+

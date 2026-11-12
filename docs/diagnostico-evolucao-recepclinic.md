@@ -9,9 +9,9 @@ Marcas: **[Código]** conferido no repositório; **[Doc]** decisão registrada e
 sem confirmação; **[Pendência]** a confirmar (cliente, Meta, advogado).
 
 **Atenção sobre os ambientes.** O bloco multiprofissional (especialidades, convênios, informações do bot e serviços por
-profissional, perfil e prazo por profissional, fotos) está na `main` e no **staging**, aguardando a validação do
-cliente; **a produção ainda não tem esse bloco** ([`frente-validacao.md`](frente-validacao.md)). Neste documento, "existe"
-quer dizer "existe na `main`"; o que só está no staging vem marcado como **(staging)**.
+profissional, perfil e prazo por profissional, fotos) foi escrito quando estava só no staging; **desde 08/nov está na
+produção** (`64ec6b1`, validado pelo cliente; [`producao.md`](producao.md)). As marcas **(staging)** abaixo ficam como
+registro e hoje valem para staging e produção.
 
 ## 1. Arquitetura atual
 

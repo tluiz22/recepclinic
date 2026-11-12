@@ -28,6 +28,9 @@ import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialo
 import { centsToInput } from "../../../../lib/forms";
 import { CATEGORY_LABELS } from "../../../../lib/serviceLabels";
 import { originPage, setupOrigin, setupParam } from "../../../../lib/setupFlow";
+import CoverageForm from "../../../../components/admin/config/CoverageForm.astro";
+import { listInsurancePlans } from "../../../../lib/data/config/insurance";
+import { listServicePlans } from "../../../../lib/data/config/serviceInsurance";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -59,6 +62,11 @@ const ownerGroups = ownerOptionGroups(professionals, { team: examsOn && !!teamAg
 const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.priceCents]));
 // Domiciliar só com o item liberado (D11); sem ele, as ligações já gravadas ficam guardadas.
 const homeVisitOn = clinic.features.includes("home_visit");
+// Particular e convênios do exame (CE-2, cliente, 10/nov/2026): só exame já criado, com o item "Convênios".
+const coverageOn = !isNew && service!.category === "exam" && clinic.features.includes("insurance");
+const [coveragePlans, examPlans] = coverageOn
+  ? await Promise.all([listInsurancePlans(db, clinic.clinicId), listServicePlans(db, clinic.clinicId, id!)])
+  : [[], []];
 const locationOptions = locations.filter((l) => (l.isActive || offered.has(l.id)) && (homeVisitOn || l.type !== "home_visit"));
 const hiddenHomeVisit = !homeVisitOn && locations.some((l) => l.type === "home_visit" && offered.has(l.id));
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
@@ -144,7 +152,11 @@ for (const w of serviceWindows) {
       >
         {
           isNew ? (
-            <select id="category" name="category" class={INPUT} aria-describedby={describedBy("category", { hint: true })}>
+            <select id="category" name="category" required class={INPUT} aria-describedby={describedBy("category", { hint: true })}>
+              {/* Sem tipo pré-escolhido (cliente, 10/nov/2026): o usuário escolhe, para não cadastrar no tipo errado. */}
+              <option value="" disabled selected={!presetCategory}>
+                Escolha o tipo
+              </option>
               {categories.map((c) => (
                 <option value={c} selected={c === presetCategory}>
                   {CATEGORY_LABELS[c]}
@@ -304,6 +316,21 @@ for (const w of serviceWindows) {
         <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
+    {
+      coverageOn && (
+        <CoverageForm
+          action={action}
+          plans={coveragePlans}
+          acceptedIds={examPlans.map((p) => p.planId)}
+          notes={new Map(examPlans.flatMap((p) => (p.note ? [[p.planId, p.note] as const] : [])))}
+          acceptsPrivate={service!.acceptsPrivate}
+          privateLabel="Aceita particular"
+          privateHint="Desmarcado: só pelos convênios abaixo."
+          legend="Convênios aceitos"
+          canRegisterPlans={!ownOnly}
+        />
+      )
+    }
     {
       !isNew && (
         <ActiveToggle

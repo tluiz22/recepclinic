@@ -117,9 +117,14 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["connection_test", "pending", null],
       // CN4b (05/nov/2026): o "Retomar conversa", com a Central de atendimento.
       ["conversation_resume", "pending", null],
+      // VR4 (11/nov/2026): aviso ao outro responsável, com o Portal.
+      ["rescheduled_by_other", "pending", null],
+      ["canceled_by_other", "pending", null],
+      // O código do portal não é pedido à clínica (seção 14, 09/nov/2026): sai do número do RecepClinic.
     ]);
     const created = meta.calls.filter((c) => c.method === "POST");
-    expect(created.map((c) => c.path)).toEqual(Array(13).fill(`/${WABA}/message_templates`));
+    expect(created.map((c) => c.path)).toEqual(Array(15).fill(`/${WABA}/message_templates`));
+    expect(created.find((c) => c.body?.name === "rc_codigo_portal_v1")).toBeUndefined();
     expect(created[0].body).toMatchObject({ name: "rc_confirmacao_v1", language: "pt_BR", category: "UTILITY" });
     // Exemplo de cada variável, exigido pela Meta.
     const body = (created[0].body!.components as { type: string; example?: { body_text: string[][] } }[])[0];
@@ -153,6 +158,8 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       consultation_guidance: ["pending", null],
       connection_test: ["pending", null],
       conversation_resume: ["pending", null],
+      rescheduled_by_other: ["pending", null],
+      canceled_by_other: ["pending", null],
     });
   });
 
@@ -446,6 +453,14 @@ describe("orientações gerais da consulta depois da entrega (08/out)", () => {
     await cancel(first);
 
     await adminClient().from("clinic_settings").update({ guidance_enabled: true }).eq("clinic_id", f.clinicId);
+    // Consulta em casa (cliente, 10/nov/2026): as orientações não saem.
+    const home = await book("09:00");
+    await adminClient().from("appointments").update({ location_id: f.ids.home, home_visit_address: "Rua das Flores, 10" }).eq("id", home);
+    expect(await confirmationDelivered(home, "wamid.f62.conf-guia-casa")).toMatchObject({ errors: 0 });
+    expect(meta.calls).toEqual([]);
+    expect((await outbound(home)).map((m) => m.message_type)).toEqual(["appointment_confirmation"]);
+    await cancel(home);
+
     const consult = await book("10:30");
     expect(await confirmationDelivered(consult, "wamid.f62.conf-guia-2")).toMatchObject({ errors: 0 });
     await status("wamid.f62.conf-guia-2", "read");

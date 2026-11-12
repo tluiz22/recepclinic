@@ -1,0 +1,118 @@
+---
+// P1 Início do portal da clínica (F2a; canvas, opção A da rodada 4): nome, "Agendar consulta", especialidades em
+// destaque, "Ver médicos, convênios e valores", endereço e horário da recepção. Clínica de um só profissional: o início
+// dele (PP). "Marcar retorno" e "Marcar exame" (F2d) abaixo de "Agendar consulta" e, por último, "Minhas consultas" (F3c).
+import PortalLayout from "../../../components/portal/PortalLayout.astro";
+import PortalMoreActions from "../../../components/portal/PortalMoreActions.astro";
+import { MY_APPOINTMENTS } from "../../../lib/portal";
+import PortalNotice from "../../../components/portal/PortalNotice.astro";
+import PortalProfessionalHome from "../../../components/portal/PortalProfessionalHome.astro";
+import { openPortalPage, singleProfessional } from "../../../lib/data/portal/page";
+import { examProfessional, nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../../../lib/data/portal/portal";
+import { portalOffersReturn } from "../../../lib/data/portal/returnVisit";
+import { mapsHref, portalHref, readPlace } from "../../../lib/portal";
+
+const page = await openPortalPage(Astro);
+if (page.kind === "not_found") Astro.response.status = 404;
+const portal = page.kind === "open" ? page.portal : null;
+const base = page.kind === "open" ? page.base : "";
+const single = portal ? singleProfessional(portal) : null;
+const next = portal && page.kind === "open" ? await nextFreeSlots(page.db, portal.clinicId, portal.professionals, portal.timeZone) : new Map<string, Date | null>();
+// Especialidades com algum médico com horário no prazo (até 6 em destaque).
+const specialties = portal
+  ? portalSpecialties(portal.professionals).filter((s) => professionalsOfSpecialty(portal.professionals, s.id).some((p) => next.get(p.id)))
+  : [];
+const bookable = portal?.professionals.some((p) => next.get(p.id)) ?? false;
+// Exames com horário livre no prazo (F2d): sem eles, o botão não aparece (nada de telas até "sem horários").
+const examPros = portal ? portal.exams.map((e) => examProfessional(portal, e)).filter((p): p is NonNullable<typeof p> => !!p) : [];
+const examNext = portal && page.kind === "open" && examPros.length ? await nextFreeSlots(page.db, portal.clinicId, examPros, portal.timeZone) : new Map<string, Date | null>();
+const bookableExams = examPros.filter((p) => examNext.get(p.id));
+// Link marcado por lugar (F3d, "?de=instagram"): a origem segue pelas telas até a marcação.
+const origem = readPlace(Astro.url.searchParams);
+const startHref = portalHref(specialties.length > 1 ? `${base}/especialidade` : `${base}/medicos`, { origem });
+const located = portal?.locations.filter((l) => l.address) ?? [];
+// "Marcar retorno" só com o serviço de retorno num médico do portal (D4).
+// "Marcar exame" só na clínica com exames marcáveis (item "Exames e procedimentos", F2d).
+const examNames = bookableExams.map((p) => p.name);
+const actions = [
+  ...(portal && page.kind === "open" && (await portalOffersReturn(page.db, portal))
+    ? [{ href: `${base}/retorno`, label: "Marcar retorno", detail: "Volta ao médico da última consulta, dentro do prazo", icon: "return" as const }]
+    : []),
+  ...(examNames.length
+    ? [{ href: portalHref(`${base}/exames`, { origem }), label: "Marcar exame", detail: examNames.length > 2 ? `${examNames.slice(0, 2).join(", ")} e outros` : examNames.join(" e "), icon: "exam" as const }]
+    : []),
+  ...(portal ? [MY_APPOINTMENTS(base)] : []),
+];
+const pin = "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z";
+---
+
+<PortalLayout
+  title={page.kind === "not_found" ? "Link não encontrado" : page.kind === "unavailable" ? "Agendamento indisponível" : single ? single.name : "Agendar consulta"}
+  brand={page.kind === "not_found" ? null : page.kind === "unavailable" ? page.brand : page.portal.brand}
+  receptionHours={portal?.receptionHours}
+  width={single ? "wide" : "home"}
+>
+  {page.kind === "not_found" && <PortalNotice kind="not_found" />}
+  {page.kind === "unavailable" && <PortalNotice kind="unavailable" brand={page.brand} />}
+  {portal && single && <PortalProfessionalHome portal={portal} professional={single} base={base} next={next.get(single.id) ?? null} actions={actions} origem={origem} />}
+  {
+    portal && !single && (
+      <div class="grid gap-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-14">
+        <div class="flex flex-col gap-5 pt-3 lg:pt-0">
+          <div class="flex flex-col gap-3.5">
+            <h1 class="font-display text-[38px] leading-[1.05] font-bold tracking-[-0.02em] break-words lg:text-[64px] lg:leading-none">{portal.brand.name}</h1>
+            <p class="max-w-[520px] text-xl text-gray-700 lg:text-[22px]">Agende sua consulta em poucos passos, sem precisar ligar.</p>
+          </div>
+          {bookable ? (
+            <a href={startHref} class="flex min-h-[58px] items-center justify-center rounded-xl bg-clinic px-6 text-[19px] font-bold text-clinic-text no-underline hover:opacity-90 sm:max-w-[360px]">
+              Agendar consulta
+            </a>
+          ) : (
+            <p class="rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-[17px] text-amber-900">
+              {actions.some((a) => a.icon !== "mine")
+                ? "Não há horário livre para marcar consulta pela internet agora."
+                : 'Não há horário livre para marcar pela internet agora. Toque em "Recepção", no topo, para falar com a clínica.'}
+            </p>
+          )}
+          <PortalMoreActions actions={actions} />
+          {specialties.length > 1 && (
+            <div class="flex flex-col gap-2.5 pt-3">
+              <p class="text-base font-semibold text-gray-600">Especialidades</p>
+              <ul class="flex flex-wrap gap-2">
+                {specialties.slice(0, 6).map((s) => (
+                  <li class="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-base">{s.name}</li>
+                ))}
+                {specialties.length > 6 && <li class="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-base">+ {specialties.length - 6}</li>}
+              </ul>
+            </div>
+          )}
+          {portal.professionals.length > 0 && (
+            <a href={portalHref(`${base}/medicos`, { origem })} class="flex min-h-11 items-center self-start text-[17px] font-semibold text-clinic-ink">
+              Ver médicos, convênios e valores
+            </a>
+          )}
+        </div>
+        {(located.length > 0 || portal.receptionHours) && (
+          <div class="flex flex-col gap-3.5 self-start rounded-[18px] border border-gray-200 bg-white p-4 lg:gap-[18px] lg:p-6">
+            {located.map((l) => (
+              <div class="flex items-start gap-2.5">
+                <svg aria-hidden="true" class="mt-0.5 h-[22px] w-[22px] shrink-0 text-clinic-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={pin} /><circle cx="12" cy="9.5" r="2.5" /></svg>
+                <div>
+                  {located.length > 1 && <p class="font-semibold">{l.name}</p>}
+                  <p class="text-[17px]">{l.address}</p>
+                  <a href={mapsHref(l.address!)} target="_blank" rel="noopener" class="text-base font-semibold text-clinic-ink">Ver no mapa</a>
+                </div>
+              </div>
+            ))}
+            {portal.receptionHours && (
+              <div class="flex items-start gap-2.5">
+                <svg aria-hidden="true" class="mt-0.5 h-[22px] w-[22px] shrink-0 text-clinic-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                <p class="text-[17px]">Recepção: {portal.receptionHours}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+</PortalLayout>

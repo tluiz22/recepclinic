@@ -10,6 +10,7 @@ export type { SendOutcome };
 import { rescheduleAppointment } from "../agenda/appointments";
 import { getFreeSlots, getGroupSessions, getNextAvailableDates, loadSchedulingPlan, type SchedulingPlan } from "../agenda/slots";
 import { logError } from "../../log";
+import { appointmentRecipientContact, BOOKER_COLUMNS, type RecipientContact } from "../whatsapp/recipient";
 
 // Motor de ofertas da lista de espera (Fase 25 do piloto, etapa 3), F3.7b.
 // Roda com a credencial da clínica (clinic_service): vagas e ofertas só são
@@ -468,7 +469,8 @@ type QueueRow = {
     service_id: string;
     locations: { type: string };
     services: { name: string; category: ServiceCategory };
-    patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
+    patients: { full_name: string; contacts: RecipientContact };
+    booker: RecipientContact | null;
   };
 };
 
@@ -478,7 +480,7 @@ async function loadQueue(db: DbClient, clinicId: string, opening: Opening): Prom
     await db
       .from("waitlist_entries")
       .select(
-        "id, appointments!inner ( id, status, scheduled_at, agenda_id, service_id, locations ( type ), services ( name, category ), patients ( full_name, contacts ( id, full_name, phone ) ) )",
+        `id, appointments!inner ( id, status, scheduled_at, agenda_id, service_id, locations ( type ), services ( name, category ), patients ( full_name, contacts ( id, full_name, phone ) ), ${BOOKER_COLUMNS} )`,
       )
       .eq("clinic_id", clinicId)
       .eq("status", "active")
@@ -498,11 +500,7 @@ async function loadQueue(db: DbClient, clinicId: string, opening: Opening): Prom
     patientName: row.appointments.patients.full_name,
     serviceName: row.appointments.services.name,
     serviceCategory: row.appointments.services.category,
-    contact: {
-      id: row.appointments.patients.contacts.id,
-      fullName: row.appointments.patients.contacts.full_name,
-      phone: row.appointments.patients.contacts.phone,
-    },
+    contact: appointmentRecipientContact(row.appointments),
   }));
 }
 

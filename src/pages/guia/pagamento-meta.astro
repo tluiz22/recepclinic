@@ -3,6 +3,8 @@
 // defini-lo como padrão na conta do WhatsApp da clínica, o que fazer quando não fica como padrão e a mensagem para o
 // suporte da Meta (que não atende por e-mail). Veio do rascunho de 03/nov feito para a clínica piloto
 // (claude.ai/artifact/597uX5NDYhbLdUGRi2bC12), sem os ids dela. Pública, sem login, com a marca do RecepClinic.
+// 09/nov/2026 (seção 14 do plano da recepção digital): o modelo novo da Meta (set–out/2026) separa a "conta do
+// WhatsApp" (o número) da "conta de mensagens" (templates e pagamento); nas contas novas, o cartão vai nesta.
 import PublicLayout from "../../layouts/PublicLayout.astro";
 import { GUIDE_CODE, GUIDE_H2, GUIDE_H3, GUIDE_LEAD, GUIDE_LINK, GUIDE_OL, GUIDE_P, GUIDE_SECTION, GUIDE_TITLE, GUIDE_UL } from "../../components/public/guideStyles";
 import { GUIDE_BEFORE_CONNECT_PATH } from "../../lib/guides";
@@ -105,6 +107,13 @@ Thank you,
       <li>Confira os dados da empresa pedidos na mesma tela (nome, endereço, moeda em reais e fuso de Brasília) e salve.</li>
       <li>Volte à página inicial da conta do WhatsApp e confira se não há mais nenhum alerta de "problema de pagamento" ou "conta restrita".</li>
     </ol>
+    <h3 class={GUIDE_H3}>Se aparecer "Contas de mensagens"</h3>
+    <p class={GUIDE_P}>
+      Desde setembro de 2026, a Meta está separando duas contas: a <strong>conta do WhatsApp</strong> guarda o número e a{" "}
+      <strong>conta de mensagens</strong> guarda os modelos de mensagem e o pagamento. Se no menu de Configurações aparecer{" "}
+      <strong>Contas › Contas de mensagens</strong>, o cartão é cadastrado e definido como principal lá: escolha a conta de mensagens da clínica, abra a parte de pagamento dela e siga os
+      passos 6 a 9 acima. Cartão só na conta do WhatsApp, nesse caso, não basta.
+    </p>
     <p class={GUIDE_P}>
       Atalho para o Gerenciador do WhatsApp: <a class={GUIDE_LINK} href="https://business.facebook.com/wa/manage/home/" target="_blank" rel="noopener">business.facebook.com/wa/manage/home</a>.
       Os nomes dos menus mudam de vez em quando na Meta: se algum não aparecer exatamente assim, procure por "pagamento" dentro da conta do WhatsApp.
@@ -156,7 +165,7 @@ Thank you,
     </p>
     <p class={GUIDE_P}>
       <strong>Onde achar os números:</strong> o ID do portfólio fica em Configurações › Informações do negócio; o ID da conta do WhatsApp, em Configurações ›
-      Contas › Contas do WhatsApp, ao escolher a conta. O suporte do RecepClinic também pode informar os dois.
+      Contas › Contas do WhatsApp, ao escolher a conta (com "Contas de mensagens" no menu, use o ID da conta de mensagens). O suporte do RecepClinic também pode informar os dois.
     </p>
     <pre class={GUIDE_CODE}>{messagePt}</pre>
     <p class={GUIDE_P}>Se o atendimento for em inglês:</p>

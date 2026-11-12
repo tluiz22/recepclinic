@@ -98,3 +98,12 @@ describe("apresentação do menu principal (cliente, 04/nov/2026)", () => {
     expect(rows.map((r) => r.description)).toEqual(Object.values(t.MAIN_MENU_DESCRIPTIONS));
   });
 });
+
+describe("Informações › Convênios (F3, pendência da F1)", () => {
+  it("só convênio diz que não atende particular", async () => {
+    const { insuranceInfoText } = await import("./texts");
+    expect(insuranceInfoText("Dra. Ana", ["Unimed"], null)).toBe("Convênios atendidos por *Dra. Ana*: Unimed.");
+    expect(insuranceInfoText("Dra. Ana", ["Unimed"], null, false)).toBe("Convênios atendidos por *Dra. Ana*: Unimed. Não atende particular.");
+    expect(insuranceInfoText("Dra. Ana", [], "Traga a carteirinha.")).toBe("*Dra. Ana* atende só particular.\n\nTraga a carteirinha.");
+  });
+});

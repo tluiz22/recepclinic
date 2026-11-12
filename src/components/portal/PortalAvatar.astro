@@ -1,0 +1,25 @@
+---
+// Foto do profissional (RD13: sempre que houver no cadastro) ou as iniciais.
+import { initialsOf } from "../../lib/portal";
+
+interface Props {
+  name: string;
+  photoUrl: string | null;
+  size?: "sm" | "md" | "lg";
+  /** No celular, sobre o fundo na cor clara da clínica: o círculo branco, para aparecer (no computador o fundo é branco). */
+  onTint?: boolean;
+}
+
+const { name, photoUrl, size = "md", onTint = false } = Astro.props;
+const box = { sm: "h-11 w-11 text-base", md: "h-14 w-14 text-xl", lg: "h-16 w-16 text-[22px] sm:h-[72px] sm:w-[72px]" }[size];
+---
+
+{
+  photoUrl ? (
+    <img src={photoUrl} alt={`Foto de ${name}`} loading="lazy" decoding="async" class={`${box} shrink-0 rounded-full bg-gray-100 object-cover`} />
+  ) : (
+    <span aria-hidden="true" class={`${box} flex shrink-0 items-center justify-center rounded-full ${onTint ? "bg-white sm:bg-clinic-tint" : "bg-clinic-tint"} font-display font-bold text-clinic-ink`}>
+      {initialsOf(name)}
+    </span>
+  )
+}

@@ -6,6 +6,7 @@ import { isPlatformStaff } from "./lib/data/clinicChoice";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
 import { recordSystemError } from "./lib/data/platform";
 import { platformEnv } from "./lib/env";
+import { isPortalHost, portalRewrite } from "./lib/portal";
 import { logError, setErrorSink } from "./lib/log";
 import { withSecurityHeaders } from "./lib/securityHeaders";
 
@@ -149,4 +150,12 @@ const access = defineMiddleware(async (context, next) => {
 // redirecionamentos e erros do controle de acesso (F9.1).
 const securityHeaders = defineMiddleware(async (_context, next) => withSecurityHeaders(await next()));
 
-export const onRequest = sequence(securityHeaders, access);
+// Portal de agendamento (recepção digital, F2a): no endereço agendar.recepclinic.com.br (e no agendar-teste. do
+// staging), "/{clínica}/…" é a página /portal/{clínica}/…; o painel e as rotas /api não abrem nesse endereço.
+const portalHost = defineMiddleware((context, next) => {
+  if (context.isPrerendered || !isPortalHost(context.url.hostname)) return next();
+  const path = portalRewrite(context.url.pathname);
+  return path ? context.rewrite(`${path}${context.url.search}`) : next();
+});
+
+export const onRequest = sequence(securityHeaders, portalHost, access);

@@ -3,6 +3,7 @@ import { hasFeature } from "../features";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 import { cancelAppointments, listAppointmentsBetween, type Appointment } from "./appointments";
 import { createRebookingLink, type BookingLink } from "./links";
+import { createPortalRebookingLink, type PortalLink } from "../portal/links";
 import { logError } from "../../log";
 import { recessReturnDate, renderRecessMessage } from "../../recess";
 
@@ -26,7 +27,8 @@ export type ScheduleBlock = {
   removedAt: Date | null;
 };
 
-export type CanceledWithLink = { appointment: Appointment; rebookingLink: BookingLink | null };
+/** O link de remarcação do aviso: o do portal (F3-3) quando ele cobre o atendimento, senão o de /agendar. */
+export type CanceledWithLink = { appointment: Appointment; rebookingLink: BookingLink | null; portalLink: PortalLink | null };
 
 const COLUMNS = "id, agenda_id, starts_at, ends_at, reason, recess_message, removed_at";
 
@@ -100,15 +102,17 @@ async function cancelWithLinks(
   const result: CanceledWithLink[] = [];
   for (const appointment of canceled) {
     let rebookingLink: BookingLink | null = null;
+    let portalLink: PortalLink | null = null;
     if (withLinks) {
       try {
-        rebookingLink = await createRebookingLink(db, clinicId, appointment, now);
+        portalLink = await createPortalRebookingLink(db, clinicId, appointment, now);
+        if (!portalLink) rebookingLink = await createRebookingLink(db, clinicId, appointment, now);
       } catch (error) {
         // Melhor esforço, como no piloto: falha num link não desfaz os cancelamentos.
         logError("bloqueio: não gerou link de remarcação", error, { clinica: clinicId, atendimento: appointment.id });
       }
     }
-    result.push({ appointment, rebookingLink });
+    result.push({ appointment, rebookingLink, portalLink });
   }
   return result;
 }
