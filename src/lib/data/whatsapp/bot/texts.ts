@@ -92,7 +92,6 @@ export const LEAN_MENU = [
 export const LEAN_BOOK_DESCRIPTION_NO_EXAM = "Consulta ou retorno";
 export type LeanMenuId = (typeof LEAN_MENU)[number]["id"];
 
-/** BE-2: o 1º menu da conversa, com o primeiro nome quando o número é cadastrado (cliente, 08/nov/2026). */
 /**
  * Boas-vindas do menu principal (cliente, 12/nov/2026): diz que é o contato oficial de agendamento e o que o paciente
  * consegue fazer. "Exames" só com exame na clínica; "Falar com a recepção" só quando a recepção atende pelo app.
