@@ -14,6 +14,7 @@
 | [Nota fiscal (NFS-e)](iniciativas/nota-fiscal/status.md) | N1–N5 na branch; validação pendente; N6 bloqueada | `nota-fiscal` (10 à frente, 14 atrás da `main`) | Asaas (BaaS), contador, advogado | Decidir com o cliente se atualiza com a `main` |
 | [Faturamento SaaS (Asaas)](iniciativas/faturamento-asaas/status.md) | Código na `main` (F12.1–F12.8) | — (juntada) | Asaas: reanálise do BaaS e tokenização do cartão | Conferir tokenização antes do 1º contrato no cartão |
 | [Biomedical](iniciativas/biomedical/status.md) | Proposta enviada em 09/nov | — | Portal, F3, F5, F6 no ar | Parada até a F3f ir à produção |
+| [Comprovantes no WhatsApp](iniciativas/comprovantes/status.md) | Código na `main` (12/nov); sem migração; falta publicar no staging e o cliente validar | — (juntada) | — | Push no staging e teste com foto "pix" |
 | [Painel de pendências do Suporte](iniciativas/painel-suporte/status.md) | Decidido; nada implementado | — | — | Só quando o cliente pedir |
 
 ## Pendências avulsas
