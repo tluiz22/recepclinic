@@ -12,9 +12,10 @@ export const metricas = {
     ],
     // metrics_activity (booking_channel; created_at no período; sem agenda_import_id).
     marcadosPor: [
-      { termo: "WhatsApp (bot)", texto: "marcados pelo bot ou pelo link de agendamento que ele manda." },
-      { termo: "Painel (equipe)", texto: "marcados pela equipe." },
-      { termo: "Conta", texto: "pela data da marcação, mesmo se cancelados depois; a agenda carregada na implantação fica de fora." },
+      { termo: "Recepção (equipe)", texto: "marcados pela equipe." },
+      { termo: "WhatsApp", texto: "marcados pelo bot ou pelo link dele." },
+      { termo: "Link do portal", texto: "marcados pelo link da clínica ou do profissional. Embaixo, de onde veio o link." },
+      { termo: "Conta", texto: "pela data da marcação, mesmo se cancelados depois; sem a agenda importada." },
     ],
     // DigitalFlowRow em src/lib/data/botFunnel.ts (concluded / finished; worstStep = a maior queda entre etapas seguidas).
     porOperacao: [

@@ -34,6 +34,38 @@ export type ActivityDay = {
   canceledMass: number;
 };
 
+// F6: de onde vêm as marcações. Recepção, WhatsApp e link do portal; do link, a entrada e o lugar onde ele estava.
+export type OriginRow = { origin: "reception" | "whatsapp" | "portal_link"; entry: string | null; place: string | null; total: number };
+
+export type OriginSummary = {
+  total: number;
+  reception: number;
+  whatsapp: number;
+  portalLink: number;
+  /** Só as entradas e os lugares com valor (maior primeiro). */
+  entries: { key: string; total: number }[];
+  places: { key: string; total: number }[];
+  placeUnknown: number;
+};
+
+export function summarizeOrigins(rows: OriginRow[]): OriginSummary {
+  const sum = (f: (r: OriginRow) => boolean) => rows.filter(f).reduce((t, r) => t + r.total, 0);
+  const group = (field: "entry" | "place") => {
+    const m = new Map<string, number>();
+    for (const r of rows) if (r.origin === "portal_link" && r[field]) m.set(r[field]!, (m.get(r[field]!) ?? 0) + r.total);
+    return [...m].map(([key, total]) => ({ key, total })).filter((x) => x.total > 0).sort((a, b) => b.total - a.total);
+  };
+  return {
+    total: sum(() => true),
+    reception: sum((r) => r.origin === "reception"),
+    whatsapp: sum((r) => r.origin === "whatsapp"),
+    portalLink: sum((r) => r.origin === "portal_link"),
+    entries: group("entry"),
+    places: group("place"),
+    placeUnknown: sum((r) => r.origin === "portal_link" && !r.place),
+  };
+}
+
 export type AttendanceRow = {
   day: string;
   serviceId: string;
@@ -96,6 +128,12 @@ export async function listActivity(db: DbClient, clinicId: string, scope: Perfor
     canceledClinic: n(r.canceled_clinic),
     canceledMass: n(r.canceled_mass),
   }));
+}
+
+export async function listOrigins(db: DbClient, clinicId: string, scope: PerformanceScope): Promise<OriginRow[]> {
+  if (!scope.agendaIds.length) return [];
+  const rows = unwrap(await db.rpc("metrics_origin", args(clinicId, scope)), "Métricas: origem das marcações");
+  return rows.map((r) => ({ origin: r.origin as OriginRow["origin"], entry: r.entry, place: r.place, total: n(r.total) }));
 }
 
 export async function listAttendance(db: DbClient, clinicId: string, scope: PerformanceScope, now: Date): Promise<AttendanceRow[]> {

@@ -2971,6 +2971,11 @@ isOneToOne: false
               "canceled": number,"completed": number,"day": string,"location_id": string,"location_name": string,"no_show": number,"scheduled": number,"service_category": Database["public"]['Enums']["service_category"],"service_id": string,"service_name": string,"unregistered": number,"upcoming": number
             }[]
                            },
+"metrics_origin":
+{ Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_service_ids"?: (string)[],"p_start": string }; Returns: {
+              "entry": string | null,"origin": string,"place": string | null,"total": number
+            }[]
+                           },
 "metrics_bot_sessions":
 { Args: { "p_clinic_id": string,"p_end": string,"p_start": string }; Returns: {
               "appointment_id": string,"appointment_status": Database["public"]['Enums']["appointment_status"],"contact_id": string,"contact_phone": string,"flow": string,"in_period": boolean,"last_at": string,"last_failure": Json,"session_id": string,"started_at": string,"steps": Json

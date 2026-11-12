@@ -13,9 +13,11 @@ import {
   byServiceAndLocation,
   listActivity,
   listAttendance,
+  listOrigins,
   listReminderOutcomes,
   listReturnOpportunities,
   listReturnRights,
+  summarizeOrigins,
   summarizePerformance,
   type ActivityDay,
   type AttendanceRow,
@@ -88,7 +90,8 @@ const noCompareReason =
   !compare ? null : clinicStart && clinicStart > prevRange.from ? `Sem comparação: a clínica começou a usar o RecepClinic em ${formatCalendarDate(clinicStart, "dd/MM/yyyy")}.` : null;
 const comparing = compare && !noCompareReason;
 
-const [activity, attendance, reminders, rights, opportunities, prevActivity, prevAttendance, prevReminders] = await Promise.all([
+const [origins, activity, attendance, reminders, rights, opportunities, prevActivity, prevAttendance, prevReminders] = await Promise.all([
+  safe("origem das marcações", () => listOrigins(db, clinic.clinicId, current)),
   safe("agendamentos", () => listActivity(db, clinic.clinicId, current)),
   safe("comparecimento", () => listAttendance(db, clinic.clinicId, current, now)),
   safe("lembretes", () => listReminderOutcomes(db, clinic.clinicId, current, now)),
@@ -102,6 +105,9 @@ const [activity, attendance, reminders, rights, opportunities, prevActivity, pre
 const summarize = (a: ActivityDay[] | null, t: AttendanceRow[] | null, r: ReminderRow[] | null, rr: ReturnRight[] | null) =>
   summarizePerformance({ activity: a ?? [], attendance: t ?? [], reminders: r ?? [], returnRights: rr ?? [] });
 const s = summarize(activity, attendance, reminders, rights);
+const o = origins ? summarizeOrigins(origins) : null;
+const ENTRY_LABEL: Record<string, string> = { clinic_link: "Link da clínica", professional_link: "Link do profissional" };
+const PLACE_LABEL: Record<string, string> = { instagram: "Instagram", site: "Site", google: "Google", message: "Mensagem", poster: "Cartaz", other: "Outro lugar" };
 const p = comparing ? summarize(prevActivity, prevAttendance, prevReminders, null) : null;
 
 const isEmpty = activity !== null && attendance !== null && s.created.total === 0 && s.rescheduled.total === 0 && s.canceled.total === 0 && (attendance ?? []).length === 0;
@@ -305,32 +311,53 @@ import { metricas } from "../../../lib/ajuda/metricas";
           <HelpTip subject="De onde vêm as marcações" text={metricas.dicas.marcadosPor} id="origem">
             <h2 class={h2}>De onde vêm as marcações</h2>
           </HelpTip>
-          {activity === null ? (
+          {activity === null || origins === null ? (
             <p role="alert" class="text-danger">{failed("Origem das marcações")}</p>
-          ) : s.created.total === 0 ? (
+          ) : (o?.total ?? 0) === 0 ? (
             <p class={sub}>Nenhum agendamento criado no período.</p>
           ) : (
             <>
-              <p class={sub}>Dos {s.created.total} agendamentos criados no período.</p>
-              <div class="flex h-7 overflow-hidden rounded-md" role="img" aria-label={`WhatsApp ${s.created.whatsapp}, painel ${s.created.panel}`}>
-                <div class="bg-whatsapp" style={`width:${(s.created.whatsapp / s.created.total) * 100}%`} />
-                <div class="bg-line-strong" style={`width:${(s.created.panel / s.created.total) * 100}%`} />
-              </div>
-              <table class="w-full text-[15px]">
-                <caption class="sr-only">Origem das marcações</caption>
-                <tbody>
-                  <tr class="border-b border-[#e6ecea]">
-                    <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px] bg-whatsapp" />WhatsApp (bot)</span></th>
-                    <td class="py-2 text-right font-bold tabular-nums">{s.created.whatsapp}</td>
-                    <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(s.created.whatsapp / s.created.total)}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px] bg-line-strong" />Painel (equipe)</span></th>
-                    <td class="py-2 text-right font-bold tabular-nums">{s.created.panel}</td>
-                    <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(s.created.panel / s.created.total)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <p class={sub}>Dos {o?.total} agendamentos criados no período.</p>
+              {o && (
+                <>
+                  <div class="flex h-7 overflow-hidden rounded-md" role="img" aria-label={`Recepção ${o.reception}, WhatsApp ${o.whatsapp}, link do portal ${o.portalLink}`}>
+                    <div class="bg-line-strong" style={`width:${(o.reception / o.total) * 100}%`} />
+                    <div class="bg-whatsapp" style={`width:${(o.whatsapp / o.total) * 100}%`} />
+                    <div class="bg-brand" style={`width:${(o.portalLink / o.total) * 100}%`} />
+                  </div>
+                  <table class="w-full text-[15px]">
+                    <caption class="sr-only">Origem das marcações</caption>
+                    <tbody>
+                      {[
+                        { label: "Recepção (equipe)", n: o.reception, color: "bg-line-strong" },
+                        { label: "WhatsApp", n: o.whatsapp, color: "bg-whatsapp" },
+                        { label: "Link do portal", n: o.portalLink, color: "bg-brand" },
+                      ].filter((r) => r.n > 0).map((r) => (
+                        <tr class="border-b border-[#e6ecea] last:border-0">
+                          <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class={`h-3 w-3 rounded-[3px] ${r.color}`} />{r.label}</span></th>
+                          <td class="py-2 text-right font-bold tabular-nums">{r.n}</td>
+                          <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(r.n / o.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {o.portalLink > 0 && (
+                    <div class="mt-3 flex flex-col gap-3 border-t border-[#e6ecea] pt-3">
+                      <h3 class="text-[14.5px] font-semibold text-ink-mid">De onde veio o link do portal</h3>
+                      {o.entries.length > 0 && (
+                        <p class={sub} data-origem="entrada">
+                          {o.entries.map((e) => `${ENTRY_LABEL[e.key] ?? e.key}: ${e.total}`).join(" · ")}
+                        </p>
+                      )}
+                      {(o.places.length > 0 || o.placeUnknown > 0) && (
+                        <p class={sub} data-origem="lugar">
+                          {[...o.places.map((e) => `${PLACE_LABEL[e.key] ?? e.key}: ${e.total}`), ...(o.placeUnknown > 0 ? [`Lugar não informado: ${o.placeUnknown}`] : [])].join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
           {activity !== null && (
