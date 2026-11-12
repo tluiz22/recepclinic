@@ -39,3 +39,33 @@ export async function listOpenBirthdateChecks(db: DbClient, clinicId: string, pa
 export async function resolveBirthdateCheck(db: DbClient, checkId: string, action: "corrected" | "kept"): Promise<void> {
   unwrap(await db.rpc("resolve_portal_birthdate_check", { p_check_id: checkId, p_action: action }), "Data a conferir");
 }
+
+export type BirthdateCheckToConfirm = BirthdateCheck & { patientName: string };
+
+/** Meu dia (F5b): as pendências abertas da clínica, da mais antiga para a mais recente, com o nome do paciente. */
+export async function listBirthdateChecksToConfirm(db: DbClient, clinicId: string): Promise<BirthdateCheckToConfirm[]> {
+  const rows = unwrap(
+    await db
+      .from("portal_birthdate_checks")
+      .select("id, patient_id, registered_birthdate, informed_birthdate, created_at, patients ( full_name )")
+      .eq("clinic_id", clinicId)
+      .is("resolved_at", null)
+      .order("created_at", { ascending: true }),
+    "Datas a conferir",
+  ) as unknown as {
+    id: string;
+    patient_id: string;
+    registered_birthdate: string;
+    informed_birthdate: string;
+    created_at: string;
+    patients: { full_name: string } | null;
+  }[];
+  return rows.map((row) => ({
+    id: row.id,
+    patientId: row.patient_id,
+    registered: row.registered_birthdate,
+    informed: row.informed_birthdate,
+    createdAt: new Date(row.created_at),
+    patientName: row.patients?.full_name ?? "Paciente",
+  }));
+}

@@ -128,3 +128,74 @@ export async function getMeuDiaCount(
   ]);
   return parts.reduce((total, n) => total + n, 0);
 }
+
+/**
+ * Meu dia, tabela "Por profissional" (F5b; cliente, 12/nov/2026): uma linha por agenda ativa, com os atendimentos de
+ * hoje (sem cancelados), os que faltam confirmar, os cancelados de hoje e as datas de nascimento a conferir do portal
+ * (a pendência vai para a agenda da consulta marcada). Só as agendas que o login vê (RLS).
+ */
+export type ProfessionalDayRow = {
+  agendaId: string;
+  name: string;
+  specialty: string | null;
+  today: number;
+  toConfirm: number;
+  canceled: number;
+  toCheck: number;
+};
+
+type ProfessionalDayAppointment = Omit<TodayRow, "services"> & { agenda_id: string };
+
+/** Junta as contagens por agenda; sem atendimento nem pendência, a linha fica com zeros (ordem alfabética). */
+export function professionalDayRows(
+  agendas: { id: string; name: string; specialty: string | null }[],
+  appointments: ProfessionalDayAppointment[],
+  checkAgendaIds: string[],
+): ProfessionalDayRow[] {
+  const rows = new Map<string, ProfessionalDayRow>(
+    agendas.map((a) => [a.id, { agendaId: a.id, name: a.name, specialty: a.specialty, today: 0, toConfirm: 0, canceled: 0, toCheck: 0 }]),
+  );
+  for (const row of appointments) {
+    const line = rows.get(row.agenda_id);
+    if (!line) continue;
+    if (row.status === "canceled") {
+      line.canceled += 1;
+      continue;
+    }
+    line.today += 1;
+    if (todayGroup(row) === "to_confirm") line.toConfirm += 1;
+  }
+  for (const agendaId of checkAgendaIds) {
+    const line = rows.get(agendaId);
+    if (line) line.toCheck += 1;
+  }
+  return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
+export async function getProfessionalDay(db: DbClient, clinicId: string, timeZone: string, now: Date = new Date()): Promise<ProfessionalDayRow[]> {
+  const today = dayBounds(todayIn(timeZone, now), timeZone);
+  const [agendas, appointments, checks] = await Promise.all([
+    unwrap(
+      await db.from("agendas").select("id, name, professionals ( specialty )").eq("clinic_id", clinicId).eq("is_active", true),
+      "Agendas do Meu dia",
+    ) as unknown as { id: string; name: string; professionals: { specialty: string | null } | null }[],
+    unwrap(
+      await db
+        .from("appointments")
+        .select("agenda_id, status, patient_confirmed_at, reminder_response")
+        .eq("clinic_id", clinicId)
+        .gte("scheduled_at", today.start.toISOString())
+        .lt("scheduled_at", today.end.toISOString()),
+      "Atendimentos de hoje por agenda",
+    ) as unknown as ProfessionalDayAppointment[],
+    unwrap(
+      await db.from("portal_birthdate_checks").select("appointment_id, appointments ( agenda_id )").eq("clinic_id", clinicId).is("resolved_at", null),
+      "Datas a conferir",
+    ) as unknown as { appointment_id: string | null; appointments: { agenda_id: string } | null }[],
+  ]);
+  return professionalDayRows(
+    agendas.map((a) => ({ id: a.id, name: a.name, specialty: a.professionals?.specialty ?? null })),
+    appointments,
+    checks.flatMap((c) => (c.appointments ? [c.appointments.agenda_id] : [])),
+  );
+}
