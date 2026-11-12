@@ -4,7 +4,7 @@
 > git; **Doc** = só o que o documento afirma; **A confirmar** = depende do cliente. Detalhe de cada frente: `status.md`.
 
 ## Ambientes
-- **Produção** (`app.recepclinic.com.br`, branch `producao` = `1ebfc87d`, 12/nov): com a F3f e a F6. Fluxo: `producao.md`.
+- **Produção** (`app.recepclinic.com.br`, branch `producao` = `cd60a03b`, 12/nov): com a F3f e a F6. Fluxo: `producao.md`.
 - **Staging** (`teste.recepclinic.com.br`) = `main`: produção + vários responsáveis (VR) + F3f + F6 (12/nov). Migrações até `20270120140000`.
 
 ## Iniciativas abertas
