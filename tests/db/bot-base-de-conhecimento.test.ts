@@ -247,8 +247,9 @@ describe("\"Você quis dizer…?\"", () => {
     await reset(phone);
     const reply = await say(phone, "não vou poder ir");
     const none = await say(phone, { id: optionId(reply, "Nenhuma") });
-    expect(none[0].body).toContain("Não entendi");
-    expect(none.at(-1)!.body).toBe(MENU);
+    // "Não entendi" e o menu numa mensagem só (cliente, 12/nov/2026).
+    expect(none).toHaveLength(1);
+    expect(none[0]).toMatchObject({ kind: "list", body: "Não entendi sua resposta 🙏 Escolha uma das opções abaixo." });
   });
 });
 
