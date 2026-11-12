@@ -1105,7 +1105,18 @@ recebia "não está mais ativo". Teste de banco `varios-responsaveis-bot.test.ts
 - Jornada do bot (regras gerais) e artigo do WhatsApp na Central. Testes: `bot-enxuto.test.ts` (+5), `bot-base-de-conhecimento`
   (agradecimento depois do menu fica sem resposta). Unidade 1217, banco 1137, `astro check` sem erros.
 
-**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validação pendente). Depois: E5 (portal, BE-5/BE-6),
+**E5 feita (11/nov/2026), portal:**
+- **BE-5 início:** ícone no "Agendar consulta"; "Minhas consultas" com calendar-clock; novo botão "Profissionais e valores"
+  (Especialidades, valores e convênios) junto das outras ações (só em clínica com mais de um profissional); sai o link pequeno
+  "Ver médicos…". Botão "Recepção" do topo com o ícone headset (era o do WhatsApp).
+- **BE-6 `/medicos?lista=1`:** vitrine "Profissionais, valores e convênios" com ícone users, "‹ Início", sem barra de passos nem
+  resumo ao lado; filtro novo de **Especialidade** (filtra ao escolher) ao lado de "Atende meu convênio"; "Agendar ›" no rodapé do
+  cartão (e na lista compacta de 6+). `PortalFlow.directory` (`lista=1`) segue pelos cartões, e o Voltar dos passos seguintes
+  volta à vitrine; a especialidade não entra nos passos. Sem `lista` e com `esp` (vindo da P2): tela de antes.
+- Testes: unidade 1218 (+1 em `portal.test.ts`), `astro check` sem erros; Playwright em 390: vitrine e filtro de especialidade, sem
+  rolagem lateral. Banco 1137 (suíte inteira antes da E5). Sem captura da Central afetada.
+
+**Retomar daqui:** branch `bot-enxuto` (só local): E1, E2+E3 (validadas), E4 (validada), E5 (feita, validação pendente). Depois:
 E6 (confirmação, migração), E7 (lembrete novo), E8 (fechamento). Captura `config-mensagens` na fila, sem autorização ainda.
 
 ## 16. F5a: agenda da clínica grande (10/nov/2026, branch `agenda-colunas`)

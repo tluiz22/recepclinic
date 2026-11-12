@@ -294,6 +294,8 @@ export type PortalFlow = {
   name: string | null;
   place: PortalPlaceParam | null;
   where: PortalWhere | null;
+  /** Veio da página "Profissionais e valores" (sem a barra de passos). */
+  directory: boolean;
 };
 
 const ID = /^[a-z0-9-]{1,64}$/i;
@@ -308,6 +310,7 @@ export function readFlow(params: URLSearchParams): PortalFlow {
     name: params.get("nome")?.trim().slice(0, 60) || null,
     place: readPlace(params),
     where: params.get("onde") === WHERE_PARAM.home ? "home" : params.get("onde") === WHERE_PARAM.clinic ? "clinic" : null,
+    directory: params.get("lista") === "1",
   };
 }
 
@@ -318,11 +321,12 @@ export const flowParams = (flow: PortalFlow) => ({
   nome: flow.name,
   origem: flow.place,
   onde: flow.where ? WHERE_PARAM[flow.where] : null,
+  lista: flow.directory ? "1" : null,
 });
 
 /** A lista de médicos com a especialidade, o filtro e o nome de antes. */
-export const doctorsHref = (base: string, flow: Pick<PortalFlow, "specialty" | "plan" | "name"> & { place?: PortalPlaceParam | null }) =>
-  portalHref(`${base}/medicos`, { esp: flow.specialty, conv: flow.plan, nome: flow.name, origem: flow.place });
+export const doctorsHref = (base: string, flow: Pick<PortalFlow, "specialty" | "plan" | "name"> & { place?: PortalPlaceParam | null; directory?: boolean }) =>
+  portalHref(`${base}/medicos`, { esp: flow.specialty, conv: flow.plan, nome: flow.name, origem: flow.place, lista: flow.directory ? "1" : null });
 
 /**
  * Voltar da primeira tela do médico (P5, ou P6 quando a P5 é pulada): a lista de médicos, a especialidade ou o
@@ -347,7 +351,7 @@ export function changeProfessionalHref(base: string, flow: PortalFlow): string |
 /** Passos do caminho pelo médico: especialidade e lista só se o paciente passou por elas. */
 export const professionalSteps = (flow: PortalFlow, modality: boolean, viaBotLink = false, home = false) =>
   portalSteps({
-    specialty: flow.from !== null && flow.specialty !== null,
+    specialty: flow.from !== null && flow.specialty !== null && !flow.directory,
     professional: flow.from === "medicos" || flow.from === "exames",
     modality,
     phone: !viaBotLink,
