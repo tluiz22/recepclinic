@@ -6,6 +6,7 @@ import "../../../../styles/global.css";
 import QRCode from "qrcode";
 import { createUserClient } from "../../../../lib/data/clients";
 import { loadPortalSettings } from "../../../../lib/data/config/portal";
+import { ownSettingsOnly } from "../../../../lib/clinicAccess";
 import { portalLinksOf } from "../../../../lib/data/config/portalLinks";
 
 const clinic = Astro.locals.clinic!;
@@ -14,9 +15,10 @@ const settings = await loadPortalSettings(db, clinic.clinicId);
 const links = portalLinksOf(Astro.url, settings);
 const key = Astro.url.searchParams.get("p") ?? "clinica";
 const link = key === "clinica" ? links.clinic : links.professionals.get(key);
-if (!link) return Astro.redirect("/admin/configuracoes/portal");
+if (!link || (ownSettingsOnly(clinic) && key !== clinic.ownProfessionalId)) return Astro.redirect("/admin/dashboard?aviso=acesso_negado");
 const professional = key === "clinica" ? null : settings.professionals.find((p) => p.id === key);
 const svg = await QRCode.toString(link.posterUrl, { type: "svg", errorCorrectionLevel: "M", margin: 0 });
+const backHref = ownSettingsOnly(clinic) ? `/admin/configuracoes/profissionais/${clinic.ownProfessionalId}` : "/admin/configuracoes/portal";
 const shortUrl = link.url.replace(/^https?:\/\//, "");
 ---
 
@@ -30,7 +32,7 @@ const shortUrl = link.url.replace(/^https?:\/\//, "");
   </head>
   <body class="bg-canvas text-ink print:bg-white">
     <div class="mx-auto flex max-w-[210mm] items-center justify-between gap-3 px-4 py-4 print:hidden">
-      <a href="/admin/configuracoes/portal" class="text-[15px] font-semibold text-brand underline">Voltar</a>
+      <a href={backHref} class="text-[15px] font-semibold text-brand underline">Voltar</a>
       <button type="button" data-print class="rounded-lg bg-brand px-5 py-2.5 text-[15px] font-bold text-white">Imprimir</button>
     </div>
     <main class="mx-auto flex min-h-[297mm] w-full max-w-[210mm] flex-col items-center justify-center gap-[12mm] bg-white px-[18mm] py-[20mm] text-center shadow-sm print:min-h-0 print:shadow-none">

@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import QRCode from "qrcode";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { loadPortalSettings } from "../../../../../lib/data/config/portal";
+import { ownSettingsOnly } from "../../../../../lib/clinicAccess";
 import { portalLinksOf } from "../../../../../lib/data/config/portalLinks";
 
 // QR code do link (F3d; R7 "QR code só pelo botão"): o link do cartaz (`?de=cartaz`) da clínica (`p=clinica`) ou de um
@@ -11,6 +12,8 @@ export const GET: APIRoute = async ({ request, cookies, locals, url }) => {
   const settings = await loadPortalSettings(db, locals.clinic!.clinicId);
   const links = portalLinksOf(url, settings);
   const key = url.searchParams.get("p") ?? "clinica";
+  // Profissional com login: só o QR do próprio link (F5b).
+  if (ownSettingsOnly(locals.clinic!) && key !== locals.clinic!.ownProfessionalId) return new Response("Sem acesso.", { status: 403 });
   const link = key === "clinica" ? links.clinic : links.professionals.get(key);
   if (!link) return new Response("Link não encontrado.", { status: 404 });
   const options = { errorCorrectionLevel: "M" as const, margin: 2 };
