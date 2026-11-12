@@ -4,7 +4,7 @@ import { confirmBookingLink, loadBookingPage, logBookingPageStep, parseSlotChoic
 import { isClinicSuspended } from "../../../../lib/data/config/brand";
 import { resolveClinicByBookingLink } from "../../../../lib/data/platform";
 import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
-import { sendAppointmentNotice } from "../../../../lib/data/whatsapp/notices";
+import { confirmationEnabled, sendAppointmentNotice } from "../../../../lib/data/whatsapp/notices";
 import { parsePublicId } from "../../../../lib/publicId";
 
 // Confirma o horário escolhido em /agendar (F5.2). Toda volta com erro é uma
@@ -38,6 +38,10 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   const page = await loadBookingPage(db, clinicId, token);
   await logBookingPageStep(db, clinicId, page, "confirmed", { appointment_id: result.appointmentId });
   const sender = await clinicSenderFor(clinicId, request.url);
-  await sendAppointmentNotice(db, clinicId, result.appointmentId, page.link.mode === "reschedule" ? "reschedule" : "confirmation", sender);
+  const reschedule = page.link.mode === "reschedule";
+  // BE-9: a confirmação respeita "Marcadas pelo portal" em Lembretes; a remarcação sempre sai.
+  if (reschedule || (await confirmationEnabled(db, clinicId, "portal"))) {
+    await sendAppointmentNotice(db, clinicId, result.appointmentId, reschedule ? "reschedule" : "confirmation", sender);
+  }
   return redirect(pageUrl, 303);
 };
