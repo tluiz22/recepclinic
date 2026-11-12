@@ -15,4 +15,4 @@
   Sem migração. Branch `meu-dia-f5b`. **Feito na branch (12/nov), aguardando validação do cliente:** Meu dia (com "Conferir data");
   Conversas (aguardando primeiro, botão "Aguardando" com contador, "Com quem ele já consulta" com o próximo horário livre, só com
   um paciente no contato); Meu perfil do profissional (link, copiar, QR e cartaz do próprio link, só com Portal); a barra do celular já existia.
-  Falta: o cliente validar e decidir onde a recepção pega o link da clínica (hoje só Configurações › Portal, do Administrador).
+  A recepção **não gera o link por enquanto** (cliente, 12/nov): o link da clínica fica só em Configurações › Portal (Administrador) e o do profissional no Meu perfil. Falta: o cliente validar.
