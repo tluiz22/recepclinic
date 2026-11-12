@@ -10,6 +10,6 @@
 - **Branch:** nenhuma aberta (`bot-enxuto` juntada). revisto até: `bddd483d`.
 - **Próxima ação:** roteiro de validação da F3f (menu e links do bot, portal com Profissionais e valores, Confirmação ao
   paciente em Lembretes). Clínica de teste: Exemplo Saúde, 12 profissionais (`scripts/clinica-exemplo-grande.mjs`).
-- **F5b (Meu dia, 12/nov, decisões do cliente):** sem atalho do link; tabela "Por profissional" com busca por nome e filtro de
-  especialidade; "Cancelamentos" = cancelados de hoje; "Conferir" = datas de nascimento a conferir (coluna conta, linha em
-  "Precisa de você" lista com "Conferir data"). Sem migração. Branch `meu-dia-f5b`.
+- **F5b (Meu dia, 12/nov, decisões do cliente):** sem atalho do link; **sem a tabela "Por profissional"** (a informação já está no
+  Relatório do dia); "Precisa de você" ganha a linha "Conferir data" (data de nascimento diferente no portal, abre a ficha).
+  Sem migração. Branch `meu-dia-f5b`.
