@@ -1,0 +1,82 @@
+---
+// Sistema › Portal (F6, parte 3; cliente, 12/nov/2026): os bloqueios por excesso de tentativas que estão valendo agora, de
+// todas as clínicas, com o botão de liberar (com confirmação). Só o Suporte (menu Sistema).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import { CARD } from "../../../components/admin/config/formStyles";
+import { formatInstant } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { blockKindLabel, listActiveBlocks, type ActiveBlock } from "../../../lib/data/portalBlocks";
+import { logError } from "../../../lib/log";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const now = new Date();
+let blocks: ActiveBlock[] | null = null;
+let truncated = false;
+try {
+  ({ blocks, truncated } = await listActiveBlocks(db, { now }));
+} catch (error) {
+  logError("sistema/portal: bloqueios não carregaram", error);
+}
+const at = (b: ActiveBlock, date: Date) => formatInstant(date, b.timezone, "dd/MM 'às' HH:mm");
+---
+
+<AdminLayout title="Portal" platform>
+  <SystemHeader title="Portal" subtitle="Bloqueios por excesso de tentativas que estão valendo agora, em todas as clínicas." />
+  <FlashMessage />
+
+  <div class="mt-5 flex flex-col gap-3">
+    {
+      blocks === null ? (
+        <div role="alert" class={`${CARD} px-4 py-4 text-danger`}>
+          Não foi possível carregar os bloqueios. <a href="/admin/sistema/portal" class="font-semibold underline">Tentar de novo</a>
+        </div>
+      ) : blocks.length === 0 ? (
+        <div class={`${CARD} px-4 py-5`}>
+          <h2 id="sem-bloqueios" class="font-display text-lg font-bold text-ink">Nenhum bloqueio agora</h2>
+          <p class="mt-1 text-sm text-ink-soft">Quando o portal travar um celular, um endereço ou uma sessão por tentativas demais, aparece aqui até o bloqueio vencer.</p>
+        </div>
+      ) : (
+        <>
+          <p class="text-sm text-ink-soft">
+            {blocks.length} {blocks.length === 1 ? "bloqueio ativo" : "bloqueios ativos"}. Liberar não apaga o histórico: fica no registro do Suporte.
+            {truncated && " Há mais bloqueios do que a lista mostra; libere os primeiros e abra de novo."}
+          </p>
+          <ul class="flex flex-col gap-3">
+            {blocks.map((b) => (
+              <li class={`${CARD} flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5`} data-bloqueio={b.kind}>
+                <div class="min-w-0">
+                  <p class="font-display text-base font-bold text-ink">
+                    {blockKindLabel(b.kind)}: <span class="break-words">{b.target}</span>
+                  </p>
+                  <p class="text-[15px] text-ink-mid">
+                    {b.clinicName} · {b.actionLabel} · bloqueio {b.level} de 3
+                  </p>
+                  <p class="text-[13px] text-ink-soft">Desde {at(b, b.createdAt)} · vale até {at(b, b.blockedUntil)} (horário da clínica)</p>
+                </div>
+                <form method="POST" action="/api/admin/sistema/portal" class="self-start sm:self-center">
+                  <input type="hidden" name="acao" value="liberar" />
+                  <input type="hidden" name="id" value={b.id} />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    class="js-confirm-delete"
+                    data-confirm-title="Liberar este bloqueio?"
+                    data-confirm-message={`${blockKindLabel(b.kind)} ${b.target} (${b.clinicName}) volta a usar o portal agora. Se continuar abusando, o bloqueio recomeça.`}
+                    data-confirm-label="Liberar"
+                  >
+                    Liberar
+                  </Button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+  </div>
+  <ConfirmDeleteDialog />
+</AdminLayout>
