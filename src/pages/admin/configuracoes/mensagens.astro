@@ -153,7 +153,7 @@ const rows = visibleTemplates.map((standard) => {
 });
 
 const botDefaults: Record<string, string> = {
-  welcome: bot.leanWelcome(example.nome, label, { exams: clinic.features.includes("exams") }),
+  welcome: bot.leanWelcome(example.nome, label, settings.name, { exams: clinic.features.includes("exams") }),
   menu: clinic.features.includes("knowledge_base") ? bot.MENU_BODY_ASK : bot.MENU_BODY,
   not_understood: bot.notUnderstood(),
   handoff: bot.LEAN_HANDOFF,
