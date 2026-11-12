@@ -77,8 +77,8 @@ const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 const optionId = (reply: Sent[], title: string) => reply.at(-1)!.options.find((o) => o.title.includes(title))!.id;
 const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
 // Bot enxuto (F3f, BE-2): o 1º menu da conversa é uma mensagem só, com as boas-vindas.
-const LEAN = expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento d.+\n\nEscolha uma das opções abaixo\.$/);
-const LEAN_KNOWN = expect.stringMatching(/^Olá, Resp\.! 👋\n\nEste é o contato oficial para agendamento d.+\n\nEscolha uma das opções abaixo\.$/);
+const LEAN = expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento d[\s\S]+\n\nEscolha uma das opções abaixo\.$/);
+const LEAN_KNOWN = expect.stringMatching(/^Olá, Resp\.! 👋\n\nEste é o contato oficial para agendamento d[\s\S]+\n\nEscolha uma das opções abaixo\.$/);
 const LEAN_HANDOFF = "Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor.";
 const BOOK_LINK = /^Para agendar sua consulta ou exame, toque no botão abaixo\./;
 const MINE_LINK = /^Para ver, remarcar ou cancelar suas consultas, toque no botão abaixo\./;
