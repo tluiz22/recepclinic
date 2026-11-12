@@ -125,8 +125,8 @@ export function notUnderstood(isMainMenu = false): string {
 export const NOT_UNDERSTOOD_YES_NO = "Não entendi 🙏 Responda apenas Sim ou Não.";
 
 // Mídia no lugar de uma resposta (F8.5d, cliente, 27/out/2026): o bot só lê texto e toques.
-export const MEDIA_AUDIO = "Ainda não consigo ouvir áudios 🙏 Toque em uma das opções abaixo ou escreva.";
-export const MEDIA_OTHER = "Ainda não consigo ver fotos, vídeos, figurinhas ou arquivos 🙏 Toque em uma das opções abaixo ou escreva.";
+export const MEDIA_AUDIO = "Ainda não consigo ouvir áudios 🙏 Escolha uma das opções abaixo.";
+export const MEDIA_OTHER = "Ainda não consigo ver fotos, vídeos, figurinhas ou arquivos 🙏 Escolha uma das opções abaixo.";
 
 /**
  * 4ª mensagem seguida que o bot não entende (F8.5d): a conversa vai para a

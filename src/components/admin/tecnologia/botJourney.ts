@@ -123,7 +123,7 @@ export const JOURNEY: JourneySection[] = [
             ),
           ],
         ],
-        ["O bot não entende", [bot("No menu principal, uma mensagem só: \"Não entendi sua resposta 🙏 Escolha uma das opções abaixo.\" com a lista (cliente, 12/nov/2026). Na 4ª mensagem seguida que não entende: \"Não consegui entender sua mensagem.\"", "Áudio, foto e figurinha: o bot avisa que só lê texto.")]],
+        ["O bot não entende", [bot("No menu principal, uma mensagem só: \"Não entendi sua resposta 🙏 Escolha uma das opções abaixo.\" com a lista (cliente, 12/nov/2026). Na 4ª mensagem seguida que não entende: \"Não consegui entender sua mensagem.\"", "Áudio, foto e figurinha: o bot avisa que só lê texto e pede para escolher uma das opções (sem pedir para escrever; cliente, 12/nov/2026).")]],
         ["Sem o portal", [bot("Agendar, Minhas consultas, Profissionais ou o Remarcar/Cancelar do lembrete com o portal desligado: transfere direto")]],
       ),
       check("Quando o bot oferece: \"Você quer falar com a recepção?\"", "Quando o bot não entende (4ª mensagem seguida) ou numa pergunta de saúde (cliente, 31/out/2026). Sem a recepção no app: \"Você quer que a clínica entre em contato por aqui?\"."),
