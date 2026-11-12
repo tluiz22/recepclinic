@@ -8,7 +8,7 @@
 - **Etapas que faltam (mostrar ao perguntarem o estado do roadmap):**
   1. **Produção da F3f**: só com autorização do cliente (skill `publicar`; migrações antes do código).
   2. **F5b**: o cliente validar (Meu dia, Conversas, Meu perfil).
-  3. **F6 Métricas e recuperação** (não iniciada, sem branch): Métricas › Portal; Desempenho › "De onde vêm as marcações"; aviso a quem não terminou de marcar (15 min, "parou em {etapa}"); monitor do Suporte (com a tela para liberar o celular do paciente no portal). Antes: reunião com a clínica (RD6, horário por convênio, e perguntas do roteiro). Destrava o Biomedical.
+  3. **F6 Métricas e recuperação** (não iniciada, sem branch): Métricas › Portal; Desempenho › "De onde vêm as marcações"; monitor do Suporte (o aviso a quem não terminou de marcar **saiu da F6**: cliente, 12/nov, sem aviso à recepção nem ao paciente) (com a tela para liberar o celular do paciente no portal). Antes: reunião com a clínica (RD6, horário por convênio, e perguntas do roteiro). Destrava o Biomedical.
   4. **Limpeza do `/agendar`** (`api/agendar`, `booking_links`), depois da F3f na produção.
   - Fora do escopo (pendente do cliente, 08/nov): F4 e vários números de WhatsApp. Plano: `../../implementacao-recepcao-digital.md` (seção 3, tabela de etapas).
 - **Dependências:** Meta (modelo de lembrete); `PORTAL_BUTTON_ROOT` já definida na Vercel do staging.
