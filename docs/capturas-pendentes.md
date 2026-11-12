@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-- `metricas` — Desempenho perdeu o bloco "Por serviço e local" (12/11/2026)
+(nenhuma)
