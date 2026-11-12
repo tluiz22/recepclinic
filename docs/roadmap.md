@@ -1,6 +1,6 @@
 # Roadmap (fonte única do estado)
 
-> Atualizado em 12/nov/2026 (reorganização da documentação). Só se edita na `main`. Marcas: **Código** = conferido no
+> Atualizado em 12/nov/2026 (etapas que faltam da recepção digital). Só se edita na `main`. Marcas: **Código** = conferido no
 > git; **Doc** = só o que o documento afirma; **A confirmar** = depende do cliente. Detalhe de cada frente: `status.md`.
 
 ## Ambientes
@@ -10,7 +10,7 @@
 ## Iniciativas abertas
 | Frente | Estado | Branch | Bloqueio externo | Próxima ação |
 |---|---|---|---|---|
-| [Recepção digital / F3f](iniciativas/recepcao-digital/status.md) | Código na `main` e no staging; falta validar | — (juntada) | Meta: modelo `rc_lembrete_v2` | Roteiro de validação da F3f no staging; depois produção e limpeza do `/agendar` |
+| [Recepção digital](iniciativas/recepcao-digital/status.md) | F1–F5b na `main`; F3f validada no staging, **aguarda autorização do cliente para a produção**. **Faltam:** produção da F3f, validação da F5b, **F6 (Métricas e recuperação)**, limpeza do `/agendar` | — (juntada) | Meta: modelo `rc_lembrete_v2`; reunião com a clínica (RD6) antes da F6; advogado (LGPD) antes da produção | Etapas que faltam em ordem: 1) produção da F3f; 2) F5b validada; 3) F6; 4) limpeza do `/agendar` (detalhe no `status.md`) |
 | [Nota fiscal (NFS-e)](iniciativas/nota-fiscal/status.md) | N1–N5 na branch; validação pendente; N6 bloqueada | `nota-fiscal` (10 à frente, 14 atrás da `main`) | Asaas (BaaS), contador, advogado | Decidir com o cliente se atualiza com a `main` |
 | [Faturamento SaaS (Asaas)](iniciativas/faturamento-asaas/status.md) | Código na `main` (F12.1–F12.8) | — (juntada) | Asaas: reanálise do BaaS e tokenização do cartão | Conferir tokenização antes do 1º contrato no cartão |
 | [Biomedical](iniciativas/biomedical/status.md) | Proposta enviada em 09/nov | — | Portal, F3, F5, F6 no ar | Parada até a F3f ir à produção |
