@@ -164,7 +164,7 @@ const MEDIA_TYPES = new Set(["image", "video", "sticker", "document"]);
  * conhecimento: se ela respondeu, null (o passo se repete sem o "não entendi"
  * e não conta).
  */
-async function notUnderstood(b: Bot, body: string): Promise<string | null> {
+export async function notUnderstood(b: Bot, body: string): Promise<string | null> {
   if (b.knowledge && !b.knowledge.done && !b.notUnderstoodSaid) {
     b.knowledge.done = true;
     const outcome = await b.knowledge.run(b);

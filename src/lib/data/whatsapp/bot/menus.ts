@@ -1,6 +1,6 @@
 import { preparationMessageText } from "../../../preparationMessage";
 import type { BotService } from "./catalog";
-import { contactFirstName, go, say, sayPreparationFile, sendList, textFor, type Bot } from "./engine";
+import { contactFirstName, go, notUnderstood as countNotUnderstood, say, sayPreparationFile, sendList, textFor, type Bot } from "./engine";
 import { renderWelcome } from "../customMessages";
 import { sendPortalShortcut, type ShortcutPurpose } from "./portalLink";
 import { pick, type Selection } from "./input";
@@ -13,7 +13,11 @@ type Item = { id: string; label: string; description?: string | null };
 // Falar com a recepção (esta só com a recepção no app, coexistência; cliente, 07/out). Sem a especialidade e o
 // profissional antes do menu, sem os submenus e sem Informações gerais.
 function mainItems(b: Bot): Item[] {
-  return t.LEAN_MENU.filter((item) => item.id !== "menu_reception" || b.receptionAvailable).map((item) => ({ ...item }));
+  const exams = b.features.includes("exams");
+  return t.LEAN_MENU.filter((item) => item.id !== "menu_reception" || b.receptionAvailable).map((item) => ({
+    ...item,
+    description: item.id === "menu_book" && !exams ? t.LEAN_BOOK_DESCRIPTION_NO_EXAM : item.description,
+  }));
 }
 
 /** Corpo do 1º menu da conversa: as boas-vindas próprias da clínica ou as do bot enxuto, com o primeiro nome. */
@@ -28,12 +32,14 @@ async function leanWelcomeBody(b: Bot): Promise<string> {
  * boas-vindas e a lista (BE-2); nas outras vezes, o corpo curto.
  */
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false, intro = false } = {}): Promise<void> {
-  if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
+  // "Não entendi" e o menu numa mensagem só (cliente, 12/nov/2026): o texto do "não entendi" vira o corpo da lista.
+  // Passa pela contagem do "não entendi"; null = a base de conhecimento já respondeu (o menu volta com o corpo normal).
+  const misunderstood = notUnderstood ? await countNotUnderstood(b, textFor(b, "not_understood", t.notUnderstood(true))) : null;
   const first = withWelcome || intro;
-  const body = first ? await leanWelcomeBody(b) : textFor(b, "menu", b.features.includes("knowledge_base") ? t.MENU_BODY_ASK : t.MENU_BODY);
+  const body = misunderstood ?? (first ? await leanWelcomeBody(b) : textFor(b, "menu", b.features.includes("knowledge_base") ? t.MENU_BODY_ASK : t.MENU_BODY));
   // Sem o número na frente (título com até 24 caracteres, como no canvas); digitar o número continua valendo.
   const rows = mainItems(b).map((item) => ({ id: item.id, title: item.label, description: item.description ?? undefined }));
-  await sendList(b, "bot_menu", body, [{ rows }], first ? t.leanMenuHeader(b.clinic.name) : undefined);
+  await sendList(b, "bot_menu", body, [{ rows }], first && misunderstood === null ? t.leanMenuHeader(b.clinic.name) : undefined);
   await go(b, "MENU");
 }
 

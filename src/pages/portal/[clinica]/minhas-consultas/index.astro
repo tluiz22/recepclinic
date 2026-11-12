@@ -139,7 +139,7 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
             {group.items.map((item) => {
               const free = outsideLead(item.start, leadHours, now);
               // Dentro do prazo, mas com o link do bot de remarcar este atendimento: só o Remarcar.
-              const waived = !free && item.id === waivedId && item.canReschedule;
+              const waived = !free && item.id === waivedId;
               const wa = waHref(item);
               return (
                 <li class="flex flex-col overflow-hidden rounded-2xl border-[1.5px] border-gray-200 bg-white">
@@ -162,16 +162,13 @@ const small = "flex min-h-12 flex-1 items-center justify-center rounded-xl px-4 
                     {free ? (
                       <>
                         <div class="flex gap-2.5">
-                          {item.canReschedule && (
-                            <a href={portalHref(`${here}/remarcar`, { a: item.id })} class={`${small} bg-clinic text-clinic-text hover:opacity-90`} aria-label={`Remarcar: ${item.patientName}, ${whenText(item)}`}>
-                              Remarcar
-                            </a>
-                          )}
+                          <a href={portalHref(`${here}/remarcar`, { a: item.id })} class={`${small} bg-clinic text-clinic-text hover:opacity-90`} aria-label={`Remarcar: ${item.patientName}, ${whenText(item)}`}>
+                            Remarcar
+                          </a>
                           <a href={portalHref(`${here}/cancelar`, { a: item.id })} class={`${small} border-[1.5px] border-clinic-ink bg-white text-clinic-ink hover:bg-clinic-tint`} aria-label={`Cancelar: ${item.patientName}, ${whenText(item)}`}>
                             Cancelar
                           </a>
                         </div>
-                        {!item.canReschedule && <p class="text-[15px] text-gray-600">Para remarcar {item.isGroup ? "a turma" : "o atendimento em casa"}, fale com a recepção.</p>}
                       </>
                     ) : waived ? (
                       <>

@@ -83,11 +83,13 @@ export const MENU_BODY_ASK = "Escolha uma opção abaixo ou faça uma pergunta."
 
 /** BE-2: o menu principal; a lista do WhatsApp não aceita ícone, o emoji é o símbolo (cliente). */
 export const LEAN_MENU = [
-  { id: "menu_book", label: "📅 Agendar", description: "Consulta ou exame, pelo portal" },
+  { id: "menu_book", label: "📅 Agendar", description: "Consulta, retorno ou exame" },
   { id: "menu_mine", label: "🗓 Minhas consultas", description: "Consultar, remarcar ou cancelar" },
   { id: "menu_professionals", label: "👥 Profissionais", description: "Especialidades, valores e convênios" },
   { id: "menu_reception", label: "🎧 Falar com a recepção", description: "Atendimento com a nossa equipe" },
 ] as const;
+/** A descrição de Agendar sem exame na clínica (exame desligado nos recursos): só consulta ou retorno (cliente, 12/nov/2026). */
+export const LEAN_BOOK_DESCRIPTION_NO_EXAM = "Consulta ou retorno";
 export type LeanMenuId = (typeof LEAN_MENU)[number]["id"];
 
 /** BE-2: o 1º menu da conversa, com o primeiro nome quando o número é cadastrado (cliente, 08/nov/2026). */

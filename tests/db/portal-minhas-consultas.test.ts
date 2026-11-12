@@ -61,7 +61,7 @@ describe("Minhas consultas (F3c)", () => {
     const other = await book(f.ids.p2, MON1, "08:30");
     const items = await listMyAppointments(service, f.clinicId, PHONE, NOW);
     expect(items.map((i) => i.id)).toEqual([mine.id]);
-    expect(items[0]).toMatchObject({ patientName: "Paciente Um", professionalName: "Dra. Agenda", canReschedule: true, category: "consultation" });
+    expect(items[0]).toMatchObject({ patientName: "Paciente Um", professionalName: "Dra. Agenda", category: "consultation" });
     expect(await findMyAppointment(service, f.clinicId, PHONE, other.id, { now: NOW })).toBeNull();
     expect(await findMyAppointment(service, f.clinicId, PHONE, "nao-e-id", { now: NOW })).toBeNull();
   });

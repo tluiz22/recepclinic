@@ -2,7 +2,7 @@ import { addDays, formatInstant, localDateOf, todayIn } from "../../clinicTime";
 import { capitalize } from "../../vocabulary";
 import { logError } from "../../log";
 import { bookAppointment, cancelAppointment, findReturnOrigin, rescheduleAppointment } from "../agenda/appointments";
-import { earliestDate, getFreeSlots, getNextAvailableDates, horizonLastDate } from "../agenda/slots";
+import { earliestDate, getFreeSlots, getGroupSessions, getNextAvailableDates, horizonLastDate } from "../agenda/slots";
 import { BOOKING_HORIZON_DEFAULT } from "../config/clinic";
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
@@ -45,7 +45,6 @@ export type MyAppointment = {
   isGroup: boolean;
   originAppointmentId: string | null;
   /** Remarcar pelo portal (individual, no consultório ou em casa, F3e-1). */
-  canReschedule: boolean;
   /** Em casa (F3e-1): o endereço gravado no atendimento. */
   homeVisitAddress: string | null;
   /**
@@ -139,7 +138,6 @@ const toItem = (row: Row, bookers?: Bookers): MyAppointment => {
     status: row.status,
     isGroup,
     originAppointmentId: row.origin_appointment_id,
-    canReschedule: !isGroup,
     homeVisitAddress: row.home_visit_address,
     bookedByText: bookers ? bookedByText(row, bookers) : null,
   };
@@ -246,6 +244,7 @@ export async function rescheduleScope(
 
 /** Próximos dias com horário livre (o próprio atendimento não ocupa o horário que vai deixar). */
 export async function rescheduleDates(db: DbClient, clinicId: string, item: MyAppointment, scope: RescheduleScope, now: Date = new Date()): Promise<string[]> {
+  if (item.isGroup) return [...new Set((await groupRescheduleSessions(db, clinicId, item, scope, now)).map((s) => s.date))];
   const per = await Promise.all(
     scope.locations.map((location) =>
       getNextAvailableDates(
@@ -262,8 +261,24 @@ export async function rescheduleDates(db: DbClient, clinicId: string, item: MyAp
 
 export type RescheduleSlot = { start: Date; locationId: string };
 
+/** Turma: as sessões com vaga da mesma turma, nos locais do serviço (a vaga de hoje não é nova). */
+async function groupRescheduleSessions(db: DbClient, clinicId: string, item: MyAppointment, scope: RescheduleScope, now: Date) {
+  const sessions = await getGroupSessions(
+    db,
+    clinicId,
+    { serviceId: item.serviceId, agendaId: item.agendaId, count: 60, lastDate: scope.lastDate, holds: { exceptSession: scope.sessionId } },
+    now,
+  );
+  const here = new Set(scope.locations.map((l) => l.id));
+  return sessions.filter((s) => here.has(s.locationId) && (scope.ignoreAppointmentId === null || s.start.getTime() !== item.start.getTime() || s.locationId !== item.locationId));
+}
+
 export async function rescheduleSlots(db: DbClient, clinicId: string, item: MyAppointment, scope: RescheduleScope, date: string, now: Date = new Date()): Promise<RescheduleSlot[]> {
   if (date > scope.lastDate) return [];
+  if (item.isGroup) {
+    const sessions = await groupRescheduleSessions(db, clinicId, item, scope, now);
+    return sessions.filter((s) => s.date === date).map((s) => ({ start: s.start, locationId: s.locationId }));
+  }
   const per = await Promise.all(
     scope.locations.map(async (location) =>
       (

@@ -136,7 +136,7 @@ describe("primeira mensagem", () => {
     const first = await say(phone, "Oi");
     expect(first.at(-1)!.button).toBe("Ver opções");
     expect(first.at(-1)!.options).toEqual([
-      { id: "menu_book", title: "📅 Agendar", description: "Consulta ou exame, pelo portal" },
+      { id: "menu_book", title: "📅 Agendar", description: "Consulta, retorno ou exame" },
       { id: "menu_mine", title: "🗓 Minhas consultas", description: "Consultar, remarcar ou cancelar" },
       { id: "menu_professionals", title: "👥 Profissionais", description: "Especialidades, valores e convênios" },
     ]);

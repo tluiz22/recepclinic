@@ -43,7 +43,7 @@ export async function openChangePage(Astro: AstroGlobal, action: "remarcar" | "c
   // Cancelar o cancelado pela clínica não existe: o link de remarcação só remarca.
   const rebook = allowed.rebook && action === "remarcar";
   const item = await findMyAppointment(db, portal.clinicId, session.phone, id, { canceledByClinic: rebook });
-  if (!item || (action === "remarcar" && !item.canReschedule) || (scope.professional && item.agendaId !== scope.professional.agendaId)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "mudou" })) };
+  if (!item || (scope.professional && item.agendaId !== scope.professional.agendaId)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "mudou" })) };
   // O link do bot dispensa a antecedência só para remarcar (F3-4); cancelar pelo portal segue a regra (RD10).
   const leadHours = allowed.noLead && action === "remarcar" ? null : await leadHoursOf(db, portal.clinicId);
   if (!rebook && leadHours !== null && !outsideLead(item.start, leadHours)) return { kind: "redirect", response: Astro.redirect(portalHref(listHref, { aviso: "prazo" })) };

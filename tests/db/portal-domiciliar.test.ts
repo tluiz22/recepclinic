@@ -126,7 +126,7 @@ describe("atendimento em casa pelo portal", () => {
     const id = (booked as { appointmentId: string }).appointmentId;
 
     const item = (await findMyAppointment(service, fixture.clinicId, phone, id))!;
-    expect(item).toMatchObject({ locationType: "home_visit", homeVisitAddress: ADDRESS, canReschedule: true });
+    expect(item).toMatchObject({ locationType: "home_visit", homeVisitAddress: ADDRESS });
     const scope = await rescheduleScope(service, fixture.clinicId, item, { timeZone: TZ, sessionId: null, rebook: false });
     expect(scope.locations.map((l) => l.id)).toEqual([fixture.ids.home]);
     const [slot] = await rescheduleSlots(service, fixture.clinicId, item, scope, addDays(nextMonday, 21));

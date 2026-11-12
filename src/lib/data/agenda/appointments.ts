@@ -573,6 +573,21 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
     unwrap(await db.from("appointments").update({ insurance_plan_id: null }).eq("clinic_id", clinicId).eq("id", id), "Atendimento");
   }
 
+  // Paciente que marca para o mesmo dia já entra confirmado: o lembrete de confirmação saiu na véspera (cliente,
+  // 12/nov/2026). Só os canais do paciente (portal, bot, link); a recepção confirma à mão.
+  if (input.channel !== "admin" && date === todayIn(plan.timeZone, now)) {
+    // A marcação já valeu: falha aqui só deixa o atendimento sem a confirmação (a recepção confirma à mão).
+    try {
+      unwrap(
+        await db.from("appointments").update({ patient_confirmed_at: now.toISOString(), patient_confirmed_by: null }).eq("clinic_id", clinicId).eq("id", id),
+        "Atendimento",
+      );
+      await logTrail(db, clinicId, id, "presence_confirmed", input.trailChannel ?? input.channel, null);
+    } catch (error) {
+      logError("agenda: não confirmou a marcação do mesmo dia", error, { clinica: clinicId, atendimento: id });
+    }
+  }
+
   // Links de agendamento pendentes do mesmo serviço perdem a validade (piloto, Fase 12). Serviços por profissional
   // (MS, 07/nov/2026): "o mesmo serviço" inclui as cópias dos outros profissionais (mesmo nome e tipo).
   const { data: catalog } = await db.from("services").select("id, name, category").eq("clinic_id", clinicId);
