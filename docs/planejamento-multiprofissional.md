@@ -2,7 +2,7 @@
 
 > **Estado atual (retomar daqui), 07/nov/2026.** ME, MC e MI + MB no staging (cliente valida pelo roteiro da seção 8).
 > **MS (S2, S3, S1, S4) feita** (seção 10; migrações `20261230120000` e `20261230130000`), no staging para o cliente
-> validar pelo roteiro no fim da seção 10, pela [`frente-validacao.md`](frente-validacao.md). Produção só com autorização.
+> validar pelo roteiro no fim da seção 10, pela [`frente-validacao.md`](arquivo/frente-validacao.md). Produção só com autorização.
 > A NFS-e por profissional (N-P1 a N-P7) segue na frente da nota fiscal ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)).
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.

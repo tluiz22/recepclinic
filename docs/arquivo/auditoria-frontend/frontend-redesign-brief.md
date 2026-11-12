@@ -80,7 +80,7 @@ páginas públicas limpas e legíveis no celular; carregamento rápido.
 
 ## 5. Capturas de referência
 
-Todas em [`evidencias/`](evidencias/), com dados fictícios do ambiente local. Padrão de nome:
+Todas em [`evidencias/`](evidencias), com dados fictícios do ambiente local. Padrão de nome:
 `<id>-desktop.jpg` (1280px, página inteira) e `<id>-390.jpg` (celular, página inteira). A pílula
 escura no pé das capturas é a barra de desenvolvimento do Astro: ignorar.
 
@@ -198,7 +198,7 @@ Objetivos, não soluções. O "porquê" está entre parênteses.
   de salvar.
 - Sem "Cancelar selecionados" na Agenda: cancelar vários é pelo "Bloquear e cancelar".
 
-**Regras de negócio e arquitetura** ([`docs/arquitetura.md`](../arquitetura.md)):
+**Regras de negócio e arquitetura** ([`docs/arquitetura.md`](../../arquitetura.md)):
 - Papéis e permissões do painel (D6) e isolamento por clínica (D1): o menu e as telas variam por perfil.
 - Vocabulário e configuração por clínica e nicho (D4): Pediátrica, Adultos ou Mista; os textos mudam.
 - Agendas por clínica (D2), atendimentos recorrentes/séries (D9), convênios (D10).

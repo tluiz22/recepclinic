@@ -22,4 +22,4 @@
 - A branch **`CRM`** (28/out) entrou na `main` e foi excluída em 30/out. Etapa nova do CRM com código: branch
   recriada da `main`, pelas regras de branch paralela do `CLAUDE.md`.
 - O CRM entra na `main` só com a aprovação do cliente, e as decisões de arquitetura novas vão para
-  [`arquitetura.md`](arquitetura.md), como as D1–D11.
+  [`arquitetura.md`](../arquitetura.md), como as D1–D11.

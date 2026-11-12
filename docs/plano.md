@@ -2429,8 +2429,8 @@ planejar melhorias no processo de geração da nota fiscal.
 
 ## Redesign do painel (a partir da auditoria de frontend)
 
-Pedido pelo cliente em 15/out/2026, a partir da [auditoria](auditoria-frontend/frontend-audit-report.md)
-e do [brief](auditoria-frontend/frontend-redesign-brief.md). Só muda a forma: rotas, permissões,
+Pedido pelo cliente em 15/out/2026, a partir da [auditoria](arquivo/auditoria-frontend/frontend-audit-report.md)
+e do [brief](arquivo/auditoria-frontend/frontend-redesign-brief.md). Só muda a forma: rotas, permissões,
 regras e textos de negócio ficam como estão. Avaliação global, identidade visual e proposta da
 Agenda no canvas
 [Redesign RecepClinic: avaliação global e Agenda](https://claude.ai/artifact/AUajFVHWJNscFp5w5Pvqn4).
@@ -2520,7 +2520,7 @@ outros perfis não mudou. **Validado pelo cliente e publicado no staging em 16/o
 
 **Teste de interface da R0 a R4 (16/out/2026, a pedido do cliente)** com a skill
 `playwright-ui-form-best-practices`, no ambiente local e sem gravar dados:
-[relatório](auditoria-frontend/redesign-r0-r4-report.md). 27 cenários: 19 passaram, 6 falharam (2
+[relatório](arquivo/auditoria-frontend/redesign-r0-r4-report.md). 27 cenários: 19 passaram, 6 falharam (2
 Médias e 4 Baixas) e 2 ficaram bloqueados (envio válido e envio duplo, que gravariam). As 6 foram
 corrigidas, retestadas, validadas pelo cliente e publicadas no staging no mesmo dia:
 - **NAV-07:** a busca de paciente da Agenda leva a tela de origem (`volta`), mostra "Voltar" para ela
@@ -2572,7 +2572,7 @@ até a tela seguinte abrir (`src/scripts/sendOnce.ts`, no `AdminLayout`; o botã
 com `data-envio-livre`, porque não sai da tela). **Implementada em 16/out** e testada no navegador
 local (computador e celular, sem gravar dados; o envio duplo com um formulário de teste para um
 endereço inexistente: 1 envio, 2 barrados). **Teste de interface da R5 (16/out, a pedido do
-cliente)**: [relatório](auditoria-frontend/redesign-r5-report.md), com gravação autorizada só no banco
+cliente)**: [relatório](arquivo/auditoria-frontend/redesign-r5-report.md), com gravação autorizada só no banco
 local (apagada no fim); 3 falhas (o erro de CPF de "Outra pessoa" marcado num campo escondido, o
 "Voltar" da ficha aberta pelo Pagamento pulando o Pagamento e o foco perdido ao fechar um painel da
 nota) e 1 suspeita (o aceite do diálogo sem conferir a trava), **todas corrigidas e retestadas**.
@@ -2603,7 +2603,7 @@ cartão `EditCard` em `ui/` (dados em leitura, "Editar" com `<details>`, recolhi
 `keepFormValues` abre o cartão do formulário que voltou com erro); `Tabs` com `inCard` e contador
 neutro; `Pill` com o tom `alert` (faltas). No responsável, "Bloquear no bot…" abre o cartão do
 bloqueio por `?bloquear=1`.
-**Teste de interface da R6 (16/out, a pedido do cliente)**: [relatório](auditoria-frontend/redesign-r6-report.md),
+**Teste de interface da R6 (16/out, a pedido do cliente)**: [relatório](arquivo/auditoria-frontend/redesign-r6-report.md),
 com gravação autorizada só no banco local (desfeita no fim e conferida com um snapshot). 31 cenários:
 28 passaram e 3 falharam, todos Baixos: no celular, o campo com erro fica atrás das barras fixas
 (QA-02); no computador, os títulos dos cartões entram na tabulação (QA-06); no Cadastrar, o erro do
@@ -2642,7 +2642,7 @@ telefone com o WhatsApp (`listContactsToReview` traz o `phone`; teste de banco a
 Início leva o `volta`. No celular, o período quebra a linha e os filtros abrem recolhidos (abertos
 com o período personalizado ou uma busca; sem JavaScript, abertos). Faltosos e Retomar contato com
 linhas não foram vistos com dados (o seed não tem faltosos nem conversas interrompidas).
-**Teste de interface da R7 (16/out, a pedido do cliente)**: [relatório](auditoria-frontend/redesign-r7-report.md),
+**Teste de interface da R7 (16/out, a pedido do cliente)**: [relatório](arquivo/auditoria-frontend/redesign-r7-report.md),
 sem gravar dados. 30 cenários: 22 passaram, 4 falharam (3 defeitos) e 4 ficaram bloqueados (Faltosos e
 Retomar contato sem dados no seed, o envio do "Revisado" e os itens desligados na matriz). Defeitos:
 no Personalizado inválido, De e Até voltam para hoje e o digitado se perde (FORM-01/02, Média, já
@@ -2695,7 +2695,7 @@ com as permissões de quem chama; mesma regra de `resolvePayer`), pela opção `
 `listPatientsPage`, e a contagem `countPatientsMissingPayerCpf`; teste de banco em
 `modulo-financeiro.test.ts`. O nome na lista leva à ficha já no cartão Financeiro (`#financeiro`). O
 estado "Ficam de fora" foi conferido tirando por alguns segundos o CPF de um pagamento no banco local
-(devolvido em seguida). [Teste de interface](auditoria-frontend/redesign-r8-report.md) em 17/out: a mensagem do "Falta
+(devolvido em seguida). [Teste de interface](arquivo/auditoria-frontend/redesign-r8-report.md) em 17/out: a mensagem do "Falta
 CPF" com busca sem resultado ganhou "Buscar em Todos" (FIL-03); no staging, o cliente achou o erro 500
 da busca por telefone com o filtro (FIL-04, Alta), corrigido sem migração (contatos primeiro, depois a
 função pelo `contact_id`). Migração aplicada no staging e registrada no histórico; código publicado
@@ -2741,7 +2741,7 @@ bloco da Clínica mantém o que foi digitado e não grava nada; salvar um bloco 
 Nota fiscal volta para a DMED no mesmo ano depois de salvar; as 13 seções e os 7 formulários abrem sem
 erro; sem rolagem lateral em 390px. Não visto com dados: o guia com pendências (as duas clínicas do seed
 estão completas; coberto pelo teste das contagens). `astro check` sem erros e `npm test` (501) passando.
-[Teste de interface](auditoria-frontend/redesign-r9-report.md) em 17/out: 3 falhas, as 3 corrigidas e
+[Teste de interface](arquivo/auditoria-frontend/redesign-r9-report.md) em 17/out: 3 falhas, as 3 corrigidas e
 retestadas a pedido do cliente: o aviso não era apagado em 14 telas de Configurações e reaparecia nas
 seguintes (QA-02; o `ConfigShell` lê o aviso antes de esperar o guia); o erro de um bloco de baixo da
 Clínica ficava fora da tela (QA-01; a mensagem vai para dentro do cartão "Editar", à vista com o campo,
@@ -2804,7 +2804,7 @@ Vendas com `Tabs`; Tecnologia com os atalhos. Achado no teste e corrigido: no ce
 RecepClinic" do cabeçalho do sistema empurrava o "Sair" para fora da tela (30px de rolagem lateral em
 todas as telas do sistema, desde a R1); agora some só no celular. Não visto com dados: a busca (o seed
 tem 2 clínicas; coberta pelo teste) e uma clínica suspensa. `astro check` sem erros e `npm test` (506).
-**Teste de interface da R10 em 17/out** ([relatório](auditoria-frontend/redesign-r10-report.md)): 3 falhas Baixas,
+**Teste de interface da R10 em 17/out** ([relatório](arquivo/auditoria-frontend/redesign-r10-report.md)): 3 falhas Baixas,
 corrigidas e retestadas a pedido do cliente: a Matriz aberta pela tela da clínica volta para ela (`de=clinica`, também
 depois de salvar e do erro); o "n de m" dos grupos com o espaço; a Matriz que volta com erro mantém as marcações e marca o
 limite (anterior à R10). **Decisão do cliente (17/out, S-01):** "Abrir a clínica para configurar" entra na clínica e
@@ -2864,7 +2864,7 @@ por inteiro, este último decidido pelo cliente): "Não existe agenda aberta par
 horas que já passaram) e `isLinkDayOpen` (`publicBooking.ts`, qualquer profissional ou local do link). Também no
 Marcar e no Remarcar do painel (cliente, 17/out): a primeira frase do aviso segue a mesma regra e o "Mostrando a partir
 de …" continua.
-**Teste de interface da S-01 e da S-02 (17/out),** [relatório](auditoria-frontend/redesign-r11-s01-s02-report.md); decisões do
+**Teste de interface da S-01 e da S-02 (17/out),** [relatório](arquivo/auditoria-frontend/redesign-r11-s01-s02-report.md); decisões do
 cliente: no `/agendar`, dia pedido depois do último dia livre mostra o aviso e a faixa a partir do primeiro dia livre
 (S02-08); cada dia da faixa com no máximo 1/7 da largura, alinhado à esquerda (dia sozinho não estica); abaixo de 380px o
 papel sai do cabeçalho do painel (QA-01).
@@ -2928,19 +2928,19 @@ outras. Sem migração. Validado pelo cliente pelos testes e publicado no stagin
 
 **1C implementada e testada no local em 19/out** (`categoryStyle.ts`, `AppointmentCard.astro`, a Semana e a turma;
 tom `ret` no tema; ícones `clipboard`, `arrow-uturn-left` e `beaker`). A faixa vale também no Resumo do Dia (mesmo
-cartão). [Teste de interface](auditoria-frontend/redesign-1c-report.md): nenhuma falha; S-01 (turma sem o tipo)
+cartão). [Teste de interface](arquivo/auditoria-frontend/redesign-1c-report.md): nenhuma falha; S-01 (turma sem o tipo)
 decidida pelo cliente: a turma também ganha a faixa; corrigida e retestada. Publicada no staging em 19/out a pedido
 do cliente (sem migração); **1C validada pelo cliente em 19/out**.
 
 **2B implementada e testada no local em 19/out** (`ConfigShell.astro`, ícone de cada seção em `sections.ts`, 7 ícones
-novos no `Icon.astro`). [Teste de interface](auditoria-frontend/redesign-2b-report.md): nenhuma falha; o "Abrindo…" no
+novos no `Icon.astro`). [Teste de interface](arquivo/auditoria-frontend/redesign-2b-report.md): nenhuma falha; o "Abrindo…" no
 celular e o número de pendências não verificados no local. Publicada no staging em 19/out a pedido do cliente (sem
 migração), que valida em paralelo.
 
 **3B implementada e testada no local em 19/out** (`horarios.astro`, `HorarioBloco.astro`, `HorarioMenu.astro`; o
 `MoreMenu` ganhou `iconOnly`). Colunas a partir de 1280px (na coluna de ~100px, o "⋯" fica embaixo, à direita, com os
 selos à esquerda); abaixo disso, uma linha por dia. "Mostrar desativados" virou caixa de marcar e a rota volta com ele
-como estava. [Teste de interface](auditoria-frontend/redesign-3b-report.md): 4 falhas da implementação (1 Alta: o
+como estava. [Teste de interface](arquivo/auditoria-frontend/redesign-3b-report.md): 4 falhas da implementação (1 Alta: o
 "Desativado" cobria o "⋯") corrigidas e retestadas na rodada. Publicada no staging em 19/out a pedido do cliente (sem
 migração). **2B e 3B validadas pelo cliente em 19/out.**
 
@@ -2957,7 +2957,7 @@ etiqueta); decisões do cliente em 19/out:
 
 **Implementado e testado no local em 19/out** (`HorarioBloco.astro`, `horarios.astro`, `agendaCategoriesTitle` em
 `categoryStyle.ts` com 2 testes). Na coluna de ~100px do computador, o ícone fica acima do tipo e o tipo não é
-hifenizado. [Teste de interface](auditoria-frontend/redesign-3b-tipo-report.md): 1 falha da implementação (o tipo partido
+hifenizado. [Teste de interface](arquivo/auditoria-frontend/redesign-3b-tipo-report.md): 1 falha da implementação (o tipo partido
 no meio da palavra na coluna) corrigida e retestada. Publicado no staging em 19/out a pedido do cliente (sem
 migração), que valida lá.
 
@@ -2974,7 +2974,7 @@ vinha do tipo). Decisões do cliente em 19/out:
 
 O horário de todos os serviços (Horários) continua verde-claro. Implementado (`serviceTints` e `serviceLook` em
 `categoryStyle.ts`, `listServiceRefs` em `services.ts`, tokens `sv-*` no tema; 3 testes novos) e testado no local
-([teste](auditoria-frontend/cor-servico-report.md)). Publicado no staging em 19/out a pedido do cliente (sem migração)
+([teste](arquivo/auditoria-frontend/cor-servico-report.md)). Publicado no staging em 19/out a pedido do cliente (sem migração)
 e **validado pelo cliente em 19/out**.
 
 **Resumo do Dia com a cor do serviço (pedido do cliente, 19/out).** Propostas no
@@ -2983,7 +2983,7 @@ decisões do cliente em 19/out: **proposta A** na aba "Resumo do dia" (na coluna
 do serviço, o nome do serviço quando é diferente do tipo e, abaixo, a agenda e o local) e **a mesma etiqueta nas outras
 abas** que mostram o serviço (Lembretes, Lista de espera, no título do grupo, Aguardando remarcação e Envios). "A
 registrar" e "Registradas" já usam o cartão da Agenda. Implementado (`ServiceTag.astro`, `serviceTags`; Envios passou a
-trazer o `serviceId`) e testado no local ([teste](auditoria-frontend/resumo-tipo-report.md)). Publicado no staging em 19/out a pedido do
+trazer o `serviceId`) e testado no local ([teste](arquivo/auditoria-frontend/resumo-tipo-report.md)). Publicado no staging em 19/out a pedido do
 cliente (sem migração) e **validado pelo cliente em 19/out**.
 
 **"Marcar retorno" na Consulta realizada (pedido do cliente, 19/out).** Botão no cartão da Consulta (Agenda e Resumo
@@ -3199,7 +3199,7 @@ consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende
 - Estados: carregando ("Calculando os números…"), nada no período, poucos dados ("X de Y"), parcial, erro por bloco,
   sem comparação (com o motivo), Profissional (só Desempenho, Faltosos e Financeiro, na própria agenda), bot sem
   tentativas e o "i" (abre pelo teclado; Esc e toque fora fecham).
-- [Teste de interface](auditoria-frontend/redesign-metricas-report.md): 32 cenários, 2 falhas Baixas (QA-01 links de
+- [Teste de interface](arquivo/auditoria-frontend/redesign-metricas-report.md): 32 cenários, 2 falhas Baixas (QA-01 links de
   28px no celular; QA-02 o "i" não fechava com Esc), **as duas corrigidas e retestadas**; 2 bloqueados (erro de bloco e
   bot sem tentativas, sem como simular no local sem mexer no banco).
 - Testes: `botFunnel.test.ts` com o relatório digital (soma de marcações sem remarcar/cancelar, seguem de pé,

@@ -5,7 +5,7 @@
 > https://claude.ai/artifact/WjcCnvq9PgpXnh98af46i7 (seção 9). Telas da demonstração: canvas
 > https://claude.ai/artifact/Npzjm2Vixb3UnEuUWfiAmb (portal P1 a P13, rodada 4 de retorno e exames, painel R1 a R7).
 > Base: [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md) e
-> [`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md).
+> [`implementacao-recepcao-digital.md`](../implementacao-recepcao-digital.md).
 
 **O que se sabe da clínica:** cerca de 18 profissionais e 3 secretárias; cada profissional com o próprio telefone para
 marcar; um sistema obrigatório que hoje guarda a agenda e o prontuário; pacientes reclamando que não conseguem marcar.

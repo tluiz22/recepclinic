@@ -10,7 +10,7 @@ sem confirmação; **[Pendência]** a confirmar (cliente, Meta, advogado).
 
 **Atenção sobre os ambientes.** O bloco multiprofissional (especialidades, convênios, informações do bot e serviços por
 profissional, perfil e prazo por profissional, fotos) foi escrito quando estava só no staging; **desde 08/nov está na
-produção** (`64ec6b1`, validado pelo cliente; [`producao.md`](producao.md)). As marcas **(staging)** abaixo ficam como
+produção** (`64ec6b1`, validado pelo cliente; [`producao.md`](../producao.md)). As marcas **(staging)** abaixo ficam como
 registro e hoje valem para staging e produção.
 
 ## 1. Arquitetura atual
@@ -18,7 +18,7 @@ registro e hoje valem para staging e produção.
 | Camada | Como é | Onde |
 |---|---|---|
 | Aplicação | Astro 7 com renderização no servidor (`@astrojs/vercel`), Tailwind 4, TypeScript. Páginas `.astro` com formulários `POST` e pouco JavaScript no navegador | `astro.config.mjs`, `src/pages/` |
-| Hospedagem | Vercel (região `gru1`): `app.recepclinic.com.br` (produção, branch `producao`) e `teste.recepclinic.com.br` (staging, `main`) | `vercel.json`, [`producao.md`](producao.md) |
+| Hospedagem | Vercel (região `gru1`): `app.recepclinic.com.br` (produção, branch `producao`) e `teste.recepclinic.com.br` (staging, `main`) | `vercel.json`, [`producao.md`](../producao.md) |
 | Banco | Supabase (Postgres) com RLS por clínica (D1), 149 migrações versionadas pela CLI | `supabase/migrations/` |
 | Acesso ao banco | Concentrado por domínio em `src/lib/data/` (agenda, pacientes, WhatsApp, financeiro…). Login da equipe usa a credencial do usuário (RLS); bot, rotinas e páginas públicas usam a **credencial limitada à clínica** (`createClinicServiceClient`) | `src/lib/data/clients.ts`, `clinicService.ts` |
 | Rotinas | `pg_cron` chamando `/api/cron/*` (lembretes, resumo do dia, reenvios, mídias, faturamento) | `src/pages/api/cron/` |
@@ -29,7 +29,7 @@ registro e hoje valem para staging e produção.
 Decisões que esta evolução precisa respeitar ou rever: D1 (isolamento), D2 (agendas), D3 (WhatsApp por clínica), D4
 (genérico, perfil por profissional desde 08/nov), D6 (papéis e acesso por agenda), D7 (domínio único, clínica pelo
 token), D10 (convênios), D11 (matriz de acesso), D12 (texto das conversas só com a Central). Ver
-[`arquitetura.md`](arquitetura.md).
+[`arquitetura.md`](../arquitetura.md).
 
 ## 2. Modelo de dados atual (o que importa para a evolução)
 
@@ -86,11 +86,11 @@ Pontos conferidos:
 | Pacientes e contatos, com dependentes (contato → pacientes), busca por nome parecido, anotações, lembretes e documentos do paciente | `src/pages/admin/pacientes/`, `patientNotes.ts`, `patientDocuments.ts` |
 | Bot determinístico no WhatsApp: menu, marcar, remarcar, cancelar, retorno, exames, informações, falar com a recepção, Base de Conhecimento (dicionário de termos, sem IA) | `src/lib/data/whatsapp/bot/` |
 | Link de agendar/remarcar com token opaco (UUID aleatório em 22 caracteres), validade de 30 min, uso único, marca da clínica, horários reais por agenda | `src/pages/agendar/[token].astro`, `publicBooking.ts`, `publicId.ts` |
-| Confirmação pelo WhatsApp depois de marcar, reenvio automático de falhas (30 s e 2 min), aviso de falha na Agenda | `notices.ts`, `retries.ts`, [`falhas-de-envio.md`](falhas-de-envio.md) |
+| Confirmação pelo WhatsApp depois de marcar, reenvio automático de falhas (30 s e 2 min), aviso de falha na Agenda | `notices.ts`, `retries.ts`, [`falhas-de-envio.md`](../falhas-de-envio.md) |
 | Lembrete da véspera com Confirmar / Remarcar / Cancelar | `reminders.ts` |
-| Pedido não concluído: link vencido sem marcação recebe "Não concluímos a marcação de *X*" com [Novo link] [Falar com a recepção] [Desistir] | [`pedido-nao-concluido.md`](pedido-nao-concluido.md), `bot/notCompleted.ts` |
+| Pedido não concluído: link vencido sem marcação recebe "Não concluímos a marcação de *X*" com [Novo link] [Falar com a recepção] [Desistir] | [`pedido-nao-concluido.md`](../pedido-nao-concluido.md), `bot/notCompleted.ts` |
 | Limites contra abuso no bot: atendimentos futuros, pacientes novos em 30 dias e faltas em 90 dias por contato; "Contatos para revisar" | `botLimits.ts` |
-| Central de Atendimento (item da Matriz): conversas no painel, assumir, transferir, responder, mídias, não lidas por pessoa, leitura registrada | [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md), `src/pages/admin/conversas.astro` |
+| Central de Atendimento (item da Matriz): conversas no painel, assumir, transferir, responder, mídias, não lidas por pessoa, leitura registrada | [`planejamento-central-atendimento.md`](../planejamento-central-atendimento.md), `src/pages/admin/conversas.astro` |
 | Papéis Administrador / Profissional / Recepção / Suporte; acesso por agenda; matriz de funções por clínica; limite de profissionais ativos | D6, D11 |
 | Funil do bot e Métricas (Visão geral, Atendimentos, Faltosos, Funil, Financeiro) | `botFunnel.ts`, `metrics.ts` |
 | Marca da clínica nas páginas públicas (nome, logo, cor) | `config/brand.ts` |
@@ -133,10 +133,10 @@ Pontos conferidos:
 |---|---|
 | Limites da Meta para vários números | Quantos números por conta (WABA) e por portfólio, limite de mensagens (por número ou por portfólio), qualidade do número, coexistência em cada número. Conferir na documentação atual da Meta antes da Fase 2 **[Pendência]** |
 | Várias contas (WABAs) e portfólios por clínica | Cada médico pode ter o próprio portfólio; cada conta precisa do conjunto de templates aprovado; inscrição do app no webhook por conta |
-| Template de autenticação (código por WhatsApp) | Categoria própria da Meta, com botão de copiar código; custo por mensagem (~R$ 0,035, tabela de 01/out, [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md) seção 15) e quem paga (a clínica paga a Meta) |
+| Template de autenticação (código por WhatsApp) | Categoria própria da Meta, com botão de copiar código; custo por mensagem (~R$ 0,035, tabela de 01/out, [`planejamento-central-atendimento.md`](../planejamento-central-atendimento.md) seção 15) e quem paga (a clínica paga a Meta) |
 | CAPTCHA e CSP | Provedor (ex.: Cloudflare Turnstile) exige liberar o domínio na CSP; a CSP só existe no build (o `npm run dev` não tem CSP; só quebra no staging) |
 | Rate limit na Vercel | Sem Redis hoje: contador no Postgres, Vercel Firewall/WAF ou serviço externo |
-| Webhook com volume maior | Hoje processa em linha, inclusive o bot; 18 profissionais e vários números aumentam o volume ([`planejamento-central-atendimento.md`](planejamento-central-atendimento.md) seção 7) |
+| Webhook com volume maior | Hoje processa em linha, inclusive o bot; 18 profissionais e vários números aumentam o volume ([`planejamento-central-atendimento.md`](../planejamento-central-atendimento.md) seção 7) |
 | Agenda em grade com 18 colunas | Desempenho da consulta de horários livres de 18 agendas de uma vez e leitura no celular |
 
 ## 4. Limitações técnicas existentes

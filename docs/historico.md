@@ -35,7 +35,7 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
 >   ficha; para todas as clínicas) e **P2 Anotações** (aba "Anotações" no lugar das Observações) **no staging em
 >   28/out**. **Não está na produção.** Próximo do CRM: validação da P2 no staging e a P3 Lembretes, por `docs/crm.md`.
 >
-> - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
+> - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](arquivo/diagnostico.md), [limites](arquivo/limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
 > - **Produto:**
 >   - **F0 a F5 concluídas e validadas** (base, testes das regras do piloto, schema multi-clínica,
@@ -116,8 +116,8 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
 >     Meta (Análise do App; depois, a Verificação do acesso); a F10 (produção, com custo mensal)
 >     segue como opção. A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
->   - **Auditoria de frontend (14/out):** [relatório](auditoria-frontend/frontend-audit-report.md)
->     e [cobertura](auditoria-frontend/frontend-test-coverage.md). Todos os defeitos confirmados
+>   - **Auditoria de frontend (14/out):** [relatório](arquivo/auditoria-frontend/frontend-audit-report.md)
+>     e [cobertura](arquivo/auditoria-frontend/frontend-test-coverage.md). Todos os defeitos confirmados
 >     foram corrigidos, revalidados no navegador e publicados: Alta (F-01 a F-03), Média (F-04,
 >     F-05, A-02) e Baixa (F-06, F-08, F-09, A-01, A-03, A-05); F-07 não se reproduziu (era a barra
 >     do Astro no `npm run dev`). Status de cada achado na seção 12 do relatório. Ícone da aba nas
@@ -125,7 +125,7 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
 >     cliente em 17/out:** envio duplo e U-01 a U-12 resolvidos ou fechados (U-08 corrigido; U-05 e U-12 sem mudança) e o
 >     QA-09 da R8 corrigido; implementado, conferido no local, publicado no staging em 17/out (sem migração, commit `9d01b21`) e validado pelo cliente. Na validação, o cliente achou o telefone curto aceito e exibido com o +55: **regra do telefone corrigida** (celular com 9 dígitos, fixo com 8; exibição sem o +55), conferida no local e publicada no staging em 17/out (sem migração, commit `dfd146b`) e **validada pelo cliente em 17/out** (detalhes no [plano](plano.md) e na seção 12.3
 >     do relatório).
->   - **Regressão do frontend (18/out):** [relatório](auditoria-frontend/regressao-2026-10-18-report.md),
+>   - **Regressão do frontend (18/out):** [relatório](arquivo/auditoria-frontend/regressao-2026-10-18-report.md),
 >     no local e sem gravar dados: 107 cenários (94 passaram, 4 falharam, 8 bloqueados, 1 não
 >     aplicável) e 105 endereços varridos. Nenhum defeito corrigido voltou. Defeitos novos, **abertos e
 >     aguardando o cliente**: REG-01 (Média: barra de filtros da Agenda passa da tela entre 640 e
@@ -145,16 +145,16 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
 >     paciente primeiro) publicados e **R4 validada pelo cliente em 16/out**. **Retomar daqui:** R5
 >     (Pagamento): proposta no canvas → aprovação → implementação. **Menu do Suporte agrupado
 >     (pendência da R1, U-07) validado e publicado no staging em 16/out: R1 concluída.**
->     **Teste de interface da R0 a R4 (16/out)**: [relatório](auditoria-frontend/redesign-r0-r4-report.md);
+>     **Teste de interface da R0 a R4 (16/out)**: [relatório](arquivo/auditoria-frontend/redesign-r0-r4-report.md);
 >     as 6 falhas foram corrigidas, validadas e publicadas. **R5 (Pagamento): proposta aprovada, implementada, testada
->     ([relatório](auditoria-frontend/redesign-r5-report.md), 3 falhas e 1 suspeita corrigidas),
+>     ([relatório](arquivo/auditoria-frontend/redesign-r5-report.md), 3 falhas e 1 suspeita corrigidas),
 >     validada pelo cliente e publicada no staging em 16/out** ("Emitir a nota agora" desmarcado e
 >     envio único em todo o painel; detalhes no [plano](plano.md)). **R6 (Pacientes e Ficha): proposta
 >     aprovada (7 decisões no [plano](plano.md)) e implementada em 16/out**, testada no navegador local
->     (computador e celular, sem gravar dados); [teste de interface](auditoria-frontend/redesign-r6-report.md)
+>     (computador e celular, sem gravar dados); [teste de interface](arquivo/auditoria-frontend/redesign-r6-report.md)
 >     com 3 falhas Baixas (QA-02, QA-03, QA-06), já corrigidas e retestadas; **publicada no staging em 16/out** (commit `06dbf90`, a
 >     pedido do cliente), **R6 validada pelo cliente em 16/out.** **R7 (Início e Métricas): proposta aprovada em 16/out
->     (8 decisões no [plano](plano.md), com a nova ordem das abas das Métricas); implementada e testada no navegador local em 16/out; [teste de interface](auditoria-frontend/redesign-r7-report.md) com 3 defeitos (1 Médio, 2 Baixos), já corrigidos e retestados; **publicada no staging em 16/out** (commit `9e02dc5`, sem migração), R7 validada pelo cliente em 17/out.** **R8 (Financeiro e DMED): proposta aprovada em 17/out (6 decisões no [plano](plano.md), com o filtro novo "Falta CPF") e implementada e testada no navegador local em 17/out. [Teste de interface](auditoria-frontend/redesign-r8-report.md) em 17/out: 2 falhas Baixas (FIL-03, mensagem do "Falta CPF" com busca sem resultado, **corrigida e retestada** com o texto aprovado: "Buscar em Todos"; QA-09, erro sem JavaScript no `EditCard`, anterior à R8, só registrada) e "Ficam de fora" não testado (sem pagamento sem CPF no seed). Migração `20261017120000_falta_cpf.sql` aplicada no staging pelo cliente (função conferida no banco) e **R8 publicada no staging em 17/out** (commit `979a294`). No staging, o cliente achou o erro 500 da busca por telefone com o filtro "Falta CPF" (FIL-04), corrigido e publicado (commit `16d5553`). **R8 validada pelo cliente em 17/out** (a DMED continua abrindo no ano passado, decisão do cliente). **R9 (Configurações): proposta aprovada em 17/out** (7 decisões no [plano](plano.md), com o salvar por bloco na Clínica e o "Voltar" para a origem, que resolve o S-01 da R8). **R9 implementada e testada no navegador local em 17/out** (sem commit: aguarda a validação do cliente; depois, o teste de interface e a publicação no staging, sem migração). [Teste de interface da R9](auditoria-frontend/redesign-r9-report.md) em 17/out: 3 falhas (QA-02, Média: o aviso não é apagado em 14 telas de Configurações e reaparece nas seguintes; QA-01, Média: erro de um bloco de baixo da Clínica fora da tela e sem marca no campo; NAV-06, Baixa e anterior à R9: "‹ lista" perde o filtro "Todos"), **as 3 corrigidas e retestadas em 17/out** a pedido do cliente. **R9 publicada no staging em 17/out** (commit `8a06541`, sem migração), a pedido do cliente, que valida depois. Na validação pelo celular, o cliente achou o menu de seções confuso (grupo × seção) e a troca de seção sem retorno ao toque: **proposta de revisão aprovada no canvas e implementada em 17/out** (grupos em cartões, "Abrindo…" na linha, barra de carregamento abaixo da barra de status do iPhone; detalhes no [plano](plano.md)), testada no navegador local e **publicada no staging em 17/out** a pedido do cliente (sem migração). **R10 (Sistema e Acesso): proposta aprovada em 17/out** (7 decisões no [plano](plano.md), com "Mostrar" na senha, a busca de clínica acima de 6, "Abrir" na lista de Clínicas e o filtro e o total do Uso). **R10 implementada e testada no navegador local em 17/out**. [Teste de interface da R10](auditoria-frontend/redesign-r10-report.md) em 17/out: 3 falhas Baixas (NAV-06: a Matriz aberta pela tela da clínica volta para a lista; QA-10: "3de 3" no contador dos grupos da Matriz; FORM-09, anterior à R10: a Matriz perde as marcações quando volta com erro) **as 3 corrigidas e retestadas em 17/out** a pedido do cliente; e, por decisão do cliente (S-01), "Abrir a clínica para configurar" abre Configurações. **R10 publicada no staging em 17/out** a pedido do cliente (sem migração) e **R10 validada pelo cliente em 17/out** (ajustes que aparecerem nos testes dele entram depois). **R11 (páginas do paciente: `/agendar`, `/preparo`, `/orientacoes`, o `/formulario` da clínica e a 404): proposta aprovada em 17/out** (8 decisões no [plano](plano.md), com o botão "Falar com a clínica no WhatsApp" nos avisos do link e o verde `#0B7A62` como cor padrão da clínica sem cor). **R11 implementada e testada no navegador local em 17/out** (sem commit do código: aguarda a validação do cliente; depois, o teste de interface e a publicação no staging, sem migração). [Teste de interface da R11](auditoria-frontend/redesign-r11-report.md) em 17/out: 3 falhas Baixas (QA-01, da R11: horário escolhido com contraste abaixo de 4,5:1, inclusive no verde padrão; QA-02, anterior: aba "Atendimento marcado" no aviso de cancelado e de link já usado; FORM-04, anterior: no `/formulario`, o nome da clínica apagado volta preenchido junto com o erro) e 2 suspeitas de usabilidade (S-01: a faixa de dias no celular mostra 4 dias e a seta pula 7; S-02: dia sem horário no endereço vira o seguinte sem aviso), a decidir com o cliente. **As 3 falhas corrigidas e retestadas em 17/out** a pedido do cliente (seção 10 do relatório); banco local de volta ao seed. **R11 publicada no staging em 17/out** a pedido do cliente (sem migração), que valida depois pelo celular. **R11 validada pelo cliente em 17/out.** **S-01 do teste da R11 decidida e implementada em 17/out** (setas na linha do título no celular, no `/agendar` e no Marcar e Remarcar do painel; os 7 dias sem arrastar), conferida no local (sem commit do código: aguarda a validação do cliente; depois, a publicação no staging, sem migração). **S-02 decidida e implementada em 17/out** (no `/agendar`, o dia pedido sem horário mostra "Não existe agenda aberta para esse dia." ou "… não tem mais horário livre. Mostramos o próximo dia com horário."; o mesmo no Marcar e no Remarcar do painel), conferida no local, também sem commit. O cliente valida a S-01 e a S-02 juntas no fim (17/out). [Teste de interface da S-01 e da S-02](auditoria-frontend/redesign-r11-s01-s02-report.md) em 17/out: 15 cenários aprovados; 2 falhas Baixas anteriores (S02-08: no `/agendar`, dia pedido depois do último dia livre some com a faixa e diz "Não encontramos horários livres"; QA-01, fora do escopo: cabeçalho do painel passa 4px em 360px) e 1 suspeita (dia sozinho na última página fica esticado). **Decididas pelo cliente, corrigidas e retestadas em 17/out** (seção 10 do relatório): aviso + faixa a partir do primeiro dia livre; cada dia com no máximo 1/7 da faixa; abaixo de 380px o "Administrador" sai do cabeçalho. Publicadas junto com a S-01 e a S-02. **S-01, S-02 e as correções do teste publicadas no staging em 17/out** a pedido do cliente (sem migração). **Correção do "Outra data" no iPhone** (abria e fechava o calendário no Marcar e no Remarcar; o campo agora vem com o dia escolhido; detalhes no [plano](plano.md)), feita e conferida no local e publicada no staging em 17/out (sem migração, commit `30088ce`) e **validada pelo cliente no iPhone em 17/out**. S-01 e S-02 validadas pelo cliente em 17/out. **Retomar daqui (próxima sessão, 17/out):** tudo publicado e validado (S-01/S-02, "Outra data" no iPhone, texto das confirmações, busca por nascimento e "Já marcado", U-08, QA-09 e a regra do telefone). **Telefones gravados antes da regra nova (17/out):** levantados no staging (pacientes, profissionais, avisos, nota, links, bot e mensagens); só 5 fora da regra, todos fictícios da clínica de demonstração da Meta (Paciente Exemplo 1 a 4 e Dra. Exemplo), corrigidos com o 9 depois do DDD a pedido do cliente e conferidos no banco. **Testes da F11 pelo roteiro (do T3.1) ficam pendentes** (cliente, 18/out): `WHATSAPP_APP_ID` e `NFSE_SIMULATION=1` já configurados na Vercel pelo cliente (conferir que houve o Redeploy: o botão "Passar para Simulação" aparece para o Suporte); ao retomar, "Criar na Meta" do `rc_nota_fiscal_v1`, Teste 3 com os certificados fictícios, Simulação e Testes 4 a 7. Enquanto isso, aguardar a Meta (Análise do App até ~29/out; depois Verificação do acesso e Tech Provider, que destravam a F8 e a F10). **CI (17/out):** o job `db` falhava desde a F5.1 (06/out) porque o CI subia o Supabase sem o Storage (logo e XML da nota); corrigido no commit `369ea5e` e o CI voltou a passar. Migração registrada no histórico pelo cliente (`migration repair`, 17/out); conferido: staging em dia. **Largura única (16/out):** Agenda e Resumo do Dia na largura das outras telas (1152px), aprovada pelo cliente e publicada no staging (decisão no [plano](plano.md)). **Revisão da Agenda na largura única (17/out):** barra numa linha, 4 colunas sem corte, cartão da turma e selo da Semana como na proposta aprovada; validada pelo cliente e publicada no staging. **Texto das confirmações (S-01 do teste da R0 a R4) decidido em 17/out:** Marcar, série e Remarcar dizem o horário (e, na série, a frequência, o começo e até quando); implementado, conferido no local e publicado no staging em 17/out (sem migração); commit `e02cf3e`, **validado pelo cliente pelo celular em 17/out** (detalhes no [plano](plano.md)). **Ajustes da validação (17/out), decididos pelo cliente:** busca de paciente por nome (com números), telefone ou nascimento (dd/mm/aaaa), com o nascimento nos resultados; e, no Marcar, o "Já marcado" na busca e no cartão do paciente e a trava conferida ao escolher o serviço (aviso com "Remarcar esse atendimento"). Implementados, conferidos no local e publicados no staging em 17/out (sem migração, commit `67d0297`) e **validados pelo cliente em 17/out**.
+>     (8 decisões no [plano](plano.md), com a nova ordem das abas das Métricas); implementada e testada no navegador local em 16/out; [teste de interface](arquivo/auditoria-frontend/redesign-r7-report.md) com 3 defeitos (1 Médio, 2 Baixos), já corrigidos e retestados; **publicada no staging em 16/out** (commit `9e02dc5`, sem migração), R7 validada pelo cliente em 17/out.** **R8 (Financeiro e DMED): proposta aprovada em 17/out (6 decisões no [plano](plano.md), com o filtro novo "Falta CPF") e implementada e testada no navegador local em 17/out. [Teste de interface](arquivo/auditoria-frontend/redesign-r8-report.md) em 17/out: 2 falhas Baixas (FIL-03, mensagem do "Falta CPF" com busca sem resultado, **corrigida e retestada** com o texto aprovado: "Buscar em Todos"; QA-09, erro sem JavaScript no `EditCard`, anterior à R8, só registrada) e "Ficam de fora" não testado (sem pagamento sem CPF no seed). Migração `20261017120000_falta_cpf.sql` aplicada no staging pelo cliente (função conferida no banco) e **R8 publicada no staging em 17/out** (commit `979a294`). No staging, o cliente achou o erro 500 da busca por telefone com o filtro "Falta CPF" (FIL-04), corrigido e publicado (commit `16d5553`). **R8 validada pelo cliente em 17/out** (a DMED continua abrindo no ano passado, decisão do cliente). **R9 (Configurações): proposta aprovada em 17/out** (7 decisões no [plano](plano.md), com o salvar por bloco na Clínica e o "Voltar" para a origem, que resolve o S-01 da R8). **R9 implementada e testada no navegador local em 17/out** (sem commit: aguarda a validação do cliente; depois, o teste de interface e a publicação no staging, sem migração). [Teste de interface da R9](arquivo/auditoria-frontend/redesign-r9-report.md) em 17/out: 3 falhas (QA-02, Média: o aviso não é apagado em 14 telas de Configurações e reaparece nas seguintes; QA-01, Média: erro de um bloco de baixo da Clínica fora da tela e sem marca no campo; NAV-06, Baixa e anterior à R9: "‹ lista" perde o filtro "Todos"), **as 3 corrigidas e retestadas em 17/out** a pedido do cliente. **R9 publicada no staging em 17/out** (commit `8a06541`, sem migração), a pedido do cliente, que valida depois. Na validação pelo celular, o cliente achou o menu de seções confuso (grupo × seção) e a troca de seção sem retorno ao toque: **proposta de revisão aprovada no canvas e implementada em 17/out** (grupos em cartões, "Abrindo…" na linha, barra de carregamento abaixo da barra de status do iPhone; detalhes no [plano](plano.md)), testada no navegador local e **publicada no staging em 17/out** a pedido do cliente (sem migração). **R10 (Sistema e Acesso): proposta aprovada em 17/out** (7 decisões no [plano](plano.md), com "Mostrar" na senha, a busca de clínica acima de 6, "Abrir" na lista de Clínicas e o filtro e o total do Uso). **R10 implementada e testada no navegador local em 17/out**. [Teste de interface da R10](arquivo/auditoria-frontend/redesign-r10-report.md) em 17/out: 3 falhas Baixas (NAV-06: a Matriz aberta pela tela da clínica volta para a lista; QA-10: "3de 3" no contador dos grupos da Matriz; FORM-09, anterior à R10: a Matriz perde as marcações quando volta com erro) **as 3 corrigidas e retestadas em 17/out** a pedido do cliente; e, por decisão do cliente (S-01), "Abrir a clínica para configurar" abre Configurações. **R10 publicada no staging em 17/out** a pedido do cliente (sem migração) e **R10 validada pelo cliente em 17/out** (ajustes que aparecerem nos testes dele entram depois). **R11 (páginas do paciente: `/agendar`, `/preparo`, `/orientacoes`, o `/formulario` da clínica e a 404): proposta aprovada em 17/out** (8 decisões no [plano](plano.md), com o botão "Falar com a clínica no WhatsApp" nos avisos do link e o verde `#0B7A62` como cor padrão da clínica sem cor). **R11 implementada e testada no navegador local em 17/out** (sem commit do código: aguarda a validação do cliente; depois, o teste de interface e a publicação no staging, sem migração). [Teste de interface da R11](arquivo/auditoria-frontend/redesign-r11-report.md) em 17/out: 3 falhas Baixas (QA-01, da R11: horário escolhido com contraste abaixo de 4,5:1, inclusive no verde padrão; QA-02, anterior: aba "Atendimento marcado" no aviso de cancelado e de link já usado; FORM-04, anterior: no `/formulario`, o nome da clínica apagado volta preenchido junto com o erro) e 2 suspeitas de usabilidade (S-01: a faixa de dias no celular mostra 4 dias e a seta pula 7; S-02: dia sem horário no endereço vira o seguinte sem aviso), a decidir com o cliente. **As 3 falhas corrigidas e retestadas em 17/out** a pedido do cliente (seção 10 do relatório); banco local de volta ao seed. **R11 publicada no staging em 17/out** a pedido do cliente (sem migração), que valida depois pelo celular. **R11 validada pelo cliente em 17/out.** **S-01 do teste da R11 decidida e implementada em 17/out** (setas na linha do título no celular, no `/agendar` e no Marcar e Remarcar do painel; os 7 dias sem arrastar), conferida no local (sem commit do código: aguarda a validação do cliente; depois, a publicação no staging, sem migração). **S-02 decidida e implementada em 17/out** (no `/agendar`, o dia pedido sem horário mostra "Não existe agenda aberta para esse dia." ou "… não tem mais horário livre. Mostramos o próximo dia com horário."; o mesmo no Marcar e no Remarcar do painel), conferida no local, também sem commit. O cliente valida a S-01 e a S-02 juntas no fim (17/out). [Teste de interface da S-01 e da S-02](arquivo/auditoria-frontend/redesign-r11-s01-s02-report.md) em 17/out: 15 cenários aprovados; 2 falhas Baixas anteriores (S02-08: no `/agendar`, dia pedido depois do último dia livre some com a faixa e diz "Não encontramos horários livres"; QA-01, fora do escopo: cabeçalho do painel passa 4px em 360px) e 1 suspeita (dia sozinho na última página fica esticado). **Decididas pelo cliente, corrigidas e retestadas em 17/out** (seção 10 do relatório): aviso + faixa a partir do primeiro dia livre; cada dia com no máximo 1/7 da faixa; abaixo de 380px o "Administrador" sai do cabeçalho. Publicadas junto com a S-01 e a S-02. **S-01, S-02 e as correções do teste publicadas no staging em 17/out** a pedido do cliente (sem migração). **Correção do "Outra data" no iPhone** (abria e fechava o calendário no Marcar e no Remarcar; o campo agora vem com o dia escolhido; detalhes no [plano](plano.md)), feita e conferida no local e publicada no staging em 17/out (sem migração, commit `30088ce`) e **validada pelo cliente no iPhone em 17/out**. S-01 e S-02 validadas pelo cliente em 17/out. **Retomar daqui (próxima sessão, 17/out):** tudo publicado e validado (S-01/S-02, "Outra data" no iPhone, texto das confirmações, busca por nascimento e "Já marcado", U-08, QA-09 e a regra do telefone). **Telefones gravados antes da regra nova (17/out):** levantados no staging (pacientes, profissionais, avisos, nota, links, bot e mensagens); só 5 fora da regra, todos fictícios da clínica de demonstração da Meta (Paciente Exemplo 1 a 4 e Dra. Exemplo), corrigidos com o 9 depois do DDD a pedido do cliente e conferidos no banco. **Testes da F11 pelo roteiro (do T3.1) ficam pendentes** (cliente, 18/out): `WHATSAPP_APP_ID` e `NFSE_SIMULATION=1` já configurados na Vercel pelo cliente (conferir que houve o Redeploy: o botão "Passar para Simulação" aparece para o Suporte); ao retomar, "Criar na Meta" do `rc_nota_fiscal_v1`, Teste 3 com os certificados fictícios, Simulação e Testes 4 a 7. Enquanto isso, aguardar a Meta (Análise do App até ~29/out; depois Verificação do acesso e Tech Provider, que destravam a F8 e a F10). **CI (17/out):** o job `db` falhava desde a F5.1 (06/out) porque o CI subia o Supabase sem o Storage (logo e XML da nota); corrigido no commit `369ea5e` e o CI voltou a passar. Migração registrada no histórico pelo cliente (`migration repair`, 17/out); conferido: staging em dia. **Largura única (16/out):** Agenda e Resumo do Dia na largura das outras telas (1152px), aprovada pelo cliente e publicada no staging (decisão no [plano](plano.md)). **Revisão da Agenda na largura única (17/out):** barra numa linha, 4 colunas sem corte, cartão da turma e selo da Semana como na proposta aprovada; validada pelo cliente e publicada no staging. **Texto das confirmações (S-01 do teste da R0 a R4) decidido em 17/out:** Marcar, série e Remarcar dizem o horário (e, na série, a frequência, o começo e até quando); implementado, conferido no local e publicado no staging em 17/out (sem migração); commit `e02cf3e`, **validado pelo cliente pelo celular em 17/out** (detalhes no [plano](plano.md)). **Ajustes da validação (17/out), decididos pelo cliente:** busca de paciente por nome (com números), telefone ou nascimento (dd/mm/aaaa), com o nascimento nos resultados; e, no Marcar, o "Já marcado" na busca e no cartão do paciente e a trava conferida ao escolher o serviço (aviso com "Remarcar esse atendimento"). Implementados, conferidos no local e publicados no staging em 17/out (sem migração, commit `67d0297`) e **validados pelo cliente em 17/out**.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
@@ -186,23 +186,23 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
 >   limpo em 19/out (8 clínicas e 16 logins de uma rodada de testes interrompida, com o OK do cliente): `npm run test:db`
 >   com os 516 passando. **REG-01 a REG-04 e S-01 da regressão de 18/out decididos e corrigidos em 19/out** (barra
 >   da Agenda em duas linhas de 640 a 1279px; borda vermelha em todo campo com erro do painel), conferidos no local
->   (seção 10 do [relatório](auditoria-frontend/regressao-2026-10-18-report.md)), **validados pelo cliente e publicados
+>   (seção 10 do [relatório](arquivo/auditoria-frontend/regressao-2026-10-18-report.md)), **validados pelo cliente e publicados
 >   no staging em 19/out** (sem migração). **Redesign de 19/out:** propostas no [canvas](https://claude.ai/artifact/8x8Zi8osZZLypbMkGRiPbQ) e
 >   decisões do cliente (1C tipo como título do cartão na Agenda; 2B seções com ícone em Configurações, com ícones também
->   no celular; 3B Horários em colunas, em lista) no [plano](plano.md). **1C implementada e testada no local** ([teste](auditoria-frontend/redesign-1c-report.md),
+>   no celular; 3B Horários em colunas, em lista) no [plano](plano.md). **1C implementada e testada no local** ([teste](arquivo/auditoria-frontend/redesign-1c-report.md),
 >   turma com a faixa a pedido do cliente); publicada no staging em 19/out (sem migração); **1C validada pelo cliente em 19/out.** **2B implementada, testada
->   ([teste](auditoria-frontend/redesign-2b-report.md)) e publicada no staging em 19/out** (sem migração); o cliente valida
->   em paralelo. **3B implementada e testada no local** ([teste](auditoria-frontend/redesign-3b-report.md)), publicada
+>   ([teste](arquivo/auditoria-frontend/redesign-2b-report.md)) e publicada no staging em 19/out** (sem migração); o cliente valida
+>   em paralelo. **3B implementada e testada no local** ([teste](arquivo/auditoria-frontend/redesign-3b-report.md)), publicada
 >   no staging em 19/out (sem migração); **2B e 3B validadas pelo cliente em 19/out.** **Ajuste da 3B (19/out), proposta A
 >   do [canvas](https://claude.ai/artifact/J3gdVmShr3aJACVsgcr7Fe):** em Horários, o bloco ganha a faixa do tipo no alto,
 >   como na Agenda; o horário de todos os serviços leva no título os tipos da agenda ("Consulta e Retorno"). Implementado
->   e testado no local ([teste](auditoria-frontend/redesign-3b-tipo-report.md)) e publicado no staging em 19/out a pedido do
+>   e testado no local ([teste](arquivo/auditoria-frontend/redesign-3b-tipo-report.md)) e publicado no staging em 19/out a pedido do
 >   cliente (sem migração), que valida lá. **Cor de cada serviço (19/out, decisões no [plano](plano.md)):** automática pela
 >   ordem de criação, Retorno sempre roxo, em Horários e na Agenda; implementada e testada no local
->   ([teste](auditoria-frontend/cor-servico-report.md)), publicada no staging e **validada pelo cliente em 19/out**.
+>   ([teste](arquivo/auditoria-frontend/cor-servico-report.md)), publicada no staging e **validada pelo cliente em 19/out**.
 >   **Resumo do Dia com a etiqueta do tipo na cor do serviço** (proposta A do
 >   [canvas](https://claude.ai/artifact/QmFLaNUcC74FLSnaFu2nyw), também em Lembretes, Lista de espera, Aguardando
->   remarcação e Envios): implementada e testada no local ([teste](auditoria-frontend/resumo-tipo-report.md)) e
+>   remarcação e Envios): implementada e testada no local ([teste](arquivo/auditoria-frontend/resumo-tipo-report.md)) e
 >   publicada no staging em 19/out a pedido do cliente (sem migração) e **validada pelo cliente em 19/out**.
 >   **"Marcar retorno" na Consulta realizada e apta** (cliente, 19/out; 7 regras no [plano](plano.md)): implementado e
 >   conferido no local e publicado no staging em 19/out a pedido do cliente (sem migração); ajustado para aparecer a partir
@@ -268,7 +268,7 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
 >   `20261022130000_metricas_contas.sql`). **M4 (aba Desempenho, filtros de serviço e local, matriz com um item só)
 >   implementada e publicada no staging em 22/out** (migração `20261022140000_metricas_matriz.sql`). **M5 (Agendamento digital,
 >   estados, celular, quantidade em Retomar contato) implementada, testada
->   ([relatório](auditoria-frontend/redesign-metricas-report.md), 2 falhas Baixas corrigidas) e publicada no staging
+>   ([relatório](arquivo/auditoria-frontend/redesign-metricas-report.md), 2 falhas Baixas corrigidas) e publicada no staging
 >   em 22/out** (sem migração). **Redesign das Métricas todo implementado e dado como validado pelo cliente em 22/out**
 >   (ele confere no staging e traz os ajustes, se houver). **Fim da sessão de 22/out. Retomar daqui (próxima sessão):**
 >   o cliente passa um novo ajuste. Pendentes do redesign: ajustes que vierem da conferência no staging (limitações no
@@ -741,7 +741,7 @@ Cópia integral do bloco antes de ser enxugado (cliente, 31/out).
 >
 > **Próxima sessão (cliente, 31/out): revisão da jornada do bot, na `main`.** Base: [`jornada-do-bot.md`](jornada-do-bot.md)
 > (temporário: não precisa acompanhar o bot; excluir ao fim da revisão). Mudança no caminho do paciente atualiza também
-> Tecnologia › Jornada do bot (`botJourney.ts`, regra do `CLAUDE.md`). Menu lateral ([`menu-lateral.md`](menu-lateral.md))
+> Tecnologia › Jornada do bot (`botJourney.ts`, regra do `CLAUDE.md`). Menu lateral ([`menu-lateral.md`](arquivo/menu-lateral.md))
 > concluído e na produção; o cliente valida quando puder. O faturamento fica parado na branch `faturamento` (abaixo).
 >
 > **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
@@ -766,7 +766,7 @@ Cópia integral do bloco antes de ser enxugado (cliente, 31/out).
 >   C14 e C15 na produção em 31/out, `fd4668c`).
 >   Detalhes no [`historico.md`](historico.md) (busca "C9" a "C13"). Clínica com exames: "Criar na Meta" (Suporte) para
 >   `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada pendente nesta frente; aguarda o cliente.
-> - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
+> - **CRM concluído** (28/out; [`crm.md`](arquivo/crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS** (código na branch **`faturamento`, só local, sem push** a pedido do cliente; retomar pelo
 >   bloco de retomada do `planejamento-faturamento-saas.md` **na branch**): **F12.1** (conta de cobrança) e **F12.2**
 >   (contrato com versões) feitas e **validadas no local (30/out)**. Ordem decidida: cobrança antes da nota fiscal, só
@@ -1137,7 +1137,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 > métricas: precisam estar no ar antes da implantação.
 >
 > **Frente ativa (08/nov): recepção digital integrada.** Retomar pelo bloco do
-> [`proposta-recepcao-digital-integrada.md`](proposta-recepcao-digital-integrada.md).
+> [`proposta-recepcao-digital-integrada.md`](arquivo/proposta-recepcao-digital-integrada.md).
 > - **Feito:** Etapa 1 (proposta, RD1 a RD14) e Etapa 2 (design: portal P1 a P13, link do profissional, painel da
 >   recepção R1 a R7), aprovadas; especificação em `especificacao-telas-portal-e-recepcao.md`. Nenhum código mudou.
 > - **Fora desta entrega:** vários números de WhatsApp (F4, RD11), pendente.
@@ -1183,7 +1183,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 > Frente da nota fiscal encerrada em 08/nov com a validação pendente (abaixo).
 >
 > **Duas frentes (cliente, 07/nov):**
-> - **Validação do que está pendente:** [`frente-validacao.md`](frente-validacao.md) (multiprofissional ME, MC, MI, MB
+> - **Validação do que está pendente:** [`frente-validacao.md`](arquivo/frente-validacao.md) (multiprofissional ME, MC, MI, MB
 >   e MS no staging; o ajuste `9b22e00` da Central; depois, produção com autorização).
 > - **Nota fiscal:** bloco "Frente da nota fiscal" do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md).
 >   N-P1 a N-P7 decididas; **N1 a N5 feitas na branch `nota-fiscal`** (só local, 7 migrações); roteiro de validação
@@ -1333,7 +1333,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
 >   na Meta. Próximo: templates aprovados → configuração → ativação → testes do bot. Depois: lembrete com botões no
 >   staging e etapa B.
-> - **Redesign da Recepção (UX)** ([`redesign-recepcao.md`](redesign-recepcao.md)): RX1 a RX9 e os ajustes da validação
+> - **Redesign da Recepção (UX)** ([`redesign-recepcao.md`](arquivo/redesign-recepcao.md)): RX1 a RX9 e os ajustes da validação
 >   (Meu dia, Agenda opção B, Pacientes/ficha A, Relatório do dia opção C) **na `main` e no staging (02/nov)**, sem
 >   produção. **Central de Ajuda atualizada com o redesign (02/nov):** artigos e as 25 capturas refeitas, validadas (05/nov). Avisos técnicos só do Suporte; tela
 >   de pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
@@ -1347,7 +1347,7 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 > - **Limpeza (item 4, 08/nov):** `clinic_settings.booking_horizon_days` e `consultation_age_limit_years` sem uso; migração
 >   para tirar depois da produção.
 > - **Fotos (cliente, 08/nov):** cadastradas no profissional e na pessoa da Equipe; onde mostrar fora do cadastro fica
->   para uma etapa posterior, a planejar ([`frente-validacao.md`](frente-validacao.md), registro).
+>   para uma etapa posterior, a planejar ([`frente-validacao.md`](arquivo/frente-validacao.md), registro).
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
 > - **Operação:** 1º backup diário da produção; sessão do painel que caiu (parte P do `staging.md`).
 > - **Clínica piloto (03/nov):** conferir os lembretes de hoje (1º lote depois do cartão na Meta); verificação da
@@ -1362,3 +1362,51 @@ Movido do README em 10/nov/2026 para enxugar a retomada (texto original).
 > - **WhatsApp de testes:** `+55 61 9903-3143` ("Consultorio de Teste", staging).
 > - **Outras:** site em [`site-plano.md`](site-plano.md) (pasta `recepclinic-site`); triagem em
 >   [`triagem-piloto.md`](triagem-piloto.md).
+
+
+## Bloco de retomada do README até 12/nov/2026 (preservado na reorganização)
+
+> **Estado atual (retomar daqui, 11/nov).** Bloco enxuto: só ambientes e próximo passo. Histórico até 10/nov no
+> [`historico.md`](historico.md) ("Bloco de retomada do README até 10/nov/2026").
+>
+> **Ambientes**
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `2fffd62` (11/nov: `be69117` + correção do portal de exames, sessão paralela; registro em `producao.md`), migrações até `20270112120000`. Fluxo: [`producao.md`](producao.md).
+> - **Staging** (`teste.recepclinic.com.br`) = `main` `bddd483d` (12/nov): produção + **vários responsáveis (VR1–VR5)** + **F3f (bot enxuto, E1–E8)**.
+>   VR validada pelo cliente (V1–V12, 11/nov); **F3f a validar no staging** (E6 e E7 só lá). Migrações até `20270119120000`
+>   (inclui `20270117120000` e `20270119120000` da F3f, aplicadas e conferidas em 12/nov). `PORTAL_BUTTON_ROOT` definida no projeto
+>   `recepclinic` da Vercel (`https://agendar-teste.recepclinic.com.br`). **Pendente:** o Suporte criar o `rc_lembrete_v2` em
+>   Configurações › WhatsApp e esperar a Meta (até lá, `rc_lembrete_v1`). Modelos "Remarcada/Cancelada por outro responsável"
+>   enviados à Meta (11/nov). **Produção só depois da validação da F3f no staging** (a produção tem a VR sem o bot pela ligação).
+>
+> **Frente ativa: recepção digital integrada** ([`implementacao-recepcao-digital.md`](implementacao-recepcao-digital.md)).
+> Duas sessões: validação (esta pasta, `main`, edita este bloco) e implementação (branch curta; quem junta e publica é
+> a validação). Banco local único: migração só avisando.
+> **Validação final (11/nov, `59049142`):** CI verde (tipos no formato da CLI 2.121; local atualizada para 3.1.0, mesmo formato),
+> 1217 testes de unidade, build e `astro check` ok; banco local tem as migrações VR (testes de banco locais divergem).
+> **Implantação da `main` na produção (11/nov, feita):** 17 migrações aplicadas e conferidas, código publicado, saúde
+> `ok` (registro em `producao.md`); portal ligado na clínica piloto pelo cliente. Foto como primeiro item em
+> Configurações › Profissionais e Equipe (`be69117`, validada no staging e na produção, 11/nov). **F3f (bot enxuto, seção 15.6, BE-1 a BE-10) feita na `main` e no staging (12/nov);
+> code-review e segurança passados.** **Próximo:** roteiro de validação da F3f no staging (menu e links do bot, portal com Profissionais
+> e valores, Confirmação ao paciente em Lembretes, lembrete v2 depois do modelo aprovado); depois, produção e a limpeza do `/agendar`
+> (`api/agendar`, `booking_links`). Clínica Exemplo Saúde do staging com 12 profissionais
+> (`scripts/clinica-exemplo-grande.mjs`).
+> **VR na `main` (11/nov):** branch `varios-responsaveis` juntada (suíte verde: unidade 1223, banco 1218); detalhe na seção
+> 8 do [`planejamento-varios-responsaveis.md`](planejamento-varios-responsaveis.md). Pergunta aberta: atualizar a
+> `nota-fiscal` com a `main`.
+>
+> **Outras frentes paradas**
+> - **Biomedical** ([proposta](propostas/clinica-12-profissionais/README.md)): implantação depende do portal, F3, F5 e F6 no ar.
+> - **Nota fiscal:** N1–N5 na branch `nota-fiscal` (só local), validação pendente (seção 15.2 do
+>   [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)); N6 depende de Asaas, contador e advogado.
+> - **Asaas:** reanálise do BaaS aguardando; tokenização do cartão em produção pedida (conferir antes do 1º contrato
+>   com implantação no cartão). Faturamento: `planejamento-faturamento-saas.md`.
+> - **Pendências:** limpeza de `booking_horizon_days`/`consultation_age_limit_years`; onde mostrar fotos; F11 (T3.1);
+>   1º backup diário da produção; advogado (páginas legais, contrato, termo de dados); verificação da empresa na Meta.
+>
+> **Como trabalhar**
+> - **Migrações:** staging com `supabase db push` (simular → aplicar → conferir → push do código); produção só com
+>   autorização, pelo `producao.md` (`git push origin main:producao`).
+> - **Local:** OrbStack, `npm run db:start`, `npm run dev`; `npm test`, `npm run test:db` (PATH com `/opt/homebrew/bin`).
+> - **WhatsApp de testes:** `+55 61 9903-3143` ("Consultorio de Teste", staging).
+> - **Demos:** antes de apresentar, `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar`.
+> - **Outras:** site em [`site-plano.md`](site-plano.md); triagem em [`triagem-piloto.md`](triagem-piloto.md).

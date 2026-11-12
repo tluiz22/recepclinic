@@ -1,7 +1,7 @@
 # Emissão de NFS-e pelo Asaas (substitui o emissor direto da F11)
 
 > **Frente da nota fiscal (retomar daqui), 07/nov/2026.** Separada da frente de validação a pedido do cliente (07/nov;
-> validação em [`frente-validacao.md`](frente-validacao.md)). Base pronta para a emissão por profissional: serviços,
+> validação em [`frente-validacao.md`](arquivo/frente-validacao.md)). Base pronta para a emissão por profissional: serviços,
 > especialidades e convênios por profissional (MS e M1 a M8, no staging). **N-P1 a N-P7 decididas (14.7).**
 > **N1 a N5 feitas (08/nov) na branch `nota-fiscal`** (`23cae85`…`aee7cec`, 7 migrações `20261231120000` a
 > `20261231170000`), só local, testes por etapa (unidade, banco e Playwright). **Próximo passo:** o cliente valida

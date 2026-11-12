@@ -1,7 +1,7 @@
 # Arquitetura alvo
 
 > Etapa 3 do RecepClinic. Decisões tomadas com o cliente, uma de cada vez, a partir dos
-> [limites](limites.md). Cada decisão registra o que foi escolhido, por quê, o que foi descartado e
+> [limites](arquivo/limites.md). Cada decisão registra o que foi escolhido, por quê, o que foi descartado e
 > quais limites resolve. O **como fazer** (ordem, migrações, etapas) fica para o plano de evolução
 > (etapa 4).
 

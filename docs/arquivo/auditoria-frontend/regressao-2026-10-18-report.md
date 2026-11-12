@@ -5,7 +5,7 @@
 > nascimento, "Já marcado", U-08, QA-09 e a regra do telefone). Feita com a skill
 > `playwright-ui-form-best-practices`. **Só auditoria: nenhum código da aplicação foi alterado.**
 > Referências: [auditoria inicial](frontend-audit-report.md) (mantida como está), [cobertura](frontend-test-coverage.md),
-> relatórios do redesign (`redesign-*.md`) e as decisões do redesign no [plano](../plano.md).
+> relatórios do redesign (`redesign-*.md`) e as decisões do redesign no [plano](../../plano.md).
 
 ## 1. Resumo da execução
 

@@ -3,10 +3,10 @@
 > **Retomar daqui (02/nov/2026):** as nove etapas (RX1 a RX9) estão **implementadas e commitadas na branch
 > `rx1-historico`** (local, sem push, criada da `main` em `c239b84`), cada uma aprovada pelo cliente. Falta: o cliente
 > validar tudo, trazer a `main` para a branch e rodar os testes, juntar na `main` (staging) e, com autorização,
-> recapturar as telas da Central de Ajuda (lista em [`capturas-pendentes.md`](capturas-pendentes.md)). Decisões tomadas
+> recapturar as telas da Central de Ajuda (lista em [`capturas-pendentes.md`](../capturas-pendentes.md)). Decisões tomadas
 > no caminho: contador do Meu dia (soma de conversas à espera, conversas com a clínica, presença a registrar e
 > contatos a conferir); "Resolvido hoje" ficou de fora (sem dado persistido); avisos técnicos só para o Suporte
-> ([`painel-suporte.md`](painel-suporte.md), tela do Suporte pendente); "Avisar pacientes" fora do "Mais" da Agenda;
+> ([`painel-suporte.md`](../painel-suporte.md), tela do Suporte pendente); "Avisar pacientes" fora do "Mais" da Agenda;
 > horário livre = lacunas das janelas gerais, com a hora levada ao Marcar (`hora`).
 
 Canvas com as propostas e as escolhas: <https://claude.ai/artifact/LUVvbPjkrLfVaazSCgMMTT>. As fileiras de baixo
@@ -148,7 +148,7 @@ De cima para baixo:
 
 Uma etapa por vez, cada uma publicável sozinha: branch curta da `main`, testes (`npm test`, `npm run check`),
 Playwright, staging, validação do cliente. Mudou tela com captura da Central: anotar em
-[`capturas-pendentes.md`](capturas-pendentes.md) no mesmo commit e pedir autorização (regra do CLAUDE.md).
+[`capturas-pendentes.md`](../capturas-pendentes.md) no mesmo commit e pedir autorização (regra do CLAUDE.md).
 
 | Etapa | O que | Risco |
 |---|---|---|

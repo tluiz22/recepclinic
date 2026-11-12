@@ -1,58 +1,35 @@
 # RecepClinic: instruções para o Claude
 
-Antes de qualquer coisa, leia o bloco **"Estado atual (retomar daqui)"** do `docs/README.md`: ele diz onde
-o trabalho parou. Numa frente com arquivo próprio (ex.: o CRM em `docs/crm.md`), leia também o bloco de retomada
-dele.
+SaaS multi-clínica (Astro, Supabase, Vercel, WhatsApp/Meta). Responder e documentar em português do Brasil.
 
-**Para economizar contexto:** na retomada, leia só esses blocos. `docs/plano.md`, `docs/historico.md`,
-`docs/analises/crm-arquivo.md` e os demais documentos longos só por busca (`grep`), no trecho necessário. Ao fim de
-cada etapa, atualize o bloco de retomada de forma **enxuta** (o que está em cada ambiente e o próximo passo) e
-registre o detalhe no plano da frente ou no `historico.md`, nunca no README.
+**Retomada:** ler `docs/roadmap.md` e, só da frente em andamento, `docs/iniciativas/<frente>/status.md`.
+Documentos longos (`docs/plano.md`, `docs/historico.md`, `docs/arquivo/**`) só por `grep`, no trecho necessário.
+Índice: `docs/README.md`. Decisões de arquitetura: `docs/arquitetura.md` (D1–D14); mudar só com o cliente.
 
 ## Como trabalhar com o cliente
 
-- **Uma etapa por vez.** Ao concluir uma etapa: o que foi feito + comandos para o cliente validar no
-  terminal, e **parar até a confirmação explícita**. Nunca avançar sozinho.
-- **Nunca decidir questões de negócio sozinho.** Dúvidas uma de cada vez, pela ferramenta de
-  perguntas (AskUserQuestion), com uma opção recomendada.
-- Responder e documentar em português do Brasil.
+- **Uma etapa por vez.** Concluída: o que foi feito + comandos para validar; **parar até a confirmação explícita**.
+- **Nunca decidir negócio sozinho.** Dúvidas uma de cada vez, por AskUserQuestion, com opção recomendada, o termo
+  explicado em linguagem simples e um exemplo.
 - Commits com a linha `Co-Authored-By` do Claude; push na `main` deste repositório.
 
 ## Regras do projeto
 
-- Este repositório é o **RecepClinic** (SaaS para várias clínicas). O **piloto** (sistema da
-  Dra. Ana Karina) fica em `tluiz22/site-dra-ana-karina` e aqui é o remoto `piloto`, **só
-  leitura**.
-- **Sem merge cego** do piloto: cada mudança dele é avaliada e registrada em
-  `docs/triagem-piloto.md` (classes A/B/C/D).
-- **Nunca usar nada do piloto**: banco, agendador/Vault, número de WhatsApp, app da Meta ou
-  segredos. O número de WhatsApp do piloto não pertence ao cliente; os testes do RecepClinic usam um
-  chip próprio.
-  **Revisto pelo cliente em 20/out:** o piloto está desativado e o número do app antigo "Consultório
-  Dra. Ana Karina" é do cliente; o app antigo é excluído e esse número pode entrar no portfólio
-  RecepClinic como número de testes de outra clínica do staging (o resto do piloto segue proibido).
-- **Branches paralelas** (cliente, 30/out/2026): planejamento fica na `main` (cada frente no seu arquivo); branch
-  paralela só quando há código, criada da `main` e de vida curta. A cada correção na `main`, o Claude **pergunta**
-  se é para atualizar as outras branches (cliente, 31/out/2026); com o OK, traz a `main` para a branch
-  (`git merge main`), roda os testes e avisa; com conflito, para e pergunta. Nunca o caminho inverso sem
-  o OK do cliente: antes de juntar a branch na `main`, trazer a `main` para ela, rodar todos os testes e conferir que
-  nenhuma correção da `main` voltou ao estado antigo. O bloco de retomada do README só é editado na `main`.
-- **Jornada do bot** (cliente, 30/out/2026): toda mudança no caminho do paciente no WhatsApp (bot em
-  `src/lib/data/whatsapp/bot/` ou mensagens automáticas) atualiza, no mesmo commit, o fluxograma de Tecnologia ›
-  Jornada do bot (`src/components/admin/tecnologia/botJourney.ts`, com a data em `JOURNEY_UPDATED`).
-- **Capturas da Central de Ajuda** (cliente, 01/nov/2026): mudou uma tela que tem captura em `public/ajuda/` (lista em
-  `src/lib/central/imagens.ts`): **não recapturar sozinho**. Anotar a captura e o motivo em `docs/capturas-pendentes.md`
-  no mesmo commit, avisar o cliente no fim da etapa e esperar a autorização; com ela, `npm run ajuda:capturas --
-  --pendentes` (com o `npm run dev` no ar), conferir as imagens e atualizar o texto do artigo se citar o que mudou. Tela
-  nova com artigo: acrescentar a linha em `scripts/capturas-ajuda.mjs` e em `imagens.ts`.
-- **Economia de tokens** (cliente, 10/nov/2026): Playwright por etapa só da tela que mudou (suíte inteira antes de
-  juntar na `main` e do staging); conferir tela pelo snapshot em texto, captura de imagem a 390/1280 só no fim da
-  etapa; sem subagentes nem workflows sem pedido do cliente; ler arquivos e saídas por trecho; no fim de etapa
-  confirmada, lembrar `/clear` antes da próxima frente e `/model sonnet` para tarefa mecânica.
-- As decisões de arquitetura estão em `docs/arquitetura.md` (D1–D11) e o plano em `docs/plano.md`.
-  Mudança de decisão só com o cliente, e registrada lá.
+- **Piloto** (`tluiz22/site-dra-ana-karina`, remoto `piloto`) é **só leitura**. Sem merge cego: cada mudança dele é
+  avaliada em `docs/triagem-piloto.md` (classes A/B/C/D). **Nunca usar do piloto:** banco, agendador/Vault, app da Meta,
+  segredos. Exceção (cliente, 20/out): o número do app antigo "Consultório Dra. Ana Karina" é do cliente e pode ser
+  número de testes de outra clínica do staging.
+- **Branches:** planejamento na `main` (cada frente no seu `status.md`); branch só quando há código, criada da `main`,
+  de vida curta. O bloco de retomada (`roadmap.md`) só é editado na `main`. Juntar: skill `juntar-branch`.
+- **Jornada do bot:** mudou o caminho do paciente no WhatsApp → atualizar no mesmo commit o fluxograma
+  (`.claude/rules/bot-jornada.md`).
+- **Capturas da Central de Ajuda:** mudou tela com captura → **não recapturar sozinho** (`.claude/rules/ajuda-capturas.md`).
+- **Migrações:** migração no staging antes do código que a lê (`.claude/rules/migracoes.md`).
+- **Economia de tokens:** Playwright por etapa só da tela que mudou (suíte inteira antes de juntar e do staging);
+  tela pelo snapshot em texto, imagem a 390/1280 só no fim; sem subagentes nem workflows sem pedido; leitura por trecho.
+  Fim de etapa confirmada: lembrar `/clear` e `/model sonnet` para tarefa mecânica.
 
-## Communication Style (Caveman Mode)
-- Speak like a caveman. Use minimal words.
-- No pleasantries, no conversational filler, no explanations unless explicitly asked.
-- Output code diffs and file paths directly. Skip recap text.
+## Procedimentos (skills do projeto)
+
+`iniciar-etapa`, `fechar-etapa`, `juntar-branch`, `publicar` (staging/produção), `recapturar-ajuda`.
+Telas novas: skill `frontend-design`; testes de UI: `playwright-ui-form-best-practices`.
