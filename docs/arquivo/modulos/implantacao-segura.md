@@ -157,6 +157,7 @@ Itens (A = automático, S = Suporte marca; R = recomendado, não bloqueia):
 - Clínica piloto (já ativa): a checklist aparece só como consulta.
 
 ### IS4 — Mensagem automática do app (feita, 03/nov)
+> **Revisto em 12/nov/2026 (cliente):** a classificação pelo tempo (eco até 5 s depois do paciente) foi **retirada**: tratou como automática a mensagem digitada pela recepção ("ESQUECI ONTEM", clínica piloto, 14:23). Todo eco do app agora conta como resposta da recepção (pausa o bot). Sem produção ainda. Os 10 registros antigos `app_auto_reply` da produção seguem como estão (a decidir com o cliente).
 
 Feito: no webhook, o eco do app com a hora da Meta (`timestamp`, sempre presente nos eventos reais) até 5 s depois
 (ou 2 s antes) de uma mensagem do paciente ou do bot naquela conversa vira `app_auto_reply`
