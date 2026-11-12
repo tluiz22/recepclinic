@@ -412,3 +412,15 @@ Resultado de cada tela: anotar aqui (ok ou ajuste com o commit).
   (`patientContacts.ts`), `registerPatient` (`otherResponsible`), `novo.astro`; `confirmFormData.ts` não lê botões como
   campos. Artigo "Cadastrar um paciente". Testes: banco 1222, unidade 1223; Playwright 390/1280 (aviso, dados mantidos,
   ligar → "Responsáveis (3)", sem erro no console). Captura `paciente-novo` sem mudança (formulário vazio).
+
+- **Ficha repetida pelo portal (11/nov, cliente):** a cliente marcou pelo celular "Kate Doguinho" (12/10/2026), que já
+  tinha ficha, e o portal criou outra (no portal ninguém se liga sozinho: decisão de 10/nov, mantida). **Ajuste
+  (cliente, 11/nov):** a ficha mostra a faixa **"Possível ficha repetida"** (mesmo nome sem acento/caixa e nascimento,
+  outra ficha ativa; só Administrador, Recepção e Suporte) com o responsável da outra, qual é a mais nova e de onde veio
+  (portal, bot, equipe); **"Ligar o número e desativar a repetida"** abre o Adicionar responsável na ficha mais antiga,
+  já com o número e "Desativar a outra ficha" marcado; "Abrir a outra ficha"; **"Não é a mesma"** guarda o par e o aviso
+  não volta. **Migração `20270118120000_fichas_nao_repetidas.sql`** (tabela `patient_not_duplicates` + função
+  `mark_patients_not_duplicate`; local feita, **staging pendente, antes do código**; renumerada porque a F3f já usa
+  `20270117120000`). `duplicateSuspects` e `markNotDuplicate` (`patientContacts.ts`), ficha, API (`nao_repetida`),
+  `seed.sql`. Testes: banco 1225, unidade e `astro check` ok; Playwright 390/1280 (faixa, ligar e desativar, não é a
+  mesma). Artigos da Central: texto em "Ficha do paciente" a revisar.

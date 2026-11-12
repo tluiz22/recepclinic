@@ -161,6 +161,86 @@ export async function twinsOfOtherResponsibles(
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
+export type DuplicateSuspect = {
+  id: string;
+  fullName: string;
+  birthdate: string;
+  createdAt: string;
+  createdVia: string;
+  primary: { contactId: string; fullName: string; phone: string; kinship: string | null } | null;
+  /** A ficha mais antiga do par (a que fica): esta ou a outra. */
+  keep: "this" | "other";
+  /** O principal da ficha mais nova já é responsável da mais antiga (só falta desativar a nova). */
+  alreadyLinked: boolean;
+};
+
+/**
+ * Possível ficha repetida (cliente, 11/nov/2026, validação da VR): outras fichas ativas com o mesmo nome (sem acento e
+ * caixa) e nascimento, menos os pares que a equipe marcou como "Não é a mesma" (`patient_not_duplicates`). Acontece
+ * pelo portal e pelo bot, onde ninguém se liga sozinho a uma ficha.
+ */
+export async function duplicateSuspects(
+  db: DbClient,
+  clinicId: string,
+  patient: { id: string; fullName: string; birthdate: string },
+): Promise<DuplicateSuspect[]> {
+  const rows = unwrap(
+    await db
+      .from("patients")
+      .select("id, full_name, birthdate, contact_id, created_at, created_via")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .is("anonymized_at", null)
+      .eq("birthdate", patient.birthdate),
+    "Fichas repetidas",
+  );
+  const self = rows.find((row) => row.id === patient.id);
+  const name = comparableName(patient.fullName);
+  const twins = rows.filter((row) => row.id !== patient.id && comparableName(row.full_name) === name);
+  if (twins.length === 0) return [];
+  const [dismissed, links, selfRow] = await Promise.all([
+    db
+      .from("patient_not_duplicates")
+      .select("patient_a, patient_b")
+      .eq("clinic_id", clinicId)
+      .or(`patient_a.eq.${patient.id},patient_b.eq.${patient.id}`)
+      .then((r) => unwrap(r, "Fichas que não são repetidas")),
+    db
+      .from("patient_contacts")
+      .select("patient_id, contact_id, kinship, contacts ( full_name, phone )")
+      .eq("clinic_id", clinicId)
+      .in("patient_id", [patient.id, ...twins.map((row) => row.id)])
+      .then((r) => unwrap(r, "Responsáveis das fichas") as unknown as { patient_id: string; contact_id: string; kinship: string | null; contacts: { full_name: string; phone: string } | null }[]),
+    self ? Promise.resolve(self) : db.from("patients").select("id, contact_id, created_at").eq("clinic_id", clinicId).eq("id", patient.id).single().then((r) => unwrap(r, "Ficha")),
+  ]);
+  const notSame = new Set(dismissed.map((d) => (d.patient_a === patient.id ? d.patient_b : d.patient_a)));
+  return twins
+    .filter((row) => !notSame.has(row.id))
+    .map((row) => {
+      const primary = links.find((l) => l.patient_id === row.id && l.contact_id === row.contact_id);
+      const keep = row.created_at < selfRow.created_at ? "other" : "this";
+      // A mais nova se desfaz: o principal dela já está na mais antiga?
+      const [newer, older] = keep === "other" ? [selfRow, row] : [row, selfRow];
+      return {
+        id: row.id,
+        fullName: row.full_name,
+        birthdate: row.birthdate,
+        createdAt: row.created_at,
+        createdVia: row.created_via,
+        primary: primary?.contacts ? { contactId: row.contact_id, fullName: primary.contacts.full_name, phone: primary.contacts.phone, kinship: primary.kinship } : null,
+        keep,
+        alreadyLinked: links.some((l) => l.patient_id === older.id && l.contact_id === newer.contact_id),
+      } satisfies DuplicateSuspect;
+    })
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/** "Não é a mesma" (cliente, 11/nov/2026): o par não volta a aparecer como possível ficha repetida. */
+export async function markNotDuplicate(db: DbClient, clinicId: string, patientId: string, otherId: string): Promise<void> {
+  const { error } = await db.rpc("mark_patients_not_duplicate", { p_clinic_id: clinicId, p_patient_id: patientId, p_other_id: otherId });
+  if (error) throw toError(error, "Ficha repetida");
+}
+
 export type SimilarRecord = { id: string; fullName: string; birthdate: string; futureAppointments: number };
 
 /**

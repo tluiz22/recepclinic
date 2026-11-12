@@ -2,8 +2,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment } from "../../src/lib/data/agenda/appointments";
 import { contactForResponsible, getPatient, listPatientsPage, registerPatient, searchPatients } from "../../src/lib/data/patients";
 import {
+  duplicateSuspects,
   linkPatientContact,
   listContactLinkedPatients,
+  markNotDuplicate,
   setAppointmentsBooker,
   similarRecordsOfContact,
 } from "../../src/lib/data/patientContacts";
@@ -209,5 +211,35 @@ describe("cadastro de paciente que já tem ficha com outro responsável (cliente
         "2031-03-09",
       ),
     ).rejects.toMatchObject({ code: "invalid" });
+  });
+});
+
+describe("possível ficha repetida na ficha (cliente, 11/nov/2026; migração 20270118120000)", () => {
+  it("as duas fichas se apontam; a mais antiga fica; o principal da nova já ligado na antiga", async () => {
+    const db = asDb(fixture.reception);
+    const older = await getPatient(db, clinicId, child);
+    const newer = await getPatient(db, clinicId, duplicate);
+    const fromOlder = (await duplicateSuspects(db, clinicId, older)).find((s) => s.id === duplicate);
+    expect(fromOlder).toMatchObject({ keep: "this", alreadyLinked: true, primary: { contactId: dad } });
+    const fromNewer = (await duplicateSuspects(db, clinicId, newer)).find((s) => s.id === child);
+    expect(fromNewer).toMatchObject({ keep: "other", alreadyLinked: true, primary: { contactId: mom } });
+  });
+
+  it("Não é a mesma: o par some dos dois lados, uma linha só; ficha de outra clínica é recusada", async () => {
+    const db = asDb(fixture.reception);
+    await markNotDuplicate(db, clinicId, duplicate, child);
+    await markNotDuplicate(db, clinicId, child, duplicate);
+    const older = await getPatient(db, clinicId, child);
+    const newer = await getPatient(db, clinicId, duplicate);
+    expect((await duplicateSuspects(db, clinicId, older)).map((s) => s.id)).not.toContain(duplicate);
+    expect((await duplicateSuspects(db, clinicId, newer)).map((s) => s.id)).not.toContain(child);
+    const rows = await sql("select created_by from patient_not_duplicates where clinic_id = $1", [clinicId]);
+    expect(rows).toEqual([{ created_by: fixture.reception.id }]);
+    await expect(markNotDuplicate(db, clinicId, child, "00000000-0000-0000-0000-000000000001")).rejects.toBeTruthy();
+  });
+
+  it("a equipe não grava direto na tabela", async () => {
+    const { error } = await fixture.reception.client.from("patient_not_duplicates").insert({ clinic_id: clinicId, patient_a: child, patient_b: duplicate });
+    expect(error).not.toBeNull();
   });
 });

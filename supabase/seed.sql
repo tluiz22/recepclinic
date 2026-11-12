@@ -228,6 +228,9 @@ begin
   insert into public.patient_contacts (clinic_id, patient_id, contact_id, kinship) values (c_a, pt_ana, ct_carlos, 'Pai');
   insert into public.patient_contact_events (clinic_id, patient_id, contact_id, event, kinship)
     values (c_a, pt_ana, ct_carlos, 'linked', 'Pai');
+  -- Possível ficha repetida (11/nov/2026): um par que a equipe marcou como "Não é a mesma" (para o isolamento).
+  insert into public.patient_not_duplicates (clinic_id, patient_a, patient_b)
+    values (c_a, least(pt_joao, pt_julia), greatest(pt_joao, pt_julia));
 
   -- Módulo financeiro (F11.1): o CPF de Maria (paga pelos filhos, o padrão) e,
   -- para Ana, o pai como outra pessoa. CPFs fictícios, com dígitos válidos.
