@@ -17,3 +17,12 @@ describe("filterConversations (F5b)", () => {
     expect(filterConversations([c, d, a, b], "minhas", "u1").map((i) => i.phone)).toEqual(["c"]);
   });
 });
+
+import { usualFromRows } from "./centralPanel";
+describe("usualFromRows (F5b)", () => {
+  const row = (agendaId: string, day: number, category = "consultation") => ({ agendaId, agendaName: agendaId, serviceId: "s", serviceName: "S", category, at: new Date(2026, 9, day) });
+  it("uma linha por agenda, da mais recente, sem exames, até 3", () => {
+    const r = usualFromRows([row("a", 1), row("b", 5), row("a", 9), row("c", 3, "exam"), row("d", 2), row("e", 1)]);
+    expect(r.map((x) => x.agendaId)).toEqual(["a", "b", "d"]);
+  });
+});

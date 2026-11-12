@@ -5,6 +5,7 @@ import { listInsurancePlans } from "./config/insurance";
 import { listPatientNotes, type PatientNote } from "./patientNotes";
 import { getContact, listContactPatients, type Contact, type Patient } from "./patients";
 import { loadActorLabels } from "./agenda/trail";
+import { getFreeSlots, getNextAvailableDates } from "./agenda/slots";
 
 // Painel do paciente ao lado da conversa (CN3b; telas T1 opção C, T2, T3 e T5, cliente, 05/nov/2026): quem fala com a
 // clínica, os pacientes desse contato com a próxima consulta, as anotações (um só paciente) e os atendimentos
@@ -37,12 +38,68 @@ export type ConversationPanel = {
   patients: PanelPatient[];
   /** O contato é o próprio paciente (um só, `is_contact_self`): painel normal, sem "Quem fala com a clínica". */
   selfPatient: boolean;
+  /** F5b: com quem o paciente (quando há um só) já consultou, com o próximo horário livre de cada um. */
+  usual: UsualProfessional[];
   /** Anotações do paciente, quando há um só (as 3 mais novas). */
   notes: PatientNote[];
   events: HandoffEvent[];
   /** Nomes de quem aparece nos eventos (primeiro nome). */
   names: Map<string, string>;
 };
+
+export type UsualProfessional = {
+  agendaId: string;
+  agendaName: string;
+  serviceId: string;
+  serviceName: string;
+  lastAt: Date;
+  /** Próximo horário livre (null = sem horário no prazo). */
+  nextDate: string | null;
+  nextStart: Date | null;
+};
+
+const USUAL_LIMIT = 3;
+
+/** Agendas das consultas passadas do paciente, da mais recente, sem repetir (a última consulta de cada uma). */
+export function usualFromRows(rows: { agendaId: string; agendaName: string; serviceId: string; serviceName: string; category: string; at: Date }[]) {
+  const seen = new Map<string, (typeof rows)[number]>();
+  for (const row of [...rows].sort((a, b) => b.at.getTime() - a.at.getTime())) {
+    if (row.category !== "exam" && !seen.has(row.agendaId)) seen.set(row.agendaId, row);
+  }
+  return [...seen.values()].slice(0, USUAL_LIMIT);
+}
+
+/** F5b (cliente, 08/nov): "Com quem ele já consulta", com o próximo horário livre de cada profissional. */
+export async function listUsualProfessionals(db: DbClient, clinicId: string, patientId: string, now: Date): Promise<UsualProfessional[]> {
+  const rows = unwrap(
+    await db
+      .from("appointments")
+      .select("agenda_id, service_id, scheduled_at, agendas ( name ), services ( name, category )")
+      .eq("clinic_id", clinicId)
+      .eq("patient_id", patientId)
+      .neq("status", "canceled")
+      .lte("scheduled_at", now.toISOString())
+      .order("scheduled_at", { ascending: false })
+      .limit(50),
+    "Consultas anteriores do paciente",
+  ) as unknown as { agenda_id: string; service_id: string; scheduled_at: string; agendas: { name: string } | null; services: { name: string; category: string } | null }[];
+  const usual = usualFromRows(
+    rows.map((r) => ({ agendaId: r.agenda_id, agendaName: r.agendas?.name ?? "Agenda", serviceId: r.service_id, serviceName: r.services?.name ?? "Consulta", category: r.services?.category ?? "consultation", at: new Date(r.scheduled_at) })),
+  );
+  return Promise.all(
+    usual.map(async (u) => {
+      const base = { agendaId: u.agendaId, agendaName: u.agendaName, serviceId: u.serviceId, serviceName: u.serviceName, lastAt: u.at };
+      try {
+        const [first] = await getNextAvailableDates(db, clinicId, { serviceId: u.serviceId, agendaId: u.agendaId, count: 1 }, now);
+        if (!first) return { ...base, nextDate: null, nextStart: null };
+        const [slot] = await getFreeSlots(db, clinicId, { serviceId: u.serviceId, agendaId: u.agendaId, date: first.date }, now);
+        return { ...base, nextDate: first.date, nextStart: slot?.start ?? null };
+      } catch {
+        return { ...base, nextDate: null, nextStart: null };
+      }
+    }),
+  );
+}
 
 /** Eventos do atendimento da conversa (assumir, transferir, encaminhar, finalizar), do mais antigo ao mais novo. */
 export async function listHandoffEvents(db: DbClient, clinicId: string, phone: string, limit = 200): Promise<HandoffEvent[]> {
@@ -92,6 +149,7 @@ export async function loadConversationPanel(
     options.insurance && patients.some((p) => p.insurance) ? listInsurancePlans(db, clinicId, { includeInactive: true }) : Promise.resolve([]),
     patients.length === 1 ? listPatientNotes(db, clinicId, patients[0].id).catch(() => []) : Promise.resolve([]),
   ]);
+  const usual = patients.length === 1 ? await listUsualProfessionals(db, clinicId, patients[0].id, now).catch(() => []) : [];
   const planName = (patient: Patient) => (patient.insurance ? (plans.find((plan) => plan.id === patient.insurance!.planId)?.name ?? "Convênio") : "Particular");
   const ids = events.flatMap((e) => [e.actorId, e.assignedFrom, e.assignedTo]);
   const labels = await loadActorLabels(db, clinicId, ids);
@@ -99,6 +157,7 @@ export async function loadConversationPanel(
     contact,
     patients: patients.map((patient) => ({ patient, planName: options.insurance ? planName(patient) : null, next: upcoming.get(patient.id)?.[0] ?? null })),
     selfPatient: patients.length === 1 && patients[0].isContactSelf && patients[0].contactId === contact?.id,
+    usual,
     notes: notes.slice(0, 3),
     events,
     names: new Map([...labels.entries()].map(([id, label]) => [id, label.isSupport ? "Suporte" : firstNameOf(label.name)])),
