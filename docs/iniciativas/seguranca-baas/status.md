@@ -54,6 +54,12 @@
 - Incluir a empresa de IA e a Meta na política de privacidade.
 - Ao contratar o primeiro desenvolvedor: seguir a seção 1 (contrato, conta nominal, staging, MFA, sem chave de produção).
 
+**S10: Continuidade (plano adotado em 13/nov: `plano-de-continuidade.md`; RTO 24 h, RPO 24 h)**
+- Conferir no painel do Supabase de produção: prazo de guarda dos backups e se o PITR está ligado; registrar no plano.
+- Fazer o **primeiro teste de restauração** (no staging) e registrar na tabela; depois, a cada 6 meses (maio e novembro).
+- Decidir quando subir as metas (PITR) e o custo.
+- Roadmap: a "1º backup diário da produção" ainda está como pendência avulsa; conferir se já está confirmado.
+
 **S8: Rotinas**
 - 1ª revisão semestral de acessos: 05/2027 (maio e novembro). Revisão mensal dos alertas de dependência.
 
