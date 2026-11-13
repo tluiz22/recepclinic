@@ -1,13 +1,16 @@
 ---
-// Métricas › Portal (F6, parte 2): o caminho do paciente no portal de agendamento, da clínica toda. Visitas, quem
-// confirmou o celular e quem escolheu um horário; as marcações feitas pelo portal e os bloqueios do período.
-// Uma visita pode reservar e marcar mais de uma vez: por isso as marcações ficam fora do funil e têm cartão próprio.
+// Métricas › Portal (F6, parte 2; funil detalhado na frente Usabilidade, U1): o caminho do paciente no portal, da
+// clínica toda. As visitas são anônimas (cookie, sem nome nem celular) e guardam o passo mais longe alcançado: o funil
+// conta quem chegou ao menos até cada passo e quantas visitas pararam ali. As marcações e os bloqueios vêm do banco.
+// Uma visita pode marcar mais de uma vez: por isso as marcações têm cartão próprio.
 import type { ClinicContext } from "../../../lib/clinicAccess";
 import { dayBounds, todayIn } from "../../../lib/clinicTime";
 import type { DbClient } from "../../../lib/data/clients";
-import { getPortalMetrics, portalSteps, type PortalMetrics } from "../../../lib/data/portalMetrics";
+import { getPortalMetrics, type PortalMetrics } from "../../../lib/data/portalMetrics";
+import { getVisitSteps } from "../../../lib/data/portal/visit";
 import { logError } from "../../../lib/log";
 import { compareCounts, comparisonRange, describeComparison, formatRate, type DateRange } from "../../../lib/metricsRules";
+import { biggestLoss, visitFunnel, type StepCount, type VisitEntry } from "../../../lib/portalVisit";
 import { countDelta, previousCount } from "./compare";
 import Kpi from "./Kpi.astro";
 
@@ -16,38 +19,51 @@ interface Props {
   clinic: ClinicContext;
   range: DateRange;
   compare: boolean;
-  links: { retry: string };
+  entry: VisitEntry | null;
+  links: { retry: string; entries: { label: string; href: string; active: boolean }[] };
   now: Date;
 }
 
-const { db, clinic, range, compare, links, now } = Astro.props;
+const { db, clinic, range, compare, entry, links, now } = Astro.props;
 const tz = clinic.timezone;
 const bounds = (r: DateRange) => ({ start: dayBounds(r.from, tz).start, end: dayBounds(r.to, tz).end });
 
-async function load(r: DateRange): Promise<PortalMetrics | null> {
+type Loaded = { m: PortalMetrics; steps: StepCount[] };
+async function load(r: DateRange): Promise<Loaded | null> {
   try {
     const b = bounds(r);
-    return await getPortalMetrics(db, clinic.clinicId, b.start, b.end);
+    const [m, steps] = await Promise.all([getPortalMetrics(db, clinic.clinicId, b.start, b.end), getVisitSteps(db, clinic.clinicId, b.start, b.end)]);
+    return { m, steps };
   } catch (error) {
     logError("métricas: portal não carregou", error, { clinica: clinic.clinicId });
     return null;
   }
 }
 
-// Sessões e bloqueios do portal são apagados depois de 30 dias (limpeza diária): antes disso só as marcações existem.
+// Visitas e bloqueios do portal são apagados depois de 30 dias (limpeza diária): antes disso só as marcações existem.
 const limitDay = dayBounds(todayIn(tz, now), tz).start.getTime() - 30 * 86_400_000;
 const oldRange = dayBounds(range.from, tz).start.getTime() < limitDay;
 const prevRange = comparisonRange(range);
 const prevText = describeComparison(prevRange);
 const prevOld = dayBounds(prevRange.from, tz).start.getTime() < limitDay;
-const [m, prev] = await Promise.all([load(range), compare && !prevOld ? load(prevRange) : Promise.resolve(null)]);
-const steps = m ? portalSteps(m) : [];
-const visitsCmp = m && prev && prev.visits > 0 ? compareCounts(m.visits, prev.visits) : null;
-const bookedCmp = m && prev && prev.booked > 0 ? compareCounts(m.booked, prev.booked) : null;
+const [cur, prev] = await Promise.all([load(range), compare && !prevOld ? load(prevRange) : Promise.resolve(null)]);
+const m = cur?.m ?? null;
+const total = (rows: StepCount[]) => rows.reduce((sum, r) => sum + r.visits, 0);
+const visits = cur ? total(cur.steps) : 0;
+const fromWhatsapp = cur ? total(cur.steps.filter((r) => r.entry === "whatsapp")) : 0;
+const prevVisits = prev ? total(prev.steps) : 0;
+const funnel = cur ? visitFunnel(cur.steps, entry) : [];
+const loss = biggestLoss(funnel);
+const funnelTotal = funnel[0]?.reached ?? 0;
+const visitsCmp = cur && prev && prevVisits > 0 ? compareCounts(visits, prevVisits) : null;
+const bookedCmp = m && prev && prev.m.booked > 0 ? compareCounts(m.booked, prev.m.booked) : null;
+const activeEntry = entry ? links.entries.find((e) => e.active) : null;
+const entryName = activeEntry ? activeEntry.label[0].toLowerCase() + activeEntry.label.slice(1) : null;
 
 const card = "flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-5";
 const h2 = "font-display text-lg leading-tight font-bold text-ink";
 const sub = "text-sm leading-relaxed text-ink-soft";
+const chip = "inline-flex min-h-11 items-center rounded-full border px-3.5 text-sm no-underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand";
 ---
 
 {
@@ -56,28 +72,33 @@ const sub = "text-sm leading-relaxed text-ink-soft";
       <h2 class={`${h2} text-ns-800`}>Não foi possível carregar o Portal</h2>
       <a href={links.retry} class="mt-2 inline-flex h-11 items-center rounded-lg bg-brand px-4 font-semibold text-white no-underline hover:bg-brand-strong">Tentar de novo</a>
     </div>
-  ) : m.visits === 0 && m.booked === 0 ? (
+  ) : visits === 0 && m.booked === 0 ? (
     <div class="mt-4 rounded-xl border border-line bg-white px-4 py-5">
       <h2 id="sem-visitas" class={h2}>Ninguém usou o portal neste período</h2>
       <p class={`${sub} mt-1`}>Quando alguém entrar pelo link da clínica, do profissional ou do WhatsApp, o caminho aparece aqui.</p>
     </div>
   ) : (
     <>
+      {visits < m.booked && (
+        <p id="aviso-anotacao" role="note" class="mt-4 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3 text-sm text-ink-mid">
+          O caminho no portal começou a ser anotado em novembro de 2026. Se este período começa antes disso, há menos visitas do que marcações: o funil mostra só as visitas anotadas.
+        </p>
+      )}
       {oldRange && (
         <p role="note" class="mt-4 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3 text-sm text-ink-mid">
-          As visitas, os celulares confirmados, os horários escolhidos e os bloqueios são guardados por 30 dias. Neste período, esses números estão incompletos; só as marcações têm o histórico inteiro.
+          As visitas, o caminho no portal e os bloqueios são guardados por 30 dias. Neste período, esses números estão incompletos; só as marcações têm o histórico inteiro.
         </p>
       )}
       <section aria-label="Indicadores principais" class="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-3">
         <Kpi
           id="kpi-visitas"
           label="Entraram no portal"
-          value={String(m.visits)}
+          value={String(visits)}
           delta={visitsCmp ? countDelta(visitsCmp, "up") : null}
           previous={visitsCmp ? previousCount(visitsCmp, prevText) : null}
-          rule="Sessões abertas no período (pela data de abertura): pelo link da clínica, do profissional ou do WhatsApp. Quem volta depois de a sessão vencer conta de novo."
+          rule="Visitas abertas no período (pela data da primeira tela): pelo link da clínica, do profissional ou do WhatsApp. Quem volta depois de 2 horas conta de novo. Robôs de busca ficam de fora."
         >
-          {m.fromBotLink} pelo link que o WhatsApp mandou.
+          {fromWhatsapp} pelo link que o WhatsApp mandou.
         </Kpi>
         <Kpi
           id="kpi-marcacoes"
@@ -101,22 +122,85 @@ const sub = "text-sm leading-relaxed text-ink-soft";
 
       <section aria-labelledby="funil-portal" class="mt-4">
         <div class={card}>
-          <h2 id="funil-portal" class={h2}>Onde o paciente avança</h2>
-          <p class={sub}>Cada passo sobre as {m.visits} visitas. Quem chega pelo link do WhatsApp conta como celular confirmado.</p>
-          <ol class="flex flex-col gap-3">
-            {steps.map((s) => (
-              <li class="flex flex-col gap-1" data-passo={s.id}>
-                <div class="flex items-baseline justify-between gap-3 text-[15px]">
-                  <span>{s.label}</span>
-                  <span class="font-bold tabular-nums">{s.count}{s.share !== null && <span class="ml-2 font-normal text-ink-soft">{formatRate(s.share)}</span>}</span>
-                </div>
-                <div class="h-3 overflow-hidden rounded-md bg-canvas-deep" role="img" aria-label={`${s.label}: ${s.count}`}>
-                  <div class="h-full bg-brand" style={`width:${(s.share ?? 0) * 100}%`} />
-                </div>
-                {s.lostAfter !== null && s.lostAfter > 0 && <p class="text-[13px] text-ink-soft">{s.lostAfter} {s.lostAfter === 1 ? "não seguiu" : "não seguiram"} para o próximo passo.</p>}
-              </li>
-            ))}
-          </ol>
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div class="flex min-w-0 flex-[1_1_360px] flex-col gap-1">
+              <h2 id="funil-portal" class={h2}>Onde o paciente avança</h2>
+              <p class={sub}>
+                Cada passo do portal, da primeira tela à consulta marcada{entryName ? `, só de quem entrou pelo ${entryName}` : ""}. “Pararam aqui” são as visitas que terminaram naquele passo.
+              </p>
+            </div>
+            <nav aria-label="Por onde entraram" class="flex flex-wrap gap-1.5">
+              {links.entries.map((e) => (
+                <a
+                  href={e.href}
+                  aria-current={e.active ? "true" : undefined}
+                  class={`${chip} ${e.active ? "border-brand bg-brand font-bold text-white" : "border-line bg-white text-ink hover:border-brand"}`}
+                >
+                  {e.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+
+          {funnelTotal === 0 ? (
+            <p id="funil-vazio" class="text-[15px] text-ink-soft">Nenhuma visita por esse link no período.</p>
+          ) : (
+            <div class="flex flex-col">
+              <div aria-hidden="true" class="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,2fr)_110px_120px] gap-x-3 pb-2 text-[13px] font-semibold text-ink-soft sm:grid">
+                <span>Passo</span>
+                <span>Chegaram</span>
+                <span class="text-right">Visitas</span>
+                <span class="text-right">Pararam aqui</span>
+              </div>
+              <ol class="flex flex-col" aria-label="Passos do portal">
+                {funnel.map((s) => {
+                  const hot = loss?.id === s.id;
+                  return (
+                    <li
+                      data-passo={s.id}
+                      class={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 border-t border-canvas-deep py-2.5 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,2fr)_110px_120px] ${hot ? "-mx-2 rounded-md bg-pend-50 px-2" : ""}`}
+                    >
+                      <span class="flex items-baseline gap-2.5">
+                        <span class="w-4 flex-none text-[13px] text-ink-soft tabular-nums">{s.step}</span>
+                        <span class="flex min-w-0 flex-col">
+                          <span class="font-semibold text-ink">{s.label}</span>
+                          <span class="text-[13px] text-ink-soft">{s.where}</span>
+                        </span>
+                      </span>
+                      <span class="col-span-2 row-start-2 h-3 overflow-hidden rounded-md bg-canvas-deep sm:col-span-1 sm:row-start-auto" aria-hidden="true">
+                        <span class={`block h-full ${s.step === 8 ? "bg-brand-strong" : "bg-brand"}`} style={`width:${(s.share ?? 0) * 100}%`} />
+                      </span>
+                      <span class="text-right text-[15px] tabular-nums">
+                        <strong>{s.reached}</strong>
+                        <span class="sr-only"> visitas</span>
+                        {s.share !== null && <span class="ml-1.5 text-ink-soft">{formatRate(s.share)}</span>}
+                      </span>
+                      <span class="col-span-2 row-start-3 text-[14px] tabular-nums sm:col-span-1 sm:row-start-auto sm:text-right sm:text-[15px]">
+                        {s.step === 8 ? (
+                          <span class="text-ink-soft"><span class="sm:sr-only">Último passo</span><span aria-hidden="true" class="hidden sm:inline">—</span></span>
+                        ) : (
+                          <span class={hot ? "rounded-md bg-ns-100 px-2 py-0.5 font-bold text-ns-800" : "text-ink-mid"}>
+                            <span class="sm:sr-only">Pararam aqui: </span>
+                            {s.stoppedHere}
+                            {hot && <span class="sr-only"> (maior perda)</span>}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
+
+          {loss && (
+            <p id="maior-perda" class="rounded-lg border border-ns-100 bg-ns-100/40 px-3 py-2.5 text-[15px] text-ink">
+              <strong>Maior perda no passo {loss.step}, “{loss.label}”:</strong> {loss.stoppedHere} {loss.stoppedHere === 1 ? "visita parou" : "visitas pararam"} ali.
+            </p>
+          )}
+          <p class="text-[13px] leading-relaxed text-ink-soft">
+            Passo que não existe para todos (a lista de profissionais numa clínica de um profissional só, o celular de quem veio pelo WhatsApp) conta como passado. Voltar um passo não conta de novo.
+          </p>
         </div>
       </section>
     </>

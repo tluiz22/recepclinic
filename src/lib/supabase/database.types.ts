@@ -2049,6 +2049,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"portal_visits": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"entry": string,"furthest": number,"id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"entry": string,"furthest": number,"id": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"entry"?: string,"furthest"?: number,"id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "portal_visits_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"professional_bot_info": {
                   Row: {
                     "clinic_id": string,"insurance_info": string | null,"notes": string | null,"payment_info": string | null,"professional_id": string,"updated_at": string
@@ -3104,6 +3124,11 @@ isOneToOne: false
               "blocks": number,"booked": number,"from_bot_link": number,"held": number,"verified": number,"visits": number
             }[]
                            },
+"metrics_portal_steps":
+{ Args: { "p_clinic_id": string,"p_end": string,"p_start": string }; Returns: {
+              "entry": string,"furthest": number,"visits": number
+            }[]
+                           },
 "metrics_reminders":
 { Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_now"?: string,"p_service_ids"?: (string)[],"p_start": string }; Returns: {
               "outcome": string,"status": Database["public"]['Enums']["appointment_status"],"total": number
@@ -3189,6 +3214,9 @@ isOneToOne: false
                            },
 "portal_release_phone":
 { Args: { "p_clinic_id": string,"p_phone": string }; Returns: undefined
+                           },
+"portal_visit_step":
+{ Args: { "p_entry": string,"p_step": number,"p_visit_id": string }; Returns: undefined
                            },
 "publish_knowledge_base":
 { Args: Record<PropertyKey, never>; Returns: number
@@ -3304,17 +3332,17 @@ isOneToOne: false
 "set_fiscal_issuing_enabled":
 { Args: { "p_enabled": boolean,"p_issuer_id": string }; Returns: undefined
                            },
-"set_payment_payer_contact":
-{ Args: { "p_complement": string,"p_district": string,"p_email": string,"p_number": string,"p_payment_id": string,"p_postal_code": string,"p_street": string }; Returns: undefined
-                           },
-"set_professional_fiscal_route":
-{ Args: { "p_clinic_id": string,"p_mode": string,"p_professional_id": string }; Returns: undefined
-                           },
 "set_patient_primary_contact":
 { Args: { "p_clinic_id": string,"p_contact_id": string,"p_patient_id": string }; Returns: undefined
                            },
+"set_payment_payer_contact":
+{ Args: { "p_complement": string,"p_district": string,"p_email": string,"p_number": string,"p_payment_id": string,"p_postal_code": string,"p_street": string }; Returns: undefined
+                           },
 "set_professional_accepts_private":
 { Args: { "p_accepts": boolean,"p_clinic_id": string,"p_professional_id": string }; Returns: undefined
+                           },
+"set_professional_fiscal_route":
+{ Args: { "p_clinic_id": string,"p_mode": string,"p_professional_id": string }; Returns: undefined
                            },
 "set_professional_specialties":
 { Args: { "p_clinic_id": string,"p_professional_id": string,"p_specialty_ids": (string)[] }; Returns: undefined

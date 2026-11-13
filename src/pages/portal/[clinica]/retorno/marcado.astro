@@ -2,6 +2,7 @@
 // Retorno marcado (F2d; D4: P10 "Retorno marcado"): o resumo (sem valor), "Enviamos a confirmação no WhatsApp" (a fila
 // manda), "Adicionar à agenda do celular" (.ics "Retorno com {médico} — {Clínica}") e "Ver no mapa". Recarregar mostra a
 // mesma confirmação (a reserva desta sessão guarda o atendimento); nada é marcado de novo.
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import { portalCta, portalNotice, portalSecondary, portalTitle } from "../../../../components/portal/styles";
@@ -30,6 +31,7 @@ if (page.kind === "open") {
   professional = hold ? (portal.professionals.find((p) => p.agendaId === hold!.agendaId) ?? null) : null;
 }
 if (page.kind !== "unavailable" && !booked) Astro.response.status = 404;
+if (page.kind === "open" && booked) trackPortalStep(Astro, page.db, page.portal.clinicId, "booked");
 
 const location = professional && booked ? (professional.locations.find((l) => l.id === booked!.locationId) ?? null) : null;
 const when = booked ? capitalize(formatInstant(booked.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "";

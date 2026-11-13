@@ -20,15 +20,3 @@ export async function getPortalMetrics(db: DbClient, clinicId: string, start: Da
   const r = rows[0];
   return { visits: n(r?.visits), fromBotLink: n(r?.from_bot_link), verified: n(r?.verified), held: n(r?.held), booked: n(r?.booked), blocks: n(r?.blocks) };
 }
-
-export type PortalStep = { id: "visits" | "verified" | "held"; label: string; count: number; share: number | null; lostAfter: number | null };
-
-/** Passos do funil (cada um sobre as visitas) e o que se perdeu entre um e o seguinte. Sem visitas: sem percentual. */
-export function portalSteps(m: PortalMetrics): PortalStep[] {
-  const raw: { id: PortalStep["id"]; label: string; count: number }[] = [
-    { id: "visits", label: "Entraram no portal", count: m.visits },
-    { id: "verified", label: "Confirmaram o celular", count: m.verified },
-    { id: "held", label: "Escolheram um horário", count: m.held },
-  ];
-  return raw.map((s, i) => ({ ...s, share: m.visits > 0 ? s.count / m.visits : null, lostAfter: i < raw.length - 1 ? Math.max(0, s.count - raw[i + 1].count) : null }));
-}

@@ -1,6 +1,7 @@
 ---
 // P5 Particular ou convênio (F2a), sempre depois do médico: o particular com o valor (se atende) e um convênio por
 // linha, com a observação dele. Com uma opção só, vai direto aos horários. Topo com quem atende (a P4 saiu da jornada).
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
@@ -12,6 +13,7 @@ import { backFromProfessional, changeProfessionalHref, chosenModality, flowParam
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (page.kind === "open" && professional) trackPortalStep(Astro, page.db, page.portal.clinicId, "professional");
 if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
 const flow = readFlow(Astro.url.searchParams);
 const options = professional ? modalityOptions(professional) : [];

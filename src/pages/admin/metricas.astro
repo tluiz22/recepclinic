@@ -151,6 +151,9 @@ const recallContacts = await loadContactNames(db, clinic.clinicId, recall.map((r
 const financialTotals = tab === "financeiro" ? await listFinancialTotals(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
 const frequent = tab === "faltosos" ? await listFrequentNoShows(db, clinic.clinicId, agendaIds) : [];
 
+// Métricas › Portal: o funil filtrado pela entrada (U1).
+const PORTAL_ENTRIES = { clinica: "clinic", profissional: "professional", whatsapp: "whatsapp" } as const;
+const portalEntryParam = (Object.keys(PORTAL_ENTRIES) as (keyof typeof PORTAL_ENTRIES)[]).find((k) => k === params.get("entrada")) ?? null;
 const keep = {
   tab: tab ?? "",
   periodo: period.preset === "mes" ? "" : period.preset,
@@ -165,6 +168,7 @@ const keep = {
   origem: digitalOrigin === "todas" ? "" : digitalOrigin,
   paciente: filterPatient?.id ?? "",
   responsavel: filterContact?.id ?? "",
+  entrada: tab === "portal" ? (portalEntryParam ?? "") : "",
 };
 const link = (changes: Partial<Record<keyof typeof keep | "busca", string>>) => {
   const next = new URLSearchParams();
@@ -425,7 +429,25 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
         )}
 
         {tab === "portal" && (
-          <PortalTab db={db} clinic={clinic} range={indicatorRange} compare={compare} links={{ retry: link({}) }} now={now} />
+          <PortalTab
+            db={db}
+            clinic={clinic}
+            range={indicatorRange}
+            compare={compare}
+            entry={portalEntryParam ? PORTAL_ENTRIES[portalEntryParam] : null}
+            links={{
+              retry: link({}),
+              entries: [
+                { label: "Todos", href: link({ entrada: "" }), active: !portalEntryParam },
+                ...(Object.keys(PORTAL_ENTRIES) as (keyof typeof PORTAL_ENTRIES)[]).map((k) => ({
+                  label: { clinica: "Link da clínica", profissional: "Link do profissional", whatsapp: "Link do WhatsApp" }[k],
+                  href: link({ entrada: k }),
+                  active: portalEntryParam === k,
+                })),
+              ],
+            }}
+            now={now}
+          />
         )}
 
         {tab === "digital" && (
