@@ -1,0 +1,47 @@
+name: Segurança
+
+# Varreduras de vulnerabilidades (política em docs/politica-de-vulnerabilidades.md). Separado do CI para não
+# travar a publicação: falha aqui = alerta visível no GitHub, tratado nos prazos da política.
+on:
+  schedule:
+    - cron: "0 9 * * 1" # toda segunda, 9h UTC
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["package.json", "package-lock.json", ".github/workflows/seguranca.yml"]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  dependencias:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Falha se houver vulnerabilidade alta ou crítica nas bibliotecas de produção.
+      - run: npm audit --omit=dev --audit-level=high
+
+  segredos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3

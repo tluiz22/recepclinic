@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Atualizações e correções de segurança das bibliotecas (política de vulnerabilidades, 13/nov/2026).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      seguranca:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
