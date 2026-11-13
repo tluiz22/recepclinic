@@ -44,6 +44,7 @@ import { metricsScope, type FeatureKey } from "../../lib/features";
 import { buildFunnelReportFromSessions, DIGITAL_OPERATIONS, listFunnelSessions, type DigitalOperation, type DigitalOrigin, type FunnelSession } from "../../lib/data/botFunnel";
 import DigitalTab from "../../components/admin/metricas/DigitalTab.astro";
 import PortalTab from "../../components/admin/metricas/PortalTab.astro";
+import UsabilityTab from "../../components/admin/metricas/UsabilityTab.astro";
 import { logError } from "../../lib/log";
 import { loadContactNames } from "../../lib/data/people";
 import { loadRecallDismissals, withoutDismissed } from "../../lib/data/relationship";
@@ -70,8 +71,10 @@ const TABS: { id: string; label: string; feature: FeatureKey }[] = [
 // Agendamento digital e Retomar contato são da clínica toda: o Profissional (só a própria agenda) não vê.
 const BOT_TABS = ["digital", "retomar_contato"];
 // Abas da clínica toda (sem seletor de agenda): as do bot e o Portal.
-const isClinicWide = (id: string | null) => !!id && (BOT_TABS.includes(id) || id === "portal");
+const isClinicWide = (id: string | null) => !!id && (BOT_TABS.includes(id) || id === "portal" || id === "usabilidade");
 const visible = TABS.filter((t) => clinic.features.includes(t.feature) && (!isClinicWide(t.id) || metricsScope(clinic) === "clinic"));
+// Usabilidade (U2): só o Suporte (equipe da plataforma), depois das abas da clínica; sem módulo próprio.
+if (clinic.isPlatformStaff && metricsScope(clinic) === "clinic") visible.push({ id: "usabilidade", label: "Usabilidade", feature: "portal" });
 const tab = visible.find((t) => t.id === params.get("tab"))?.id ?? visible[0]?.id ?? null;
 
 // Escopo: a clínica toda (Administrador, com o seletor) ou só as agendas do próprio Profissional.
@@ -187,7 +190,7 @@ const badTo = period.invalidReason === "missing" ? !period.requested?.to : perio
 const scopeText = scope === "own_agenda" ? "só da sua agenda" : isClinicWide(tab) ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
 const extraFilters = performanceTab ? [selectedService?.name, selectedLocation?.name].filter(Boolean).join(" · ") : "";
 const subtitle = tab
-  ? `${!usesPeriod ? "Todo o histórico" : performanceTab || tab === "digital" || tab === "portal" ? periodTitle : period.label} · ${scopeText}${extraFilters ? ` · ${extraFilters}` : ""}`
+  ? `${!usesPeriod ? "Todo o histórico" : performanceTab || tab === "digital" || tab === "portal" || tab === "usabilidade" ? periodTitle : period.label} · ${scopeText}${extraFilters ? ` · ${extraFilters}` : ""}`
   : undefined;
 const filterSummary = [
   usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null,
@@ -448,6 +451,10 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
             }}
             now={now}
           />
+        )}
+
+        {tab === "usabilidade" && clinic.isPlatformStaff && (
+          <UsabilityTab db={db} clinic={clinic} range={indicatorRange} links={{ retry: link({}), portal: link({ tab: "portal" }) }} now={now} />
         )}
 
         {tab === "digital" && (
