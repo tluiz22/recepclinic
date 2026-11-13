@@ -75,6 +75,8 @@ export const welcome = (clinicLabel: string, invite = true, name: string | null 
 export const MENU_BODY = "Escolha uma das opções abaixo.";
 /** Menu com a base de conhecimento ligada: convida a perguntar (cliente, 04/nov/2026). */
 export const MENU_BODY_ASK = "Escolha uma opção abaixo ou faça uma pergunta.";
+/** Saudação depois do menu ("bom dia", "oi"): "Olá! 👋" e o texto do menu curto, numa mensagem só (cliente, 13/nov/2026). */
+export const greetingMenuBody = (menuBody: string) => `Olá! 👋 ${menuBody}`;
 
 /** Descrições das opções do menu principal (cliente, 04/nov/2026; até 72 caracteres, limite da Meta). */
 // ---------------------------------------------------------------------------
@@ -86,28 +88,25 @@ export const LEAN_MENU = [
   { id: "menu_book", label: "📅 Agendar", description: "Consulta, retorno ou exame" },
   { id: "menu_mine", label: "🗓 Minhas consultas", description: "Consultar, remarcar ou cancelar" },
   { id: "menu_professionals", label: "👥 Profissionais", description: "Especialidades, valores e convênios" },
-  { id: "menu_reception", label: "🎧 Falar com a recepção", description: "Atendimento com a nossa equipe" },
+  { id: "menu_reception", label: "🎧 Falar com a recepção", description: "Atendimento com nossa equipe" },
 ] as const;
 /** A descrição de Agendar sem exame na clínica (exame desligado nos recursos): só consulta ou retorno (cliente, 12/nov/2026). */
 export const LEAN_BOOK_DESCRIPTION_NO_EXAM = "Consulta ou retorno";
 export type LeanMenuId = (typeof LEAN_MENU)[number]["id"];
 
 /**
- * Boas-vindas do menu principal (cliente, 12/nov/2026): diz que é o contato oficial de agendamento e o que cada opção
- * do menu faz. `clinicLabel` já vem com o artigo ("da Clínica X"); o nome da clínica sai em negrito do WhatsApp.
- * "Exame" só com exame na clínica; "Falar com a recepção" só quando a recepção atende pelo app.
+ * Boas-vindas do menu principal (cliente, 13/nov/2026): a saudação, "Como podemos ajudar você hoje?" e as opções do
+ * menu ("Agendar — Consulta, retorno ou exame"), com o primeiro nome do número cadastrado. O nome da clínica vai no
+ * cabeçalho da lista. Agendar sem "exame" sem exame na clínica; "Falar com a recepção" só quando a recepção atende
+ * pelo app.
  */
-export const leanWelcome = (name: string | null, clinicLabel: string, clinicName: string, { exams = true, reception = true } = {}) =>
+export const leanWelcome = (name: string | null, { exams = true, reception = true } = {}) =>
   [
-    `Olá${name ? `, ${name}` : ""}! 👋`,
-    `Este é o contato oficial para agendamento ${clinicLabel.replace(clinicName.trim(), `*${clinicName.trim()}*`)}.`,
-    "Estamos aqui para ajudar você! 😊",
-    "Por aqui, você pode:",
-    exams ? "📅 Agendar consulta, retorno ou exame." : "📅 Agendar consulta ou retorno.",
-    exams ? "🗓 Remarcar ou cancelar sua consulta ou exame." : "🗓 Remarcar ou cancelar sua consulta.",
-    "👥 Consultar informações sobre profissionais, especialidades, valores e convênios.",
-    ...(reception ? ["🎧 Falar diretamente com a recepção: atendimento com a nossa equipe."] : []),
-    "Escolha uma das opções abaixo.",
+    `Olá${name ? `, ${name}` : ""}! 👋 Seja bem-vindo(a)!`,
+    "Como podemos ajudar você hoje?",
+    ...LEAN_MENU.filter((item) => item.id !== "menu_reception" || reception).map(
+      (item) => `${item.label} — ${item.id === "menu_book" && !exams ? LEAN_BOOK_DESCRIPTION_NO_EXAM : item.description}`,
+    ),
   ].join("\n\n");
 export const leanMenuHeader = (clinicName: string) => clinicName;
 

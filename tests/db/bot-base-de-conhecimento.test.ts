@@ -77,8 +77,8 @@ const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 const optionId = (reply: Sent[], title: string) => reply.at(-1)!.options.find((o) => o.title.includes(title))!.id;
 const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
 // Bot enxuto (F3f, BE-2): o 1º menu da conversa é uma mensagem só, com as boas-vindas.
-const LEAN = expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento d[\s\S]+\n\nEscolha uma das opções abaixo\.$/);
-const LEAN_KNOWN = expect.stringMatching(/^Olá, Resp\.! 👋\n\nEste é o contato oficial para agendamento d[\s\S]+\n\nEscolha uma das opções abaixo\.$/);
+const LEAN = expect.stringMatching(/^Olá! 👋 Seja bem-vindo\(a\)!\n\nComo podemos ajudar você hoje\?\n\n📅 Agendar — [^\n]+\n\n🗓 Minhas consultas — Consultar, remarcar ou cancelar\n\n👥 Profissionais — Especialidades, valores e convênios(\n\n🎧 Falar com a recepção — Atendimento com nossa equipe)?$/);
+const LEAN_KNOWN = expect.stringMatching(/^Olá, Resp\.! 👋 Seja bem-vindo\(a\)!\n\nComo podemos ajudar você hoje\?\n\n📅 Agendar — [^\n]+\n\n🗓 Minhas consultas — Consultar, remarcar ou cancelar\n\n👥 Profissionais — Especialidades, valores e convênios(\n\n🎧 Falar com a recepção — Atendimento com nossa equipe)?$/);
 const LEAN_HANDOFF = "Certo! A recepção vai te atender por aqui. Escreva sua dúvida, por favor.";
 const BOOK_LINK = /^Para agendar sua consulta ou exame, toque no botão abaixo\./;
 const MINE_LINK = /^Para ver, remarcar ou cancelar suas consultas, toque no botão abaixo\./;
@@ -144,7 +144,8 @@ describe("primeira mensagem", () => {
     expect(bodies(again)).toEqual([MENU]);
     // O número digitado vale como o toque.
     expect(bodies(await say(phone, "2"))[0]).toMatch(MINE_LINK);
-    expect((await convo(phone)).state).toBe("WELCOME");
+    // Depois do link, a conversa fica no menu por 15 minutos (cliente, 13/nov/2026).
+    expect((await convo(phone)).state).toBe("MENU");
   });
 
   it("pedido claro na 1ª mensagem: o link do Agendar, sem o menu", async () => {
@@ -215,6 +216,27 @@ describe("no menu", () => {
     expect(bodies(reply)).toEqual(["Sim, fazemos *Exame*.", MENU]);
   });
 
+  it("depois do link: a pergunta recebe a resposta da base e o menu, sem as boas-vindas de novo (cliente, 13/nov/2026)", async () => {
+    await reset(phone);
+    expect(bodies(await say(phone, "quero marcar uma consulta"))[0]).toMatch(BOOK_LINK);
+    expect(bodies(await say(phone, "vocês fazem exame?"))).toEqual(["Sim, fazemos *Exame*.", MENU]);
+    // Saudação: a resposta curta com o menu, numa mensagem (sem o "Olá!" da base à parte), com o convite para perguntar.
+    expect(bodies(await say(phone, "bom dia"))).toEqual(["Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta."]);
+  });
+
+  it("link só com o pedido (cliente, 13/nov/2026): \"Quanto tá a consulta\" recebe o valor; \"tem vaga?\" não abre o Agendar", async () => {
+    await reset(phone);
+    const price = bodies(await say(phone, "Quanto tá a consulta"));
+    expect(price.join("\n")).not.toMatch(BOOK_LINK);
+    expect(price.at(-1)).toBe(MENU);
+    expect(price.join("\n")).not.toContain("Não entendi");
+    for (const text of ["tem vaga amanhã?", "Pneumologista pediátrica", "quando?"]) {
+      const reply = bodies(await say(phone, text)).join("\n");
+      expect(reply).not.toMatch(BOOK_LINK);
+      expect(reply).not.toMatch(MINE_LINK);
+    }
+    expect(bodies(await say(phone, "quero agendar"))[0]).toMatch(BOOK_LINK);
+  });
 });
 
 describe("\"voltar\" digitado (cliente, 31/out/2026)", () => {
@@ -235,7 +257,7 @@ describe("\"Você quis dizer…?\"", () => {
 
   it("empate: as opções e \"Nenhuma destas\"; a escolha abre o fluxo", async () => {
     await say(phone, "Oi");
-    const reply = await say(phone, "não vou poder ir");
+    const reply = await say(phone, "quero remarcar ou cancelar");
     expect(reply.at(-1)).toMatchObject({ kind: "list", body: "Você quis dizer…?" });
     expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(["1. Quero cancelar", "2. Quero remarcar", "3. Nenhuma destas"]);
     const chosen = await say(phone, { id: optionId(reply, "remarcar") });
@@ -245,7 +267,7 @@ describe("\"Você quis dizer…?\"", () => {
 
   it("\"Nenhuma destas\": o \"não entendi\" de hoje e o passo de novo", async () => {
     await reset(phone);
-    const reply = await say(phone, "não vou poder ir");
+    const reply = await say(phone, "quero remarcar ou cancelar");
     const none = await say(phone, { id: optionId(reply, "Nenhuma") });
     // "Não entendi" e o menu numa mensagem só (cliente, 12/nov/2026).
     expect(none).toHaveLength(1);

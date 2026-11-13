@@ -4,7 +4,7 @@ import { matchQuestion, type CompiledKb, type DetectedTerms, type KbEntry } from
 import { publishedKnowledge } from "../../../knowledge/published";
 import { logAbandonment, WELCOME, type HandoffOrigin } from "../../conversations";
 import { logFunnelEvent } from "../../funnel";
-import { go, KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, tick, type Bot, type KnowledgeHook } from "../engine";
+import { go, restingState, KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, tick, type Bot, type KnowledgeHook } from "../engine";
 import { asksForReception, pick, withoutReceptionWords, yesNo, type Selection } from "../input";
 import { handoff } from "../manage";
 import { portalShortcut, showMenu, showPreparationChoice } from "../menus";
@@ -271,7 +271,9 @@ async function handleConfirmReply(b: Bot, pending: PendingConfirm, selection: Se
   if (selection.id === t.KB_CONFIRM_IDS.resolved) {
     await logInfo(b, pending.sessionId, "resolved");
     await say(b, "bot_kb_resolved", t.KB_RESOLVED_THANKS);
-    await go(b, WELCOME);
+    // Os botões do "Resolvido?" deixam de valer (toque neles depois = mensagem antiga).
+    b.promptId = null;
+    await go(b, restingState(b));
     return "handled";
   }
   if (selection.id === t.KB_CONFIRM_IDS.reception) {
@@ -296,7 +298,9 @@ async function handleConfirmReply(b: Bot, pending: PendingConfirm, selection: Se
   if (answer === true) {
     await logInfo(b, pending.sessionId, "resolved", { typed: true });
     await say(b, "bot_kb_resolved", t.KB_RESOLVED_THANKS);
-    await go(b, WELCOME);
+    // Os botões do "Resolvido?" deixam de valer (toque neles depois = mensagem antiga).
+    b.promptId = null;
+    await go(b, restingState(b));
     return "handled";
   }
   if (answer === false) {

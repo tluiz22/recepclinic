@@ -189,8 +189,38 @@ function candidateScore(kb: CompiledKb, c: Candidate, keywordWords: string[], to
   return 0.6 * covered + 0.4 * precision;
 }
 
+const BOOKING_FLOWS = new Set<KbFlow>(["book_consultation", "book_exam", "book_return", "waitlist"]);
+
 /** Sinônimo igual à mensagem (sem as palavras de cortesia e os nomes) vale como palavra-chave. */
 const EXACT_SCORE = 0.99;
+
+// Pedido dito, por caminho (cliente, 13/nov/2026): palavras inteiras, nunca o começo ("Marcela", "marcapasso" e
+// "marcada" não são pedido de marcar).
+const REQUEST_WORDS: [KbFlow | "booking", string[]][] = [
+  ["booking", ["marcar", "marco", "marque", "marquem", "marcamos", "marcacao", "marcacoes", "agendar", "agendo", "agende", "agendem", "agendamos", "agendamento", "agendamentos"]],
+  ["reschedule", ["remarcar", "remarco", "remarque", "remarcacao", "reagendar", "reagendo", "reagende", "reagendamento"]],
+  ["cancel", ["cancelar", "cancelo", "cancele", "cancelamento", "desmarcar", "desmarco", "desmarque"]],
+  ["confirm", ["confirmar", "confirmo", "confirme", "confirmacao"]],
+];
+/** A consulta que a pessoa já tem: "minha(s) consulta(s)", "meu(s) exame(s)/agendamento(s)/horário(s)/retorno(s)". */
+const OWN_APPOINTMENT = /(?:^| )(?:minhas? consultas?|meus? (?:exames?|agendamentos?|horarios?|retornos?))(?: |$)/;
+
+/**
+ * Pedidos ditos na mensagem (sem os nomes citados). A entrada que abre um link do portal só vale com o dela
+ * (cliente, 13/nov/2026): o Agendar com "marcar"/"agendar"; remarcar, cancelar e confirmar com a palavra deles; "minha
+ * consulta" com ela. "Quanto tá a consulta", "tem vaga?" ou "exame de sangue" não abrem a marcação. O Encaixe
+ * (recepção) fica de fora.
+ */
+function requestsOf(tokens: string[]): Set<KbFlow | "booking"> {
+  const said = new Set<KbFlow | "booking">(REQUEST_WORDS.filter(([, words]) => tokens.some((token) => words.includes(token))).map(([flow]) => flow));
+  if (OWN_APPOINTMENT.test(tokens.join(" "))) said.add("my_appointments");
+  return said;
+}
+
+function explicitRequest(flow: KbFlow | null, requests: Set<KbFlow | "booking">): boolean {
+  if (!flow || flow === "waitlist") return true;
+  return requests.has(BOOKING_FLOWS.has(flow) ? "booking" : flow);
+}
 
 function passesGate(e: CompiledEntry, tokens: string[], terms: DetectedTerms, best: number): boolean {
   if (e.entry.requiredTerm === "service" && !terms.serviceIds.length) return false;
@@ -212,8 +242,6 @@ function entryScore(kb: CompiledKb, e: CompiledEntry, tokens: string[], content:
   if (e.entry.sources.includes("insurance") && terms.planIds.length) score = Math.max(score + 0.3, 0.75);
   return score;
 }
-
-const BOOKING_FLOWS = new Set<KbFlow>(["book_consultation", "book_exam", "book_return", "waitlist"]);
 
 function withoutPhrases(tokens: string[], phrases: string[]): string[] {
   let rest = ` ${tokens.join(" ")} `;
@@ -240,7 +268,9 @@ export function rankEntries(kb: CompiledKb, text: string, clinic: ClinicTerms): 
   if (!tokens.length || tokens.every((token) => /^\d+$/.test(token))) return { terms, clinical: false, ranked: [] };
   const names = nameTokens(kb, tokens, clinic, terms);
   const content = contentOf(tokens).filter((token) => !names.has(token));
+  const requests = requestsOf(tokens.filter((token) => !names.has(token)));
   const ranked = kb.entries
+    .filter((e) => explicitRequest(e.entry.flow, requests))
     .map((e) => ({ e, score: entryScore(kb, e, tokens, content, terms) }))
     .filter(({ e, score }) => passesGate(e, tokens, terms, score))
     .map(({ e, score }) => ({ entry: e.entry, score }))

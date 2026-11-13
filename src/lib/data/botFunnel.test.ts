@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDigitalReport, buildFunnelReport, groupEvents, type FunnelEventRow } from "./botFunnel";
+import { assignBookingTypes, buildDigitalReport, buildFunnelReport, buildFunnelReportFromSessions, groupEvents, linkPortalBookings, type FunnelEventRow } from "./botFunnel";
 
 const T0 = new Date("2026-10-07T12:00:00Z");
 let n = 0;
@@ -140,14 +140,128 @@ describe("Agendamento digital (M5 das Métricas)", () => {
     expect(r.outcomes).toEqual({ concluded: 1, abandoned: 2, blocked: 1, declined: 0, error: 0, in_progress: 1 });
     expect(r.finished).toBe(4);
     expect(r.stages.map((s) => [s.label, s.count])).toEqual([
-      ["Iniciaram", 5],
-      ["Identificaram o paciente", 3],
+      ["Pediram para marcar", 5],
       ["Receberam o link", 3],
       ["Abriram o link", 2],
       ["Marcaram", 1],
     ]);
     expect(r.stages[0]).toMatchObject({ lostToNext: 2, blockedHere: 1, biggestLoss: true });
-    expect(r.stages[3]).toMatchObject({ lostToNext: 1, slotTakenHere: 1 });
+    expect(r.stages[2]).toMatchObject({ lostToNext: 1, slotTakenHere: 1 });
+    expect(r.markedLater).toBe(0);
+  });
+
+  it("marcou depois pelo portal (link vencido): conta em Marcaram, com o detalhe", () => {
+    const lean = [
+      // p1: link vencido, marcou pelo portal 2 h depois (o mesmo contato).
+      { ...ev("p1", "booking", "started", 0, { lean: true }, P(7)), contactId: "c7" },
+      ev("p1", "booking", "link_sent", 1, {}, P(7)),
+      ev("p1", "booking", "link_expired", 60, {}, P(7)),
+      // p2: pediu e marcou pelo portal 2 dias depois (fora das 24 horas).
+      ev("p2", "booking", "started", 5, { lean: true }, P(8)),
+      ev("p2", "booking", "link_sent", 6, {}, P(8)),
+      // p3: pediu duas vezes; a marcação liga só à mais recente (p3b).
+      ev("p3a", "booking", "started", 10, { lean: true }, P(9)),
+      ev("p3a", "booking", "link_sent", 11, {}, P(9)),
+      ev("p3b", "booking", "started", 40, { lean: true }, P(9)),
+      ev("p3b", "booking", "link_sent", 41, {}, P(9)),
+    ];
+    const s = groupEvents(lean, start, end);
+    const at = (minutes: number) => new Date(T0.getTime() + minutes * 60_000);
+    linkPortalBookings(s, [
+      { appointmentId: "x1", status: "scheduled", createdAt: at(120), contactId: "c7", phone: null },
+      { appointmentId: "x2", status: "scheduled", createdAt: at(5 + 48 * 60), contactId: "c8", phone: P(8) },
+      { appointmentId: "x3", status: "canceled", createdAt: at(90), contactId: "c9", phone: P(9) },
+      // Outra pessoa: não liga.
+      { appointmentId: "x4", status: "scheduled", createdAt: at(30), contactId: "c0", phone: P(0) },
+    ]);
+    const r = buildDigitalReport(s, now);
+    expect(r.outcomes).toMatchObject({ concluded: 2, abandoned: 2 });
+    expect(r.markedLater).toBe(2);
+    expect(r.stages.map((x) => x.count)).toEqual([4, 4, 2, 2]);
+    expect(r.standing).toEqual({ standing: 1, canceledLater: 1, unlinked: 0 });
+    expect(r.dropped).toEqual([{ label: "Pararam de responder", count: 2 }]);
+    expect(s.find((x) => x.sessionId === "p3a")!.appointmentId).toBeNull();
+  });
+
+  it("botão Agendar: conta no tipo que marcou; sem marcação, linha própria só em Marcar", () => {
+    const lean = (id: string, purpose: string, phone: string, extra: FunnelEventRow[] = []) => [
+      ev(id, "booking", "started", 0, { lean: true }, phone),
+      ev(id, "booking", "link_sent", 1, { purpose }, phone),
+      ...extra,
+    ];
+    const s = groupEvents(
+      [
+        // g1: Agendar e marcou um exame; g2: Agendar e marcou consulta; g3: Agendar e não marcou.
+        ...lean("g1", "book", P(20), [ev("g1", "booking", "confirmed", 3, { appointment_id: "e1" }, P(20))]),
+        ...lean("g2", "book", P(21), [ev("g2", "booking", "confirmed", 3, { appointment_id: "c1" }, P(21))]),
+        ...lean("g3", "book", P(22)),
+        // g4: link de retorno antigo (gravado como consulta) e não marcou.
+        ...lean("g4", "return", P(23)),
+      ],
+      start,
+      end,
+    );
+    assignBookingTypes(s, new Map([["e1", "exam"], ["c1", "consultation"]]));
+    expect(s.map((x) => [x.sessionId, x.flow, !!x.untyped])).toEqual([
+      ["g1", "exam", false],
+      ["g2", "booking", false],
+      ["g3", "booking", true],
+      ["g4", "return_booking", false],
+    ]);
+    expect(buildDigitalReport(s, now).attempts).toBe(4);
+    expect(buildDigitalReport(s, now).flows.map((f) => [f.label, f.attempts, f.concluded])).toEqual([
+      ["Consulta", 1, 1],
+      ["Retorno", 1, 0],
+      ["Exame", 1, 1],
+      ["Agendar (tipo não escolhido)", 1, 0],
+    ]);
+    expect(buildDigitalReport(s, now, "consulta").attempts).toBe(1);
+    expect(buildDigitalReport(s, now, "exame").outcomes.concluded).toBe(1);
+    expect(buildDigitalReport(s, now, "consulta").flows.map((f) => f.label)).toEqual(["Consulta"]);
+  });
+
+  it("Retomar contato: pedido pelo Agendar sem marcação some se a pessoa marcou depois outro tipo", () => {
+    const s = groupEvents(
+      [
+        ev("h1", "booking", "started", 0, { lean: true, purpose: "book" }, P(30)),
+        ev("h1", "booking", "link_sent", 1, { purpose: "book" }, P(30)),
+        ev("h2", "booking", "started", 5, { lean: true, purpose: "book" }, P(30)),
+        ev("h2", "booking", "link_sent", 6, { purpose: "book" }, P(30)),
+        ev("h2", "booking", "confirmed", 8, { appointment_id: "e9" }, P(30)),
+        // h3: erro antes do link; o tipo vem do início da tentativa.
+        ev("h3", "booking", "started", 10, { lean: true, purpose: "book" }, P(31)),
+        ev("h3", "booking", "error", 11, { reason: "link_error" }, P(31)),
+      ],
+      start,
+      end,
+    );
+    assignBookingTypes(s, new Map([["e9", "exam"]]));
+    expect(s.find((x) => x.sessionId === "h3")!.untyped).toBe(true);
+    const report = buildFunnelReportFromSessions(s, now);
+    expect(report.incomplete.map((i) => i.sessionId)).toEqual(["h3"]);
+  });
+
+  it("a marcação pelo link não liga de novo a outra tentativa", () => {
+    const s = groupEvents(
+      [
+        ev("q1", "booking", "started", 0, {}, P(10)),
+        ev("q1", "booking", "link_sent", 1, {}, P(10)),
+        ev("q2", "booking", "started", 2, {}, P(10)),
+        ev("q2", "booking", "confirmed", 3, { appointment_id: "y1" }, P(10)),
+        // q3: barrada sem receber o link; a marcação pelo portal não a liga.
+        ev("q3", "booking", "started", 4, {}, P(11)),
+        ev("q3", "booking", "blocked", 5, { reason: "already_scheduled" }, P(11)),
+      ],
+      start,
+      end,
+    );
+    linkPortalBookings(s, [
+      { appointmentId: "y1", status: "scheduled", createdAt: new Date(T0.getTime() + 3 * 60_000), contactId: "c10", phone: P(10) },
+      { appointmentId: "y2", status: "scheduled", createdAt: new Date(T0.getTime() + 60 * 60_000), contactId: "c11", phone: P(11) },
+    ]);
+    expect(buildDigitalReport(s, now).markedLater).toBe(0);
+    expect(buildDigitalReport(s, now).outcomes.blocked).toBe(1);
+    expect(s.find((x) => x.sessionId === "q1")!.events.some((e) => e.step === "confirmed")).toBe(false);
   });
 
   it("seguem de pé confere o atendimento, não a conversa", () => {

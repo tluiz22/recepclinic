@@ -2,6 +2,7 @@ import type { DbClient } from "../clients";
 import { DataError, unwrap, unwrapOne, Validation } from "../errors";
 import { getWhatsappAccessToken, getWhatsappConnection, listWhatsappTemplates, type TemplateKey, type WhatsappTemplate } from "./connection";
 import { createTemplate, GraphRequestError, type Fetcher } from "./graph";
+import { leanWelcome } from "./bot/texts";
 import { DEFAULT_TEMPLATES, defaultTemplate, TEMPLATE_LANGUAGE, templateCreationPayload } from "./templates";
 
 // Mensagens personalizadas (F6.6; D3b revista, cliente 05 e 07/out/2026),
@@ -120,7 +121,7 @@ export type BotMessageDef = {
 
 export const BOT_MESSAGES: BotMessageDef[] = [
   // Bot enxuto (F3f, BE-2): as boas-vindas são o corpo do 1º menu, numa mensagem só (o nome da clínica vai no cabeçalho).
-  { key: "welcome", label: "Boas-vindas", markers: ["nome", "clinica"], required: [], defaultText: "Olá, {nome}! 👋\n\nEste é o contato oficial para agendamento {clinica}.\n\nEstamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar consulta, retorno ou exame.\n\n🗓 Remarcar ou cancelar sua consulta ou exame.\n\n👥 Consultar informações sobre profissionais, especialidades, valores e convênios.\n\n🎧 Falar diretamente com a recepção: atendimento com a nossa equipe.\n\nEscolha uma das opções abaixo." },
+  { key: "welcome", label: "Boas-vindas", markers: ["nome", "clinica"], required: [], defaultText: leanWelcome("{nome}") },
   { key: "menu", label: "Menu", markers: [], required: [], defaultText: "Escolha uma opção abaixo ou faça uma pergunta." },
   {
     key: "not_understood",

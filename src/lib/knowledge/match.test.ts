@@ -82,13 +82,9 @@ describe("perguntas do catálogo", () => {
     ["unimed?", "C1"],
     ["quais convênios vocês atendem", "C1"],
     ["quero marcar uma consulta", "M1"],
-    ["tem vaga amanhã?", "M1"],
     // C28: o dia na frase não tira a marcação nem a pergunta do profissional.
     ["quero marcar consulta na terça", "M1"],
-    ["tem vaga na terça?", "M1"],
-    ["tem horário na sexta?", "M1"],
     ["quero agendar para quarta", "M1"],
-    ["tem horário na quinta?", "M1"],
     ["quero marcar para sexta", "M1"],
     ["quero marcar um exame", "X1"],
     ["Encaixe", "EN1"],
@@ -99,7 +95,6 @@ describe("perguntas do catálogo", () => {
     ["quero entrar na fila de espera", "EN1"],
     ["o resultado do meu exame já saiu?", "X2"],
     ["quero remarcar", "R1"],
-    ["preciso mudar o dia da consulta", "R1"],
     ["quero cancelar", "K1"],
     ["desmarcar minha consulta", "K1"],
     ["quero marcar o retorno", "T1"],
@@ -125,10 +120,9 @@ describe("perguntas do catálogo", () => {
 });
 
 describe("intenções parecidas", () => {
-  it("remarcar × cancelar: cada uma na sua; \"não vou poder ir\" sozinho pergunta", () => {
-    expect(codeOf(match("quero trocar o horário"))).toBe("R1");
+  it("remarcar × cancelar: cada uma na sua", () => {
+    expect(codeOf(match("quero remarcar o horário"))).toBe("R1");
     expect(codeOf(match("não vou mais, pode cancelar"))).toBe("K1");
-    expect(codeOf(match("não vou poder ir"))).toBe("?K1|R1");
   });
 
   it("valor × formas de pagamento × convênio", () => {
@@ -146,6 +140,80 @@ describe("intenções parecidas", () => {
   it("cortesia junto com pergunta: vale a pergunta", () => {
     expect(codeOf(match("bom dia, qual o horário de vocês?"))).toBe("F1");
     expect(codeOf(match("obrigado, quero remarcar"))).toBe("R1");
+  });
+});
+
+describe("link do portal só com o pedido (cliente, 13/nov/2026)", () => {
+  const LINK_FLOWS = new Set(["book_consultation", "book_exam", "book_return", "my_appointments", "reschedule", "cancel", "confirm"]);
+  const opensLink = (m: KbMatch) =>
+    m.kind === "answer" ? LINK_FLOWS.has(m.entry.flow ?? "") : m.kind === "ambiguous" && m.options.some((o) => LINK_FLOWS.has(o.flow ?? ""));
+
+  it.each([
+    "Quanto tá a consulta",
+    "Pneumologista pediátrica",
+    "consulta",
+    "tem vaga amanhã?",
+    "tem vaga na terça?",
+    "tem horário na sexta?",
+    "exame de sangue",
+    "retorno",
+    "que horas?",
+    "quando?",
+    "preciso mudar o dia da consulta",
+    "não vou poder ir",
+    "a consulta está marcada?",
+    "tenho marcapasso, posso fazer o exame?",
+    "Marcia aqui, sobre o retorno",
+    "pode confirmar o valor do exame?",
+  ])("%s → sem link", (text) => {
+    expect(opensLink(match(text))).toBe(false);
+  });
+
+  it("\"quanto tá\", \"quanto sai\": o valor", () => {
+    expect(codeOf(match("Quanto tá a consulta"))).toBe("V1");
+    expect(codeOf(match("quanto sai o exame?"))).toBe("V1");
+    expect(codeOf(match("quanto está a consulta?"))).toBe("V1");
+    // A frase inteira: "quanto tá demorando" não é preço.
+    expect(codeOf(match("quanto está demorando o resultado?"))).not.toBe("V1");
+  });
+
+  it("nome de profissional com \"marc…\" não é pedido de marcar", () => {
+    const marcela: ClinicTerms = { ...clinic, professionals: [...clinic.professionals, { id: "p-marcela", name: "Dra. Marcela Souza" }] };
+    expect(opensLink(match("exame com a Dra Marcela", marcela))).toBe(false);
+  });
+
+  it("cada pedido abre só o seu caminho: \"cancelar\" não oferece remarcar", () => {
+    expect(codeOf(match("quero cancelar, não vou poder ir"))).toBe("K1");
+  });
+
+  it("toda frase de exemplo e palavra-chave de uma entrada com link traz o pedido dela", () => {
+    const words = (text: string) => normalizeText(text).split(" ");
+    for (const entry of (catalog as KbContent).entries.filter((e) => e.flow && e.flow !== "waitlist")) {
+      for (const text of entry.synonyms) {
+        const m = matchQuestion(compileKnowledge(1, { ...(catalog as KbContent), entries: [entry] }), text, clinic);
+        expect(m.kind === "answer" || m.kind === "ambiguous", `${entry.code}: "${text}" (${words(text).length} palavras)`).toBe(true);
+      }
+    }
+  });
+
+  it.each([
+    ["quero marcar uma consulta", "M1"],
+    ["quero agendar para amanhã", "M1"],
+    ["tem como agendar para amanhã?", "M1"],
+    ["agendamento", "M1"],
+    ["marcar retorno", "T1"],
+    ["quero agendar um exame", "X1"],
+    ["quando é minha consulta?", "CF2"],
+    ["quero ver meu agendamento", "CF2"],
+    ["preciso remarcar", "R1"],
+    ["desmarcar", "K1"],
+    ["quero confirmar", "CF1"],
+    ["marque uma consulta pra mim", "M1"],
+    ["agende uma consulta", "M1"],
+    ["meu retorno é quando?", "CF2"],
+    ["que dia é meu horário?", "CF2"],
+  ])("%s → %s", (text, code) => {
+    expect(codeOf(match(text))).toBe(code);
   });
 });
 

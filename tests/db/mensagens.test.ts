@@ -153,7 +153,7 @@ describe("conversa do bot", () => {
     sent.length = 0;
     await adminClient().from("conversation_state").update({ state: "WELCOME", human_handoff: false }).eq("clinic_id", clinicId);
     await hello("wamid.f66.in.2");
-    expect(sent[0]).toMatch(/^Olá! 👋\n\nEste é o contato oficial para agendamento d/);
+    expect(sent[0]).toMatch(/^Olá! 👋 Seja bem-vindo\(a\)!/);
   });
 });
 

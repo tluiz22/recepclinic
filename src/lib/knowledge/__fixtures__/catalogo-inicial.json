@@ -49,15 +49,13 @@
    "keywords": [
     "confirmar",
     "confirmo",
-    "confirmação",
-    "comparecer"
+    "confirmação"
    ],
    "question": "Quero confirmar minha consulta",
    "synonyms": [
     "confirmar presença",
     "confirmo a consulta",
-    "quero confirmar o horário",
-    "vou comparecer"
+    "quero confirmar o horário"
    ],
    "template": null,
    "answerType": "flow",
@@ -73,19 +71,16 @@
     "minha consulta",
     "meu exame",
     "meu agendamento",
-    "marcada",
-    "marcado",
-    "que dia",
-    "que horas",
-    "quando"
+    "meu horário",
+    "meu retorno"
    ],
    "question": "Minha consulta está marcada? Para quando é?",
    "synonyms": [
-    "esqueci o horário",
+    "quando é meu retorno",
+    "que dia é meu horário",
     "que dia é minha consulta",
     "que horas é minha consulta",
-    "quero ver meu agendamento",
-    "tenho consulta marcada"
+    "quero ver meu agendamento"
    ],
    "template": null,
    "answerType": "flow",
@@ -456,17 +451,15 @@
     "cancelar",
     "cancelamento",
     "desmarcar",
-    "desistir",
-    "não vou"
+    "desmarque",
+    "cancele"
    ],
    "question": "Quero cancelar",
    "synonyms": [
     "cancelar consulta",
     "cancelar exame",
-    "desistir da consulta",
     "desmarcar",
-    "não vou mais",
-    "não vou poder ir"
+    "quero desmarcar a consulta"
    ],
    "template": null,
    "answerType": "flow",
@@ -508,28 +501,25 @@
     "marcar",
     "agendar",
     "agendamento",
-    "consulta",
-    "vaga",
-    "vagas",
-    "horário livre"
+    "marque",
+    "agende",
+    "marco",
+    "agendo"
    ],
    "question": "Quero marcar uma consulta",
    "synonyms": [
     "agendar consulta",
+    "agendar para amanhã",
     "como faço para marcar",
     "como funciona o agendamento",
     "marcar horário",
+    "marcar para amanhã",
     "marcar para meu filho",
     "marcar para outra pessoa",
     "marcar para segunda",
-    "primeira consulta",
-    "qual o próximo horário",
+    "marque uma consulta",
     "quero agendar para quarta",
-    "quero uma consulta",
-    "tem horário",
-    "tem horário amanhã",
-    "tem horário na sexta",
-    "tem vaga"
+    "quero marcar a primeira consulta"
    ],
    "template": null,
    "answerType": "flow",
@@ -663,22 +653,14 @@
    "keywords": [
     "remarcar",
     "remarcação",
-    "mudar",
-    "trocar",
-    "adiar",
-    "outro dia",
-    "outro horário"
+    "reagendar",
+    "remarque"
    ],
    "question": "Quero remarcar",
    "synonyms": [
-    "adiar a consulta",
     "como faço para remarcar",
-    "mudar a data",
-    "mudar o dia",
-    "não vou poder ir",
-    "não vou poder ir nesse horário, quero outro",
-    "passar para outro dia",
-    "trocar o horário"
+    "quero remarcar o horário",
+    "remarcar para outro dia"
    ],
    "template": null,
    "answerType": "flow",
@@ -805,8 +787,6 @@
    "question": "Quero marcar retorno",
    "synonyms": [
     "agendar retorno",
-    "consulta de revisão",
-    "levar o exame para o médico ver",
     "marcar a volta"
    ],
    "template": null,
@@ -864,7 +844,13 @@
     "quanto fica",
     "cobra",
     "cobram",
-    "particular"
+    "particular",
+    "quanto tá a consulta",
+    "quanto está a consulta",
+    "quanto tá o exame",
+    "quanto está o exame",
+    "quanto sai a consulta",
+    "quanto sai o exame"
    ],
    "question": "Quanto custa a consulta?",
    "synonyms": [
@@ -875,6 +861,8 @@
     "quanto custa o exame",
     "quanto é",
     "quanto fica",
+    "quanto sai a consulta",
+    "quanto tá a consulta",
     "valor da consulta",
     "valor particular"
    ],
@@ -933,9 +921,8 @@
    "question": "Quero marcar um exame",
    "synonyms": [
     "agendar exame",
-    "fazer um exame",
     "marcar procedimento",
-    "tem horário para exame"
+    "quero marcar um exame"
    ],
    "template": null,
    "answerType": "flow",

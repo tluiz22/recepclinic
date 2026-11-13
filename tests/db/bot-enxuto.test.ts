@@ -108,8 +108,11 @@ describe("menu enxuto (BE-2)", () => {
   it("1ª mensagem: uma só, com o nome da clínica no cabeçalho, as boas-vindas e os 3 atalhos (sem a recepção no app)", async () => {
     const reply = await say(NEW, "oi");
     expect(reply).toHaveLength(1);
-    expect(reply[0]).toMatchObject({ kind: "list", header: "Clínica Enxuta", body: expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento da \*Clínica Enxuta\*\./) });
+    expect(reply[0]).toMatchObject({ kind: "list", header: "Clínica Enxuta", body: expect.stringMatching(/^Olá! 👋 Seja bem-vindo\(a\)!\n\nComo podemos ajudar você hoje\?/) });
     expect(reply[0].options.map((o) => o.title)).toEqual(MENU_TITLES.slice(0, 3));
+    // As opções do texto são as da lista: sem a recepção no app, sem a linha dela.
+    expect(reply[0].body).toContain("📅 Agendar — ");
+    expect(reply[0].body).not.toContain("Falar com a recepção");
   });
 
   it("número com consulta marcada: direto o menu, com o primeiro nome e sem perguntar pela consulta; com a recepção no app, 4 itens", async () => {
@@ -118,7 +121,8 @@ describe("menu enxuto (BE-2)", () => {
       await restart(PATIENT);
       const reply = await say(PATIENT, "Bom dia");
       expect(reply).toHaveLength(1);
-      expect(reply[0].body).toMatch(/^Olá, .+! 👋\n\nEste é o contato oficial para agendamento d/);
+      expect(reply[0].body).toMatch(/^Olá, .+! 👋 Seja bem-vindo\(a\)!/);
+      expect(reply[0].body).toMatch(/\n\n🎧 Falar com a recepção — Atendimento com nossa equipe$/);
       expect(reply[0].options.map((o) => o.title)).toEqual(MENU_TITLES);
     } finally {
       await setCoexistence(false);
@@ -127,7 +131,7 @@ describe("menu enxuto (BE-2)", () => {
 });
 
 describe("links do portal (BE-3)", () => {
-  it("Agendar: uma mensagem com o botão do link; o funil fecha com link enviado e a conversa volta ao começo", async () => {
+  it("Agendar: uma mensagem com o botão do link; o funil fecha com link enviado e a conversa fica no menu", async () => {
     await restart(NEW);
     await say(NEW, "oi");
     const reply = await say(NEW, "1");
@@ -139,7 +143,8 @@ describe("links do portal (BE-3)", () => {
       }),
     ]);
     expect((await lastLink(NEW)).purpose).toBe("book");
-    expect((await conversation(NEW)).state).toBe("WELCOME");
+    // Fica no menu (não volta ao começo): a próxima mensagem não recebe as boas-vindas de novo (cliente, 13/nov/2026).
+    expect((await conversation(NEW)).state).toBe("MENU");
     const { data: steps } = await adminClient().from("bot_funnel_events").select("step").eq("clinic_id", f.clinicId).eq("contact_phone", NEW).eq("flow", "booking");
     expect(steps!.map((s) => s.step)).toContain("link_sent");
   });
@@ -313,5 +318,56 @@ describe("cortesia (BE-8)", () => {
       .from("whatsapp_messages")
       .insert({ clinic_id: f.clinicId, contact_phone: phone, direction: "outbound", message_type: "bot_reception_confirm", status: "sent", created_at: new Date().toISOString() });
     expect((await say(phone, "ok")).length).toBeGreaterThan(0);
+  });
+});
+
+describe("texto depois do menu (cliente, 13/nov/2026)", () => {
+  const NOT_UNDERSTOOD = "Não entendi sua resposta 🙏 Escolha uma das opções abaixo.";
+
+  it("depois do link: texto solto recebe o \"não entendi\" com o menu, numa mensagem, sem as boas-vindas de novo", async () => {
+    const phone = `${PREFIX}72`;
+    await say(phone, "oi");
+    expect((await say(phone, "1"))[0]).toMatchObject({ kind: "link" });
+    // O link fecha o assunto, mas a conversa fica no menu (não volta ao começo).
+    expect((await conversation(phone)).state).toBe("MENU");
+    const reply = await say(phone, "Pneumologista pediátrica");
+    expect(reply).toHaveLength(1);
+    expect(reply[0]).toMatchObject({ kind: "list", body: NOT_UNDERSTOOD, header: undefined });
+    expect((await conversation(phone)).state).toBe("MENU");
+    // O menu segue valendo.
+    expect((await say(phone, "1"))[0]).toMatchObject({ kind: "link" });
+  });
+
+  it("saudação depois do menu ou do link: \"Olá! 👋\" e o menu curto (com a base, o convite para perguntar), numa mensagem", async () => {
+    const phone = `${PREFIX}73`;
+    await say(phone, "oi");
+    for (const text of ["Bom dia!!", "Oii"]) {
+      const reply = await say(phone, text);
+      expect(reply).toHaveLength(1);
+      expect(reply[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta.", options: expect.any(Array) });
+    }
+    await say(phone, "1");
+    expect((await say(phone, "boa tarde"))[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta." });
+  });
+
+  it("conversa nova: parada 15 minutos depois do link, a rotina volta ao começo e o \"oi\" recebe as boas-vindas", async () => {
+    const phone = `${PREFIX}74`;
+    await say(phone, "oi");
+    await say(phone, "1");
+    const db = createClinicServiceClient(f.clinicId, env());
+    sent = [];
+    expect(await closeIdleConversations(db, f.clinicId, sender, new Date(Date.now() + 16 * 60_000))).toBeGreaterThanOrEqual(1);
+    expect(sent.filter((m) => m.to === phone)).toEqual([]);
+    expect((await conversation(phone)).state).toBe("WELCOME");
+    expect((await say(phone, "oi"))[0].body).toMatch(/^Olá! 👋 Seja bem-vindo\(a\)!/);
+  });
+
+  it("saudação não zera a contagem do \"não entendi\"", async () => {
+    const phone = `${PREFIX}75`;
+    await say(phone, "oi");
+    await say(phone, "xyz abc");
+    await say(phone, "bom dia");
+    const { data } = await adminClient().from("conversation_state").select("not_understood_count").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
+    expect(data!.not_understood_count).toBe(1);
   });
 });
