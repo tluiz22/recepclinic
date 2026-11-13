@@ -4,7 +4,7 @@
 // ("Atende particular", "Convênios atendidos") e no exame (CE-2, cliente, 10/nov/2026: "Aceita particular",
 // "Convênios aceitos"). Vai para `action` com acao=convenios, plan_id e note_{id}.
 import { PLAN_NOTE_MAX } from "../../../lib/data/config/insurance";
-import { CARD, CHECK, CHOICE, HINT, INPUT, LEGEND, SECONDARY_BUTTON, SECTION_TITLE } from "./formStyles";
+import { CARD, CHECK, CHOICE, HINT, INPUT, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "./formStyles";
 
 interface Props {
   action: string;
@@ -17,9 +17,11 @@ interface Props {
   legend: string;
   /** Sem convênio cadastrado: quem não cadastra (o profissional) vê "Peça ao Administrador". */
   canRegisterPlans: boolean;
+  /** "Cancelar" ao lado do salvar (cadastro do profissional em abas: volta à leitura). */
+  cancelHref?: string;
 }
 
-const { action, plans, acceptedIds, notes, acceptsPrivate, privateLabel, privateHint, legend, canRegisterPlans } = Astro.props;
+const { action, plans, acceptedIds, notes, acceptsPrivate, privateLabel, privateHint, legend, canRegisterPlans, cancelHref } = Astro.props;
 const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 // Muitos convênios (clínicas grandes): busca pelo nome, sem acento.
 const withSearch = plans.length > 8;
@@ -96,7 +98,8 @@ const linked = acceptedIds.filter((pid) => plans.some((p) => p.id === pid)).leng
     )
   }
   <div class="flex flex-wrap items-center gap-3 border-t border-[#e6ecea] pt-4">
-    <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar particular e convênios</button>
+    <button type="submit" class={cancelHref ? PRIMARY_BUTTON : SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar particular e convênios</button>
+    {cancelHref && <a href={cancelHref} class={SECONDARY_BUTTON}>Cancelar</a>}
     <span class="text-sm text-ink-soft" role="status" data-coverage-summary>
       {linked === 0 ? "Hoje: só particular." : acceptsPrivate ? "Hoje: particular e convênios." : "Hoje: só convênios."}
     </span>

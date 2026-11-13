@@ -29,9 +29,11 @@ interface Props {
   back?: { href: string; label: string };
   /** Já carregado pela tela (evita buscar duas vezes). */
   setup?: SetupStatus;
+  /** A tela mostra o próprio cabeçalho (cadastro do profissional em abas): sem o título padrão. */
+  hideTitle?: boolean;
 }
 
-const { current, title, subtitle, pageTitle, back, setup: given } = Astro.props;
+const { current, title, subtitle, pageTitle, back, setup: given, hideTitle = false } = Astro.props;
 // O aviso é lido (e o cookie apagado) antes de esperar o guia: depois da espera
 // a resposta já começou a sair e o cookie ficava, repetindo o aviso nas telas
 // seguintes (QA-02 do teste da R9).
@@ -119,7 +121,7 @@ const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-
           </a>
         )
       }
-      <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+      <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3" hidden={hideTitle}>
         <div class="min-w-0">
           <span class="text-[12.5px] font-bold tracking-[.06em] text-ink-soft uppercase">Configurações</span>
           <h1 class="mt-1 font-display text-[26px] leading-[1.1] font-bold break-words text-ink sm:text-[30px]">{title}</h1>

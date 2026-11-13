@@ -14,7 +14,8 @@ import { setProfessionalBotInfo } from "../../../../../lib/data/config/professio
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { agendaOfProfessional, updateAgendaAttendance } from "../../../../../lib/data/config/agendas";
 import { attendanceFromForm } from "../../../../../lib/attendanceForm";
-import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
+import { allFilterOn } from "../../../../../lib/returnPath";
+import { professionalPage, tabOfAction } from "../../../../../lib/professionalTabs";
 import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Profissional (F4.3): criar (`novo`), salvar, desativar e reativar. O login
@@ -30,8 +31,10 @@ export const POST: APIRoute = async (context) => {
   const db = createUserClient(request, cookies);
   // Cadastro aberto da lista em "Todos": volta com o filtro (teste da R9, NAV-06).
   const all = allFilterOn(new URL(request.url));
-  const page = (target: string) => withAllFilter(`/admin/configuracoes/profissionais/${target}`, all);
   const acao = formText(form, "acao");
+  // Cadastro em abas (cliente, 13/nov/2026): salvo, volta à aba da parte em leitura; com erro, com ela aberta.
+  const { tab, edit } = tabOfAction(acao);
+  const page = (target: string) => professionalPage(target, tab, null, all);
 
   return runFormAction(
     context,
@@ -102,7 +105,7 @@ export const POST: APIRoute = async (context) => {
       await updateProfessional(db, clinic.clinicId, id, input);
       return { redirectTo: page(id), message: "Profissional salvo." };
     },
-    page(id),
+    id === "novo" ? professionalPage("novo", "perfil", null, all) : professionalPage(id, tab, edit, all),
   );
 };
 

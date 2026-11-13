@@ -3,7 +3,7 @@
 // Configurações › Clínica): perfil, prazo para oferecer horários e idade limite
 // da Consulta. Ficam na agenda dele; sem agenda, o cartão pede para criar.
 import HelpTip from "../ui/HelpTip.astro";
-import { CARD, CHECK, CHOICE, HINT, INPUT_INLINE, LABEL, LEGEND, PRIMARY_BUTTON, SECTION_TITLE } from "./formStyles";
+import { CARD, CHECK, CHOICE, HINT, INPUT_INLINE, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "./formStyles";
 import type { AgendaAttendance } from "../../../lib/data/config/agendas";
 import { BOOKING_HORIZON_MAX, BOOKING_HORIZON_MIN, CLINIC_PROFILES } from "../../../lib/data/config/clinic";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
@@ -19,9 +19,11 @@ interface Props {
   createAgendaHref?: string;
   /** Idade limite da Consulta (a Equipe só faz exame: sem o campo). */
   withAgeLimit?: boolean;
+  /** "Cancelar" ao lado do salvar (cadastro do profissional em abas: volta à leitura). */
+  cancelHref?: string;
 }
 
-const { action, attendance, who, createAgendaHref, withAgeLimit = true } = Astro.props;
+const { action, attendance, who, createAgendaHref, withAgeLimit = true, cancelHref } = Astro.props;
 const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
   const words = vocabularyFor(profile);
   return `"${words.patient}" e "${words.contact}"`;
@@ -106,7 +108,14 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
           <p id="age_limit-hint" class={HINT}>A partir desta idade, o bot não marca Consulta (só Retorno e Exame) e o Marcar avisa.</p>
         </div>
         )}
-        <button type="submit" class={`${PRIMARY_BUTTON} self-start`} data-sending-label="Salvando…">Salvar atendimento</button>
+        {cancelHref ? (
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">Salvar atendimento</button>
+            <a href={cancelHref} class={SECONDARY_BUTTON}>Cancelar</a>
+          </div>
+        ) : (
+          <button type="submit" class={`${PRIMARY_BUTTON} self-start`} data-sending-label="Salvando…">Salvar atendimento</button>
+        )}
       </form>
     )
   }

@@ -3,12 +3,18 @@
 // profissão, especialidades (uma ou mais da lista do Suporte, obrigatória; ME,
 // cliente, 07/nov/2026), conselho (número e UF) e o WhatsApp para o resumo
 // do dia dos próprios atendimentos (D2 revista, 05/out/2026).
+// Redesenho (cliente, 13/nov/2026, Opção A): cabeçalho com foto, nome e situação; abas Perfil,
+// Atendimento, Convênios e Bot (`?aba=`); cada parte em leitura com "Editar" (`?editar=`), o
+// formulário só aberto quando pedido. Especialidades por busca, marcadas como etiquetas, e a
+// estrela escolhe a principal. Foto num botão só: escolher o arquivo já envia.
 import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
 import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
+import PhoneLinks from "../../../../components/admin/PhoneLinks.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
-import { CARD, CHECK, CHOICE, HINT, LEGEND, SECTION_TITLE, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import { CARD, HINT, INPUT, LABEL, LEGEND, SECTION_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, DANGER_BUTTON } from "../../../../components/admin/config/formStyles";
 import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listProfessionals, listSpecialtyOptions, professionalRegistry } from "../../../../lib/data/config/professionals";
@@ -18,8 +24,7 @@ import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
 import { ownSettingsOnly } from "../../../../lib/clinicAccess";
-import PhotoCard from "../../../../components/admin/config/PhotoCard.astro";
-import { profilePhotoLink } from "../../../../lib/data/config/profilePhotos";
+import { PHOTO_TYPES, profilePhotoLink } from "../../../../lib/data/config/profilePhotos";
 import AttendanceCard from "../../../../components/admin/config/AttendanceCard.astro";
 import CoverageForm from "../../../../components/admin/config/CoverageForm.astro";
 import PortalLinkActions from "../../../../components/admin/config/PortalLinkActions.astro";
@@ -27,6 +32,8 @@ import PortalLinkTools from "../../../../components/admin/config/PortalLinkTools
 import { loadPortalSettings } from "../../../../lib/data/config/portal";
 import { portalLinksOf } from "../../../../lib/data/config/portalLinks";
 import { agendaOfProfessional } from "../../../../lib/data/config/agendas";
+import { PROFILE_LABELS } from "../../../../lib/vocabulary";
+import { professionalPage, professionalTabs, type ProfessionalEdit, type ProfessionalTab } from "../../../../lib/professionalTabs";
 
 const clinic = Astro.locals.clinic!;
 const { id } = Astro.params;
@@ -44,7 +51,6 @@ const list = withAllFilter("/admin/configuracoes/profissionais", all);
 const action = withAllFilter(`/api/admin/configuracoes/profissionais/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
-// Profissão, especialidade e registro embaixo do nome (R9).
 const subtitle = professional ? [professional.profession, professional.specialty, professionalRegistry(professional)].filter(Boolean).join(" · ") || undefined : undefined;
 const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 // Especialidades: as do profissional primeiro (na ordem, a principal na frente),
@@ -52,28 +58,31 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 const chosen = professional?.specialties ?? [];
 const chosenIds = new Set(chosen.map((s) => s.id));
 const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(createUserClient(Astro.request, Astro.cookies))).filter((s) => !chosenIds.has(s.id))];
-// Particular e convênios (MC, 07/nov/2026; F1 da recepção digital, 08/nov/2026): só com o item "Convênios";
-// particular sim/não, os convênios marcados e a observação de cada um (o paciente vê ao escolher o convênio).
+// Particular e convênios (MC; F1 da recepção digital): só com o item "Convênios".
 const insuranceOn = clinic.features.includes("insurance") && !isNew;
-const [plans, acceptedPlans, planNotes] = insuranceOn
-  ? await Promise.all([
-      listInsurancePlans(createUserClient(Astro.request, Astro.cookies), clinic.clinicId),
-      listProfessionalPlans(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!),
-      listProfessionalPlanNotes(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!),
-    ])
-  : [[], [] as string[], new Map<string, string>()];
-const acceptsPrivate = professional?.acceptsPrivate ?? true;
-// Informações que o bot responde (MI, 07/nov/2026, M5): só por profissional, com o bot.
+// Informações que o bot responde (MI, M5): só por profissional, com o bot.
 const botOn = clinic.features.includes("whatsapp_bot") && !isNew;
-const botInfo = botOn ? await getProfessionalBotInfo(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!) : EMPTY_BOT_INFO;
-// Foto (cliente, 08/nov/2026): só no cadastro, por enquanto.
-const photoUrl = isNew ? null : await profilePhotoLink(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { kind: "professional", id: id! });
-// Perfil, prazo e idade limite (cliente, 08/nov/2026; antes, da clínica): na agenda do profissional.
-const agenda = isNew ? null : await agendaOfProfessional(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!);
-// Link de agendamento (F5b, "Meu perfil"): só com o Portal, e quando o profissional aparece nele.
+
+// Abas e a parte aberta para edição (o cadastro novo é só o formulário).
+const { tabs, tab, edit } = professionalTabs(Astro.url, { insurance: insuranceOn, bot: botOn });
+const pageHref = (t: ProfessionalTab, e?: ProfessionalEdit) => professionalPage(id!, t, e ?? null, all);
+const editing = (part: ProfessionalEdit) => isNew || edit === part;
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const [plans, acceptedPlans, planNotes] =
+  insuranceOn && tab === "convenios"
+    ? await Promise.all([listInsurancePlans(db, clinic.clinicId), listProfessionalPlans(db, clinic.clinicId, id!), listProfessionalPlanNotes(db, clinic.clinicId, id!)])
+    : [[], [] as string[], new Map<string, string>()];
+const planName = new Map(plans.map((p) => [p.id, p.name]));
+const acceptsPrivate = professional?.acceptsPrivate ?? true;
+const botInfo = botOn && tab === "bot" ? await getProfessionalBotInfo(db, clinic.clinicId, id!) : EMPTY_BOT_INFO;
+// Foto (cliente, 08/nov/2026): no cabeçalho e na linha "Foto" do Perfil.
+const photoUrl = isNew ? null : await profilePhotoLink(db, clinic.clinicId, { kind: "professional", id: id! });
+const agenda = isNew || tab !== "atendimento" ? null : await agendaOfProfessional(db, clinic.clinicId, id!);
+// Link de agendamento (F5b): só com o Portal, e quando o profissional aparece nele.
 const portalLink =
   !isNew && clinic.features.includes("portal")
-    ? await loadPortalSettings(createUserClient(Astro.request, Astro.cookies), clinic.clinicId)
+    ? await loadPortalSettings(db, clinic.clinicId)
         .then((settings) => {
           const mine = settings.professionals.find((p) => p.id === id);
           const link = portalLinksOf(Astro.url, settings).professionals.get(id!);
@@ -82,13 +91,40 @@ const portalLink =
         .catch(() => null)
     : null;
 const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+const initials =
+  (professional?.displayName ?? "")
+    .replace(/^(dra?|dr)\.?\s+/i, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .filter((_, i, all) => i === 0 || i === all.length - 1)
+    .join("")
+    .toLocaleUpperCase("pt-BR") || "?";
+const chip = (tone: "ok" | "off" | "pend") =>
+  `inline-flex items-center rounded-full px-2.5 py-0.5 text-[13.5px] font-semibold ${
+    tone === "ok" ? "bg-conf-100 text-conf-800" : tone === "pend" ? "bg-pend-100 text-pend-800" : "bg-canvas-deep text-ink-mid"
+  }`;
+const tabClass = (on: boolean) =>
+  `inline-flex min-h-11 shrink-0 items-center whitespace-nowrap border-b-[3px] px-1 text-base font-semibold no-underline ${on ? "border-brand text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
+const EDIT_LINK = `${SECONDARY_BUTTON} shrink-0`;
+const DT = "text-sm text-ink-soft";
+const DD = "mt-0.5 font-semibold break-words text-ink";
+const registry = professional ? professionalRegistry(professional) : "";
+// Diálogo de confirmação: o do Desativar já vem com o ActiveToggle.
+const needsDialog = !!photoUrl && (ownOnly || !professional?.isActive || tab !== "perfil");
 ---
 
-<ConfigShell current="profissionais" title={isNew ? "Novo profissional" : professional!.displayName} back={ownOnly ? undefined : { href: list, label: "Profissionais" }} subtitle={subtitle}>
+<ConfigShell
+  current="profissionais"
+  title={isNew ? "Novo profissional" : professional!.displayName}
+  pageTitle={isNew ? "Novo profissional" : professional!.displayName}
+  back={ownOnly ? undefined : { href: list, label: "Profissionais" }}
+  subtitle={isNew ? undefined : subtitle}
+  hideTitle={!isNew}
+>
   {
-    // Cadastrado antes da ME sem especialidade (M2): pendente até salvar com uma.
     professionalIssues.includes("no_specialty") && (
-      <NextStep text={`Falta a especialidade de ${professional!.displayName}: marque ao menos uma abaixo e salve.`} />
+      <NextStep text={`Falta a especialidade de ${professional!.displayName}: em Perfil, clique em Editar e marque ao menos uma.`} />
     )
   }
   {
@@ -96,7 +132,6 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
       (ownOnly ? (
         <NextStep text="Sua agenda ainda não está ativa: sem ela, não recebe atendimentos. Fale com o Administrador da clínica." />
       ) : setup!.inactiveAgendaOf.has(id!) ? (
-        // Uma agenda por profissional (cliente, 21/out/2026): reativa-se a antiga.
         <NextStep
           text={`A agenda de ${professional!.displayName} está desativada: sem ela, não recebe atendimentos.`}
           href={`/admin/configuracoes/agendas/${setup!.inactiveAgendaOf.get(id!)}?todos=1`}
@@ -109,7 +144,6 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
           label="Criar a agenda"
         />
       ) : (
-        // Jornada revista (cliente, 21/out/2026): Local antes da Agenda.
         <NextStep
           text={`${professional!.displayName} ainda não tem agenda. Antes dela, cadastre onde a clínica atende.`}
           href={`/admin/configuracoes/locais/novo?profissional=${id}`}
@@ -118,9 +152,239 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
       ))
   }
 
-  <div class="flex max-w-3xl flex-col gap-4">
+  <div class="flex max-w-3xl min-w-0 flex-col gap-4">
     {
-      portalLink && (
+      !isNew && (
+        <>
+          <section class={`${CARD} flex min-w-0 flex-wrap items-center gap-4 p-4 sm:p-5`} aria-label="Resumo do profissional">
+            {photoUrl ? (
+              <img src={photoUrl} alt={`Foto de ${professional!.displayName}`} class="h-16 w-16 shrink-0 rounded-full border border-line object-cover sm:h-[76px] sm:w-[76px]" />
+            ) : (
+              <span
+                class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-soft font-display text-[22px] font-bold text-brand-ink sm:h-[76px] sm:w-[76px] sm:text-[26px]"
+                role="img"
+                aria-label="Sem foto"
+              >
+                {initials}
+              </span>
+            )}
+            <div class="flex min-w-0 flex-1 flex-col gap-1">
+              <h1 class="font-display text-[22px] leading-tight font-bold break-words text-ink sm:text-[26px]">{professional!.displayName}</h1>
+              {subtitle && <p class="text-[15px] text-ink-soft">{subtitle}</p>}
+              <div class="mt-1 flex flex-wrap gap-2">
+                <span class={chip(professional!.isActive ? "ok" : "off")}>{professional!.isActive ? "Ativo" : "Desativado"}</span>
+                {portalLink && <span class={chip(portalLink.shown ? "ok" : "off")}>{portalLink.shown ? "No portal" : "Fora do portal"}</span>}
+              </div>
+            </div>
+          </section>
+
+          <nav aria-label="Partes do cadastro" class="-mx-4 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
+            <div class="flex gap-x-5">
+              {tabs.map((t) => (
+                <a href={pageHref(t.id)} aria-current={t.id === tab ? "page" : undefined} class={tabClass(t.id === tab)}>
+                  {t.label}
+                </a>
+              ))}
+            </div>
+          </nav>
+        </>
+      )
+    }
+
+    {
+      (isNew || tab === "perfil") &&
+        (editing("dados") ? (
+          <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5 ${isNew ? "" : "border-2 border-brand"}`} aria-labelledby="dados-titulo">
+            <input type="hidden" name="acao" value="salvar" />
+            <h2 id="dados-titulo" class={SECTION_TITLE}>{isNew ? "Dados do profissional" : "Editar dados do profissional"}</h2>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label for="display_name" class={LABEL}>Nome (como aparece para o paciente)</label>
+                <input id="display_name" name="display_name" required value={professional?.displayName ?? ""} class={INPUT} />
+              </div>
+              <div>
+                <label for="profession" class={LABEL}>Profissão</label>
+                <input id="profession" name="profession" required placeholder="Médica, Dentista, Psicóloga…" value={professional?.profession ?? ""} class={INPUT} />
+              </div>
+            </div>
+            <fieldset class="min-w-0" data-specialties>
+              <legend class={LEGEND}>Especialidades</legend>
+              <p id="specialties-orientacao" class={HINT}>
+                No WhatsApp, o paciente escolhe a especialidade antes do profissional. Falta alguma na lista? Peça ao Suporte.
+              </p>
+              <ul class="mt-2 flex flex-wrap gap-2" aria-label="Especialidades marcadas" data-chosen hidden></ul>
+              <p class={`${HINT} mt-1`} data-star-hint hidden>
+                A estrela marca a principal: aparece primeiro ao lado do nome.
+              </p>
+              <div class="mt-2 flex flex-wrap items-center gap-2" data-filter-row hidden>
+                <input
+                  type="search"
+                  aria-label="Buscar especialidade para incluir"
+                  aria-controls="specialties-list"
+                  aria-describedby="specialties-orientacao"
+                  placeholder="Buscar e incluir: pediatria, ortodontia…"
+                  autocomplete="off"
+                  class={`${INPUT} mt-0 min-w-0 flex-1 sm:max-w-sm`}
+                  data-specialty-filter
+                />
+                <button type="button" class={SECONDARY_BUTTON} aria-controls="specialties-list" aria-expanded="false" data-show-all>
+                  Ver a lista
+                </button>
+              </div>
+              <div id="specialties-list" class="mt-2 grid max-h-72 overflow-y-auto rounded-lg border border-line-strong px-3 py-2 sm:grid-cols-2 sm:gap-x-6">
+                {specialtyOptions.map((s) => (
+                  <label class="flex min-h-10 items-center gap-2.5 py-1 text-[15px] text-ink" data-specialty-option data-key={searchKey(s.name)} data-name={s.name}>
+                    <input type="checkbox" name="specialties" value={s.id} checked={chosenIds.has(s.id)} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                    <span>
+                      {s.name}
+                      {!s.isActive && <span class="text-sm text-ink-soft"> (saiu da lista)</span>}
+                    </span>
+                  </label>
+                ))}
+                <p class={`${HINT} col-span-full mt-0 py-1`} data-specialty-empty hidden>
+                  Nenhuma especialidade com esse nome. Peça ao Suporte para incluir.
+                </p>
+              </div>
+              <div class="mt-3" data-principal hidden={chosen.length < 2}>
+                <label for="principal" class={LABEL}>Especialidade principal</label>
+                <select id="principal" name="principal" class={`${INPUT} sm:max-w-sm`}>
+                  {specialtyOptions.map((s, i) => (
+                    <option value={s.id} selected={i === 0 && chosen.length > 0} hidden={!chosenIds.has(s.id)}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <p class={HINT}>Aparece primeiro ao lado do nome.</p>
+              </div>
+            </fieldset>
+            <div class="grid gap-4 sm:grid-cols-4">
+              <div>
+                <label for="council" class={LABEL}>Conselho</label>
+                <input id="council" name="council" list="councils" value={professional?.council ?? ""} class={INPUT} />
+                <datalist id="councils">{COUNCIL_SUGGESTIONS.map((c) => <option value={c} />)}</datalist>
+              </div>
+              <div>
+                <label for="council_number" class={LABEL}>Número</label>
+                <input id="council_number" name="council_number" value={professional?.councilNumber ?? ""} class={INPUT} />
+              </div>
+              <div>
+                <label for="council_state" class={LABEL}>UF</label>
+                <select id="council_state" name="council_state" class={INPUT}>
+                  <option value="">—</option>
+                  {BRAZIL_STATES.map((uf) => <option value={uf} selected={uf === professional?.councilState}>{uf}</option>)}
+                </select>
+              </div>
+              <div>
+                <HelpTip subject="RQE" text={configuracoes.dicas.profissionalRqe} id="rqe">
+                  <label for="rqe" class={LABEL}>RQE (opcional)</label>
+                </HelpTip>
+                <input id="rqe" name="rqe" inputmode="numeric" placeholder="6271" value={professional?.rqe ?? ""} class={INPUT} />
+              </div>
+            </div>
+            <p class={`${HINT} -mt-3`}>Mais de um RQE: separe por vírgula (ex.: 6271, 8890).</p>
+            <div class="sm:max-w-xs">
+              <HelpTip subject="WhatsApp do profissional" text={configuracoes.dicas.profissionalWhatsapp} id="phone">
+                <label for="phone" class={LABEL}>WhatsApp</label>
+              </HelpTip>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                required
+                placeholder="(84) 99999-9999"
+                value={professional?.phone ? formatPhoneBR(professional.phone) : ""}
+                class={INPUT}
+              />
+            </div>
+            <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+              <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+              <a href={isNew ? list : pageHref("perfil")} class={SECONDARY_BUTTON}>Cancelar</a>
+            </div>
+          </form>
+        ) : (
+          <section class={`${CARD} min-w-0 p-4 sm:p-5`} aria-labelledby="dados-titulo">
+            <div class="flex items-center justify-between gap-3">
+              <h2 id="dados-titulo" class={SECTION_TITLE}>Dados do profissional</h2>
+              <a href={pageHref("perfil", "dados")} class={EDIT_LINK} aria-label="Editar dados do profissional">Editar</a>
+            </div>
+            <dl class="mt-4 grid gap-x-6 gap-y-4 text-[15.5px] sm:grid-cols-2">
+              <div>
+                <dt class={DT}>Nome para o paciente</dt>
+                <dd class={DD}>{professional!.displayName}</dd>
+              </div>
+              <div>
+                <dt class={DT}>Profissão</dt>
+                <dd class={DD}>{professional!.profession || "—"}</dd>
+              </div>
+              <div>
+                <dt class={DT}>Especialidades</dt>
+                <dd class={DD}>
+                  {chosen.length === 0
+                    ? "Nenhuma"
+                    : chosen.map((s, i) => (
+                        <>
+                          {i > 0 && ", "}
+                          {s.name}
+                          {i === 0 && chosen.length > 1 && <span class="font-normal text-ink-soft"> (principal)</span>}
+                        </>
+                      ))}
+                </dd>
+              </div>
+              <div>
+                <dt class={DT}>Registro</dt>
+                <dd class={DD}>{registry ? registry.split(" | ").join(" · ") : "—"}</dd>
+              </div>
+              <div>
+                <dt class={DT}>WhatsApp</dt>
+                <dd class={DD}>{professional!.phone ? <PhoneLinks phone={professional!.phone} /> : "—"}</dd>
+              </div>
+              <div>
+                <dt class={DT}>Foto</dt>
+                <dd class="mt-1 flex flex-wrap items-center gap-2">
+                  {photoUrl && <img src={photoUrl} alt="" class="h-11 w-11 rounded-full border border-line object-cover" />}
+                  {!photoUrl && <span class="font-semibold text-ink">Sem foto</span>}
+                  <form method="POST" action={action} enctype="multipart/form-data" class="flex flex-wrap items-center gap-2" data-photo-form>
+                    <input type="hidden" name="acao" value="foto" />
+                    <label for="photo" class="sr-only">{photoUrl ? "Trocar a foto" : "Enviar a foto"}</label>
+                    <input
+                      type="file"
+                      id="photo"
+                      name="photo"
+                      required
+                      accept={Object.keys(PHOTO_TYPES).join(",")}
+                      aria-describedby="photo-hint"
+                      class="w-full min-w-0 text-[15px] text-ink file:mr-3 file:h-10 file:rounded-lg file:border file:border-line-strong file:bg-white file:px-3 file:font-semibold"
+                      data-photo-input
+                    />
+                    <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Enviando…" data-photo-button>
+                      {photoUrl ? "Trocar foto" : "Enviar foto"}
+                    </button>
+                  </form>
+                  {photoUrl && (
+                    <form method="POST" action={action}>
+                      <input type="hidden" name="acao" value="remover_foto" />
+                      <button
+                        type="submit"
+                        class={`${DANGER_BUTTON} js-confirm-delete`}
+                        data-confirm-title="Remover a foto?"
+                        data-confirm-message="O cadastro fica sem foto. Dá para enviar outra depois."
+                        data-confirm-label="Remover"
+                      >
+                        Remover foto
+                      </button>
+                    </form>
+                  )}
+                  <p id="photo-hint" class={`${HINT} mt-0 w-full`}>PNG, JPG ou WebP, até 4 MB. De preferência quadrada, com o rosto no centro.</p>
+                </dd>
+              </div>
+            </dl>
+          </section>
+        ))
+    }
+    {isNew && <p class="text-sm text-ink-soft">Depois de cadastrar, você inclui aqui mesmo a foto, o atendimento e os convênios.</p>}
+
+    {
+      !isNew && tab === "perfil" && portalLink && (
         <section class={`${CARD} min-w-0 p-4 sm:p-5`} aria-labelledby="link-agendamento-titulo">
           <h2 id="link-agendamento-titulo" class={SECTION_TITLE}>Link de agendamento</h2>
           {portalLink.shown ? (
@@ -137,215 +401,266 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
               </div>
             </>
           ) : (
-            <p class="mt-1 text-sm text-ink-soft">Fora do portal: o paciente não vê este profissional e o link não abre. {ownOnly ? "Para mostrar, fale com o Administrador da clínica." : "Para mostrar, use \"Mostrar no portal\" em Configurações › Portal."}</p>
+            <p class="mt-1 text-sm text-ink-soft">
+              Fora do portal: o paciente não vê este profissional e o link não abre.{" "}
+              {ownOnly ? "Para mostrar, fale com o Administrador da clínica." : 'Para mostrar, use "Mostrar no portal" em Configurações › Portal.'}
+            </p>
           )}
         </section>
       )
     }
-    {/* Foto como primeiro item da tela (cliente, 11/nov/2026). */}
+    {!isNew && !ownOnly && tab === "perfil" && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
+
     {
-      !isNew && (
-        <PhotoCard action={action} photoUrl={photoUrl} name={professional!.displayName} withDialog={ownOnly || !professional!.isActive} />
-      )
+      !isNew && tab === "atendimento" &&
+        (editing("atendimento") || !agenda ? (
+          <AttendanceCard
+            action={action}
+            attendance={agenda}
+            who="do profissional"
+            createAgendaHref={ownOnly ? undefined : `/admin/configuracoes/agendas/novo?profissional=${encodeURIComponent(id!)}`}
+            cancelHref={agenda ? pageHref("atendimento") : undefined}
+          />
+        ) : (
+          <section class={`${CARD} min-w-0 p-4 sm:p-5`} aria-labelledby="atendimento-titulo">
+            <div class="flex items-center justify-between gap-3">
+              <h2 id="atendimento-titulo" class={SECTION_TITLE}>Atendimento</h2>
+              <a href={pageHref("atendimento", "atendimento")} class={EDIT_LINK} aria-label="Editar atendimento">Editar</a>
+            </div>
+            <p class={HINT}>Valem para o bot e o link de agendar nos serviços do profissional.</p>
+            <dl class="mt-4 grid gap-x-6 gap-y-4 text-[15.5px] sm:grid-cols-3">
+              <div>
+                <dt class={DT}>Perfil</dt>
+                <dd class={DD}>{PROFILE_LABELS[agenda.profile]}</dd>
+              </div>
+              <div>
+                <dt class={DT}>Oferece horários até</dt>
+                <dd class={DD}>{agenda.bookingHorizonDays} dias à frente</dd>
+              </div>
+              <div>
+                <dt class={DT}>Idade limite para consulta</dt>
+                <dd class={DD}>{agenda.consultationAgeLimitYears === null ? "Sem limite" : `${agenda.consultationAgeLimitYears} anos`}</dd>
+              </div>
+            </dl>
+          </section>
+        ))
     }
-    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
-      <input type="hidden" name="acao" value="salvar" />
-      <h2 class={SECTION_TITLE}>Quem é</h2>
-      <div>
-        <label for="display_name" class={LABEL}>Nome (como aparece para o paciente)</label>
-        <input id="display_name" name="display_name" required value={professional?.displayName ?? ""} class={INPUT} />
-      </div>
-      <div>
-        <label for="profession" class={LABEL}>Profissão</label>
-        <input id="profession" name="profession" required placeholder="Médica, Dentista, Psicóloga…" value={professional?.profession ?? ""} class={`${INPUT} sm:max-w-sm`} />
-      </div>
-      <fieldset class="min-w-0" data-specialties>
-        <legend class={LEGEND}>Especialidades</legend>
-        <p id="specialties-orientacao" class={HINT}>
-          Marque uma ou mais. No WhatsApp, o paciente escolhe a especialidade antes do profissional. Falta alguma na lista? Peça ao Suporte.
-        </p>
-        <input
-          type="search"
-          aria-label="Buscar especialidade"
-          aria-controls="specialties-list"
-          placeholder="Buscar: pediatria, ortodontia…"
-          autocomplete="off"
-          class={`${INPUT} sm:max-w-sm`}
-          data-specialty-filter
-          hidden
-        />
-        <div id="specialties-list" class="mt-2 grid max-h-72 overflow-y-auto rounded-lg border border-line-strong px-3 py-2 sm:grid-cols-2 sm:gap-x-6">
-          {
-            specialtyOptions.map((s) => (
-              <label class={`${CHOICE} py-1`} data-specialty-option data-key={searchKey(s.name)}>
-                <input type="checkbox" name="specialties" value={s.id} checked={chosenIds.has(s.id)} class={CHECK} />
-                <span>
-                  {s.name}
-                  {!s.isActive && <span class="text-sm text-ink-soft"> (saiu da lista)</span>}
-                </span>
-              </label>
-            ))
-          }
-          <p class={`${HINT} col-span-full mt-0 py-1`} data-specialty-empty hidden>Nenhuma especialidade com esse nome. Peça ao Suporte para incluir.</p>
-        </div>
-        <div class="mt-3" data-principal hidden={chosen.length < 2}>
-          <label for="principal" class={LABEL}>Especialidade principal</label>
-          <select id="principal" name="principal" class={`${INPUT} sm:max-w-sm`}>
-            {/* Todas as opções (a volta depois de um erro acha a principal escolhida); o script esconde as desmarcadas. */}
-            {specialtyOptions.map((s, i) => <option value={s.id} selected={i === 0 && chosen.length > 0} hidden={!chosenIds.has(s.id)}>{s.name}</option>)}
-          </select>
-          <p class={HINT}>Aparece primeiro ao lado do nome.</p>
-        </div>
-      </fieldset>
-      <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Registro profissional</h2>
-      <div class="grid gap-4 sm:grid-cols-4">
-        <div>
-          <label for="council" class={LABEL}>Conselho</label>
-          <input id="council" name="council" list="councils" value={professional?.council ?? ""} class={INPUT} />
-          <datalist id="councils">{COUNCIL_SUGGESTIONS.map((c) => <option value={c} />)}</datalist>
-        </div>
-        <div>
-          <label for="council_number" class={LABEL}>Número</label>
-          <input id="council_number" name="council_number" value={professional?.councilNumber ?? ""} class={INPUT} />
-        </div>
-        <div>
-          <label for="council_state" class={LABEL}>UF</label>
-          <select id="council_state" name="council_state" class={INPUT}>
-            <option value="">—</option>
-            {BRAZIL_STATES.map((uf) => <option value={uf} selected={uf === professional?.councilState}>{uf}</option>)}
-          </select>
-        </div>
-        <div>
-          <HelpTip subject="RQE" text={configuracoes.dicas.profissionalRqe} id="rqe">
-            <label for="rqe" class={LABEL}>RQE (opcional)</label>
-          </HelpTip>
-          <input id="rqe" name="rqe" inputmode="numeric" placeholder="6271" value={professional?.rqe ?? ""} class={INPUT} />
-        </div>
-      </div>
-      <p class={`${HINT} -mt-2`}>Mais de um RQE: separe por vírgula (ex.: 6271, 8890).</p>
-      <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Contato</h2>
-      <div>
-        <HelpTip subject="WhatsApp do profissional" text={configuracoes.dicas.profissionalWhatsapp} id="phone">
-          <label for="phone" class={LABEL}>WhatsApp</label>
-        </HelpTip>
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          required
-          placeholder="(84) 99999-9999"
-          value={professional?.phone ? formatPhoneBR(professional.phone) : ""}
-          class={INPUT}
-        />
-      </div>
-      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
-        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
-        <a href={ownOnly ? `/admin/configuracoes/profissionais/${id}` : list} class={SECONDARY_BUTTON}>Cancelar</a>
-      </div>
-    </form>
-    {isNew && <p class="text-sm text-ink-soft">Depois de cadastrar, você inclui aqui mesmo o atendimento (perfil, prazo e idade limite) e a foto.</p>}
+
     {
-      !isNew && (
-        <AttendanceCard
-          action={action}
-          attendance={agenda}
-          who="do profissional"
-          createAgendaHref={ownOnly ? undefined : `/admin/configuracoes/agendas/novo?profissional=${encodeURIComponent(id!)}`}
-        />
-      )
+      insuranceOn && tab === "convenios" &&
+        (editing("convenios") ? (
+          <CoverageForm
+            action={action}
+            plans={plans}
+            acceptedIds={acceptedPlans}
+            notes={planNotes}
+            acceptsPrivate={acceptsPrivate}
+            privateLabel="Atende particular"
+            privateHint="Desmarcado: atende só pelos convênios abaixo."
+            legend="Convênios atendidos"
+            canRegisterPlans={!ownOnly}
+            cancelHref={pageHref("convenios")}
+          />
+        ) : (
+          <section class={`${CARD} min-w-0 p-4 sm:p-5`} aria-labelledby="convenios-titulo">
+            <div class="flex items-center justify-between gap-3">
+              <h2 id="convenios-titulo" class={SECTION_TITLE}>Particular e convênios</h2>
+              <a href={pageHref("convenios", "convenios")} class={EDIT_LINK} aria-label="Editar particular e convênios">Editar</a>
+            </div>
+            <p class={HINT}>No WhatsApp e no agendamento online, o paciente só vê o que estiver aqui.</p>
+            <ul class="mt-4 flex flex-col gap-2.5 text-[15.5px] text-ink">
+              <li>
+                <strong>Particular</strong> · {acceptsPrivate ? "atende" : "não atende"}
+              </li>
+              {acceptedPlans
+                .filter((pid) => planName.has(pid))
+                .map((pid) => (
+                  <li>
+                    <strong>{planName.get(pid)}</strong>
+                    {planNotes.get(pid) && <span class="text-ink-soft"> · “{planNotes.get(pid)}”</span>}
+                  </li>
+                ))}
+              {acceptedPlans.filter((pid) => planName.has(pid)).length === 0 && <li class="text-ink-soft">Nenhum convênio marcado.</li>}
+            </ul>
+          </section>
+        ))
     }
+
     {
-      insuranceOn && (
-        <CoverageForm
-          action={action}
-          plans={plans}
-          acceptedIds={acceptedPlans}
-          notes={planNotes}
-          acceptsPrivate={acceptsPrivate}
-          privateLabel="Atende particular"
-          privateHint="Desmarcado: atende só pelos convênios abaixo."
-          legend="Convênios atendidos"
-          canRegisterPlans={!ownOnly}
-        />
-      )
+      botOn && tab === "bot" &&
+        (editing("bot") ? (
+          <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 border-2 border-brand p-4 sm:p-5`} aria-labelledby="bot-info-titulo">
+            <input type="hidden" name="acao" value="bot_info" />
+            <div>
+              <h2 id="bot-info-titulo" class={SECTION_TITLE}>Editar o que o bot responde</h2>
+              <p class={HINT}>
+                No WhatsApp, o paciente vê estas respostas em <strong>Informações gerais</strong> (com mais de um profissional, depois de escolher{" "}
+                {professional!.displayName}). Vazio: a opção não aparece.
+              </p>
+            </div>
+            <div>
+              <label for="payment_info" class={LABEL}>Formas de pagamento</label>
+              <textarea id="payment_info" name="payment_info" rows="2" maxlength="1000" placeholder="Pix, cartão de débito e crédito em até 3x" class={INPUT}>{botInfo.paymentInfo ?? ""}</textarea>
+              <p class={HINT}>Aparece depois dos valores dos serviços.</p>
+            </div>
+            <div>
+              <label for="insurance_info" class={LABEL}>Sobre convênios</label>
+              <textarea id="insurance_info" name="insurance_info" rows="2" maxlength="1000" placeholder="Traga a carteirinha e um documento com foto." class={INPUT}>{botInfo.insuranceInfo ?? ""}</textarea>
+              <p class={HINT}>
+                {insuranceOn ? "A lista de convênios sai da aba Convênios; aqui vai o que ela não diz." : "É a resposta de Informações gerais › Convênios, do jeito que estiver escrito."}
+              </p>
+            </div>
+            <div>
+              <label for="notes" class={LABEL}>Observações</label>
+              <textarea id="notes" name="notes" rows="2" maxlength="1000" placeholder="Chegue 10 minutos antes." class={INPUT}>{botInfo.notes ?? ""}</textarea>
+            </div>
+            <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+              <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">Salvar</button>
+              <a href={pageHref("bot")} class={SECONDARY_BUTTON}>Cancelar</a>
+            </div>
+          </form>
+        ) : (
+          <section class={`${CARD} min-w-0 p-4 sm:p-5`} aria-labelledby="bot-info-titulo">
+            <div class="flex items-center justify-between gap-3">
+              <h2 id="bot-info-titulo" class={SECTION_TITLE}>O que o bot responde</h2>
+              <a href={pageHref("bot", "bot")} class={EDIT_LINK} aria-label="Editar o que o bot responde">Editar</a>
+            </div>
+            <p class={HINT}>Em Informações gerais, depois de o paciente escolher {professional!.displayName}. Vazio: a opção não aparece.</p>
+            <dl class="mt-4 flex flex-col gap-3 text-[15.5px]">
+              {[
+                ["Formas de pagamento", botInfo.paymentInfo],
+                ["Sobre convênios", botInfo.insuranceInfo],
+                ["Observações", botInfo.notes],
+              ].map(([label, value]) => (
+                <div>
+                  <dt class={DT}>{label}</dt>
+                  <dd class={value ? "mt-0.5 break-words whitespace-pre-line text-ink" : "mt-0.5 text-ink-soft"}>{value || "Vazio: não aparece no bot"}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))
     }
-    {
-      botOn && (
-        <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 p-4 sm:p-5`} aria-labelledby="bot-info-titulo">
-          <input type="hidden" name="acao" value="bot_info" />
-          <div>
-            <h2 id="bot-info-titulo" class={SECTION_TITLE}>Informações que o bot responde</h2>
-            <p class={HINT}>
-              No WhatsApp, o paciente vê estas respostas em <strong>Informações gerais</strong> (com mais de um profissional, depois de escolher{" "}
-              {professional!.displayName}). Vazio: a opção não aparece.
-            </p>
-          </div>
-          <div>
-            <label for="payment_info" class={LABEL}>Formas de pagamento</label>
-            <textarea id="payment_info" name="payment_info" rows="2" maxlength="1000" placeholder="Pix, cartão de débito e crédito em até 3x" class={INPUT}>{botInfo.paymentInfo ?? ""}</textarea>
-            <p class={HINT}>Aparece depois dos valores dos serviços.</p>
-          </div>
-          <div>
-            <label for="insurance_info" class={LABEL}>Sobre convênios</label>
-            <textarea id="insurance_info" name="insurance_info" rows="2" maxlength="1000" placeholder="Traga a carteirinha e um documento com foto." class={INPUT}>{botInfo.insuranceInfo ?? ""}</textarea>
-            <p class={HINT}>
-              {insuranceOn ? "A lista de convênios sai de Convênios atendidos; aqui vai o que ela não diz." : "É a resposta de Informações gerais › Convênios, do jeito que estiver escrito."}
-            </p>
-          </div>
-          <div>
-            <label for="notes" class={LABEL}>Observações</label>
-            <textarea id="notes" name="notes" rows="2" maxlength="1000" placeholder="Chegue 10 minutos antes." class={INPUT}>{botInfo.notes ?? ""}</textarea>
-          </div>
-          <div class="border-t border-[#e6ecea] pt-4">
-            <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar informações</button>
-          </div>
-        </form>
-      )
-    }
-    {!isNew && !ownOnly && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
   </div>
-  {portalLink?.shown && <PortalLinkTools />}
+  {needsDialog && <ConfirmDeleteDialog />}
+  {tab === "perfil" && portalLink?.shown && <PortalLinkTools />}
 </ConfigShell>
 
 <script>
-  // Busca na lista (sem acento) e a escolha da principal entre as marcadas.
+  // Foto num botão só (cliente, 13/nov/2026): o botão abre a escolha do arquivo e a escolha já envia.
+  for (const form of document.querySelectorAll<HTMLFormElement>("[data-photo-form]")) {
+    const input = form.querySelector<HTMLInputElement>("[data-photo-input]")!;
+    const button = form.querySelector<HTMLButtonElement>("[data-photo-button]")!;
+    // O campo some (o botão o abre); sem script, ficam o campo e o botão de enviar.
+    input.hidden = true;
+    form.querySelector<HTMLLabelElement>("label[for='photo']")!.hidden = true;
+    button.type = "button";
+    button.addEventListener("click", () => input.click());
+    input.addEventListener("change", () => {
+      if (!input.files?.length) return;
+      button.disabled = true;
+      button.textContent = "Enviando…";
+      form.submit();
+    });
+  }
+
+  // Especialidades: as marcadas viram etiquetas (a estrela marca a principal); a busca
+  // mostra só as que batem e ainda não estão marcadas. Sem script, fica a lista de sempre.
   const box = document.querySelector<HTMLElement>("[data-specialties]");
   if (box) {
     const filter = box.querySelector<HTMLInputElement>("[data-specialty-filter]")!;
+    const showAll = box.querySelector<HTMLButtonElement>("[data-show-all]")!;
+    const list = box.querySelector<HTMLElement>("#specialties-list")!;
+    const chosenList = box.querySelector<HTMLUListElement>("[data-chosen]")!;
+    const starHint = box.querySelector<HTMLElement>("[data-star-hint]")!;
     const options = [...box.querySelectorAll<HTMLLabelElement>("[data-specialty-option]")];
     const empty = box.querySelector<HTMLElement>("[data-specialty-empty]")!;
-    const principalBox = box.querySelector<HTMLElement>("[data-principal]")!;
-    const principal = principalBox.querySelector<HTMLSelectElement>("select")!;
+    const principal = box.querySelector<HTMLSelectElement>("#principal")!;
     const key = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-    filter.hidden = false;
-    filter.addEventListener("input", () => {
+    const checkOf = (o: HTMLLabelElement) => o.querySelector<HTMLInputElement>("input")!;
+    let listOpen = false;
+    box.querySelector<HTMLElement>("[data-filter-row]")!.hidden = false;
+    box.querySelector<HTMLElement>("[data-principal]")!.hidden = true;
+
+    const renderList = () => {
       const q = key(filter.value);
-      // As marcadas ficam à vista; o aviso conta só as que batem com a busca.
+      const open = listOpen || q !== "";
+      list.hidden = !open;
+      showAll.setAttribute("aria-expanded", String(open));
+      showAll.textContent = listOpen ? "Fechar a lista" : "Ver a lista";
       let found = 0;
       for (const o of options) {
-        const match = !q || (o.dataset.key ?? "").includes(q);
-        o.hidden = !match && !o.querySelector("input")!.checked;
+        const match = !checkOf(o).checked && (!q || (o.dataset.key ?? "").includes(q));
+        o.hidden = !match;
         if (match) found++;
       }
       empty.hidden = found > 0;
-    });
-    const syncPrincipal = () => {
-      const marked = new Set(options.map((o) => o.querySelector("input")!).filter((c) => c.checked).map((c) => c.value));
-      for (const option of principal.options) {
-        option.hidden = !marked.has(option.value);
-        option.disabled = option.hidden;
-      }
-      if (!marked.has(principal.value)) {
-        const first = [...principal.options].find((o) => !o.disabled);
-        if (first) principal.value = first.value;
-      }
-      principalBox.hidden = marked.size < 2;
     };
+
+    const renderChosen = () => {
+      const marked = options.filter((o) => checkOf(o).checked);
+      const ids = new Set(marked.map((o) => checkOf(o).value));
+      for (const option of principal.options) option.disabled = !ids.has(option.value);
+      if (!ids.has(principal.value) && marked.length) principal.value = checkOf(marked[0]).value;
+      chosenList.replaceChildren(
+        ...marked.map((o) => {
+          const value = checkOf(o).value;
+          const name = o.dataset.name ?? "";
+          const isMain = marked.length > 1 && principal.value === value;
+          const li = document.createElement("li");
+          li.className = "inline-flex min-h-10 items-center gap-1 rounded-full bg-brand-soft py-1 pr-1 pl-1 text-[15px] font-semibold text-brand-ink";
+          if (marked.length > 1) {
+            const star = document.createElement("button");
+            star.type = "button";
+            star.className = "flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/60";
+            star.setAttribute("aria-pressed", String(isMain));
+            star.setAttribute("aria-label", isMain ? `${name} é a principal` : `Tornar ${name} a principal`);
+            star.textContent = isMain ? "★" : "☆";
+            star.addEventListener("click", () => {
+              principal.value = value;
+              renderChosen();
+            });
+            li.append(star);
+          } else {
+            li.classList.replace("pl-1", "pl-3");
+          }
+          const label = document.createElement("span");
+          label.textContent = name;
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/60";
+          remove.setAttribute("aria-label", `Tirar ${name}`);
+          remove.textContent = "✕";
+          remove.addEventListener("click", () => {
+            checkOf(o).checked = false;
+            sync();
+            filter.focus();
+          });
+          li.append(label, remove);
+          return li;
+        }),
+      );
+      chosenList.hidden = marked.length === 0;
+      starHint.hidden = marked.length < 2;
+    };
+
+    const sync = () => {
+      renderChosen();
+      renderList();
+    };
+    filter.addEventListener("input", renderList);
+    showAll.addEventListener("click", () => {
+      listOpen = !listOpen;
+      renderList();
+    });
     box.addEventListener("change", (event) => {
-      if ((event.target as HTMLElement).matches("input[name='specialties']")) syncPrincipal();
+      if (!(event.target as HTMLElement).matches("input[name='specialties']")) return;
+      filter.value = "";
+      sync();
+      filter.focus();
     });
     // Valores devolvidos depois de um erro (keepFormValues) também contam.
-    syncPrincipal();
-    window.addEventListener("load", syncPrincipal);
+    sync();
+    window.addEventListener("load", sync);
   }
 </script>
