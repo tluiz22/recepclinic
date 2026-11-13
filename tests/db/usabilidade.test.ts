@@ -51,6 +51,9 @@ describe("metrics_usability", () => {
 
   it("o Administrador da clínica não recebe nada", async () => {
     const { data } = await admin.client.rpc("metrics_usability", { p_clinic_id: clinicA, ...range });
+    // A clínica A tem 2 códigos: o Suporte os vê (teste acima), o Administrador não.
     expect((data as { affected: number; base: number }[]).every((r) => r.affected === 0 && r.base === 0)).toBe(true);
+    const asStaff = await staff.client.rpc("metrics_usability", { p_clinic_id: clinicA, ...range });
+    expect((asStaff.data as { base: number }[]).some((r) => r.base > 0)).toBe(true);
   });
 });
