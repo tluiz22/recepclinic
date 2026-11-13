@@ -185,6 +185,8 @@ export async function sendIssuerFiscalInfo(issuerId: string, credential: Credent
   let options: MunicipalOptions | null = null;
   try {
     options = await fiscal.municipalOptions();
+    // Já configurado antes: o Asaas é quem conta os RPS; reenviar o número reiniciaria a numeração.
+    const current = issuer.fiscal_info_synced_at ? await fiscal.getFiscalInfo() : null;
     const saved = await fiscal.saveFiscalInfo({
       email: issuer.fiscal_email,
       simplesNacional: issuer.simples_nacional,
@@ -195,7 +197,7 @@ export async function sendIssuerFiscalInfo(issuerId: string, credential: Credent
       nbsCode: issuer.nbs_code,
       rpsSerie: issuer.rps_series,
       // Depois do primeiro envio o Asaas é quem conta os RPS: reenviar reiniciaria a numeração.
-      rpsNumber: issuer.fiscal_info_synced_at ? null : issuer.rps_next_number,
+      rpsNumber: current ? null : issuer.rps_next_number,
       nationalPortalTaxCalculationRegime: null,
       credential: cred,
     });
@@ -209,7 +211,8 @@ export async function sendIssuerFiscalInfo(issuerId: string, credential: Credent
     });
   } catch (error) {
     const message = asaasMessage(error);
-    const transient = !(error instanceof AsaasApiError) || error.status >= 500 || error.status === 408 || error.status === 429;
+    if (!(error instanceof AsaasApiError)) throw new DataError("unexpected", `Erro inesperado ao enviar a configuração fiscal: ${message}`, { asaas: message }, { cause: error });
+    const transient = error.status === 0 || error.status >= 500 || error.status === 408 || error.status === 429;
     // Falha passageira (rede, 5xx): não desliga a emissão; é só tentar de novo.
     if (transient) throw new DataError("unexpected", `Não foi possível falar com o Asaas agora; tente de novo. (${message})`, { asaas: message }, { cause: error });
     await deps.store.setFiscalInfo(issuerId, { ok: false, message, municipalOptions: options ? snapshot(options) : null, certificateSent: false, certificateValidUntil: null, actorId });

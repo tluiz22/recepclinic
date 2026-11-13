@@ -16,4 +16,4 @@
 - **Bloqueios externos:** reanálise do BaaS pelo Asaas (aguardando), contador (PIS/COFINS), advogado (contrato do
   profissional pagador).
 - **Próxima ação:** validação pelo roteiro 15.2; depois juntar
-  (skill `juntar-branch`). revisto até: **A confirmar** (13/nov: graves e médios corrigidos; registrar o commit ao fechar).
+  (skill `juntar-branch`). revisto até: **commit deste registro** (13/nov: graves e médios corrigidos; revisão do delta achou 2 pontos, corrigidos).
