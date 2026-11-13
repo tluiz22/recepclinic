@@ -3139,6 +3139,11 @@ isOneToOne: false
               "agenda_id": string,"appointment_id": string,"has_return": boolean,"has_upcoming": boolean,"last_date": string,"patient_id": string,"scheduled_at": string,"status": string
             }[]
                            },
+"metrics_usability":
+{ Args: { "p_clinic_id": string,"p_end": string,"p_start": string }; Returns: {
+              "affected": number,"base": number,"signal": string
+            }[]
+                           },
 "migrate_agenda":
 { Args: { "p_apply"?: boolean,"p_from": string,"p_services"?: (string)[],"p_to": string }; Returns: Json
                            },

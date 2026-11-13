@@ -21,4 +21,11 @@ Branch `metricas-usabilidade`, criada da `main`.
   renovado a cada tela; sem visita nova a partir do passo 5; filtro de robôs mais estreito; aviso de período anterior
   à anotação; `portalSteps` antigo removido). `metrics_portal` ainda calcula as colunas de sessão que a tela não usa
   (custo pequeno, só ao abrir Métricas). Banco local com a migração; staging e produção ainda não.
-- **U2:** aba Usabilidade, só para o suporte (equipe da plataforma).
+- **U1 confirmada pelo cliente (13/nov).**
+- **U2 (feita na branch, 13/nov; aguarda validação):** migração `20270123120000_usabilidade_sinais` (função
+  `metrics_usability`, só Suporte, sem tabela nova) e aba **Usabilidade** em Métricas (só `isPlatformStaff`, uma clínica,
+  período como as outras). 5 sinais de dados existentes: marcou e cancelou em menos de 5 min (recepção); marcou e
+  cancelou em menos de 1 h (portal); remarcou em menos de 1 h depois de marcar; errou o código do celular; reserva
+  vencida sem marcar; mais a maior perda do funil, com link para Portal. Cada sinal traz "o que pode significar" e "o que
+  melhorar". "Remarcou 2 vezes no dia" ficou de fora: a remarcação guarda só a última data. Códigos e reservas valem
+  30 dias. Banco local com a migração; staging e produção ainda não.
