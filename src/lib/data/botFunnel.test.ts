@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDigitalReport, buildFunnelReport, groupEvents, linkPortalBookings, type FunnelEventRow } from "./botFunnel";
+import { assignBookingTypes, buildDigitalReport, buildFunnelReport, buildFunnelReportFromSessions, groupEvents, linkPortalBookings, type FunnelEventRow } from "./botFunnel";
 
 const T0 = new Date("2026-10-07T12:00:00Z");
 let n = 0;
@@ -181,6 +181,64 @@ describe("Agendamento digital (M5 das Métricas)", () => {
     expect(r.standing).toEqual({ standing: 1, canceledLater: 1, unlinked: 0 });
     expect(r.dropped).toEqual([{ label: "Pararam de responder", count: 2 }]);
     expect(s.find((x) => x.sessionId === "p3a")!.appointmentId).toBeNull();
+  });
+
+  it("botão Agendar: conta no tipo que marcou; sem marcação, linha própria só em Marcar", () => {
+    const lean = (id: string, purpose: string, phone: string, extra: FunnelEventRow[] = []) => [
+      ev(id, "booking", "started", 0, { lean: true }, phone),
+      ev(id, "booking", "link_sent", 1, { purpose }, phone),
+      ...extra,
+    ];
+    const s = groupEvents(
+      [
+        // g1: Agendar e marcou um exame; g2: Agendar e marcou consulta; g3: Agendar e não marcou.
+        ...lean("g1", "book", P(20), [ev("g1", "booking", "confirmed", 3, { appointment_id: "e1" }, P(20))]),
+        ...lean("g2", "book", P(21), [ev("g2", "booking", "confirmed", 3, { appointment_id: "c1" }, P(21))]),
+        ...lean("g3", "book", P(22)),
+        // g4: link de retorno antigo (gravado como consulta) e não marcou.
+        ...lean("g4", "return", P(23)),
+      ],
+      start,
+      end,
+    );
+    assignBookingTypes(s, new Map([["e1", "exam"], ["c1", "consultation"]]));
+    expect(s.map((x) => [x.sessionId, x.flow, !!x.untyped])).toEqual([
+      ["g1", "exam", false],
+      ["g2", "booking", false],
+      ["g3", "booking", true],
+      ["g4", "return_booking", false],
+    ]);
+    expect(buildDigitalReport(s, now).attempts).toBe(4);
+    expect(buildDigitalReport(s, now).flows.map((f) => [f.label, f.attempts, f.concluded])).toEqual([
+      ["Consulta", 1, 1],
+      ["Retorno", 1, 0],
+      ["Exame", 1, 1],
+      ["Agendar (tipo não escolhido)", 1, 0],
+    ]);
+    expect(buildDigitalReport(s, now, "consulta").attempts).toBe(1);
+    expect(buildDigitalReport(s, now, "exame").outcomes.concluded).toBe(1);
+    expect(buildDigitalReport(s, now, "consulta").flows.map((f) => f.label)).toEqual(["Consulta"]);
+  });
+
+  it("Retomar contato: pedido pelo Agendar sem marcação some se a pessoa marcou depois outro tipo", () => {
+    const s = groupEvents(
+      [
+        ev("h1", "booking", "started", 0, { lean: true, purpose: "book" }, P(30)),
+        ev("h1", "booking", "link_sent", 1, { purpose: "book" }, P(30)),
+        ev("h2", "booking", "started", 5, { lean: true, purpose: "book" }, P(30)),
+        ev("h2", "booking", "link_sent", 6, { purpose: "book" }, P(30)),
+        ev("h2", "booking", "confirmed", 8, { appointment_id: "e9" }, P(30)),
+        // h3: erro antes do link; o tipo vem do início da tentativa.
+        ev("h3", "booking", "started", 10, { lean: true, purpose: "book" }, P(31)),
+        ev("h3", "booking", "error", 11, { reason: "link_error" }, P(31)),
+      ],
+      start,
+      end,
+    );
+    assignBookingTypes(s, new Map([["e9", "exam"]]));
+    expect(s.find((x) => x.sessionId === "h3")!.untyped).toBe(true);
+    const report = buildFunnelReportFromSessions(s, now);
+    expect(report.incomplete.map((i) => i.sessionId)).toEqual(["h3"]);
   });
 
   it("a marcação pelo link não liga de novo a outra tentativa", () => {

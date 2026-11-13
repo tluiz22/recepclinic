@@ -5,6 +5,7 @@ import { unwrap } from "../../errors";
 import { createPortalLink } from "../../portal/links";
 import { end, restingState, go, say, sendLink, type Bot } from "./engine";
 import { startFunnel, WELCOME } from "../conversations";
+import type { FunnelFlow } from "../funnel";
 import * as t from "./texts";
 
 // Bot enxuto (F3f, seção 15.6; cliente, 11/nov/2026): o bot leva ao portal (/s/{token}, 30 min, só para este número,
@@ -29,6 +30,9 @@ async function openPortalSlug(b: Bot): Promise<string | null> {
 
 export type ShortcutPurpose = keyof typeof t.LEAN_LINKS;
 
+/** Fluxo da tentativa de marcar nas Métricas, por link (Minhas consultas e Profissionais não são tentativa). */
+const BOOKING_FLOW: Partial<Record<ShortcutPurpose, Extract<FunnelFlow, "booking" | "return_booking" | "exam">>> = { book: "booking", return: "return_booking", exam: "exam" };
+
 /**
  * Agendar, Minhas consultas ou Profissionais: o link do portal (30 min, só para este número, celular já comprovado).
  * false = portal fechado para a clínica: quem chamou passa para a recepção (F3-5/F3-7).
@@ -40,12 +44,13 @@ export async function sendPortalShortcut(b: Bot, purpose: ShortcutPurpose, servi
     logError("bot: portal para o atalho", error, { clinica: b.clinicId });
     return false;
   }
-  // Agendar conta como tentativa de marcação nas Métricas (o funil fecha com "link_sent", como o link de antes).
-  const booking = purpose === "book" || purpose === "return" || purpose === "exam";
-  if (booking) {
+  // Agendar conta como tentativa de marcação nas Métricas (o funil fecha com "link_sent", como o link de antes). Retorno
+  // e exame no fluxo deles (E5, 13/nov/2026), o mesmo que a página do portal grava.
+  const flow = BOOKING_FLOW[purpose];
+  if (flow) {
     b.now = new Date(b.now.getTime() + 1);
-    const sessionId = await startFunnel(b.db, b.clinicId, b.phone, "booking", { lean: true }, b.now);
-    b.convo = { ...b.convo, funnelSessionId: sessionId, funnelFlow: "booking" };
+    const sessionId = await startFunnel(b.db, b.clinicId, b.phone, flow, { lean: true, purpose }, b.now);
+    b.convo = { ...b.convo, funnelSessionId: sessionId, funnelFlow: flow };
   }
   try {
     const link = await createPortalLink(
@@ -57,12 +62,12 @@ export async function sendPortalShortcut(b: Bot, purpose: ShortcutPurpose, servi
     const url = portalLinkUrl(b.sender.baseUrl, shortId(link.id));
     const text = t.LEAN_LINKS[purpose];
     await sendLink(b, `bot_portal_${purpose}`, text.body, { text: text.button, url });
-    if (booking) await end(b, "link_sent", { portal_link_id: link.id, purpose }, restingState(b));
+    if (flow) await end(b, "link_sent", { portal_link_id: link.id, purpose }, restingState(b));
     else await go(b, restingState(b));
   } catch (error) {
     logError("bot: link do portal (atalho)", error, { clinica: b.clinicId });
     await say(b, "bot_book_link_error", t.linkError(b.clinic.designation));
-    if (booking) await end(b, "error", { reason: "link_error" });
+    if (flow) await end(b, "error", { reason: "link_error" });
     else await go(b, WELCOME);
   }
   return true;

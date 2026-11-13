@@ -27,6 +27,8 @@ type FlowDef = {
   id: string;
   flow: FunnelFlow;
   origin?: FlowOrigin;
+  /** Só as tentativas do botão Agendar sem o tipo (ver `FunnelSession.untyped`). */
+  untyped?: boolean;
   label: string;
   stages: StageDef[];
   success: string;
@@ -90,6 +92,20 @@ export const FLOW_DEFS: FlowDef[] = [
       { label: "Confirmaram", steps: ["confirmed"] },
     ],
     notes: (sessions) => [{ label: "Já tinham esse exame marcado", count: countWith(sessions, "already_scheduled") }],
+  },
+  {
+    // Botão Agendar sem marcação (E5, cliente 13/nov/2026): quem marcou vai para o tipo que marcou.
+    id: "book_any",
+    flow: "booking",
+    untyped: true,
+    label: "Agendar (tipo não escolhido)",
+    success: "confirmed",
+    stages: [
+      { label: "Pediram para marcar", steps: ["started"] },
+      { label: "Receberam o link", steps: ["link_sent"] },
+      { label: "Abriram o link", steps: LINK_OPENED },
+      { label: "Confirmaram", steps: ["confirmed"] },
+    ],
   },
   {
     id: "reschedule_menu",
@@ -193,6 +209,8 @@ export type FunnelSession = {
   events: FunnelEventRow[];
   appointmentId: string | null;
   appointmentStatus: string | null;
+  /** Botão Agendar (link geral) sem marcação: o tipo não foi escolhido (E5; só em "Marcar", linha própria). */
+  untyped?: boolean;
 };
 type Session = FunnelSession;
 
@@ -251,7 +269,7 @@ export function groupEvents(events: FunnelEventRow[], start: Date, end: Date): F
 
 const find = (s: Session, step: string) => s.events.find((e) => e.step === step);
 const origin = (s: Session): FlowOrigin => (find(s, "started")?.metadata.source === "reminder" ? "reminder" : "menu");
-const matches = (def: FlowDef, s: Session) => s.flow === def.flow && (!def.origin || origin(s) === def.origin);
+const matches = (def: FlowDef, s: Session) => s.flow === def.flow && !!def.untyped === !!s.untyped && (!def.origin || origin(s) === def.origin);
 
 function maxStage(def: FlowDef, s: Session): number {
   let max = -1;
@@ -309,8 +327,9 @@ export function buildFunnelReportFromSessions(all: FunnelSession[], now: Date = 
   for (const s of all) {
     const def = FLOW_DEFS.find((d) => matches(d, s));
     if (!def || !find(s, def.success)) continue;
-    const key = `${s.phone}:${s.flow}`;
-    lastSuccess.set(key, Math.max(lastSuccess.get(key) ?? 0, s.startedAt.getTime()));
+    // Pedido pelo Agendar sem marcação (E5): qualquer marcação posterior dispensa a retomada.
+    for (const key of [`${s.phone}:${s.flow}`, ...(MARCAR_FLOWS.includes(s.flow) ? [`${s.phone}:marcar`] : [])])
+      lastSuccess.set(key, Math.max(lastSuccess.get(key) ?? 0, s.startedAt.getTime()));
   }
 
   const incomplete: Incomplete[] = [];
@@ -328,7 +347,7 @@ export function buildFunnelReportFromSessions(all: FunnelSession[], now: Date = 
         const label = reasonLabel(find(s, "blocked")?.metadata.reason);
         blocked.set(label, (blocked.get(label) ?? 0) + 1);
       }
-      if ((outcome === "abandoned" || outcome === "error") && (lastSuccess.get(`${s.phone}:${s.flow}`) ?? 0) < s.startedAt.getTime()) {
+      if ((outcome === "abandoned" || outcome === "error") && (lastSuccess.get(`${s.phone}:${s.untyped ? "marcar" : s.flow}`) ?? 0) < s.startedAt.getTime()) {
         incomplete.push({
           sessionId: s.sessionId,
           flowLabel: def.label,
@@ -404,7 +423,43 @@ export async function listFunnelSessions(db: DbClient, clinicId: string, start: 
       };
     });
   linkPortalBookings(sessions, bookings);
+  const generic = sessions.filter((s) => s.flow === "booking" && s.appointmentId && linkPurpose(s) === "book");
+  const ids = [...new Set(generic.map((s) => s.appointmentId!))];
+  const booked = await unwrapAllIn(
+    ids,
+    (chunk, from, to) => db.from("appointments").select("id, services ( category )").eq("clinic_id", clinicId).in("id", chunk).order("id").range(from, to),
+    "Tipo das marcações do Agendar",
+  );
+  const categoryOf = new Map(booked.map((a) => [a.id, (a.services as { category: string } | null)?.category ?? null]));
+  assignBookingTypes(sessions, categoryOf);
   return sessions;
+}
+
+// ---------------------------------------------------------------------------
+// Botão Agendar (link geral, E5; cliente, 13/nov/2026): a pessoa escolhe consulta, retorno ou exame no portal. Quem
+// marcou conta no tipo que marcou; quem não marcou fica em "Agendar (tipo não escolhido)", só em "Marcar". Os links de
+// retorno e de exame já começam no fluxo deles (os antigos, gravados como consulta, vão pelo link enviado).
+// ---------------------------------------------------------------------------
+
+// O link pedido: no início da tentativa (desde a E5) ou no link enviado (as antigas).
+const linkPurpose = (s: FunnelSession) => {
+  const started = find(s, "started")?.metadata;
+  return s.flow === "booking" && started?.lean === true ? (started.purpose ?? find(s, "link_sent")?.metadata.purpose) : undefined;
+};
+const FLOW_OF_CATEGORY: Record<string, FunnelFlow> = { consultation: "booking", return_visit: "return_booking", exam: "exam" };
+
+/** Tipo de cada tentativa do bot enxuto gravada como consulta: pelo link enviado ou, no Agendar, pelo que marcou. */
+export function assignBookingTypes(sessions: FunnelSession[], categoryOf: Map<string, string | null>): void {
+  for (const s of sessions) {
+    const purpose = linkPurpose(s);
+    if (purpose === "return") s.flow = "return_booking";
+    else if (purpose === "exam") s.flow = "exam";
+    else if (purpose === "book") {
+      const category = s.appointmentId ? categoryOf.get(s.appointmentId) : null;
+      if (category && FLOW_OF_CATEGORY[category]) s.flow = FLOW_OF_CATEGORY[category];
+      else if (!find(s, "confirmed")) s.untyped = true;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -667,7 +722,7 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
   const flows = OPERATION_FLOWS[operation];
   const inPeriod = all.filter((s) => s.inPeriod);
   const sessions = inPeriod.filter(
-    (s) => flows.includes(s.flow) && (originFilter === "todas" || (originFilter === "lembrete" ? origin(s) === "reminder" : origin(s) === "menu")),
+    (s) => flows.includes(s.flow) && (!s.untyped || operation === "marcar") && (originFilter === "todas" || (originFilter === "lembrete" ? origin(s) === "reminder" : origin(s) === "menu")),
   );
   const defOf = (s: Session) => FLOW_DEFS.find((d) => matches(d, s))!;
   const outcomes: Record<Outcome, number> = { concluded: 0, abandoned: 0, blocked: 0, declined: 0, error: 0, in_progress: 0 };
@@ -742,7 +797,7 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
   }));
 
   // Tabela por fluxo (as linhas do grupo escolhido; sem filtro de origem nas linhas de remarcar e cancelar).
-  const rows: DigitalFlowRow[] = FLOW_DEFS.filter((d) => flows.includes(d.flow) && (originFilter === "todas" || !d.origin || d.origin === (originFilter === "lembrete" ? "reminder" : "menu"))).map((def) => {
+  const rows: DigitalFlowRow[] = FLOW_DEFS.filter((d) => flows.includes(d.flow) && (!d.untyped || operation === "marcar") && (originFilter === "todas" || !d.origin || d.origin === (originFilter === "lembrete" ? "reminder" : "menu"))).map((def) => {
     const list = inPeriod.filter((s) => matches(def, s));
     const counts = def.stages.map(() => 0);
     const reasons = new Map<string, number>();
