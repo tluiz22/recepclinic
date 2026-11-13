@@ -122,7 +122,8 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     }
   }
   // Mensagens seguidas que o bot não entendeu (F8.5d): soma uma ou zera.
-  const count = b.notUnderstoodSaid ? convo.notUnderstoodCount + 1 : 0;
+  // Saudação: a contagem fica como está (alternar "oi" com o que o bot não entende não evita a oferta da recepção).
+  const count = b.notUnderstoodSaid ? convo.notUnderstoodCount + 1 : b.keepNotUnderstoodCount ? convo.notUnderstoodCount : 0;
   if (count !== convo.notUnderstoodCount) await setNotUnderstoodCount(env.db, env.clinicId, phone, count);
   return "handled";
 }

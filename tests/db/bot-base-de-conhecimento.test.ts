@@ -144,7 +144,8 @@ describe("primeira mensagem", () => {
     expect(bodies(again)).toEqual([MENU]);
     // O número digitado vale como o toque.
     expect(bodies(await say(phone, "2"))[0]).toMatch(MINE_LINK);
-    expect((await convo(phone)).state).toBe("WELCOME");
+    // Depois do link, a conversa fica no menu por 15 minutos (cliente, 13/nov/2026).
+    expect((await convo(phone)).state).toBe("MENU");
   });
 
   it("pedido claro na 1ª mensagem: o link do Agendar, sem o menu", async () => {
@@ -213,6 +214,14 @@ describe("no menu", () => {
     await reset(phone);
     const reply = await say(phone, "vocês fazem exame?");
     expect(bodies(reply)).toEqual(["Sim, fazemos *Exame*.", MENU]);
+  });
+
+  it("depois do link: a pergunta recebe a resposta da base e o menu, sem as boas-vindas de novo (cliente, 13/nov/2026)", async () => {
+    await reset(phone);
+    expect(bodies(await say(phone, "quero marcar uma consulta"))[0]).toMatch(BOOK_LINK);
+    expect(bodies(await say(phone, "vocês fazem exame?"))).toEqual(["Sim, fazemos *Exame*.", MENU]);
+    // Saudação: a resposta curta com o menu, numa mensagem (sem o "Olá!" da base à parte).
+    expect(bodies(await say(phone, "bom dia"))).toEqual(["Olá! 👋 Escolha uma das opções abaixo."]);
   });
 
 });

@@ -55,6 +55,21 @@ export const JOURNEY: JourneySection[] = [
         ["Sim", [bot("A resposta e, em seguida, o menu (BE-7)")]],
         ["Não", [bot(FIRST_MENU, FIRST_MENU_NOTE)]],
       ),
+      patient("Escreve de novo depois do menu ou de um link (\"bom dia\", \"quanto tá a consulta\", \"pneumologista pediátrica\")", "Depois do link ou da dúvida resolvida (vindo do menu), a conversa fica no menu; vindo do botão do lembrete ou de um pedido na 1ª mensagem, volta ao começo. Conversa nova (boas-vindas de novo) só depois de 15 minutos parada, da recepção ou do aviso de que a clínica responde (cliente, 13/nov/2026)."),
+      check("É só uma saudação?"),
+      branch(
+        ["Sim", [bot("\"Olá! 👋 Escolha uma das opções abaixo.\" com o menu, numa mensagem só")]],
+        [
+          "Não",
+          [
+            check("A base de conhecimento responde?", "Só com \"Perguntas frequentes no bot\" ligado (item 5)."),
+            branch(
+              ["Sim", [bot("A resposta e o menu curto")]],
+              ["Não", [bot("\"Não entendi sua resposta 🙏 Escolha uma das opções abaixo.\" com o menu, numa mensagem só")]],
+            ),
+          ],
+        ],
+      ),
     ],
   },
   {
@@ -75,7 +90,7 @@ export const JOURNEY: JourneySection[] = [
         ["👥 Profissionais", [bot("\"Veja os profissionais, valores e convênios aceitos. Se quiser, já agenda por lá.\" [Ver profissionais]"), page("Profissionais, valores e convênios (/medicos), com \"Agendar\" em cada um")]],
         ["🎧 Falar com a recepção", [bot("Segue o item 4")]],
       ),
-      bot("Depois do link, a conversa volta ao começo", "A próxima mensagem recebe o menu de novo."),
+      bot("Depois do link, a conversa fica no menu", "Vindo do menu. O que o paciente escrever em seguida segue como no menu (item 1); parada 15 minutos, volta ao começo em silêncio e a próxima mensagem recebe as boas-vindas (cliente, 13/nov/2026)."),
     ],
   },
   {
@@ -188,7 +203,7 @@ export const JOURNEY: JourneySection[] = [
 export const JOURNEY_RULES = [
   "Comprovante de pagamento (cliente, 12/nov/2026): foto ou PDF com \"comprovante\", \"pix\", \"pagamento\" ou parecido na legenda ou no nome do arquivo, ou sem legenda até 24 h depois de uma consulta concluída, com a conversa no começo ou no menu: sem resposta e sem contar como \"não entendi\". Anexos nos 10 minutos seguintes também. Um pedido por texto (\"quero marcar o retorno\") responde normalmente; a secretária vê o anexo nas Conversas.",
   "A qualquer momento: \"0\", \"Voltar ao menu\" ou \"voltar\" mostra o menu principal.",
-  "Conversa parada por 15 minutos no menu: volta ao começo em silêncio (cliente, 11/nov/2026); parada na escolha do preparo: o bot encerra com aviso. A próxima mensagem começa de novo.",
+  "Conversa parada por 15 minutos no menu: volta ao começo em silêncio (cliente, 11/nov/2026); parada na escolha do preparo: o bot encerra com aviso. A próxima mensagem começa de novo (boas-vindas); antes dos 15 minutos, o texto segue como no menu (cliente, 13/nov/2026).",
   "Cortesia depois do menu, de um link ou de uma orientação (\"ok\", \"obrigado\", \"perfeito\", 👍, reação): sem resposta, sem prazo e sem encerrar a conversa (BE-8). Com pedido junto (\"ok, mas qual o valor?\") segue o caminho normal; depois de uma pergunta do bot ou na 1ª mensagem, responde.",
   "Saíram com o bot enxuto (F3f, 11/nov/2026): a marcação no chat, a entrada com a data de nascimento, a especialidade antes do menu, os submenus Consultas e Exames, Informações gerais, o Encaixe no chat e o pedido não concluído.",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa. Lembrete novo (BE-10, modelo rc_lembrete_v2): só Confirmar presença responde na conversa (\"Presença confirmada ✓\"); Remarcar e Cancelar são links do portal. Clínica que só tem o modelo antigo aprovado segue com as 3 respostas.",

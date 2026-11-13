@@ -88,6 +88,8 @@ export type Bot = BotEnv & {
   incomingType: string | null;
   /** O bot respondeu "não entendi" a esta mensagem (F8.5d). */
   notUnderstoodSaid?: boolean;
+  /** Saudação respondida (cliente, 13/nov/2026): não é "não entendi", mas também não zera a contagem dele. */
+  keepNotUnderstoodCount?: boolean;
   /** Texto digitado pelo paciente (null = toque, mídia ou vazio). */
   incomingText?: string | null;
   /** Base de conhecimento (BC, Etapa 4): consultada no lugar do primeiro "não entendi" da mensagem. */
@@ -450,9 +452,19 @@ export function step(b: Bot, name: string, metadata: Record<string, unknown> = {
 }
 
 /** Fim da tentativa (link enviado, bloqueio, erro): resultado no funil e conversa do começo. */
-export async function end(b: Bot, outcome: string, metadata: Record<string, unknown> = {}): Promise<void> {
+export async function end(b: Bot, outcome: string, metadata: Record<string, unknown> = {}, state: string = WELCOME): Promise<void> {
   await step(b, outcome, metadata);
-  await go(b, WELCOME);
+  await go(b, state);
+}
+
+/**
+ * Passo depois de uma resposta que fecha o assunto (link do portal, dúvida resolvida). Vindo do menu, a conversa fica
+ * nele: o que o paciente escrever em seguida é a resposta da base ou o "não entendi" com o menu, sem as boas-vindas de
+ * novo; parada 15 minutos, a rotina a volta ao começo em silêncio (cliente, 13/nov/2026). Sem o menu antes (botão do
+ * lembrete, pedido na 1ª mensagem), o começo: a próxima mensagem recebe as boas-vindas e o menu.
+ */
+export function restingState(b: Bot): string {
+  return b.convo.state === "MENU" ? "MENU" : WELCOME;
 }
 
 /** Texto da mensagem: o próprio da clínica (com os valores nos marcadores) ou o padrão. */

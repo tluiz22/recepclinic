@@ -131,7 +131,7 @@ describe("menu enxuto (BE-2)", () => {
 });
 
 describe("links do portal (BE-3)", () => {
-  it("Agendar: uma mensagem com o botão do link; o funil fecha com link enviado e a conversa volta ao começo", async () => {
+  it("Agendar: uma mensagem com o botão do link; o funil fecha com link enviado e a conversa fica no menu", async () => {
     await restart(NEW);
     await say(NEW, "oi");
     const reply = await say(NEW, "1");
@@ -143,7 +143,8 @@ describe("links do portal (BE-3)", () => {
       }),
     ]);
     expect((await lastLink(NEW)).purpose).toBe("book");
-    expect((await conversation(NEW)).state).toBe("WELCOME");
+    // Fica no menu (não volta ao começo): a próxima mensagem não recebe as boas-vindas de novo (cliente, 13/nov/2026).
+    expect((await conversation(NEW)).state).toBe("MENU");
     const { data: steps } = await adminClient().from("bot_funnel_events").select("step").eq("clinic_id", f.clinicId).eq("contact_phone", NEW).eq("flow", "booking");
     expect(steps!.map((s) => s.step)).toContain("link_sent");
   });
@@ -317,5 +318,56 @@ describe("cortesia (BE-8)", () => {
       .from("whatsapp_messages")
       .insert({ clinic_id: f.clinicId, contact_phone: phone, direction: "outbound", message_type: "bot_reception_confirm", status: "sent", created_at: new Date().toISOString() });
     expect((await say(phone, "ok")).length).toBeGreaterThan(0);
+  });
+});
+
+describe("texto depois do menu (cliente, 13/nov/2026)", () => {
+  const NOT_UNDERSTOOD = "Não entendi sua resposta 🙏 Escolha uma das opções abaixo.";
+
+  it("depois do link: texto solto recebe o \"não entendi\" com o menu, numa mensagem, sem as boas-vindas de novo", async () => {
+    const phone = `${PREFIX}72`;
+    await say(phone, "oi");
+    expect((await say(phone, "1"))[0]).toMatchObject({ kind: "link" });
+    // O link fecha o assunto, mas a conversa fica no menu (não volta ao começo).
+    expect((await conversation(phone)).state).toBe("MENU");
+    const reply = await say(phone, "Pneumologista pediátrica");
+    expect(reply).toHaveLength(1);
+    expect(reply[0]).toMatchObject({ kind: "list", body: NOT_UNDERSTOOD, header: undefined });
+    expect((await conversation(phone)).state).toBe("MENU");
+    // O menu segue valendo.
+    expect((await say(phone, "1"))[0]).toMatchObject({ kind: "link" });
+  });
+
+  it("saudação depois do menu ou do link: \"Olá! 👋 Escolha uma das opções abaixo.\" com o menu, numa mensagem", async () => {
+    const phone = `${PREFIX}73`;
+    await say(phone, "oi");
+    for (const text of ["Bom dia!!", "Oii"]) {
+      const reply = await say(phone, text);
+      expect(reply).toHaveLength(1);
+      expect(reply[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma das opções abaixo.", options: expect.any(Array) });
+    }
+    await say(phone, "1");
+    expect((await say(phone, "boa tarde"))[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma das opções abaixo." });
+  });
+
+  it("conversa nova: parada 15 minutos depois do link, a rotina volta ao começo e o \"oi\" recebe as boas-vindas", async () => {
+    const phone = `${PREFIX}74`;
+    await say(phone, "oi");
+    await say(phone, "1");
+    const db = createClinicServiceClient(f.clinicId, env());
+    sent = [];
+    expect(await closeIdleConversations(db, f.clinicId, sender, new Date(Date.now() + 16 * 60_000))).toBeGreaterThanOrEqual(1);
+    expect(sent.filter((m) => m.to === phone)).toEqual([]);
+    expect((await conversation(phone)).state).toBe("WELCOME");
+    expect((await say(phone, "oi"))[0].body).toMatch(/^Olá! 👋 Seja bem-vindo\(a\)!/);
+  });
+
+  it("saudação não zera a contagem do \"não entendi\"", async () => {
+    const phone = `${PREFIX}75`;
+    await say(phone, "oi");
+    await say(phone, "xyz abc");
+    await say(phone, "bom dia");
+    const { data } = await adminClient().from("conversation_state").select("not_understood_count").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
+    expect(data!.not_understood_count).toBe(1);
   });
 });

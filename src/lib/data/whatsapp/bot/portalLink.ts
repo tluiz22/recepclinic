@@ -3,7 +3,7 @@ import { shortId } from "../../../publicId";
 import { logError } from "../../../log";
 import { unwrap } from "../../errors";
 import { createPortalLink } from "../../portal/links";
-import { end, go, say, sendLink, type Bot } from "./engine";
+import { end, restingState, go, say, sendLink, type Bot } from "./engine";
 import { startFunnel, WELCOME } from "../conversations";
 import * as t from "./texts";
 
@@ -57,8 +57,8 @@ export async function sendPortalShortcut(b: Bot, purpose: ShortcutPurpose, servi
     const url = portalLinkUrl(b.sender.baseUrl, shortId(link.id));
     const text = t.LEAN_LINKS[purpose];
     await sendLink(b, `bot_portal_${purpose}`, text.body, { text: text.button, url });
-    if (booking) await end(b, "link_sent", { portal_link_id: link.id, purpose });
-    else await go(b, WELCOME);
+    if (booking) await end(b, "link_sent", { portal_link_id: link.id, purpose }, restingState(b));
+    else await go(b, restingState(b));
   } catch (error) {
     logError("bot: link do portal (atalho)", error, { clinica: b.clinicId });
     await say(b, "bot_book_link_error", t.linkError(b.clinic.designation));
@@ -99,7 +99,7 @@ export async function sendReminderPortalLink(
     const { phrase } = t.appointmentWords(appointment.category as "consultation" | "return_visit" | "exam", appointment.serviceName);
     const body = action === "reschedule" ? t.reminderRescheduleLink(phrase, appointment.patientName) : t.reminderCancelLink(phrase, appointment.patientName);
     await sendLink(b, `bot_reminder_${action}_link`, body, { text: action === "reschedule" ? t.REMINDER_RESCHEDULE_BUTTON : t.REMINDER_CANCEL_BUTTON, url });
-    await end(b, "link_sent", { portal_link_id: link.id, purpose: action, appointment_id: appointment.id });
+    await end(b, "link_sent", { portal_link_id: link.id, purpose: action, appointment_id: appointment.id }, restingState(b));
   } catch (error) {
     logError("bot: link do portal (lembrete)", error, { clinica: b.clinicId });
     await say(b, "bot_reschedule_link_error", t.linkError(b.clinic.designation));
