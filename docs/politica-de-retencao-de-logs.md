@@ -1,7 +1,7 @@
 # Política: guarda dos registros (logs)
 
-**PROPOSTA de 13/nov/2026, ainda não adotada.** Depende da decisão do cliente e da revisão do advogado e do contador
-(os prazos legais abaixo vêm do conhecimento geral e precisam ser conferidos). Origem: avaliação BaaS do Asaas (5.1.4).
+**ADOTADA pelo cliente em 13/nov/2026.** Falta a revisão do advogado e do contador (os prazos legais abaixo vêm do
+conhecimento geral e precisam ser conferidos). Origem: avaliação BaaS do Asaas (5.1.4).
 
 ## Situação hoje (verificada nas migrações)
 
@@ -15,7 +15,7 @@
 | Pedidos de autoridades | registro próprio | mínimo de 5 anos (política de 09/out) |
 | Logs de infraestrutura | Vercel, Supabase | prazo do plano de cada provedor |
 
-## Proposta
+## Regra adotada
 
 | Registro | Prazo proposto | Base |
 |---|---|---|
@@ -26,6 +26,7 @@
 | Pedidos de autoridades | **5 anos** (já adotado) | política de 09/out |
 | Logs dos provedores | conforme o plano; **exportar** ao mudar de plano se o prazo ficar abaixo de 6 meses | a verificar nos painéis |
 
-- A exclusão passa a ser automática (rotina agendada, como a `limpar-erros`), só depois da aprovação.
+- **Pendente:** a exclusão automática dos registros vencidos (rotina agendada, como a `limpar-erros`) ainda não existe;
+  hoje as trilhas ficam além do prazo, o que não fere a regra. A rotina entra numa migração (staging antes da produção).
 - Registro sob pedido de autoridade ou litígio **não é apagado** até o fim do caso.
 - Responsável: o titular do RecepClinic.
