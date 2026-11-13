@@ -2,6 +2,7 @@
 // P1 Início do portal da clínica (F2a; canvas, opção A da rodada 4): nome, "Agendar consulta", especialidades em
 // destaque, "Profissionais e valores", endereço e horário da recepção. Clínica de um só profissional: o início
 // dele (PP). "Marcar retorno" e "Marcar exame" (F2d) abaixo de "Agendar consulta" e, por último, "Minhas consultas" (F3c).
+import { trackPortalStep } from "../../../lib/data/portal/visit";
 import PortalLayout from "../../../components/portal/PortalLayout.astro";
 import PortalMoreActions from "../../../components/portal/PortalMoreActions.astro";
 import { MY_APPOINTMENTS } from "../../../lib/portal";
@@ -13,6 +14,7 @@ import { portalOffersReturn } from "../../../lib/data/portal/returnVisit";
 import { mapsHref, portalHref, readPlace } from "../../../lib/portal";
 
 const page = await openPortalPage(Astro);
+if (page.kind === "open") trackPortalStep(Astro, page.db, page.portal.clinicId, "entry");
 if (page.kind === "not_found") Astro.response.status = 404;
 const portal = page.kind === "open" ? page.portal : null;
 const base = page.kind === "open" ? page.base : "";

@@ -1,5 +1,6 @@
 ---
 // PP Início do profissional (link dele: Instagram, site, WhatsApp). Sem outros médicos da clínica.
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalProfessionalHome from "../../../../components/portal/PortalProfessionalHome.astro";
@@ -10,6 +11,7 @@ import { helpForOf } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (page.kind === "open" && professional) trackPortalStep(Astro, page.db, page.portal.clinicId, "entry", "professional");
 if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
 // Exame (F2d): não tem página de início; o endereço abre o particular ou convênio dele.
 if (professional?.exam) {

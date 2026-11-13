@@ -4,6 +4,7 @@
 // e segue. Senão: "Qual é o seu celular com WhatsApp?" com o CAPTCHA (Turnstile) → código de 6 números pelo WhatsApp
 // da clínica → reserva do horário (prazo da clínica, padrão 5 min) → tela da reserva. Limites de uso e bloqueio
 // progressivo no servidor. Formulários POST nesta mesma página (o endereço do portal não abre o /api).
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalPhoneCode from "../../../../components/portal/PortalPhoneCode.astro";
@@ -21,6 +22,7 @@ import { changeProfessionalHref, chosenModality, flowParams, helpForOf, modality
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (page.kind === "open" && professional) trackPortalStep(Astro, page.db, page.portal.clinicId, "time");
 if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
 const params = Astro.url.searchParams;
 const flow = readFlow(params);

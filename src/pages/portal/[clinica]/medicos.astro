@@ -4,6 +4,7 @@
 // Sem horário no prazo: o cartão aparece, sem toque. Filtro "Atende meu convênio" (só convênios atendidos por algum
 // deles). ?esp=<id> (da P2), ?esp=todos (busca pelo nome, "Já sei o nome do médico") ou sem esp ("Ver médicos,
 // convênios e valores", da P1).
+import { trackPortalStep } from "../../../lib/data/portal/visit";
 import PortalAvatar from "../../../components/portal/PortalAvatar.astro";
 import PortalLayout from "../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../components/portal/PortalNotice.astro";
@@ -14,6 +15,7 @@ import { nextFreeSlots, portalSpecialties, professionalsOfSpecialty } from "../.
 import { doctorsCount, matchesName, nextSlotLabel, plainText, portalHref, portalSteps, priceLine, priceTags, readFlow, stepPosition } from "../../../lib/portal";
 
 const page = await openPortalPage(Astro);
+if (page.kind === "open") trackPortalStep(Astro, page.db, page.portal.clinicId, "professionals");
 if (page.kind === "not_found") Astro.response.status = 404;
 const portal = page.kind === "open" ? page.portal : null;
 const base = page.kind === "open" ? page.base : "";

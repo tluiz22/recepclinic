@@ -494,6 +494,9 @@ begin
   insert into public.portal_rate_hits (clinic_id, key, action) values (c_a, 'ip:200.10.20', 'code');
   insert into public.portal_blocks (clinic_id, key, action, level, blocked_until, released_at)
     values (c_a, 'ip:200.10.99', 'code', 1, now() - interval '1 hour', now() - interval '2 hours');
+  -- Funil do portal (frente Usabilidade, U1): visitas anônimas paradas em passos diferentes.
+  insert into public.portal_visits (id, clinic_id, entry, furthest) values
+    (gen_random_uuid(), c_a, 'clinic', 4), (gen_random_uuid(), c_a, 'professional', 8), (gen_random_uuid(), c_a, 'whatsapp', 6);
   -- Desbloqueio pela recepção (10/nov/2026): uma liberação antiga (fora das 24 h; não muda a contagem de hoje).
   insert into public.portal_limit_resets (clinic_id, phone, created_at) values (c_a, '+5584988880001', now() - interval '3 days');
   insert into public.slot_holds (clinic_id, agenda_id, service_id, location_id, starts_at, ends_at, session_id, phone, expires_at)
