@@ -58,7 +58,7 @@ export const JOURNEY: JourneySection[] = [
       patient("Escreve de novo depois do menu ou de um link (\"bom dia\", \"quanto tá a consulta\", \"pneumologista pediátrica\")", "Depois do link ou da dúvida resolvida (vindo do menu), a conversa fica no menu; vindo do botão do lembrete ou de um pedido na 1ª mensagem, volta ao começo. Conversa nova (boas-vindas de novo) só depois de 15 minutos parada, da recepção ou do aviso de que a clínica responde (cliente, 13/nov/2026)."),
       check("É só uma saudação?"),
       branch(
-        ["Sim", [bot("\"Olá! 👋 Escolha uma das opções abaixo.\" com o menu, numa mensagem só")]],
+        ["Sim", [bot("\"Olá! 👋 Escolha uma das opções abaixo.\" com o menu, numa mensagem só", "Com \"Perguntas frequentes no bot\": \"Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta.\"; com o texto do menu da clínica, ele depois do \"Olá! 👋\".")]],
         [
           "Não",
           [

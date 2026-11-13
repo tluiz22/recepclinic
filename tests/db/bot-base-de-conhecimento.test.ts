@@ -220,8 +220,8 @@ describe("no menu", () => {
     await reset(phone);
     expect(bodies(await say(phone, "quero marcar uma consulta"))[0]).toMatch(BOOK_LINK);
     expect(bodies(await say(phone, "vocês fazem exame?"))).toEqual(["Sim, fazemos *Exame*.", MENU]);
-    // Saudação: a resposta curta com o menu, numa mensagem (sem o "Olá!" da base à parte).
-    expect(bodies(await say(phone, "bom dia"))).toEqual(["Olá! 👋 Escolha uma das opções abaixo."]);
+    // Saudação: a resposta curta com o menu, numa mensagem (sem o "Olá!" da base à parte), com o convite para perguntar.
+    expect(bodies(await say(phone, "bom dia"))).toEqual(["Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta."]);
   });
 
 });

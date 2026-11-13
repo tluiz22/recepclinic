@@ -28,6 +28,9 @@ async function leanWelcomeBody(b: Bot): Promise<string> {
   return custom ? renderWelcome(custom, b.clinic.label, name) : t.leanWelcome(name, { exams: b.features.includes("exams"), reception: b.receptionAvailable });
 }
 
+/** Corpo do menu curto: o da clínica, ou o padrão (com a base de conhecimento, o convite para perguntar). */
+const shortMenuBody = (b: Bot) => textFor(b, "menu", b.features.includes("knowledge_base") ? t.MENU_BODY_ASK : t.MENU_BODY);
+
 /**
  * Menu principal. O 1º da conversa (`withWelcome` ou `intro`) é uma mensagem só: o nome da clínica no cabeçalho, as
  * boas-vindas e a lista (BE-2); nas outras vezes, o corpo curto.
@@ -37,7 +40,7 @@ export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = fa
   // Passa pela contagem do "não entendi"; null = a base de conhecimento já respondeu (o menu volta com o corpo normal).
   const misunderstood = notUnderstood ? await countNotUnderstood(b, textFor(b, "not_understood", t.notUnderstood(true))) : null;
   const first = withWelcome || intro;
-  const body = misunderstood ?? bodyText ?? (first ? await leanWelcomeBody(b) : textFor(b, "menu", b.features.includes("knowledge_base") ? t.MENU_BODY_ASK : t.MENU_BODY));
+  const body = misunderstood ?? bodyText ?? (first ? await leanWelcomeBody(b) : shortMenuBody(b));
   // Sem o número na frente (título com até 24 caracteres, como no canvas); digitar o número continua valendo.
   const rows = mainItems(b).map((item) => ({ id: item.id, title: item.label, description: item.description ?? undefined }));
   await sendList(b, "bot_menu", body, [{ rows }], first && misunderstood === null ? t.leanMenuHeader(b.clinic.name) : undefined);
@@ -79,11 +82,11 @@ export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
   if (purpose) return portalShortcut(b, purpose);
   // BE-4: a recepção numa mensagem, sem perguntar o motivo antes.
   if (choice?.id === "menu_reception") return handoff(b, "menu");
-  // Saudação digitada depois do menu: "Olá! 👋 Escolha uma das opções abaixo." com o menu, numa mensagem; não conta
+  // Saudação digitada depois do menu: "Olá! 👋" e o texto do menu curto, com o menu, numa mensagem; não conta
   // como "não entendi" e não passa pela base (cliente, 13/nov/2026).
   if (!selection.id && isGreetingText(selection.text)) {
     b.keepNotUnderstoodCount = true;
-    return showMenu(b, { body: t.GREETING_MENU_BODY });
+    return showMenu(b, { body: t.greetingMenuBody(shortMenuBody(b)) });
   }
   // O resto: a resposta da base de conhecimento (se ligada e se ela responde) ou o "não entendi" com o menu.
   await showMenu(b, { notUnderstood: true });

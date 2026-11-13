@@ -338,16 +338,16 @@ describe("texto depois do menu (cliente, 13/nov/2026)", () => {
     expect((await say(phone, "1"))[0]).toMatchObject({ kind: "link" });
   });
 
-  it("saudação depois do menu ou do link: \"Olá! 👋 Escolha uma das opções abaixo.\" com o menu, numa mensagem", async () => {
+  it("saudação depois do menu ou do link: \"Olá! 👋\" e o menu curto (com a base, o convite para perguntar), numa mensagem", async () => {
     const phone = `${PREFIX}73`;
     await say(phone, "oi");
     for (const text of ["Bom dia!!", "Oii"]) {
       const reply = await say(phone, text);
       expect(reply).toHaveLength(1);
-      expect(reply[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma das opções abaixo.", options: expect.any(Array) });
+      expect(reply[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta.", options: expect.any(Array) });
     }
     await say(phone, "1");
-    expect((await say(phone, "boa tarde"))[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma das opções abaixo." });
+    expect((await say(phone, "boa tarde"))[0]).toMatchObject({ kind: "list", body: "Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta." });
   });
 
   it("conversa nova: parada 15 minutos depois do link, a rotina volta ao começo e o \"oi\" recebe as boas-vindas", async () => {

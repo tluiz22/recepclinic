@@ -75,8 +75,8 @@ export const welcome = (clinicLabel: string, invite = true, name: string | null 
 export const MENU_BODY = "Escolha uma das opções abaixo.";
 /** Menu com a base de conhecimento ligada: convida a perguntar (cliente, 04/nov/2026). */
 export const MENU_BODY_ASK = "Escolha uma opção abaixo ou faça uma pergunta.";
-/** Saudação depois do menu ("bom dia", "oi"): a resposta e o menu numa mensagem só (cliente, 13/nov/2026). */
-export const GREETING_MENU_BODY = "Olá! 👋 Escolha uma das opções abaixo.";
+/** Saudação depois do menu ("bom dia", "oi"): "Olá! 👋" e o texto do menu curto, numa mensagem só (cliente, 13/nov/2026). */
+export const greetingMenuBody = (menuBody: string) => `Olá! 👋 ${menuBody}`;
 
 /** Descrições das opções do menu principal (cliente, 04/nov/2026; até 72 caracteres, limite da Meta). */
 // ---------------------------------------------------------------------------
