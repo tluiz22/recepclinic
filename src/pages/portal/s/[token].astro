@@ -16,6 +16,7 @@ import { getPublicClinicBrand, type PublicClinicBrand } from "../../../lib/data/
 import { getPortalLink, logPortalLinkStep, openLinkSession, portalLinkState, portalLinkTarget, type PortalLinkState } from "../../../lib/data/portal/links";
 import { loadPortal } from "../../../lib/data/portal/portal";
 import { clientIpOf } from "../../../lib/data/portal/identityStep";
+import { trackPortalStep } from "../../../lib/data/portal/visit";
 
 let kind: "not_found" | "unavailable" | Exclude<PortalLinkState, "valid"> = "not_found";
 let brand: PublicClinicBrand | null = null;
@@ -37,6 +38,7 @@ if (clinicId && linkId) {
     if (state === "valid") {
       await openLinkSession(db, clinicId, link, Astro.cookies, { ip: ipPrefix(clientIpOf(Astro)), secure: Astro.url.protocol === "https:" });
       await logPortalLinkStep(db, clinicId, link, "page_opened");
+      trackPortalStep(Astro, db, clinicId, "entry", "whatsapp", { fresh: true });
       return Astro.redirect(portalLinkTarget(link, portal, base));
     }
     if (state === "expired") await logPortalLinkStep(db, clinicId, link, "link_expired");

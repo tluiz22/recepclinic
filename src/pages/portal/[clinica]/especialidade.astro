@@ -2,6 +2,7 @@
 // P2 Escolha da especialidade (F2a): cartões com "n médicos", busca sem acento pelo nome e pelos termos do cadastro
 // ("coração" → Cardiologia) e "Já sei o nome do médico". Só especialidades com algum médico com horário no prazo.
 // Com um médico só na especialidade, o cartão vai direto a ele. Sem JavaScript, a busca recarrega com ?q=.
+import { trackPortalStep } from "../../../lib/data/portal/visit";
 import PortalLayout from "../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../components/portal/PortalStepBar.astro";
@@ -13,6 +14,7 @@ import { doctorsCount, matchesSpecialty, plainText, portalHref, portalSteps, rea
 // Link marcado por lugar (F3d): a origem segue até a marcação.
 const origem = readPlace(Astro.url.searchParams);
 const page = await openPortalPage(Astro);
+if (page.kind === "open") trackPortalStep(Astro, page.db, page.portal.clinicId, "entry");
 if (page.kind === "not_found") Astro.response.status = 404;
 const portal = page.kind === "open" ? page.portal : null;
 const base = page.kind === "open" ? page.base : "";

@@ -4,6 +4,7 @@
 // profissional) e os horários do dia por turno. Tudo do servidor, pelas mesmas funções do bot e do Marcar. Um dia ou
 // uma seta da faixa troca os horários sem recarregar (sem JavaScript, o link abre a página nesse dia). "Continuar"
 // confere de novo se o horário está livre.
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PatientDayStrip from "../../../../components/public/PatientDayStrip.astro";
 import PatientSlots, { type PatientSlot } from "../../../../components/public/PatientSlots.astro";
 import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
@@ -25,6 +26,7 @@ import { backFromProfessional, changeProfessionalHref, chosenModality, flowParam
 
 const page = await openPortalPage(Astro);
 const professional = page.kind === "open" ? professionalOf(page.portal, Astro.params.profissional) : null;
+if (page.kind === "open" && professional) trackPortalStep(Astro, page.db, page.portal.clinicId, "times");
 if (!professional && page.kind !== "unavailable") Astro.response.status = 404;
 const params = Astro.url.searchParams;
 const asked = readFlow(params);

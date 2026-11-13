@@ -3,6 +3,7 @@
 // WhatsApp?" e o código (o mesmo da P7). Depois: "De qual consulta é o retorno?", um cartão por consulta com direito
 // (paciente, médico, data, "Retorno até…") e, embaixo, as consultas sem direito com o motivo. Uma só com direito: vai
 // direto aos horários. Nenhuma: o motivo principal (como o bot), e no prazo vencido "Agendar consulta com {médico}".
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalChangePhone from "../../../../components/portal/PortalChangePhone.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
@@ -17,6 +18,7 @@ import { phoneEnding } from "../../../../lib/portalIdentity";
 import { consultationOn, dayMonth, mainRefusal, refusalText, returnButton, returnUntil } from "../../../../lib/portalReturn";
 
 const page = await openPortalPage(Astro);
+if (page.kind === "open") trackPortalStep(Astro, page.db, page.portal.clinicId, "entry");
 if (page.kind === "not_found") Astro.response.status = 404;
 const base = page.kind === "open" ? page.base : "";
 const here = `${base}/retorno`;

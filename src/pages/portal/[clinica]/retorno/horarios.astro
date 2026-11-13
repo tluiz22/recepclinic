@@ -3,6 +3,7 @@
 // médico), nos locais onde o Retorno é oferecido; o quadro "Nenhum horário serve?" só com "Falar com a recepção".
 // "Continuar" reserva o horário (celular já comprovado na lista) com o paciente e a consulta de origem e segue para a
 // revisão. A consulta de origem é conferida de novo (do celular e ainda com direito) a cada abertura.
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PatientDayStrip from "../../../../components/public/PatientDayStrip.astro";
 import PatientSlots, { type PatientSlot } from "../../../../components/public/PatientSlots.astro";
 import PortalDoctor from "../../../../components/portal/PortalDoctor.astro";
@@ -59,6 +60,7 @@ if (page.kind === "open") {
   waitlist = await sessionJoinsWaitlist(db, clinicId, session);
   card = await findReturnCard(db, portal, session.phone, originId);
   if (!card) return Astro.redirect(listHref);
+  trackPortalStep(Astro, db, clinicId, "times");
   const scope = returnScope(card);
   lastShown = returnLastShownDate(card, timeZone);
 

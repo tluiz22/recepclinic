@@ -4,6 +4,7 @@
 // os exames (cliente, 11/nov/2026) e "Falar com a recepção" no fim. Depois, as
 // telas da consulta servem ao exame: particular ou convênio (todos os convênios), dias e horários da agenda da equipe
 // (o preparo só em "Exame marcado", cliente, 11/nov/2026), celular e código, quem será atendido, revisão e "Exame marcado".
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalStepBar from "../../../../components/portal/PortalStepBar.astro";
@@ -12,6 +13,7 @@ import { examProfessional, nextFreeSlots } from "../../../../lib/data/portal/por
 import { examValuesText, formatPrice, portalHref, portalSteps, readPlace, receptionWhatsappHref, stepPosition } from "../../../../lib/portal";
 
 const page = await openPortalPage(Astro);
+if (page.kind === "open") trackPortalStep(Astro, page.db, page.portal.clinicId, "entry");
 if (page.kind === "not_found") Astro.response.status = 404;
 const portal = page.kind === "open" ? page.portal : null;
 const base = page.kind === "open" ? page.base : "";

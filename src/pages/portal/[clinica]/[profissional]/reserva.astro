@@ -4,6 +4,7 @@
 // alguém?", UI-3) e "Outra pessoa" (P8b). Sem cadastro no celular, vai
 // direto à P8b. Escolhido, confere a idade limite do médico, consulta já marcada com ele e os limites do telefone (os
 // do bot) e segue para a revisão. O contador da reserva fica visível; o Voltar solta a reserva (horários do dia).
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
 import PortalLinkPhone from "../../../../components/portal/PortalLinkPhone.astro";
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
@@ -22,6 +23,7 @@ import { todayIn } from "../../../../lib/clinicTime";
 const view = await openHoldPage(Astro);
 const { page, professional, hold, session, timeZone, modality, when } = view;
 if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
+if (page.kind === "open" && professional && hold?.state === "active") trackPortalStep(Astro, page.db, page.portal.clinicId, "held");
 
 let patients: PortalPatient[] = [];
 let problem: string | null = null;

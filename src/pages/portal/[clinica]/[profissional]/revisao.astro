@@ -4,6 +4,7 @@
 // contador da reserva. "Alterar" em cada linha volta à tela daquele item. "Confirmar agendamento" vale uma vez só
 // (o botão trava e mostra "Confirmando…"; no servidor, a reserva é tomada uma vez). Reserva vencida: "O tempo para
 // confirmar acabou"; horário tomado: volta aos horários do dia com o aviso (cenário 8); limites: o aviso da P9.
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
@@ -26,6 +27,7 @@ const { page, professional, hold, session, timeZone, modality, when, consultatio
 const waitlist = page.kind === "open" ? await sessionJoinsWaitlist(page.db, page.portal.clinicId, session) : false;
 if (hold?.state === "booked") return Astro.redirect(view.href("marcada"));
 if (page.kind === "open" && professional && hold?.state === "active" && !hold.patientId && !hold.newPatient) return Astro.redirect(view.href("reserva"));
+if (page.kind === "open" && professional && hold?.state === "active" && !(view.atHome && !hold.homeVisitAddress)) trackPortalStep(Astro, page.db, page.portal.clinicId, "review");
 // Em casa (F3e-1, DM2b): o endereço vem depois do paciente; sem ele, a tela do endereço (o aviso da data segue junto).
 if (page.kind === "open" && professional && hold?.state === "active" && view.atHome && !hold.homeVisitAddress) {
   return Astro.redirect(view.href("endereco", { aviso: Astro.url.searchParams.get("aviso") }));

@@ -3,6 +3,7 @@
 // origem, local com "Ver no mapa", "Alterar" no dia, orientações do médico e "A confirmação chega no WhatsApp final…",
 // com o contador da reserva. Nunca mostra valor. "Marcar retorno" vale uma vez só (como a P9); reserva vencida: "O tempo
 // para confirmar acabou"; horário tomado: volta aos horários com o aviso; sem direito (marcado por outro canal): à lista.
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalHoldClock from "../../../../components/portal/PortalHoldClock.astro";
 import PortalHoldExpired from "../../../../components/portal/PortalHoldExpired.astro";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
@@ -49,6 +50,7 @@ if (page.kind === "open") {
   hold = session ? await loadHold(db, portal.clinicId, session.id, holdId) : null;
   if (hold && !hold.returnOriginId) hold = null;
   if (hold?.state === "booked") return Astro.redirect(doneHref);
+  if (session && hold?.state === "active") trackPortalStep(Astro, db, portal.clinicId, "review");
   if (session && hold?.state === "active" && Astro.request.method === "POST") {
     // "Marcar retorno": a marcação confere tudo de novo (o direito, o médico, o serviço e os limites).
     const outcome = await confirmPortalReturn(db, portal, {

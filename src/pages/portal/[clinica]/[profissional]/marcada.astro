@@ -2,6 +2,7 @@
 // P10 Confirmação final (F2c): "Consulta marcada!" com o resumo, "Enviamos a confirmação no WhatsApp" (a tela não
 // depende do envio, cenário 15: a fila manda), "Adicionar à agenda do celular" (.ics) e "Ver no mapa". Recarregar mostra
 // a mesma confirmação (a reserva guarda o atendimento); nada é marcado de novo.
+import { trackPortalStep } from "../../../../lib/data/portal/visit";
 import PortalLayout from "../../../../components/portal/PortalLayout.astro";
 import PortalNotice from "../../../../components/portal/PortalNotice.astro";
 import PortalPreparation from "../../../../components/portal/PortalPreparation.astro";
@@ -20,6 +21,7 @@ if (professional && hold && hold.state !== "booked") return Astro.redirect(view.
 let booked: BookedSummary | null = null;
 if (page.kind === "open" && professional && hold?.appointmentId) booked = await bookedSummary(page.db, page.portal.clinicId, hold.appointmentId);
 if (professional && !booked && page.kind === "open") Astro.response.status = 404;
+if (page.kind === "open" && booked) trackPortalStep(Astro, page.db, page.portal.clinicId, "booked");
 
 const location = professional && booked ? (professional.locations.find((l) => l.id === booked!.locationId) ?? null) : null;
 const when = booked ? capitalize(formatInstant(booked.start, timeZone, "EEEE, d 'de' MMMM 'às' HH:mm")) : "";
