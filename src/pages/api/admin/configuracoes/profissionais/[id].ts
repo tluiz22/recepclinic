@@ -8,6 +8,7 @@ import {
   type ProfessionalInput,
 } from "../../../../../lib/data/config/professionals";
 import { DataError } from "../../../../../lib/data/errors";
+import { logError } from "../../../../../lib/log";
 import { listInsurancePlans, listProfessionalPlans, setProfessionalCoverage } from "../../../../../lib/data/config/insurance";
 import { removeProfilePhoto, uploadProfilePhoto } from "../../../../../lib/data/config/profilePhotos";
 import { setProfessionalBotInfo } from "../../../../../lib/data/config/professionalBotInfo";
@@ -104,7 +105,7 @@ export const POST: APIRoute = async (context) => {
         const message = !marked.length ? "Salvo: só particular." : acceptsPrivate ? "Salvo: particular e convênios." : "Salvo: só convênios.";
         return { redirectTo: page(id), message };
       }
-      if (["convidar", "ligar_login", "reenviar", "trocar_email", "cancelar_convite", "tirar_acesso"].includes(acao)) {
+      if (tab === "acesso") {
         // Acesso ao painel (cliente, 13/nov/2026): só o Administrador, pela aba do cadastro.
         if (ownSettingsOnly(clinic)) throw new DataError("forbidden", "Acesso ao painel: só o Administrador");
         const actorId = locals.userId!;
@@ -154,7 +155,9 @@ export const POST: APIRoute = async (context) => {
             const next = invited(created.id, email, outcome);
             return { ...next, message: `Profissional cadastrado. ${next.message}` };
           } catch (error) {
-            const reason = error instanceof DataError && error.code === "invalid" ? Object.values(error.fields)[0] : "tente pela aba Acesso ao painel";
+            if (!(error instanceof DataError)) logError("convite do profissional", error);
+            const field = error instanceof DataError && error.code === "invalid" ? Object.values(error.fields)[0] : undefined;
+            const reason = field ?? "tente de novo pela aba Acesso ao painel.";
             return { redirectTo: professionalPage(created.id, "acesso", null, all), message: `Profissional cadastrado, mas o convite não saiu: ${reason}`, tone: "error" as const };
           }
         }

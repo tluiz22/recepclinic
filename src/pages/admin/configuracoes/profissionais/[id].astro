@@ -14,7 +14,9 @@ import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialo
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import PhoneLinks from "../../../../components/admin/PhoneLinks.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
-import { CARD, HINT, INPUT, LABEL, LEGEND, SECTION_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, DANGER_BUTTON } from "../../../../components/admin/config/formStyles";
+import { CARD, CHECK, DD as DD_BASE, DT as DT_BASE, HINT, INPUT, LABEL, LEGEND, SECTION_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, DANGER_BUTTON } from "../../../../components/admin/config/formStyles";
+import Tabs from "../../../../components/admin/ui/Tabs.astro";
+import { initialsOf } from "../../../../lib/portal";
 import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listProfessionals, listSpecialtyOptions, professionalRegistry } from "../../../../lib/data/config/professionals";
@@ -35,31 +37,33 @@ import { agendaOfProfessional } from "../../../../lib/data/config/agendas";
 import { PROFILE_LABELS } from "../../../../lib/vocabulary";
 import { professionalPage, professionalTabs, type ProfessionalEdit, type ProfessionalTab } from "../../../../lib/professionalTabs";
 import { loadProfessionalAccess } from "../../../../lib/data/config/professionalAccess";
+import { listTeam } from "../../../../lib/data/config/team";
 import { formatInstant } from "../../../../lib/clinicTime";
 
 const clinic = Astro.locals.clinic!;
 const { id } = Astro.params;
+const db = createUserClient(Astro.request, Astro.cookies);
 // Profissional com login (MS, S1): só o próprio cadastro, sem desativar nem criar outro.
 const ownOnly = ownSettingsOnly(clinic);
 if (ownOnly && id !== clinic.ownProfessionalId) return Astro.redirect(`/admin/configuracoes/profissionais/${clinic.ownProfessionalId}`);
 const isNew = id === "novo";
 const professional = isNew
   ? null
-  : ((await listProfessionals(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((p) => p.id === id) ?? null);
+  : ((await listProfessionals(db, clinic.clinicId, { includeInactive: true })).find((p) => p.id === id) ?? null);
 if (!isNew && !professional) return Astro.redirect("/admin/configuracoes/profissionais");
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
 const list = withAllFilter("/admin/configuracoes/profissionais", all);
 const action = withAllFilter(`/api/admin/configuracoes/profissionais/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
-const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const setup = isNew ? null : await loadSetupStatus(db, clinic.clinicId, clinic.features);
 const subtitle = professional ? [professional.profession, professional.specialty, professionalRegistry(professional)].filter(Boolean).join(" · ") || undefined : undefined;
 const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 // Especialidades: as do profissional primeiro (na ordem, a principal na frente),
 // depois as outras da lista; desativada pelo Suporte só aparece se já está ligada.
 const chosen = professional?.specialties ?? [];
 const chosenIds = new Set(chosen.map((s) => s.id));
-const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(createUserClient(Astro.request, Astro.cookies))).filter((s) => !chosenIds.has(s.id))];
+const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(db)).filter((s) => !chosenIds.has(s.id))];
 // Particular e convênios (MC; F1 da recepção digital): só com o item "Convênios".
 const insuranceOn = clinic.features.includes("insurance") && !isNew;
 // Informações que o bot responde (MI, M5): só por profissional, com o bot.
@@ -72,7 +76,6 @@ const { tabs, tab, edit } = professionalTabs(Astro.url, { insurance: insuranceOn
 const pageHref = (t: ProfessionalTab, e?: ProfessionalEdit) => professionalPage(id!, t, e ?? null, all);
 const editing = (part: ProfessionalEdit) => isNew || edit === part;
 
-const db = createUserClient(Astro.request, Astro.cookies);
 const [plans, acceptedPlans, planNotes] =
   insuranceOn && tab === "convenios"
     ? await Promise.all([listInsurancePlans(db, clinic.clinicId), listProfessionalPlans(db, clinic.clinicId, id!), listProfessionalPlanNotes(db, clinic.clinicId, id!)])
@@ -85,7 +88,10 @@ const photoUrl = isNew ? null : await profilePhotoLink(db, clinic.clinicId, { ki
 const agenda = isNew || tab !== "atendimento" ? null : await agendaOfProfessional(db, clinic.clinicId, id!);
 const access = canInvite ? await loadProfessionalAccess(db, clinic.clinicId, professional!) : null;
 // E-mail de quem já é da Equipe: a aba pede a confirmação de ligar ao login dessa pessoa.
-const linkEmail = tab === "acesso" && access?.state === "none" ? Astro.url.searchParams.get("ligar") : null;
+// Só quando o e-mail é mesmo de alguém da Equipe sem outro cadastro (um link montado não vira confirmação).
+const askedLink = tab === "acesso" && access?.state === "none" && professional!.isActive ? Astro.url.searchParams.get("ligar")?.trim().toLowerCase() : null;
+const linkMember = askedLink ? (await listTeam(db, clinic.clinicId)).find((m) => m.email === askedLink && !m.professionalId) : undefined;
+const linkEmail = linkMember?.email ?? null;
 // Link de agendamento (F5b): só com o Portal, e quando o profissional aparece nele.
 const portalLink =
   !isNew && clinic.features.includes("portal")
@@ -98,24 +104,14 @@ const portalLink =
         .catch(() => null)
     : null;
 const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-const initials =
-  (professional?.displayName ?? "")
-    .replace(/^(dra?|dr)\.?\s+/i, "")
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .filter((_, i, all) => i === 0 || i === all.length - 1)
-    .join("")
-    .toLocaleUpperCase("pt-BR") || "?";
+const initials = initialsOf(professional?.displayName ?? "");
 const chip = (tone: "ok" | "off" | "pend") =>
   `inline-flex items-center rounded-full px-2.5 py-0.5 text-[13.5px] font-semibold ${
     tone === "ok" ? "bg-conf-100 text-conf-800" : tone === "pend" ? "bg-pend-100 text-pend-800" : "bg-canvas-deep text-ink-mid"
   }`;
-const tabClass = (on: boolean) =>
-  `inline-flex min-h-11 shrink-0 items-center whitespace-nowrap border-b-[3px] px-1 text-base font-semibold no-underline ${on ? "border-brand text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
 const EDIT_LINK = `${SECONDARY_BUTTON} shrink-0`;
-const DT = "text-sm text-ink-soft";
-const DD = "mt-0.5 font-semibold break-words text-ink";
+const DT = `${DT_BASE} text-sm`;
+const DD = `${DD_BASE} mt-0.5`;
 const registry = professional ? professionalRegistry(professional) : "";
 // Diálogo de confirmação: o do Desativar já vem com o ActiveToggle.
 const needsDialog =
@@ -182,7 +178,7 @@ const needsDialog =
               <div class="mt-1 flex flex-wrap gap-2">
                 <span class={chip(professional!.isActive ? "ok" : "off")}>{professional!.isActive ? "Ativo" : "Desativado"}</span>
                 {portalLink && <span class={chip(portalLink.shown ? "ok" : "off")}>{portalLink.shown ? "No portal" : "Fora do portal"}</span>}
-                {access?.state === "none" && (
+                {access?.state === "none" && professional!.isActive && (
                   <a href={pageHref("acesso")} class={`${chip("pend")} no-underline hover:underline`}>
                     Sem acesso ao painel · convidar
                   </a>
@@ -196,15 +192,15 @@ const needsDialog =
             </div>
           </section>
 
-          <nav aria-label="Partes do cadastro" class="-mx-4 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
-            <div class="flex gap-x-5">
-              {tabs.map((t) => (
-                <a href={pageHref(t.id)} aria-current={t.id === tab ? "page" : undefined} class={tabClass(t.id === tab)}>
-                  {t.label}
-                </a>
-              ))}
-            </div>
-          </nav>
+          <Tabs
+            label="Partes do cadastro"
+            tabs={tabs.map((t) => ({
+              label: t.label,
+              shortLabel: t.id === "acesso" ? "Acesso" : undefined,
+              href: pageHref(t.id),
+              active: t.id === tab,
+            }))}
+          />
         </>
       )
     }
@@ -252,7 +248,7 @@ const needsDialog =
               <div id="specialties-list" class="mt-2 grid max-h-72 overflow-y-auto rounded-lg border border-line-strong px-3 py-2 sm:grid-cols-2 sm:gap-x-6">
                 {specialtyOptions.map((s) => (
                   <label class="flex min-h-10 items-center gap-2.5 py-1 text-[15px] text-ink" data-specialty-option data-key={searchKey(s.name)} data-name={s.name}>
-                    <input type="checkbox" name="specialties" value={s.id} checked={chosenIds.has(s.id)} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                    <input type="checkbox" name="specialties" value={s.id} checked={chosenIds.has(s.id)} class={CHECK} />
                     <span>
                       {s.name}
                       {!s.isActive && <span class="text-sm text-ink-soft"> (saiu da lista)</span>}
@@ -576,7 +572,7 @@ const needsDialog =
             <section class="flex flex-col gap-3 rounded-xl border-2 border-pend-200 bg-pend-50 p-4 sm:p-5" aria-labelledby="ligar-titulo">
               <h2 id="ligar-titulo" class={SECTION_TITLE}>Ligar ao login de quem já é da Equipe?</h2>
               <p class="text-[15px] text-ink">
-                <strong>{linkEmail}</strong> já entra no painel desta clínica. Ligado, este cadastro passa a usar esse login: a pessoa ganha o papel
+                <strong>{linkMember!.displayName ? `${linkMember!.displayName} (${linkEmail})` : linkEmail}</strong> já entra no painel desta clínica. Ligado, este cadastro passa a usar esse login: a pessoa ganha o papel
                 Profissional e vê também a agenda de {professional!.displayName}. Sem convite novo.
               </p>
               <div class="flex flex-wrap gap-2">
@@ -597,7 +593,10 @@ const needsDialog =
               {access.state === "active" && <span class={chip("ok")}>Com acesso</span>}
             </div>
 
-            {access.state === "none" && (
+            {access.state === "none" && !professional!.isActive && (
+              <p class="text-[15px] text-ink-soft">Profissional desativado: para convidar, reative na aba Perfil.</p>
+            )}
+            {access.state === "none" && professional!.isActive && (
               <form method="POST" action={action} class="flex flex-col gap-4">
                 <input type="hidden" name="acao" value="convidar" />
                 <p class="text-[15px] text-ink-soft">
@@ -667,7 +666,7 @@ const needsDialog =
                   </div>
                 </dl>
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <a href={`/admin/configuracoes/equipe/${access.userId}`} class="inline-flex min-h-10 items-center text-[15px] font-semibold text-brand underline">
+                  <a href={`/admin/configuracoes/equipe/${access.userId}?volta=${encodeURIComponent(pageHref("acesso"))}`} class="inline-flex min-h-10 items-center text-[15px] font-semibold text-brand underline">
                     Mudar o que vê e faz (Equipe)
                   </a>
                   {access.onlyProfessional && (
@@ -746,7 +745,8 @@ const needsDialog =
         o.hidden = !match;
         if (match) found++;
       }
-      empty.hidden = found > 0;
+      // Sem busca, a lista vazia é só "todas já marcadas": sem o aviso de nome não achado.
+      empty.hidden = found > 0 || q === "";
     };
 
     const renderChosen = () => {
@@ -807,9 +807,11 @@ const needsDialog =
     });
     box.addEventListener("change", (event) => {
       if (!(event.target as HTMLElement).matches("input[name='specialties']")) return;
+      // Valores restaurados depois de um erro (keepFormValues) não roubam o foco nem limpam a busca.
+      if (!event.isTrusted) return sync();
       filter.value = "";
       sync();
-      filter.focus();
+      if (!listOpen) filter.focus();
     });
     // Valores devolvidos depois de um erro (keepFormValues) também contam.
     sync();

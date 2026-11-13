@@ -43,6 +43,14 @@ async function releaseStaleLink(db: DbClient, clinicId: string, professionalId: 
   }
 }
 
+/** Só profissional ativo recebe acesso (o banco da Equipe também confere). */
+async function checkActive(db: DbClient, clinicId: string, professionalId: string): Promise<void> {
+  const row = unwrap(await db.from("professionals").select("is_active").eq("clinic_id", clinicId).eq("id", professionalId).maybeSingle(), "Profissional");
+  if (!row?.is_active) {
+    throw new DataError("invalid", "Acesso ao painel: profissional desativado", { email: "Profissional desativado: reative na aba Perfil antes de dar o acesso." });
+  }
+}
+
 function checkEmail(email: string): string {
   const address = normalizeEmail(email ?? "");
   const v = new Validation();
@@ -66,9 +74,16 @@ export async function inviteProfessional(
   deps: OnboardingDeps,
 ): Promise<InviteOutcome> {
   const address = checkEmail(email);
+  await checkActive(db, clinic.id, professionalId);
   const team = await listTeam(db, clinic.id);
   const member = team.find((m) => m.email === address);
   if (member) {
+    if (member.professionalId === professionalId) {
+      throw new DataError("invalid", "Acesso ao painel: já ligado", { email: "Este login já é o deste profissional." });
+    }
+    if (member.professionalId) {
+      throw new DataError("invalid", "Acesso ao painel: login de outro profissional", { email: "Este e-mail já é o login de outro cadastro de profissional." });
+    }
     return { kind: "member", name: member.displayName ?? address, roles: member.roles.map((r) => ROLE_LABELS[r]).join(" e ") };
   }
   await releaseStaleLink(db, clinic.id, professionalId, team);
@@ -87,6 +102,7 @@ export async function inviteProfessional(
 /** Liga o cadastro ao login de quem já é da Equipe (somando o papel Profissional e a agenda dele). */
 export async function linkProfessionalToMember(db: DbClient, actorId: string, clinicId: string, professionalId: string, email: string): Promise<string> {
   const address = checkEmail(email);
+  await checkActive(db, clinicId, professionalId);
   const team = await listTeam(db, clinicId);
   const member = team.find((m) => m.email === address);
   if (!member) throw new DataError("not_found", "Acesso ao painel: esta pessoa não está mais na Equipe", { email: "Esta pessoa não está mais na Equipe." });
@@ -127,6 +143,8 @@ export async function changeInviteEmail(
   deps: OnboardingDeps,
 ): Promise<InviteOutcome> {
   const address = checkEmail(email);
+  // Tudo conferido antes de cancelar o convite antigo: uma recusa depois não deixa o profissional sem convite.
+  await checkActive(db, clinic.id, professionalId);
   const team = await listTeam(db, clinic.id);
   const current = team.find((m) => m.professionalId === professionalId);
   if (!current || accessOf(current).state !== "invited") {

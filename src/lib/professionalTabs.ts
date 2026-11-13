@@ -63,3 +63,8 @@ export function professionalPage(id: string, tab: ProfessionalTab, edit: Profess
   const query = [tab === "perfil" && !edit ? "" : `aba=${tab}`, edit ? `editar=${edit}` : "", all ? "todos=1" : ""].filter(Boolean).join("&");
   return `/admin/configuracoes/profissionais/${id}${query ? `?${query}` : ""}`;
 }
+
+/** Volta para o cadastro do profissional vinda de outra tela (Equipe): só esse endereço, nada de fora. */
+export function professionalReturn(value: string | null | undefined): string | null {
+  return value && /^\/admin\/configuracoes\/profissionais\/[0-9a-f-]{36}(\?[a-z=&]*)?$/.test(value) ? value : null;
+}

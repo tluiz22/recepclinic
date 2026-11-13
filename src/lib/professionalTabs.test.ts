@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { professionalPage, professionalTabs, tabOfAction } from "./professionalTabs";
+import { professionalPage, professionalReturn, professionalTabs, tabOfAction } from "./professionalTabs";
 
 const url = (query: string) => new URL(`https://x.test/admin/configuracoes/profissionais/p1${query}`);
 const ALL = { insurance: true, bot: true };
@@ -46,5 +46,15 @@ describe("tabOfAction e professionalPage", () => {
     expect(professionalPage("p1", "perfil", null, true)).toBe("/admin/configuracoes/profissionais/p1?todos=1");
     expect(professionalPage("p1", "convenios", "convenios", true)).toBe("/admin/configuracoes/profissionais/p1?aba=convenios&editar=convenios&todos=1");
     expect(professionalPage("p1", "perfil", "dados", false)).toBe("/admin/configuracoes/profissionais/p1?aba=perfil&editar=dados");
+  });
+});
+
+describe("professionalReturn", () => {
+  it("aceita só o cadastro do profissional", () => {
+    const id = "474f9c99-5d67-41f2-b102-f0a1de5174f3";
+    expect(professionalReturn(`/admin/configuracoes/profissionais/${id}?aba=acesso`)).toBe(`/admin/configuracoes/profissionais/${id}?aba=acesso`);
+    expect(professionalReturn("https://mal.example/x")).toBeNull();
+    expect(professionalReturn(`/admin/configuracoes/profissionais/${id}?aba=<script>`)).toBeNull();
+    expect(professionalReturn(null)).toBeNull();
   });
 });
