@@ -3,8 +3,8 @@
 > **Frente da nota fiscal (retomar daqui), 07/nov/2026.** Separada da frente de validação a pedido do cliente (07/nov;
 > validação em [`frente-validacao.md`](arquivo/frente-validacao.md)). Base pronta para a emissão por profissional: serviços,
 > especialidades e convênios por profissional (MS e M1 a M8, no staging). **N-P1 a N-P7 decididas (14.7).**
-> **N1 a N5 feitas (08/nov) na branch `nota-fiscal`** (`23cae85`…`aee7cec`, 7 migrações `20261231120000` a
-> `20261231170000`), só local, testes por etapa (unidade, banco e Playwright). **Próximo passo:** o cliente valida
+> **N1 a N5 feitas (08/nov) na branch `nota-fiscal`** (`23cae85`…`aee7cec`, 7 migrações `20270121120000` a
+> `20270121170000`), só local, testes por etapa (unidade, banco e Playwright). **Próximo passo:** o cliente valida
 > local pelo roteiro da seção 15.2; depois, juntar na `main` (trazer a `main` antes) e decidir staging/produção.
 > Bloqueios externos (para a N6): reanálise do BaaS pelo Asaas, contador (PIS/COFINS), advogado (contrato do
 > profissional pagador).
@@ -697,13 +697,13 @@ commit na branch. Asaas falso (`src/lib/asaas/fake.ts`) nos testes; Sandbox só 
 | Etapa | Commit | Migração |
 |---|---|---|
 | N1 | `23cae85` | — |
-| N2a | `d903b36` | `20261231120000_emissores_fiscais` |
+| N2a | `d903b36` | `20270121120000_emissores_fiscais` |
 | N2b | `766bf75` | — |
-| N3a | `7603734` | `20261231130000_tomador_da_nota` |
-| N3b | `36584cd` | `20261231140000_emissao_pelo_asaas` (rotina `notas-fiscais` a cada 10 min) |
-| N4 | `2bf705f` | `20261231150000_arquivos_e_entrega_da_nota` (bucket `nfse-pdf`) |
-| N4b | `c9086de` | `20261231160000_cobranca_das_notas` |
-| N5 | `aee7cec` | `20261231170000_remove_emissor_antigo` (apaga `clinic_fiscal_settings`, certificados do Vault, contador da DPS) |
+| N3a | `7603734` | `20270121130000_tomador_da_nota` |
+| N3b | `36584cd` | `20270121140000_emissao_pelo_asaas` (rotina `notas-fiscais` a cada 10 min) |
+| N4 | `2bf705f` | `20270121150000_arquivos_e_entrega_da_nota` (bucket `nfse-pdf`) |
+| N4b | `c9086de` | `20270121160000_cobranca_das_notas` |
+| N5 | `aee7cec` | `20270121170000_remove_emissor_antigo` (apaga `clinic_fiscal_settings`, certificados do Vault, contador da DPS) |
 
 **Decisões do cliente (08/nov, N4b):** a cobrança das notas (excedente da clínica e a do profissional pagador)
 **vence junto da mensalidade** da clínica (dia do vencimento do contrato dela); apuração do mês anterior nos 5

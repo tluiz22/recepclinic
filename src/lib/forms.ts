@@ -59,3 +59,15 @@ export function formAll(form: Form, name: string): string[] {
 export function centsToInput(cents: number | null): string {
   return cents === null ? "" : (cents / 100).toFixed(2).replace(".", ",");
 }
+
+/** E-mail e endereço de quem paga (PayerContactFields.astro, N3a). */
+export function payerContactFromForm(form: Form) {
+  return {
+    email: formText(form, "payer_email"),
+    postalCode: formText(form, "payer_postal_code"),
+    street: formText(form, "payer_street"),
+    number: formText(form, "payer_number"),
+    complement: formText(form, "payer_complement"),
+    district: formText(form, "payer_district"),
+  };
+}

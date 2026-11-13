@@ -9,39 +9,12 @@ import type { AsaasEnv } from "../env";
 // numa data (endDate, testado no sandbox em 03/nov/2026), remove assinatura e
 // cobranças em aberto e estorna as pagas (arrependimento).
 
-export type Fetcher = typeof fetch;
+import { AsaasApiError, asaasCall, type Fetcher } from "./http";
 
-export class AsaasApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = "AsaasApiError";
-  }
-}
+export { AsaasApiError, type Fetcher };
 
-type AsaasErrorBody = { errors?: { code?: string; description?: string }[] };
-
-async function call<T>(env: AsaasEnv, fetcher: Fetcher, method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: Record<string, unknown>): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetcher(`${env.baseUrl}${path}`, {
-      method,
-      headers: { access_token: env.apiKey, "Content-Type": "application/json", "User-Agent": "RecepClinic" },
-      body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(60_000),
-    });
-  } catch (error) {
-    throw new AsaasApiError(0, `Asaas fora do ar ou sem resposta (${error instanceof Error ? error.message : String(error)})`);
-  }
-  const text = await response.text();
-  const json = text ? (JSON.parse(text) as unknown) : null;
-  if (!response.ok) {
-    const description = (json as AsaasErrorBody | null)?.errors?.map((e) => e.description ?? e.code).filter(Boolean).join("; ");
-    throw new AsaasApiError(response.status, `Asaas recusou (${response.status}): ${description || "sem detalhe"}`);
-  }
-  return json as T;
+function call<T>(env: AsaasEnv, fetcher: Fetcher, method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: Record<string, unknown>): Promise<T> {
+  return asaasCall<T>(env, fetcher, method, path, body);
 }
 
 const reais = (cents: number) => Math.round(cents) / 100;

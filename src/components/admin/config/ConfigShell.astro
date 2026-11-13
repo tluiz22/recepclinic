@@ -14,7 +14,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FlashMessage from "../FlashMessage.astro";
 import Icon from "../Icon.astro";
 import { createUserClient } from "../../../lib/data/clients";
-import { canAccessArea, inSuspendedView, OWN_SETTINGS_SECTIONS, ownSettingsOnly } from "../../../lib/clinicAccess";
+import { canAccessArea, inSuspendedView, OWN_SETTINGS_EXTRA_ITEMS, OWN_SETTINGS_SECTIONS, ownSettingsOnly } from "../../../lib/clinicAccess";
 import { pageFlash } from "../../../lib/flash";
 import { loadSetupStatus, type SetupStatus } from "../../../lib/data/config/setup";
 import { configSections, type SectionId } from "./sections";
@@ -42,7 +42,7 @@ const setup = given ?? (await loadSetupStatus(createUserClient(Astro.request, As
 // Sem acesso a Configurações (só a permissão de convênios, MC): só Convênios no menu.
 // Profissional com login (MS, S1): só o que é dele (cadastro, agenda, horários e serviços), sem as pendências da clínica.
 const ownOnly = ownSettingsOnly(clinic);
-const OWN_LABELS: Partial<Record<SectionId, string>> = { profissionais: "Meu cadastro", agendas: "Minha agenda", servicos: "Meus serviços", horarios: "Horários" };
+const OWN_LABELS: Partial<Record<SectionId, string>> = { profissionais: "Meu cadastro", agendas: "Minha agenda", servicos: "Meus serviços", horarios: "Horários", nota_fiscal: "Minha nota fiscal" };
 const onlyInsurance = !canAccessArea(clinic, "settings") && !ownOnly;
 const groups = configSections(clinic.features, clinic.isPlatformStaff, setup)
   .map((group) => (inSuspendedView(clinic) ? { ...group, items: group.items.filter((item) => item.id === "assinatura") } : group))
@@ -52,12 +52,17 @@ const groups = configSections(clinic.features, clinic.isPlatformStaff, setup)
       ? {
           ...group,
           items: group.items
-            .filter((item) => (OWN_SETTINGS_SECTIONS as readonly string[]).includes(item.id))
+            .filter((item) => ([...OWN_SETTINGS_SECTIONS, ...OWN_SETTINGS_EXTRA_ITEMS] as readonly string[]).includes(item.id))
             .map((item) => ({
               ...item,
               label: OWN_LABELS[item.id] ?? item.label,
               pending: 0,
-              href: item.id === "profissionais" ? `${item.href}/${clinic.ownProfessionalId}` : item.href,
+              href:
+                item.id === "profissionais"
+                  ? `${item.href}/${clinic.ownProfessionalId}`
+                  : item.id === "nota_fiscal"
+                    ? `${item.href}/emissor?profissional=${clinic.ownProfessionalId}`
+                    : item.href,
             })),
         }
       : group,

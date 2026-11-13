@@ -40,6 +40,10 @@ import { contractsInForce, formatPayerDocument, formatPostalCode, getBillingAcco
 import { createUserClient } from "../../../lib/data/clients";
 import { activeSuspensionReasons, describeReasons } from "../../../lib/data/suspension";
 import { formatPhoneBR } from "../../../lib/phone";
+import NotesUsageCard from "../../../components/admin/finance/NotesUsageCard.astro";
+import { countNotesThisMonth, listUsageCharges } from "../../../lib/data/fiscalBilling";
+import { getFiscalIssuerOverview } from "../../../lib/data/fiscalIssuers";
+import { toInstant } from "../../../lib/clinicTime";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -57,6 +61,22 @@ const pending = contracts.find((c) => c.status === "active" && c.acceptance === 
 const actors = await loadActorLabels(db, clinic.clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy)]);
 // O opt-in é o consentimento da clínica: só o Administrador dela (o Suporte vê).
 const isClinicAdmin = clinic.roles.includes("admin");
+// Notas fiscais (N4b, N-P3): as pagas pela clínica somam na franquia do contrato dela.
+const notesOn = clinic.features.includes("finance");
+const [notesOverview, notesCount, notesCharges] = notesOn
+  ? await Promise.all([
+      getFiscalIssuerOverview(db, clinic.clinicId),
+      countNotesThisMonth(db, clinic.clinicId, toInstant(`${todayIn(clinic.timezone).slice(0, 8)}01`, "00:00", clinic.timezone)),
+      listUsageCharges(db, clinic.clinicId, null),
+    ])
+  : [null, null, []];
+const clinicPaidIssuers = notesOverview
+  ? [
+      ...(notesOverview.clinicIssuer ? [{ id: notesOverview.clinicIssuer.id, name: `${notesOverview.clinicIssuer.legalName} (clínica)` }] : []),
+      ...notesOverview.professionals.filter((p) => p.issuer && p.issuer.payer === "clinic").map((p) => ({ id: p.issuer!.id, name: p.name })),
+    ]
+  : [];
+const proPaid = notesOverview ? notesOverview.professionals.filter((p) => p.issuer?.payer === "professional").length : 0;
 const action = "/api/admin/configuracoes/assinatura";
 const page = "/admin/configuracoes/assinatura";
 // F12.2e/F12.2i: passo a passo. Contrato (aceite) → Cartão ou Pagamento (só
@@ -254,6 +274,16 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               </div>
             )}
           </Card>
+        )}
+        {notesOn && contract?.invoiceUnitPriceCents != null && clinicPaidIssuers.length > 0 && (
+          <NotesUsageCard
+            title="Notas fiscais"
+            rows={clinicPaidIssuers.map((i) => ({ name: i.name, count: notesCount?.get(i.id) ?? 0 }))}
+            allowance={contract.invoiceMonthlyAllowance ?? 0}
+            unitPriceCents={contract.invoiceUnitPriceCents}
+            charges={notesCharges}
+            note={proPaid > 0 ? `${proPaid === 1 ? "1 profissional paga" : `${proPaid} profissionais pagam`} as próprias notas: fora desta conta.` : undefined}
+          />
         )}
         {showPaymentMethod && billed && (
           <PaymentMethodCard

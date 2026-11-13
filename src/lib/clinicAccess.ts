@@ -131,11 +131,14 @@ export type PanelArea = "settings" | "own_settings" | "insurance" | "metrics" | 
 /** As seções de Configurações do profissional com login (MS, S1). */
 export const OWN_SETTINGS_SECTIONS = ["profissionais", "agendas", "horarios", "servicos"] as const;
 
+/** Nota fiscal (N2b, N-P2): o profissional com login vê e configura só o emissor dele. */
+export const OWN_SETTINGS_EXTRA_ITEMS = ["nota_fiscal"] as const;
+
 // A primeira que casa vale: Convênios antes de Configurações.
 const AREA_PREFIXES: [string, PanelArea][] = [
   ["/admin/configuracoes/convenios", "insurance"],
   ["/api/admin/configuracoes/convenios", "insurance"],
-  ...OWN_SETTINGS_SECTIONS.flatMap((section): [string, PanelArea][] => [
+  ...[...OWN_SETTINGS_SECTIONS, "nota-fiscal"].flatMap((section): [string, PanelArea][] => [
     [`/admin/configuracoes/${section}`, "own_settings"],
     [`/api/admin/configuracoes/${section}`, "own_settings"],
   ]),

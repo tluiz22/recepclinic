@@ -19,10 +19,12 @@ const PHONE = /(?<![\w-])\+?\d(?:[\s().-]{0,2}\d){9,}(?![\w-])/g;
 // dígitos já caem na regra do telefone.
 const CNPJ = /(?<![\w-])\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}(?![\w-])/g;
 const CPF = /(?<![\w-])\d{3}\.\d{3}\.\d{3}-\d{2}(?![\w-])/g;
+// Chave da API do Asaas (conta principal ou subconta, N1): começa com $aact_.
+const ASAAS_KEY = /\$aact_[A-Za-z0-9_$:=+/.-]+/g;
 
 /** Troca CPF, CNPJ, telefones e e-mails do texto por marcadores. */
 export function maskPersonalData(text: string): string {
-  return text.replace(EMAIL, "[e-mail]").replace(CNPJ, "[CNPJ]").replace(CPF, "[CPF]").replace(PHONE, "[telefone]");
+  return text.replace(ASAAS_KEY, "[chave Asaas]").replace(EMAIL, "[e-mail]").replace(CNPJ, "[CNPJ]").replace(CPF, "[CPF]").replace(PHONE, "[telefone]");
 }
 
 function oneError(error: unknown): { label: string; cause?: unknown } {

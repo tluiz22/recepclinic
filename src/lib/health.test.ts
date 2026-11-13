@@ -17,7 +17,7 @@ describe("rotinas em dia (F9.3)", () => {
       { job: "lista-de-espera", lastFinishedAt: ago(20) },
       { job: "lembretes", lastFinishedAt: ago(61) },
       { job: "series", lastFinishedAt: ago(23 * 60) },
-      { job: "notas-fiscais", lastFinishedAt: ago(20 * 60) },
+      { job: "notas-fiscais", lastFinishedAt: ago(10) },
       { job: "atendimento-humano", lastFinishedAt: ago(5) },
       { job: "faturamento-eventos", lastFinishedAt: ago(10) },
       { job: "conciliacao-asaas", lastFinishedAt: ago(23 * 60) },

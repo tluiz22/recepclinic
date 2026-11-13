@@ -1,0 +1,83 @@
+---
+// E-mail e endereço de quem paga (N3a; planejamento-nfse-asaas.md 13.6): o
+// Asaas só autoriza a nota com eles. Campos para dentro de um formulário; o
+// CEP preenche rua e bairro (consulta pelo servidor). Nomes: payer_email,
+// payer_postal_code, payer_street, payer_number, payer_complement, payer_district.
+import type { PayerContact } from "../../../lib/data/finance";
+
+interface Props {
+  idPrefix: string;
+  value: PayerContact | null;
+  required?: boolean;
+  inputClass: string;
+  labelClass: string;
+  hintClass: string;
+}
+const { idPrefix, value, required = false, inputClass, labelClass, hintClass } = Astro.props;
+const id = (name: string) => `${idPrefix}_${name}`;
+const cep = value ? `${value.postalCode.slice(0, 5)}-${value.postalCode.slice(5)}` : "";
+---
+
+<div class="flex flex-col gap-3" data-payer-contact>
+  <div class="flex flex-col gap-1.5">
+    <label for={id("email")} class={labelClass}>E-mail de quem paga</label>
+    <input id={id("email")} name="payer_email" type="email" required={required} maxlength="200" value={value?.email ?? ""} class={inputClass} />
+    <p class={hintClass}>O Asaas manda a nota fiscal para este e-mail.</p>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+    <div class="flex flex-col gap-1.5">
+      <label for={id("cep")} class={labelClass}>CEP</label>
+      <input id={id("cep")} name="payer_postal_code" inputmode="numeric" required={required} placeholder="00000-000" value={cep} class={inputClass} data-pc-cep />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label for={id("rua")} class={labelClass}>Rua</label>
+      <input id={id("rua")} name="payer_street" required={required} maxlength="200" value={value?.street ?? ""} class={inputClass} data-pc-street />
+    </div>
+  </div>
+  <p class={hintClass} data-pc-status aria-live="polite">Digite o CEP: rua e bairro vêm sozinhos.</p>
+  <div class="grid gap-3 sm:grid-cols-[110px_minmax(0,1fr)_minmax(0,1fr)]">
+    <div class="flex flex-col gap-1.5">
+      <label for={id("numero")} class={labelClass}>Número</label>
+      <input id={id("numero")} name="payer_number" required={required} maxlength="20" placeholder="Ou s/n" value={value?.number ?? ""} class={inputClass} data-pc-number />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label for={id("complemento")} class={labelClass}>Complemento</label>
+      <input id={id("complemento")} name="payer_complement" maxlength="100" value={value?.complement ?? ""} class={inputClass} />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label for={id("bairro")} class={labelClass}>Bairro</label>
+      <input id={id("bairro")} name="payer_district" required={required} maxlength="100" value={value?.district ?? ""} class={inputClass} data-pc-district />
+    </div>
+  </div>
+</div>
+
+<script>
+  for (const box of document.querySelectorAll<HTMLElement>("[data-payer-contact]")) {
+    const cep = box.querySelector<HTMLInputElement>("[data-pc-cep]")!;
+    const status = box.querySelector<HTMLElement>("[data-pc-status]")!;
+    const field = (name: string) => box.querySelector<HTMLInputElement>(`[data-pc-${name}]`)!;
+    let last = cep.value.replace(/\D/g, "");
+    const lookup = async () => {
+      const digits = cep.value.replace(/\D/g, "");
+      if (digits.length === 8) cep.value = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+      if (digits.length !== 8 || digits === last) return;
+      last = digits;
+      status.textContent = "Buscando o CEP…";
+      try {
+        const response = await fetch(`/api/admin/financeiro/cep?cep=${digits}`, { headers: { accept: "application/json" } });
+        if (!response.ok) throw new Error(String(response.status));
+        const found = (await response.json()) as { street: string; district: string };
+        if (found.street) field("street").value = found.street;
+        if (found.district) field("district").value = found.district;
+        status.textContent = "Endereço preenchido pelo CEP: confira e informe o número.";
+        field(found.street ? "number" : "street").focus();
+      } catch {
+        status.textContent = "Não achamos este CEP: preencha o endereço à mão.";
+      }
+    };
+    cep.addEventListener("input", () => {
+      if (cep.value.replace(/\D/g, "").length === 8) void lookup();
+    });
+    cep.addEventListener("change", () => void lookup());
+  }
+</script>

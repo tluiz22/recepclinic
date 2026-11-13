@@ -69,6 +69,11 @@ function restore(): HTMLFormElement | null {
   if (!form) return null;
   // Formulário dentro de um cartão recolhido (R6, "Editar"): abre para o erro aparecer.
   for (let box = form.closest("details"); box; box = box.parentElement?.closest("details") ?? null) box.open = true;
+  // Painel que abre por botão (Pagamento: tomador, enviar e cancelar a nota, N3b): volta aberto.
+  if (form.hidden && form.hasAttribute("data-panel")) {
+    form.hidden = false;
+    if (form.id) document.querySelectorAll(`[aria-controls="${CSS.escape(form.id)}"]`).forEach((b) => b.setAttribute("aria-expanded", "true"));
+  }
   const byKey = new Map(saved.fields.map((f) => [f.key, f]));
   const changed: Element[] = [];
   for (const [key, el] of namedFields(form)) {

@@ -246,18 +246,30 @@ begin
   insert into public.patient_finance (clinic_id, patient_id, payer, payer_name, payer_cpf)
     values (c_a, pt_ana, 'other', 'Pedro Souza', '12345678909');
 
-  -- Dados fiscais (F11.3): CNPJ fictício com dígitos válidos, Mossoró, Simples
-  -- Nacional; a psicoterapia com código próprio. Certificado de mentira (o
-  -- "arquivo" no Vault não é um .pfx de verdade): só para as telas e a
-  -- varredura de isolamento, nunca para emitir.
-  insert into public.clinic_fiscal_settings (clinic_id, cnpj, legal_name, municipal_registration, municipality_ibge, simples_nacional, simples_regime, simples_total_rate, special_regime, service_code, iss_rate)
-    values (c_a, '11222333000181', 'Clínica Exemplo Saúde Ltda', '123456', '2408003', 'me_epp', '1', 6.00, 'none', '04.01.01', 2.00);
-  insert into public.service_fiscal_codes (clinic_id, service_id, service_code) values (c_a, s_psi, '04.16.01');
-  insert into public.clinic_fiscal_certificates (clinic_id, pfx_secret_id, password_secret_id, subject_name, subject_cnpj, valid_from, valid_until, terms_version)
-    values (c_a, vault.create_secret('seed-nao-e-um-pfx', 'fiscal_pfx_' || c_a::text), vault.create_secret('seed', 'fiscal_pfx_password_' || c_a::text),
-      'CLINICA EXEMPLO SAUDE LTDA', '11222333000181', now() - interval '11 months', now() + interval '20 days', 'seed');
+  -- Trilha fiscal (desde a N5, os dados fiscais e o certificado ficam no emissor; ver abaixo).
   insert into public.fiscal_audit_log (clinic_id, event, details)
-    values (c_a, 'certificate_uploaded', '{"subject_name": "CLINICA EXEMPLO SAUDE LTDA", "cnpj": "11222333000181"}');
+    values (c_a, 'issuer_saved', '{"kind": "clinic"}');
+
+  -- Emissores fiscais (N2a): o da clínica (sem subconta ainda), o da psicóloga
+  -- (CNPJ próprio, fictício) e a fisioterapia (Rafael Lima) sem CNPJ, que não emite (N-P1).
+  insert into public.fiscal_issuers (clinic_id, kind, cnpj, legal_name, fiscal_email, mobile_phone, postal_code, street, street_number, district,
+      municipality_ibge, municipal_registration, simples_nacional, service_list_item, service_code, service_name, nbs_code, iss_rate, cnae)
+    values (c_a, 'clinic', '11222333000181', 'Clínica Exemplo Saúde Ltda', 'fiscal@exemplo-saude.local', '84988880000', '59600000', 'Rua Coronel Gurgel', '100', 'Centro',
+      '2408003', '123456', true, '04.01', '04.01.01', 'Medicina e biomedicina', '1.2301.22.00', 2.00, '8630503');
+  insert into public.fiscal_issuers (clinic_id, kind, professional_id, cnpj, legal_name, fiscal_email, mobile_phone, postal_code, street, street_number, district,
+      municipality_ibge, simples_nacional, service_list_item, service_code, service_name, iss_rate, company_type)
+    values (c_a, 'professional', p_psi, '45723174000110', 'Marina Alves Psicologia Ltda', 'marina@exemplo-saude.local', '84988881111', '59600000', 'Rua Coronel Gurgel', '100', 'Centro',
+      '2408003', true, '04.16', '04.16.01', 'Psicologia', 2.00, 'LIMITED');
+  insert into public.professional_fiscal_routes (clinic_id, professional_id, mode) values (c_a, p_fis, 'none');
+  -- Contrato de notas da psicóloga (N4b, aguardando o aceite) e a cobrança das notas da clínica do mês passado (nada a cobrar).
+  insert into public.fiscal_issuer_contracts (issuer_id, clinic_id, monthly_fee_cents, unit_price_cents, monthly_allowance)
+    select id, c_a, 1500, 99, 20 from public.fiscal_issuers where clinic_id = c_a and professional_id = p_psi;
+  insert into public.fiscal_usage_charges (clinic_id, period, notes_count, allowance, unit_price_cents, amount_cents, due_date, status)
+    values (c_a, date_trunc('month', current_date - interval '1 month')::date, 0, 0, 0, 0, current_date, 'none');
+  -- Evento de webhook das notas já processado (N3b), para a varredura de isolamento.
+  insert into public.nfse_provider_events (id, clinic_id, event, processed_at) values ('evt_seed_1', c_a, 'INVOICE_CREATED', now());
+  insert into public.fiscal_issuer_service_codes (clinic_id, issuer_id, service_id, service_code)
+    select c_a, id, s_psi, '04.16.01' from public.fiscal_issuers where clinic_id = c_a and kind = 'clinic';
 
   -- Conta de cobrança no RecepClinic (F12.1, faturamento do SaaS) e a trilha.
   insert into public.billing_accounts (clinic_id, payer_name, payer_document, finance_email, finance_phone)
@@ -292,8 +304,7 @@ begin
   insert into public.payments (clinic_id, appointment_id, patient_id, amount_cents, method, paid_on, payer, payer_name, payer_cpf)
     values (c_a, ap_past, pt_joao, 30000, 'pix', monday - 14, 'contact', 'Maria Souza', '52998224725')
     returning id into pay_past;
-  -- Nota de teste (F11.4) desse pagamento, na Produção Restrita; chave fictícia.
-  insert into public.nfse_dps_counters (clinic_id, environment, last_number) values (c_a, 'restricted', 1);
+  -- Nota antiga (emissor anterior ao Asaas, F11.4) desse pagamento, na Produção Restrita; chave fictícia.
   insert into public.nfse_invoices (clinic_id, payment_id, environment, series, dps_number, dps_id, status, access_key, nfse_number, issued_at)
     values (c_a, pay_past, 'restricted', '1', 1, 'DPS240800321122233300018100001000000000000001', 'issued',
       '24080032112223330001812610000000000000000000000000', '1', now() - interval '14 days')

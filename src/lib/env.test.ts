@@ -32,7 +32,6 @@ describe("variáveis da plataforma", () => {
       whatsapp: null,
       whatsappAppId: null,
       whatsappSignupConfigId: null,
-      nfseSimulation: false,
       webPush: null,
       asaas: null,
       turnstile: null,
@@ -109,12 +108,6 @@ describe("variáveis da plataforma", () => {
     expect(() => parsePlatformEnv({ ...valid, WHATSAPP_ES_CONFIG_ID: "config" })).toThrow(/WHATSAPP_ES_CONFIG_ID inválida/);
   });
 
-  it("simulação da nota fiscal: só com NFSE_SIMULATION=1 (F11.4b)", () => {
-    expect(parsePlatformEnv(valid).nfseSimulation).toBe(false);
-    expect(parsePlatformEnv({ ...valid, NFSE_SIMULATION: "0" }).nfseSimulation).toBe(false);
-    expect(parsePlatformEnv({ ...valid, NFSE_SIMULATION: "1" }).nfseSimulation).toBe(true);
-    expect(() => parsePlatformEnv({ ...valid, NFSE_SIMULATION: "sim" })).toThrow(/NFSE_SIMULATION inválida/);
-  });
 
   it("Asaas da cobrança (F12.4): chave e endereço juntos; só sandbox ou produção", () => {
     expect(parsePlatformEnv({ ...valid, ASAAS_API_KEY: "chave", ASAAS_BASE_URL: "https://api-sandbox.asaas.com/v3/" }).asaas).toEqual({

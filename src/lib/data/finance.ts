@@ -1,7 +1,7 @@
 import { normalizeCpf } from "../cpf";
 import { normalizePhone } from "../phone";
 import type { DbClient } from "./clients";
-import { cleanText, unwrap, Validation } from "./errors";
+import { cleanText, fromDbError, unwrap, Validation } from "./errors";
 import { listPatientsPage, type Contact, type Page, type Patient, type PatientWithContact } from "./patients";
 
 // Módulo financeiro (F11.1, cliente, 12/out/2026): CPF e responsável
@@ -206,4 +206,142 @@ export async function countPatientsMissingPayerCpf(db: DbClient, clinicId: strin
     .eq("is_active", true);
   unwrap({ data: null, error }, "Dados financeiros");
   return count ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Tomador da nota pelo Asaas (N3a; planejamento-nfse-asaas.md 13.6): e-mail e
+// endereço de quem paga. Não são exigidos para registrar o pagamento; só ao
+// emitir a nota. Ficam no Financeiro (contato ou paciente) e no pagamento.
+// ---------------------------------------------------------------------------
+
+export type PayerContact = {
+  email: string;
+  postalCode: string;
+  street: string;
+  number: string;
+  complement: string | null;
+  district: string;
+};
+
+export type PayerContactInput = { email: string; postalCode: string; street: string; number: string; complement: string; district: string };
+
+export const PAYER_CONTACT_MESSAGES = {
+  email: "E-mail de quem paga inválido (o Asaas manda a nota para ele).",
+  postalCode: "CEP com 8 dígitos.",
+  street: "Informe a rua.",
+  number: "Informe o número (ou s/n).",
+  district: "Informe o bairro.",
+} as const;
+
+/** Valida o e-mail e o endereço; tudo vazio = null (nada a gravar). */
+export function parsePayerContact(input: PayerContactInput, { required = false }: { required?: boolean } = {}): PayerContact | null {
+  const email = cleanText(input.email)?.toLowerCase() ?? null;
+  const postalCode = input.postalCode.replace(/\D/g, "");
+  const street = cleanText(input.street);
+  const number = cleanText(input.number);
+  const district = cleanText(input.district);
+  if (!required && !email && !postalCode && !street && !number && !district && !cleanText(input.complement)) return null;
+  const v = new Validation();
+  v.check(email !== null && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && email.length <= 200, "payer_email", PAYER_CONTACT_MESSAGES.email);
+  v.check(postalCode.length === 8, "payer_postal_code", PAYER_CONTACT_MESSAGES.postalCode);
+  v.check(street !== null && street.length <= 200, "payer_street", PAYER_CONTACT_MESSAGES.street);
+  v.check(number !== null && number.length <= 20, "payer_number", PAYER_CONTACT_MESSAGES.number);
+  v.check(district !== null && district.length <= 100, "payer_district", PAYER_CONTACT_MESSAGES.district);
+  v.throwIfInvalid("Dados de quem paga");
+  return { email: email!, postalCode, street: street!, number: number!, complement: cleanText(input.complement), district: district! };
+}
+
+type ContactAddressRow = {
+  email: string | null;
+  postal_code: string | null;
+  street: string | null;
+  address_number: string | null;
+  address_complement: string | null;
+  district: string | null;
+};
+
+const fromColumns = (r: ContactAddressRow | null): PayerContact | null =>
+  r && r.email && r.postal_code && r.street && r.address_number && r.district
+    ? { email: r.email, postalCode: r.postal_code, street: r.street, number: r.address_number, complement: r.address_complement, district: r.district }
+    : null;
+
+/** E-mail e endereço guardados do responsável financeiro do paciente (null = falta). */
+export async function getPayerContact(db: DbClient, clinicId: string, patient: Pick<Patient, "id" | "contactId" | "isContactSelf">, payer: Payer): Promise<PayerContact | null> {
+  if (effectivePayer(patient, payer) === "contact") {
+    const row = unwrap(
+      await db.from("contact_finance").select("email, postal_code, street, address_number, address_complement, district").eq("clinic_id", clinicId).eq("contact_id", patient.contactId).maybeSingle(),
+      "Dados financeiros do contato",
+    ) as ContactAddressRow | null;
+    return fromColumns(row);
+  }
+  const row = unwrap(
+    await db
+      .from("patient_finance")
+      .select("payer_email, payer_postal_code, payer_street, payer_address_number, payer_address_complement, payer_district")
+      .eq("clinic_id", clinicId)
+      .eq("patient_id", patient.id)
+      .maybeSingle(),
+    "Dados financeiros do paciente",
+  ) as { payer_email: string | null; payer_postal_code: string | null; payer_street: string | null; payer_address_number: string | null; payer_address_complement: string | null; payer_district: string | null } | null;
+  return row
+    ? fromColumns({ email: row.payer_email, postal_code: row.payer_postal_code, street: row.payer_street, address_number: row.payer_address_number, address_complement: row.payer_address_complement, district: row.payer_district })
+    : null;
+}
+
+/** Grava no Financeiro do responsável (contato ou paciente); null apaga. */
+export async function savePayerContact(
+  db: DbClient,
+  clinicId: string,
+  patient: Pick<Patient, "id" | "contactId" | "isContactSelf">,
+  payer: Payer,
+  contact: PayerContact | null,
+): Promise<void> {
+  if (effectivePayer(patient, payer) === "contact") {
+    unwrap(
+      await db.from("contact_finance").upsert(
+        {
+          clinic_id: clinicId,
+          contact_id: patient.contactId,
+          email: contact?.email ?? null,
+          postal_code: contact?.postalCode ?? null,
+          street: contact?.street ?? null,
+          address_number: contact?.number ?? null,
+          address_complement: contact?.complement ?? null,
+          district: contact?.district ?? null,
+        },
+        { onConflict: "contact_id" },
+      ),
+      "Dados financeiros do contato",
+    );
+    return;
+  }
+  unwrap(
+    await db
+      .from("patient_finance")
+      .update({
+        payer_email: contact?.email ?? null,
+        payer_postal_code: contact?.postalCode ?? null,
+        payer_street: contact?.street ?? null,
+        payer_address_number: contact?.number ?? null,
+        payer_address_complement: contact?.complement ?? null,
+        payer_district: contact?.district ?? null,
+      })
+      .eq("clinic_id", clinicId)
+      .eq("patient_id", patient.id),
+    "Dados financeiros do paciente",
+  );
+}
+
+/** Pagamento sem nota ativa: grava o e-mail e o endereço de quem pagou (e no Financeiro dele). */
+export async function setPaymentPayerContact(db: DbClient, paymentId: string, contact: PayerContact): Promise<void> {
+  const { error } = await db.rpc("set_payment_payer_contact", {
+    p_payment_id: paymentId,
+    p_email: contact.email,
+    p_postal_code: contact.postalCode,
+    p_street: contact.street,
+    p_number: contact.number,
+    p_complement: (contact.complement ?? null) as string,
+    p_district: contact.district,
+  });
+  if (error) throw fromDbError(error, "Dados de quem paga");
 }
