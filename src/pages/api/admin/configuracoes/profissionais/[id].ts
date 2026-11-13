@@ -11,7 +11,7 @@ import { DataError } from "../../../../../lib/data/errors";
 import { logError } from "../../../../../lib/log";
 import { listInsurancePlans, listProfessionalPlans, setProfessionalCoverage } from "../../../../../lib/data/config/insurance";
 import { removeProfilePhoto, uploadProfilePhoto } from "../../../../../lib/data/config/profilePhotos";
-import { setProfessionalBotInfo } from "../../../../../lib/data/config/professionalBotInfo";
+import { getProfessionalBotInfo, setProfessionalBotInfo } from "../../../../../lib/data/config/professionalBotInfo";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { agendaOfProfessional, updateAgendaAttendance } from "../../../../../lib/data/config/agendas";
 import { attendanceFromForm } from "../../../../../lib/attendanceForm";
@@ -83,12 +83,14 @@ export const POST: APIRoute = async (context) => {
         return { redirectTo: page(id), message: "Atendimento salvo." };
       }
       if (acao === "bot_info") {
+        // Sem o bot, a tela só tem as observações: pagamento e convênios ficam como estão.
+        const kept = form?.has("payment_info") ? null : await getProfessionalBotInfo(db, clinic.clinicId, id);
         await setProfessionalBotInfo(db, clinic.clinicId, id, {
-          paymentInfo: formOptionalText(form, "payment_info"),
-          insuranceInfo: formOptionalText(form, "insurance_info"),
+          paymentInfo: kept ? kept.paymentInfo : formOptionalText(form, "payment_info"),
+          insuranceInfo: kept ? kept.insuranceInfo : formOptionalText(form, "insurance_info"),
           notes: formOptionalText(form, "notes"),
         });
-        return { redirectTo: page(id), message: "Informações do bot salvas." };
+        return { redirectTo: page(id), message: "Orientações salvas." };
       }
       if (acao === "convenios") {
         // Particular e convênios (MC; F1 da recepção digital): particular sim/não, os planos ativos marcados e a

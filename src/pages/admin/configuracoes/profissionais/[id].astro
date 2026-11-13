@@ -35,7 +35,7 @@ import { loadPortalSettings } from "../../../../lib/data/config/portal";
 import { portalLinksOf } from "../../../../lib/data/config/portalLinks";
 import { agendaOfProfessional } from "../../../../lib/data/config/agendas";
 import { PROFILE_LABELS } from "../../../../lib/vocabulary";
-import { professionalPage, professionalTabs, type ProfessionalEdit, type ProfessionalTab } from "../../../../lib/professionalTabs";
+import { professionalPage, professionalTabs, TAB_INTROS, type ProfessionalEdit, type ProfessionalTab } from "../../../../lib/professionalTabs";
 import { loadProfessionalAccess } from "../../../../lib/data/config/professionalAccess";
 import { listTeam } from "../../../../lib/data/config/team";
 import { formatInstant } from "../../../../lib/clinicTime";
@@ -67,12 +67,12 @@ const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(db)).filter(
 // Particular e convênios (MC; F1 da recepção digital): só com o item "Convênios".
 const insuranceOn = clinic.features.includes("insurance") && !isNew;
 // Informações que o bot responde (MI, M5): só por profissional, com o bot.
-const botOn = clinic.features.includes("whatsapp_bot") && !isNew;
+const botOn = clinic.features.includes("whatsapp_bot");
 
 // Abas e a parte aberta para edição (o cadastro novo é só o formulário).
 // Acesso ao painel (cliente, 13/nov/2026): o Administrador convida pelo próprio cadastro.
 const canInvite = !isNew && !ownOnly;
-const { tabs, tab, edit } = professionalTabs(Astro.url, { insurance: insuranceOn, bot: botOn, access: canInvite });
+const { tabs, tab, edit } = professionalTabs(Astro.url, { insurance: insuranceOn, orientations: !isNew, access: canInvite });
 const pageHref = (t: ProfessionalTab, e?: ProfessionalEdit) => professionalPage(id!, t, e ?? null, all);
 const editing = (part: ProfessionalEdit) => isNew || edit === part;
 
@@ -82,7 +82,7 @@ const [plans, acceptedPlans, planNotes] =
     : [[], [] as string[], new Map<string, string>()];
 const planName = new Map(plans.map((p) => [p.id, p.name]));
 const acceptsPrivate = professional?.acceptsPrivate ?? true;
-const botInfo = botOn && tab === "bot" ? await getProfessionalBotInfo(db, clinic.clinicId, id!) : EMPTY_BOT_INFO;
+const botInfo = !isNew && tab === "orientacoes" ? await getProfessionalBotInfo(db, clinic.clinicId, id!) : EMPTY_BOT_INFO;
 // Foto (cliente, 08/nov/2026): no cabeçalho e na linha "Foto" do Perfil.
 const photoUrl = isNew ? null : await profilePhotoLink(db, clinic.clinicId, { kind: "professional", id: id! });
 const agenda = isNew || tab !== "atendimento" ? null : await agendaOfProfessional(db, clinic.clinicId, id!);
@@ -156,7 +156,7 @@ const needsDialog =
       ))
   }
 
-  <div class="flex max-w-3xl min-w-0 flex-col gap-4">
+  <div class="flex min-w-0 flex-col gap-4">
     {
       !isNew && (
         <>
@@ -201,6 +201,7 @@ const needsDialog =
               active: t.id === tab,
             }))}
           />
+          <p class="-mt-1 max-w-3xl text-[15px] text-ink-soft">{TAB_INTROS[tab]}</p>
         </>
       )
     }
@@ -510,22 +511,30 @@ const needsDialog =
     }
 
     {
-      botOn && tab === "bot" &&
-        (editing("bot") ? (
+      !isNew && tab === "orientacoes" &&
+        (editing("orientacoes") ? (
           <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 border-2 border-brand p-4 sm:p-5`} aria-labelledby="bot-info-titulo">
             <input type="hidden" name="acao" value="bot_info" />
             <div>
-              <h2 id="bot-info-titulo" class={SECTION_TITLE}>Editar o que o bot responde</h2>
+              <h2 id="bot-info-titulo" class={SECTION_TITLE}>Editar as orientações</h2>
               <p class={HINT}>
-                No WhatsApp, o paciente vê estas respostas em <strong>Informações gerais</strong> (com mais de um profissional, depois de escolher{" "}
-                {professional!.displayName}). Vazio: a opção não aparece.
+                {botOn ? (
+                  <>
+                    No WhatsApp, o paciente vê pagamento e convênios em <strong>Informações gerais</strong> (com mais de um profissional, depois de escolher {professional!.displayName}). Vazio: a opção não aparece.
+                  </>
+                ) : (
+                  "As observações aparecem no portal, quando o paciente escolhe o profissional."
+                )}
               </p>
             </div>
+            {botOn && (
             <div>
               <label for="payment_info" class={LABEL}>Formas de pagamento</label>
               <textarea id="payment_info" name="payment_info" rows="2" maxlength="1000" placeholder="Pix, cartão de débito e crédito em até 3x" class={INPUT}>{botInfo.paymentInfo ?? ""}</textarea>
               <p class={HINT}>Aparece depois dos valores dos serviços.</p>
             </div>
+            )}
+            {botOn && (
             <div>
               <label for="insurance_info" class={LABEL}>Sobre convênios</label>
               <textarea id="insurance_info" name="insurance_info" rows="2" maxlength="1000" placeholder="Traga a carteirinha e um documento com foto." class={INPUT}>{botInfo.insuranceInfo ?? ""}</textarea>
@@ -533,31 +542,35 @@ const needsDialog =
                 {insuranceOn ? "A lista de convênios sai da aba Convênios; aqui vai o que ela não diz." : "É a resposta de Informações gerais › Convênios, do jeito que estiver escrito."}
               </p>
             </div>
+            )}
             <div>
               <label for="notes" class={LABEL}>Observações</label>
               <textarea id="notes" name="notes" rows="2" maxlength="1000" placeholder="Chegue 10 minutos antes." class={INPUT}>{botInfo.notes ?? ""}</textarea>
             </div>
             <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
               <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">Salvar</button>
-              <a href={pageHref("bot")} class={SECONDARY_BUTTON}>Cancelar</a>
+              <a href={pageHref("orientacoes")} class={SECONDARY_BUTTON}>Cancelar</a>
             </div>
           </form>
         ) : (
           <section class={`${CARD} min-w-0 p-4 sm:p-5`} aria-labelledby="bot-info-titulo">
             <div class="flex items-center justify-between gap-3">
-              <h2 id="bot-info-titulo" class={SECTION_TITLE}>O que o bot responde</h2>
-              <a href={pageHref("bot", "bot")} class={EDIT_LINK} aria-label="Editar o que o bot responde">Editar</a>
+              <h2 id="bot-info-titulo" class={SECTION_TITLE}>Orientações ao paciente</h2>
+              <a href={pageHref("orientacoes", "orientacoes")} class={EDIT_LINK} aria-label="Editar as orientações">Editar</a>
             </div>
-            <p class={HINT}>Em Informações gerais, depois de o paciente escolher {professional!.displayName}. Vazio: a opção não aparece.</p>
+            {botOn && <p class={HINT}>No WhatsApp, em Informações gerais, depois de o paciente escolher {professional!.displayName}. Vazio: a opção não aparece.</p>}
             <dl class="mt-4 flex flex-col gap-3 text-[15.5px]">
-              {[
-                ["Formas de pagamento", botInfo.paymentInfo],
-                ["Sobre convênios", botInfo.insuranceInfo],
-                ["Observações", botInfo.notes],
-              ].map(([label, value]) => (
+              {(botOn
+                ? [
+                    ["Formas de pagamento", botInfo.paymentInfo],
+                    ["Sobre convênios", botInfo.insuranceInfo],
+                    ["Observações", botInfo.notes],
+                  ]
+                : [["Observações", botInfo.notes]]
+              ).map(([label, value]) => (
                 <div>
                   <dt class={DT}>{label}</dt>
-                  <dd class={value ? "mt-0.5 break-words whitespace-pre-line text-ink" : "mt-0.5 text-ink-soft"}>{value || "Vazio: não aparece no bot"}</dd>
+                  <dd class={value ? "mt-0.5 break-words whitespace-pre-line text-ink" : "mt-0.5 text-ink-soft"}>{value || "Vazio: não aparece para o paciente"}</dd>
                 </div>
               ))}
             </dl>

@@ -2,14 +2,14 @@
 // aba (`?aba=`) e o formulário só aberto quando pedido (`?editar=`). Depois de salvar, a tela
 // volta para a aba da parte salva; com erro, volta com o formulário aberto para corrigir.
 
-export type ProfessionalTab = "perfil" | "atendimento" | "convenios" | "bot" | "acesso";
-export type ProfessionalEdit = "dados" | "atendimento" | "convenios" | "bot";
+export type ProfessionalTab = "perfil" | "atendimento" | "convenios" | "orientacoes" | "acesso";
+export type ProfessionalEdit = "dados" | "atendimento" | "convenios" | "orientacoes";
 
 const TAB_LABELS: Record<ProfessionalTab, string> = {
   perfil: "Perfil",
   atendimento: "Atendimento",
   convenios: "Convênios",
-  bot: "Bot",
+  orientacoes: "Orientações",
   acesso: "Acesso ao painel",
 };
 
@@ -18,16 +18,16 @@ const EDIT_OF: Record<ProfessionalTab, ProfessionalEdit | null> = {
   perfil: "dados",
   atendimento: "atendimento",
   convenios: "convenios",
-  bot: "bot",
+  orientacoes: "orientacoes",
   acesso: null,
 };
 
-/** Abas que a clínica tem (Convênios e Bot só com o item ligado; Acesso só para o Administrador) e as escolhidas no endereço. */
+/** Abas que a clínica tem (Convênios só com o item ligado; Orientações em cadastro existente; Acesso só para o Administrador) e as escolhidas no endereço. */
 export function professionalTabs(
   url: URL,
-  features: { insurance: boolean; bot: boolean; access?: boolean },
+  features: { insurance: boolean; orientations: boolean; access?: boolean },
 ): { tabs: { id: ProfessionalTab; label: string }[]; tab: ProfessionalTab; edit: ProfessionalEdit | null } {
-  const ids: ProfessionalTab[] = ["perfil", "atendimento", ...(features.insurance ? ["convenios" as const] : []), ...(features.bot ? ["bot" as const] : []), ...(features.access ? ["acesso" as const] : [])];
+  const ids: ProfessionalTab[] = ["perfil", "atendimento", ...(features.insurance ? ["convenios" as const] : []), ...(features.orientations ? ["orientacoes" as const] : []), ...(features.access ? ["acesso" as const] : [])];
   const asked = url.searchParams.get("aba");
   const tab = ids.find((id) => id === asked) ?? "perfil";
   const editOfTab = EDIT_OF[tab];
@@ -45,7 +45,7 @@ export function tabOfAction(acao: string): { tab: ProfessionalTab; edit: Profess
     case "convenios":
       return { tab: "convenios", edit: "convenios" };
     case "bot_info":
-      return { tab: "bot", edit: "bot" };
+      return { tab: "orientacoes", edit: "orientacoes" };
     case "convidar":
     case "ligar_login":
     case "reenviar":
@@ -68,3 +68,12 @@ export function professionalPage(id: string, tab: ProfessionalTab, edit: Profess
 export function professionalReturn(value: string | null | undefined): string | null {
   return value && /^\/admin\/configuracoes\/profissionais\/[0-9a-f-]{36}(\?[a-z=&]*)?$/.test(value) ? value : null;
 }
+
+/** Explicação de cada aba (cliente, 13/nov/2026): para que serve e onde o que está nela aparece. */
+export const TAB_INTROS: Record<ProfessionalTab, string> = {
+  perfil: "Como o profissional aparece para o paciente: no portal, no link de agendamento e nas mensagens do WhatsApp.",
+  atendimento: "Quem este profissional atende, com quanta antecedência o paciente pode marcar e a idade limite. Vale só para a agenda dele.",
+  convenios: "O que o profissional aceita: particular e convênios. O paciente vê ao agendar e nas respostas do WhatsApp.",
+  orientacoes: "Textos que o paciente lê sobre este profissional. As observações aparecem no portal, ao escolher o profissional; pagamento e convênios, no WhatsApp.",
+  acesso: "Como o profissional entra no painel: o e-mail recebe o convite e ele passa a ver só a própria agenda.",
+};

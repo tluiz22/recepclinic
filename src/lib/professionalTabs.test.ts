@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest";
 import { professionalPage, professionalReturn, professionalTabs, tabOfAction } from "./professionalTabs";
 
 const url = (query: string) => new URL(`https://x.test/admin/configuracoes/profissionais/p1${query}`);
-const ALL = { insurance: true, bot: true };
+const ALL = { insurance: true, orientations: true };
 
 describe("professionalTabs", () => {
   it("abre no Perfil, sem edição", () => {
     expect(professionalTabs(url(""), ALL)).toMatchObject({ tab: "perfil", edit: null });
   });
 
-  it("só mostra Convênios e Bot com o item ligado", () => {
-    expect(professionalTabs(url(""), { insurance: false, bot: false }).tabs.map((t) => t.id)).toEqual(["perfil", "atendimento"]);
-    expect(professionalTabs(url(""), ALL).tabs.map((t) => t.label)).toEqual(["Perfil", "Atendimento", "Convênios", "Bot"]);
+  it("só mostra Convênios com o item ligado", () => {
+    expect(professionalTabs(url(""), { insurance: false, orientations: false }).tabs.map((t) => t.id)).toEqual(["perfil", "atendimento"]);
+    expect(professionalTabs(url(""), ALL).tabs.map((t) => t.label)).toEqual(["Perfil", "Atendimento", "Convênios", "Orientações"]);
   });
 
   it("Acesso ao painel só para quem pode convidar", () => {
@@ -21,21 +21,21 @@ describe("professionalTabs", () => {
   });
 
   it("aba desligada ou desconhecida volta ao Perfil", () => {
-    expect(professionalTabs(url("?aba=bot"), { insurance: true, bot: false }).tab).toBe("perfil");
+    expect(professionalTabs(url("?aba=orientacoes"), { insurance: true, orientations: false }).tab).toBe("perfil");
     expect(professionalTabs(url("?aba=xyz"), ALL).tab).toBe("perfil");
   });
 
   it("abre a edição só da parte daquela aba", () => {
     expect(professionalTabs(url("?aba=convenios&editar=convenios"), ALL)).toMatchObject({ tab: "convenios", edit: "convenios" });
     expect(professionalTabs(url("?editar=dados"), ALL)).toMatchObject({ tab: "perfil", edit: "dados" });
-    expect(professionalTabs(url("?aba=bot&editar=dados"), ALL).edit).toBeNull();
+    expect(professionalTabs(url("?aba=orientacoes&editar=dados"), ALL).edit).toBeNull();
   });
 });
 
 describe("tabOfAction e professionalPage", () => {
   it("cada ação volta para a sua aba", () => {
     expect(tabOfAction("salvar")).toEqual({ tab: "perfil", edit: "dados" });
-    expect(tabOfAction("bot_info")).toEqual({ tab: "bot", edit: "bot" });
+    expect(tabOfAction("bot_info")).toEqual({ tab: "orientacoes", edit: "orientacoes" });
     expect(tabOfAction("foto")).toEqual({ tab: "perfil", edit: null });
     expect(tabOfAction("convidar")).toEqual({ tab: "acesso", edit: null });
     expect(tabOfAction("tirar_acesso")).toEqual({ tab: "acesso", edit: null });
