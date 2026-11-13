@@ -67,7 +67,7 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 **Manual de uso:** [`manual-de-uso.md`](manual-de-uso.md). **Comece por:** [`roadmap.md`](roadmap.md) (estado de tudo) e `iniciativas/<frente>/status.md` (a frente em andamento).
 
 - **Permanentes:** [`arquitetura.md`](arquitetura.md) (D1–D14), [`triagem-piloto.md`](triagem-piloto.md),
-  [`politica-pedidos-de-autoridades.md`](politica-pedidos-de-autoridades.md), [`politica-de-acessos.md`](politica-de-acessos.md), [`procedimento-de-incidentes.md`](procedimento-de-incidentes.md), [`politica-de-vulnerabilidades.md`](politica-de-vulnerabilidades.md), [`politica-de-fornecedores.md`](politica-de-fornecedores.md), [`plano-de-continuidade.md`](plano-de-continuidade.md), [`politica-de-retencao-de-logs.md`](politica-de-retencao-de-logs.md).
+  [`politica-pedidos-de-autoridades.md`](politica-pedidos-de-autoridades.md), [`politica-de-acessos.md`](politica-de-acessos.md), [`procedimento-de-incidentes.md`](procedimento-de-incidentes.md), [`politica-de-vulnerabilidades.md`](politica-de-vulnerabilidades.md), [`politica-de-fornecedores.md`](politica-de-fornecedores.md), [`plano-de-continuidade.md`](plano-de-continuidade.md), [`padroes-de-codigo-seguro.md`](padroes-de-codigo-seguro.md), [`politica-de-retencao-de-logs.md`](politica-de-retencao-de-logs.md).
 - **Operação:** [`staging.md`](staging.md), [`producao.md`](producao.md) (fluxo de publicação e registro).
 - **Integrações:** [`meta-tech-provider.md`](meta-tech-provider.md), `integracoes/` (Asaas: playbook BaaS e selos).
 - **Módulos:** fichas curtas em [`modulos/`](modulos/); detalhe completo em `arquivo/modulos/` (só por `grep`).
