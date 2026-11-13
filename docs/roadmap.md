@@ -15,6 +15,7 @@
 | [Faturamento SaaS (Asaas)](iniciativas/faturamento-asaas/status.md) | Código na `main` (F12.1–F12.8) | — (juntada) | Asaas: reanálise do BaaS e tokenização do cartão | Conferir tokenização antes do 1º contrato no cartão |
 | [Funil do portal e Usabilidade](iniciativas/usabilidade/status.md) | U1 e U2 juntas na `main`, no staging e na produção (13/nov), aguardando a validação do cliente | — | — | Validar a aba Usabilidade e o funil na produção; depois, os sinais que pedem gravação nova (formulário com erro, cancelamento desfeito) |
 | [Biomedical](iniciativas/biomedical/status.md) | Proposta enviada em 09/nov | — | Portal, F3, F5, F6 no ar | F3f já na produção; retomar a implantação quando o cliente pedir |
+| [Segurança e conformidade (BaaS do Asaas)](iniciativas/seguranca-baas/status.md) | Planejamento; políticas adotadas em 13/nov (acessos, logs, incidentes, vulnerabilidades) e varredura no GitHub ativa; S1–S8 a planejar | — | Advogado, contador, Asaas (avaliação BaaS) | S1: corrigir as 22 vulnerabilidades das bibliotecas (1 crítica) |
 | [Painel de pendências do Suporte](iniciativas/painel-suporte/status.md) | Decidido; nada implementado | — | — | Só quando o cliente pedir |
 
 ## Frentes finalizadas
