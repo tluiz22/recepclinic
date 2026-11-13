@@ -41,7 +41,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: 2.121.0
 
