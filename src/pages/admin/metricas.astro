@@ -74,7 +74,7 @@ const BOT_TABS = ["digital", "retomar_contato"];
 const isClinicWide = (id: string | null) => !!id && (BOT_TABS.includes(id) || id === "portal" || id === "usabilidade");
 const visible = TABS.filter((t) => clinic.features.includes(t.feature) && (!isClinicWide(t.id) || metricsScope(clinic) === "clinic"));
 // Usabilidade (U2): só o Suporte (equipe da plataforma), depois das abas da clínica; sem módulo próprio.
-if (clinic.isPlatformStaff && metricsScope(clinic) === "clinic") visible.push({ id: "usabilidade", label: "Usabilidade", feature: "portal" });
+if (clinic.isPlatformStaff && clinic.features.includes("portal") && metricsScope(clinic) === "clinic") visible.push({ id: "usabilidade", label: "Usabilidade", feature: "portal" });
 const tab = visible.find((t) => t.id === params.get("tab"))?.id ?? visible[0]?.id ?? null;
 
 // Escopo: a clínica toda (Administrador, com o seletor) ou só as agendas do próprio Profissional.

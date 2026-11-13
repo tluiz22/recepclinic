@@ -1,7 +1,7 @@
 import type { DbClient } from "./clients";
 import { SIGNALS, type SignalCount, type SignalId } from "../usabilitySignals";
 
-/** Sinais de usabilidade da clínica no período (só o Suporte: a função recusa os demais com lista vazia). */
+/** Sinais de usabilidade da clínica no período (só o Suporte: para os demais a função devolve os cinco sinais zerados). */
 export async function getUsabilitySignals(db: DbClient, clinicId: string, start: Date, end: Date): Promise<SignalCount[]> {
   const { data, error } = await db.rpc("metrics_usability", { p_clinic_id: clinicId, p_start: start.toISOString(), p_end: end.toISOString() });
   if (error) throw error;

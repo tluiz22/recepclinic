@@ -27,11 +27,15 @@ const end = dayBounds(range.to, tz).end;
 
 let signals: SignalCount[] | null = null;
 let steps: StepCount[] = [];
-try {
-  [signals, steps] = await Promise.all([getUsabilitySignals(db, clinic.clinicId, start, end), getVisitSteps(db, clinic.clinicId, start, end)]);
-} catch (error) {
-  logError("métricas: usabilidade não carregou", error, { clinica: clinic.clinicId });
-}
+// O funil é secundário: se só ele falhar, os sinais continuam na tela.
+await Promise.all([
+  getUsabilitySignals(db, clinic.clinicId, start, end)
+    .then((r) => { signals = r; })
+    .catch((error) => logError("métricas: usabilidade não carregou", error, { clinica: clinic.clinicId })),
+  getVisitSteps(db, clinic.clinicId, start, end)
+    .then((r) => { steps = r; })
+    .catch((error) => logError("métricas: funil da usabilidade não carregou", error, { clinica: clinic.clinicId })),
+]);
 
 const limitDay = dayBounds(todayIn(tz, now), tz).start.getTime() - 30 * 86_400_000;
 const oldRange = start.getTime() < limitDay;

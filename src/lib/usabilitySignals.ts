@@ -57,7 +57,7 @@ export const SIGNALS: readonly Signal[] = [
     id: "hold_expired",
     where: "Portal",
     label: "Reserva do horário venceu sem marcar",
-    meaning: "O paciente confirmou o celular e reservou o horário, mas não terminou em 5 minutos: demorou na revisão ou desistiu.",
+    meaning: "O paciente confirmou o celular e reservou o horário, mas não terminou em 5 minutos: demorou na revisão ou desistiu (raramente, a gravação da marcação falhou: veja os erros).",
     improve: "Ver o passo “Chegaram à revisão” no funil; se muitos param ali, simplificar a tela de revisão.",
     baseLabel: "reservas",
     baseOne: "reserva",
