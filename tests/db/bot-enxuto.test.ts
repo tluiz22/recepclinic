@@ -108,8 +108,11 @@ describe("menu enxuto (BE-2)", () => {
   it("1ª mensagem: uma só, com o nome da clínica no cabeçalho, as boas-vindas e os 3 atalhos (sem a recepção no app)", async () => {
     const reply = await say(NEW, "oi");
     expect(reply).toHaveLength(1);
-    expect(reply[0]).toMatchObject({ kind: "list", header: "Clínica Enxuta", body: expect.stringMatching(/^Olá! 👋\n\nEste é o contato oficial para agendamento da \*Clínica Enxuta\*\./) });
+    expect(reply[0]).toMatchObject({ kind: "list", header: "Clínica Enxuta", body: expect.stringMatching(/^Olá! 👋 Seja bem-vindo\(a\)!\n\nComo podemos ajudar você hoje\?/) });
     expect(reply[0].options.map((o) => o.title)).toEqual(MENU_TITLES.slice(0, 3));
+    // As opções do texto são as da lista: sem a recepção no app, sem a linha dela.
+    expect(reply[0].body).toContain("📅 Agendar — ");
+    expect(reply[0].body).not.toContain("Falar com a recepção");
   });
 
   it("número com consulta marcada: direto o menu, com o primeiro nome e sem perguntar pela consulta; com a recepção no app, 4 itens", async () => {
@@ -118,7 +121,8 @@ describe("menu enxuto (BE-2)", () => {
       await restart(PATIENT);
       const reply = await say(PATIENT, "Bom dia");
       expect(reply).toHaveLength(1);
-      expect(reply[0].body).toMatch(/^Olá, .+! 👋\n\nEste é o contato oficial para agendamento d/);
+      expect(reply[0].body).toMatch(/^Olá, .+! 👋 Seja bem-vindo\(a\)!/);
+      expect(reply[0].body).toMatch(/\n\n🎧 Falar com a recepção — Atendimento com nossa equipe$/);
       expect(reply[0].options.map((o) => o.title)).toEqual(MENU_TITLES);
     } finally {
       await setCoexistence(false);

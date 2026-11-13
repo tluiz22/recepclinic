@@ -24,7 +24,7 @@ function mainItems(b: Bot): Item[] {
 async function leanWelcomeBody(b: Bot): Promise<string> {
   const custom = b.custom.get("welcome");
   const name = await contactFirstName(b);
-  return custom ? renderWelcome(custom, b.clinic.label, name) : t.leanWelcome(name, b.clinic.label, b.clinic.name, { exams: b.features.includes("exams"), reception: b.receptionAvailable });
+  return custom ? renderWelcome(custom, b.clinic.label, name) : t.leanWelcome(name, { exams: b.features.includes("exams"), reception: b.receptionAvailable });
 }
 
 /**

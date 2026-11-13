@@ -6,7 +6,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "12/11/2026";
+export const JOURNEY_UPDATED = "13/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -33,7 +33,7 @@ const branch = (...options: [string, FlowItem[]][]): FlowBranch => ({ kind: "bra
 
 // Bot enxuto (F3f, BE-2; canvas aprovado pelo cliente em 11/nov/2026).
 const FIRST_MENU =
-  "Uma mensagem só: \"Clínica [Nome]\" no cabeçalho, \"Olá! 👋 Este é o contato oficial para agendamento da Clínica [Nome]\", o que cada opção faz (agendar consulta, retorno ou exame; remarcar ou cancelar; informações sobre profissionais, especialidades, valores e convênios; falar com a recepção), com o nome da clínica em negrito; \"exame\" e a linha da recepção só quando a clínica os tem, \"Escolha uma das opções abaixo.\" (cliente, 12/nov/2026) e o botão \"Ver opções\": 📅 Agendar (Consulta, retorno ou exame; sem exame na clínica, \"Consulta ou retorno\") · 🗓 Minhas consultas (Consultar, remarcar ou cancelar) · 👥 Profissionais (Especialidades, valores e convênios) · 🎧 Falar com a recepção (Atendimento com a nossa equipe)";
+  "Uma mensagem só: \"Clínica [Nome]\" no cabeçalho, \"Olá! 👋 Seja bem-vindo(a)!\", \"Como podemos ajudar você hoje?\" e as opções, uma por linha (\"📅 Agendar — Consulta, retorno ou exame\", \"🗓 Minhas consultas — Consultar, remarcar ou cancelar\", \"👥 Profissionais — Especialidades, valores e convênios\", \"🎧 Falar com a recepção — Atendimento com nossa equipe\"; cliente, 13/nov/2026); sem exame na clínica, \"Consulta ou retorno\"; a linha da recepção só quando a clínica a tem. Depois, o botão \"Ver opções\" com as mesmas 4 opções.";
 const FIRST_MENU_NOTE =
   "Número cadastrado: \"Olá, Ana!\". \"Falar com a recepção\" só com coexistência. A clínica pode trocar as boas-vindas em Configurações › Mensagens. Nas outras vezes, o menu curto (\"Escolha uma opção abaixo ou faça uma pergunta.\", ou \"Escolha uma das opções abaixo.\" sem a base de conhecimento). Sem a pergunta \"Identificamos um agendamento…\", sem a data de nascimento e sem a especialidade antes do menu.";
 

@@ -19,7 +19,7 @@ import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listProfessionals } from "../../../lib/data/config/professionals";
 import { listServices } from "../../../lib/data/config/services";
-import { listWhatsappTemplates, type TemplateKey, type WhatsappTemplate } from "../../../lib/data/whatsapp/connection";
+import { getWhatsappConnection, listWhatsappTemplates, type TemplateKey, type WhatsappTemplate } from "../../../lib/data/whatsapp/connection";
 import {
   BOT_MESSAGES,
   GUIDANCE_KEY,
@@ -47,7 +47,7 @@ const isSupport = clinic.isPlatformStaff;
 // Combo: "Mensagens do bot" por padrão; as da Meta só com o item.
 const grupo = metaOn && Astro.url.searchParams.get("grupo") === "meta" ? "meta" : "bot";
 
-const [settings, templates, customTexts, services, agendas, professionals, locations] = await Promise.all([
+const [settings, templates, customTexts, services, agendas, professionals, locations, connection] = await Promise.all([
   getClinicSettings(db, clinic.clinicId),
   listWhatsappTemplates(db, clinic.clinicId),
   listBotMessages(db, clinic.clinicId),
@@ -55,6 +55,7 @@ const [settings, templates, customTexts, services, agendas, professionals, locat
   listAgendas(db, clinic.clinicId),
   listProfessionals(db, clinic.clinicId),
   listLocations(db, clinic.clinicId),
+  getWhatsappConnection(db, clinic.clinicId),
 ]);
 
 // Exemplo com os dados da clínica: o primeiro serviço de consulta, o
@@ -152,8 +153,11 @@ const rows = visibleTemplates.map((standard) => {
   };
 });
 
+// Como no bot: "exame" só com exame na clínica; "Falar com a recepção" só com a recepção no app (coexistência).
+const welcomeOptions = { exams: clinic.features.includes("exams"), reception: connection?.coexistence ?? false };
+const menuButtons = bot.LEAN_MENU.filter((item) => item.id !== "menu_reception" || welcomeOptions.reception).map((item) => item.label);
 const botDefaults: Record<string, string> = {
-  welcome: bot.leanWelcome(example.nome, label, settings.name, { exams: clinic.features.includes("exams") }),
+  welcome: bot.leanWelcome(example.nome, welcomeOptions),
   menu: clinic.features.includes("knowledge_base") ? bot.MENU_BODY_ASK : bot.MENU_BODY,
   not_understood: bot.notUnderstood(),
   handoff: bot.LEAN_HANDOFF,
@@ -164,10 +168,12 @@ const botRows = BOT_MESSAGES.map((def) => {
   const custom = customTexts.get(def.key) ?? null;
   return {
     ...def,
+    // Texto inicial do campo das boas-vindas: o da clínica (exame e recepção conforme ela).
+    defaultText: def.key === "welcome" ? bot.leanWelcome("{nome}", welcomeOptions) : def.defaultText,
     custom,
     preview: custom ? renderMarkers(custom, example) : botDefaults[def.key],
     // O menu do bot enxuto (BE-2); "Falar com a recepção" só com a recepção no app.
-    buttons: def.key === "menu" || def.key === "welcome" ? bot.LEAN_MENU.slice(0, 3).map((item) => item.label) : [],
+    buttons: def.key === "menu" || def.key === "welcome" ? menuButtons : [],
   };
 });
 const guidance = customTexts.get(GUIDANCE_KEY as never) ?? null;

@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `config-mensagens` — texto padrão das boas-vindas do bot trocado ("Olá! 👋 Seja bem-vindo(a)!" e as opções) (13/11/2026)

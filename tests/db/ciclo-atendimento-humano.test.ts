@@ -186,7 +186,7 @@ describe("ciclo do atendimento humano (CA)", () => {
 
   it("10. a próxima mensagem depois de finalizar é do bot", async () => {
     const reply = await say(P, "Oi");
-    expect(reply[0]).toMatch(/^Olá, Resp\.! 👋\n\nEste é o contato oficial/);
+    expect(reply[0]).toMatch(/^Olá, Resp\.! 👋 Seja bem-vindo\(a\)!/);
     expect(await conversation(P)).toMatchObject({ human_handoff: false });
   });
 
