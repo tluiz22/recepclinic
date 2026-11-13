@@ -224,6 +224,19 @@ describe("no menu", () => {
     expect(bodies(await say(phone, "bom dia"))).toEqual(["Olá! 👋 Escolha uma opção abaixo ou faça uma pergunta."]);
   });
 
+  it("link só com o pedido (cliente, 13/nov/2026): \"Quanto tá a consulta\" recebe o valor; \"tem vaga?\" não abre o Agendar", async () => {
+    await reset(phone);
+    const price = bodies(await say(phone, "Quanto tá a consulta"));
+    expect(price.join("\n")).not.toMatch(BOOK_LINK);
+    expect(price.at(-1)).toBe(MENU);
+    expect(price.join("\n")).not.toContain("Não entendi");
+    for (const text of ["tem vaga amanhã?", "Pneumologista pediátrica", "quando?"]) {
+      const reply = bodies(await say(phone, text)).join("\n");
+      expect(reply).not.toMatch(BOOK_LINK);
+      expect(reply).not.toMatch(MINE_LINK);
+    }
+    expect(bodies(await say(phone, "quero agendar"))[0]).toMatch(BOOK_LINK);
+  });
 });
 
 describe("\"voltar\" digitado (cliente, 31/out/2026)", () => {
@@ -244,7 +257,7 @@ describe("\"Você quis dizer…?\"", () => {
 
   it("empate: as opções e \"Nenhuma destas\"; a escolha abre o fluxo", async () => {
     await say(phone, "Oi");
-    const reply = await say(phone, "não vou poder ir");
+    const reply = await say(phone, "quero remarcar ou cancelar");
     expect(reply.at(-1)).toMatchObject({ kind: "list", body: "Você quis dizer…?" });
     expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(["1. Quero cancelar", "2. Quero remarcar", "3. Nenhuma destas"]);
     const chosen = await say(phone, { id: optionId(reply, "remarcar") });
@@ -254,7 +267,7 @@ describe("\"Você quis dizer…?\"", () => {
 
   it("\"Nenhuma destas\": o \"não entendi\" de hoje e o passo de novo", async () => {
     await reset(phone);
-    const reply = await say(phone, "não vou poder ir");
+    const reply = await say(phone, "quero remarcar ou cancelar");
     const none = await say(phone, { id: optionId(reply, "Nenhuma") });
     // "Não entendi" e o menu numa mensagem só (cliente, 12/nov/2026).
     expect(none).toHaveLength(1);

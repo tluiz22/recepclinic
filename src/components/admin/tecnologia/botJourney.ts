@@ -188,7 +188,7 @@ export const JOURNEY: JourneySection[] = [
               "Convênio de um exame (\"a espirometria aceita Unimed?\"): responde pelo cadastro do exame",
               "\"Sim, *Espirometria* aceita *Unimed*.\" ou \"não aceita…; pode ser feito particular\". Convênio que só algum exame aceita: \"Aceitamos *X* nos exames: …\" (10/11/2026).",
             ),
-            bot("Pedido de marcar: o link do Agendar; remarcar, cancelar ou \"minha consulta\": o link de Minhas consultas", "Encaixe, adiantar ou antecipar: pergunta se quer falar com a recepção (o Encaixe saiu do chat). Preparo de exame: a lista dos exames com preparo."),
+            bot("Pedido de marcar: o link do Agendar; remarcar, cancelar ou \"minha consulta\": o link de Minhas consultas", "O link só com o pedido dito (cliente, 13/nov/2026): o Agendar com \"marcar\" ou \"agendar\"; Minhas consultas com \"minha consulta\", \"remarcar\", \"desmarcar\", \"cancelar\" ou \"confirmar\". \"Quanto tá a consulta\" recebe o valor; \"tem vaga?\", \"retorno\" ou \"quando?\" sozinhos recebem outra resposta da base ou o \"não entendi\". Encaixe, adiantar ou antecipar: pergunta se quer falar com a recepção (o Encaixe saiu do chat). Preparo de exame: a lista dos exames com preparo."),
           ],
         ],
         ["Em dúvida", [bot("\"Você quis dizer…?\" com até 3 opções e \"Nenhuma destas\"")]],
