@@ -7,7 +7,7 @@ import { logError } from "../log";
 import type { DbClient } from "./clients";
 import { DataError, fromDbError } from "./errors";
 import { copyInvoiceFiles } from "./nfseAutoDelivery";
-import { asaasInvoiceRecorder, platformAsaasNfse, platformInvoiceFiles, platformIssuerStore, type AsaasInvoiceRecorder, type PlatformAsaasNfse, type PlatformIssuerStore } from "./platform";
+import { platformAsaasNfse, platformInvoiceFiles, platformIssuerStore, type AsaasInvoiceRecorder, type PlatformAsaasNfse, type PlatformIssuerStore } from "./platform";
 
 // Nota fiscal pelo Asaas (N3b; planejamento-nfse-asaas.md, seções 5 e 14).
 // O banco escolhe o emissor do atendimento e reserva a nota ("emitindo"); o
@@ -142,7 +142,7 @@ export async function issueAsaasInvoice(db: DbClient, paymentId: string, deps: A
   const { data, error } = await db.rpc("begin_asaas_invoice", { p_payment_id: paymentId });
   if (error) throw fromDbError(error, "Nota fiscal");
   const b = data as unknown as BeginAsaas;
-  const recorder = asaasInvoiceRecorder(db);
+  const recorder = deps.nfse.recorder;
   const local = { invoiceId: b.invoice_id, clinicId: "", status: "issuing" };
   let fiscal: AsaasFiscalApi;
   try {
@@ -151,6 +151,8 @@ export async function issueAsaasInvoice(db: DbClient, paymentId: string, deps: A
     await recorder.finishIssue({ invoiceId: b.invoice_id, outcome: "rejected", asaasInvoiceId: null, asaasStatus: "SEM-CHAVE", message: (e as Error).message });
     throw e;
   }
+  // Depois que a nota existe no Asaas, nenhum erro 4xx é recusa da nota: ela segue "emitindo" e a conciliação confere.
+  let existsAtAsaas = false;
   const issuer = await deps.issuers.read(b.issuer_id);
   local.clinicId = issuer?.clinic_id ?? "";
   try {
@@ -193,11 +195,13 @@ export async function issueAsaasInvoice(db: DbClient, paymentId: string, deps: A
         },
       });
     }
+    existsAtAsaas = true;
     await recorder.finishIssue({ invoiceId: b.invoice_id, outcome: "pending", asaasInvoiceId: remote.id, asaasStatus: remote.rawStatus });
     if (remote.rawStatus === "SCHEDULED") remote = await fiscal.authorizeInvoice(remote.id);
     return await applyAsaasState(recorder, deps, local, remote, fiscal);
   } catch (e) {
-    if (e instanceof AsaasApiError && e.status >= 400 && e.status < 500) {
+    // 408 (tempo esgotado) e 429 (limite de pedidos) não são recusa: tentar de novo depois não duplica nada.
+    if (e instanceof AsaasApiError && e.status >= 400 && e.status < 500 && e.status !== 408 && e.status !== 429 && !existsAtAsaas) {
       const message = e.message.replace(/^Asaas recusou \(\d+\): /, "");
       await recorder.finishIssue({ invoiceId: b.invoice_id, outcome: "rejected", asaasInvoiceId: null, asaasStatus: `HTTP-${e.status}`, message });
       return { status: "rejected", message: `O Asaas recusou a nota: ${message}` };
@@ -237,7 +241,7 @@ export async function checkAsaasInvoice(db: DbClient, clinicId: string, invoiceI
   if (error) throw fromDbError(error, "Nota fiscal");
   if (!data || data.provider !== "asaas" || !data.issuer_id) throw new DataError("not_found", "Nota fiscal: não encontrada");
   if (data.status !== "issuing" && data.status !== "canceling") throw new DataError("invalid", "Nota fiscal: não está pendente");
-  return refreshAsaasInvoice(asaasInvoiceRecorder(db), { invoiceId: data.id, clinicId: data.clinic_id, issuerId: data.issuer_id, status: data.status, asaasInvoiceId: data.asaas_invoice_id }, deps);
+  return refreshAsaasInvoice(deps.nfse.recorder, { invoiceId: data.id, clinicId: data.clinic_id, issuerId: data.issuer_id, status: data.status, asaasInvoiceId: data.asaas_invoice_id }, deps);
 }
 
 /** Cancela (o Administrador ou o profissional dono do emissor; o banco confere). */
@@ -245,7 +249,7 @@ export async function cancelAsaasInvoice(db: DbClient, invoiceId: string, reason
   const { data, error } = await db.rpc("begin_asaas_cancel", { p_invoice_id: invoiceId, p_reason: reason });
   if (error) throw fromDbError(error, "Cancelamento");
   const b = data as unknown as { invoice_id: string; issuer_id: string; asaas_invoice_id: string | null };
-  const recorder = asaasInvoiceRecorder(db);
+  const recorder = deps.nfse.recorder;
   if (!b.asaas_invoice_id) {
     await recorder.finishCancel({ invoiceId, outcome: "denied", asaasStatus: null, message: "Nota sem o registro do Asaas." });
     return { status: "issued", message: "Esta nota não tem o registro do Asaas: fale com o suporte." };
@@ -318,8 +322,11 @@ export async function handleInvoiceWebhook(payload: unknown, token: string | nul
   return { status: 200, body: "ok", process };
 }
 
+/** Uma emissão em andamento pode levar vários minutos (até 60 s por chamada ao Asaas): só depois disso a nota sem registro no Asaas é dada como não enviada. */
+export const GIVE_UP_AFTER_MINUTES = 15;
+
 /** Rotina: confere as notas pendentes há mais de alguns minutos. */
-export async function reconcileAsaasInvoices(deps: AsaasNfseDeps = defaultAsaasNfseDeps(), olderThanMinutes = 3): Promise<{ checked: number; failed: number }> {
+export async function reconcileAsaasInvoices(deps: AsaasNfseDeps = defaultAsaasNfseDeps(), olderThanMinutes = GIVE_UP_AFTER_MINUTES): Promise<{ checked: number; failed: number }> {
   const pending = await deps.nfse.listPending(new Date(deps.now().getTime() - olderThanMinutes * 60_000));
   let failed = 0;
   for (const p of pending) {

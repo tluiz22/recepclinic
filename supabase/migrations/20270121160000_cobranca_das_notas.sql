@@ -15,7 +15,7 @@
 --      tarifa do Asaas não volta); recusadas não.
 --
 -- Reversão: drop das tabelas fiscal_issuer_contracts e fiscal_usage_charges e
--- das funções; restaurar app.nfse_requires_signed_contract da 20261231140000.
+-- das funções; restaurar app.nfse_requires_signed_contract da 20270121140000.
 
 -- ---------------------------------------------------------------------------
 -- Contrato de notas do profissional (regra 2)

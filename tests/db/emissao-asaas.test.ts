@@ -81,7 +81,7 @@ describe("Emissão pelo Asaas (N3b)", () => {
     const invoice = await invoiceOf(payment.id);
     const remote = [...deps.fake.invoices.values()].find((i) => i.externalReference === invoice!.id)!;
     deps.fake.reject(remote.id, "Código de serviço inválido.");
-    await withDatabase((db) => db.query(`update public.nfse_invoices set checked_at = now() - interval '10 minutes' where id = $1`, [invoice!.id]));
+    await withDatabase((db) => db.query(`update public.nfse_invoices set checked_at = now() - interval '20 minutes' where id = $1`, [invoice!.id]));
     await reconcileAsaasInvoices(deps.nfseDeps);
     expect(await row(invoice!.id)).toMatchObject({ status: "rejected", error_message: "Código de serviço inválido." });
     expect((await issueAsaasInvoice(asDb(fixture.reception), payment.id, deps.nfseDeps)).status).toBe("issuing");
@@ -93,7 +93,7 @@ describe("Emissão pelo Asaas (N3b)", () => {
     expect((await issueAsaasInvoice(asDb(fixture.reception), payment.id, deps.nfseDeps)).status).toBe("issuing");
     const invoice = await invoiceOf(payment.id);
     const before = deps.fake.invoices.size;
-    await withDatabase((db) => db.query(`update public.nfse_invoices set checked_at = now() - interval '10 minutes' where id = $1`, [invoice!.id]));
+    await withDatabase((db) => db.query(`update public.nfse_invoices set checked_at = now() - interval '20 minutes' where id = $1`, [invoice!.id]));
     await reconcileAsaasInvoices(deps.nfseDeps);
     expect(deps.fake.invoices.size).toBe(before);
     const remote = [...deps.fake.invoices.values()].find((i) => i.externalReference === invoice!.id)!;
@@ -108,6 +108,45 @@ describe("Emissão pelo Asaas (N3b)", () => {
     const result = await issueAsaasInvoice(asDb(fixture.reception), payment.id, deps.nfseDeps);
     expect(result).toMatchObject({ status: "rejected" });
     expect(result.message).toContain("Valor inválido");
+  });
+
+  it("quem usa o painel não grava o resultado da nota: só o servidor (service_role)", async () => {
+    const payment = await newPaidAppointment(fixture);
+    await issueAsaasInvoice(asDb(fixture.reception), payment.id, deps.nfseDeps);
+    const invoice = await invoiceOf(payment.id);
+    const forged = await asDb(fixture.reception).rpc("finish_asaas_invoice", {
+      p_invoice_id: invoice!.id, p_outcome: "issued", p_asaas_invoice_id: "inv_falsa", p_asaas_status: "AUTHORIZED", p_number: "999",
+    });
+    expect(forged.error).not.toBeNull();
+    const forgedCancel = await asDb(fixture.reception).rpc("finish_asaas_cancel", { p_invoice_id: invoice!.id, p_outcome: "canceled", p_asaas_status: "CANCELED" });
+    expect(forgedCancel.error).not.toBeNull();
+    expect(await row(invoice!.id)).toMatchObject({ status: "issuing" });
+  });
+
+  it("erro 4xx depois de a nota existir no Asaas (ou 429) não vira recusa: segue emitindo e a conciliação confere", async () => {
+    for (const status of [400, 429]) {
+      const payment = await newPaidAppointment(fixture);
+      deps.fake.failNext(/\/authorize$/, status, "Limite de pedidos.");
+      expect((await issueAsaasInvoice(asDb(fixture.reception), payment.id, deps.nfseDeps)).status).toBe("issuing");
+      const invoice = await invoiceOf(payment.id);
+      expect(await row(invoice!.id)).toMatchObject({ status: "issuing" });
+    }
+    const payment = await newPaidAppointment(fixture);
+    deps.fake.failNext(/^\/invoices$/, 429, "Limite de pedidos.");
+    expect((await issueAsaasInvoice(asDb(fixture.reception), payment.id, deps.nfseDeps)).status).toBe("issuing");
+  });
+
+  it("a conciliação não dá por perdida uma emissão recente sem registro no Asaas", async () => {
+    const payment = await newPaidAppointment(fixture);
+    deps.fake.timeoutNext(/^\/invoices$/);
+    expect((await issueAsaasInvoice(asDb(fixture.reception), payment.id, deps.nfseDeps)).status).toBe("issuing");
+    const invoice = await invoiceOf(payment.id);
+    await withDatabase((db) => db.query(`update public.nfse_invoices set checked_at = now() - interval '5 minutes' where id = $1`, [invoice!.id]));
+    await reconcileAsaasInvoices(deps.nfseDeps);
+    expect(await row(invoice!.id)).toMatchObject({ status: "issuing" });
+    await withDatabase((db) => db.query(`update public.nfse_invoices set checked_at = now() - interval '20 minutes' where id = $1`, [invoice!.id]));
+    await reconcileAsaasInvoices(deps.nfseDeps);
+    expect(await row(invoice!.id)).toMatchObject({ status: "rejected" });
   });
 
   it("cancelar: só o Administrador; a prefeitura confirma ou nega", async () => {
