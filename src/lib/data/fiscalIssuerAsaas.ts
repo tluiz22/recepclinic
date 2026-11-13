@@ -82,6 +82,16 @@ export async function createIssuerSubaccount(issuerId: string, actorId: string, 
       asaas: "Subconta já existe.",
     });
   }
+  const placeholders = [
+    issuer.fiscal_email === "pendente@recepclinic.com.br" && "e-mail fiscal",
+    issuer.mobile_phone === "84000000000" && "celular",
+    issuer.street === "A preencher" && "rua",
+    issuer.district === "A preencher" && "bairro",
+  ].filter(Boolean);
+  if (placeholders.length > 0) {
+    const message = `Complete os dados do emissor antes de criar a subconta (provisórios: ${placeholders.join(", ")}).`;
+    throw new DataError("invalid", message, { asaas: message });
+  }
   const token = deps.newToken();
   let created;
   try {
@@ -98,7 +108,21 @@ export async function createIssuerSubaccount(issuerId: string, actorId: string, 
   } catch (error) {
     throw new DataError("invalid", asaasMessage(error), { asaas: asaasMessage(error) }, { cause: error });
   }
-  await deps.store.linkAccount(issuerId, { accountId: created.id, walletId: created.walletId, apiKey: created.apiKey, webhookToken: token, environment: deps.environment, actorId });
+  // A chave só vem agora: se o Vault falhar, tenta de novo antes de desistir.
+  let linkError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await deps.store.linkAccount(issuerId, { accountId: created.id, walletId: created.walletId, apiKey: created.apiKey, webhookToken: token, environment: deps.environment, actorId });
+      linkError = null;
+      break;
+    } catch (error) {
+      linkError = error;
+    }
+  }
+  if (linkError) {
+    const message = `A subconta ${created.id} foi criada no Asaas, mas a chave não foi guardada. Fale com o Asaas para recuperar a chave.`;
+    throw new DataError("unexpected", message, { asaas: message }, { cause: linkError });
+  }
   // Regras do município já na criação (a tela usa para o certificado e o regime).
   await refreshIssuerFromAsaas(issuerId, deps).catch(() => undefined);
 }
@@ -170,7 +194,8 @@ export async function sendIssuerFiscalInfo(issuerId: string, credential: Credent
       serviceListItem: issuer.service_list_item,
       nbsCode: issuer.nbs_code,
       rpsSerie: issuer.rps_series,
-      rpsNumber: issuer.rps_next_number,
+      // Depois do primeiro envio o Asaas é quem conta os RPS: reenviar reiniciaria a numeração.
+      rpsNumber: issuer.fiscal_info_synced_at ? null : issuer.rps_next_number,
       nationalPortalTaxCalculationRegime: null,
       credential: cred,
     });
@@ -184,6 +209,9 @@ export async function sendIssuerFiscalInfo(issuerId: string, credential: Credent
     });
   } catch (error) {
     const message = asaasMessage(error);
+    const transient = !(error instanceof AsaasApiError) || error.status >= 500 || error.status === 408 || error.status === 429;
+    // Falha passageira (rede, 5xx): não desliga a emissão; é só tentar de novo.
+    if (transient) throw new DataError("unexpected", `Não foi possível falar com o Asaas agora; tente de novo. (${message})`, { asaas: message }, { cause: error });
     await deps.store.setFiscalInfo(issuerId, { ok: false, message, municipalOptions: options ? snapshot(options) : null, certificateSent: false, certificateValidUntil: null, actorId });
     throw new DataError("invalid", `O Asaas recusou a configuração fiscal: ${message}`, { asaas: message }, { cause: error });
   }

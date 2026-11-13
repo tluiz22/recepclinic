@@ -84,6 +84,12 @@ describe("Emissor no Asaas (N2b)", () => {
     expect((await getFiscalIssuer(asDb(fixture.admin), issuerId))?.issuingEnabled).toBe(true);
   });
 
+  it("falha passageira (5xx) não registra recusa nem desliga a emissão", async () => {
+    fake.failNext(/^\/fiscalInfo$/, 503, "Indisponível.");
+    expect(await codeOf(() => sendIssuerFiscalInfo(issuerId, null, fixture.admin.id, deps))).toBe("unexpected");
+    expect((await getFiscalIssuer(asDb(fixture.admin), issuerId))?.fiscalInfoStatus).not.toBe("error");
+  });
+
   it("recusa do Asaas fica registrada e desliga a emissão", async () => {
     fake.failNext(/^\/fiscalInfo$/, 400, "Inscrição municipal inválida.");
     expect(await codeOf(() => sendIssuerFiscalInfo(issuerId, null, fixture.admin.id, deps))).toBe("invalid");

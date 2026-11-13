@@ -8,11 +8,12 @@
 - **Revisão (13/nov, `/code-review` da branch inteira, 10 achados):** os 4 graves foram corrigidos: (1) `finish_asaas_*`
   só para `service_role`, o servidor grava o resultado pela plataforma; (2) erro 4xx depois de a nota existir no Asaas, 408 e
   429 não viram "recusada"; (3) a conciliação só dá por perdida a nota sem registro no Asaas depois de 15 min (era 3);
-  (4) as 6 migrações renomeadas para `20270121120000`–`20270121170000`. **Ainda abertos (médios):** RPS reiniciado no
-  reenvio da configuração, PDF duplicado na entrega, notas sem PDF travando a fila de 50, timeout desligando a emissão,
-  chave da subconta perdida se o Vault falhar, dados falsos do emissor migrado indo ao Asaas.
+  (4) as 6 migrações renomeadas para `20270121120000`–`20270121170000`. Os 6 médios também: RPS só enviado no 1º envio
+  (depois o Asaas conta), PDF sem fila de reenvio da mensagem (sem duplicar), fila de arquivos só dos últimos 7 dias e das
+  mais novas, falha passageira (5xx/rede) não desliga a emissão, chave da subconta com 3 tentativas e aviso claro, subconta
+  barrada se e-mail, celular, rua ou bairro do emissor migrado ainda forem provisórios.
 - **Não implementado:** N6 (emissão real).
 - **Bloqueios externos:** reanálise do BaaS pelo Asaas (aguardando), contador (PIS/COFINS), advogado (contrato do
   profissional pagador).
 - **Próxima ação:** validação pelo roteiro 15.2; depois juntar
-  (skill `juntar-branch`). revisto até: **A confirmar** (revisão de 13/nov em andamento; fecha com os médios).
+  (skill `juntar-branch`). revisto até: **A confirmar** (13/nov: graves e médios corrigidos; registrar o commit ao fechar).

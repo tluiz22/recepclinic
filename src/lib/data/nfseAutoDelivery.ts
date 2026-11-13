@@ -93,7 +93,7 @@ export async function deliverAutomatically(invoiceId: string, deps: AutoDelivery
       body: outcome.body ?? `[${filename}]`,
       status: outcome.sent ? "sent" : "failed",
       waMessageId: outcome.sent ? outcome.messageId : null,
-      retry: { outcome, context: { invoiceId } },
+      // Sem fila de reenvio da mensagem: a própria rotina da nota tenta de novo (evita PDF em dobro).
     }).catch((error) => {
       logError("nota fiscal: registro do envio automático", error, { clinica: facts.clinicId, nota: invoiceId });
       return null;

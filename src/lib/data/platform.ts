@@ -824,7 +824,7 @@ export function platformInvoiceFiles(env: ServiceEnv = platformEnv()) {
       const { error } = await db.rpc("platform_set_invoice_files", { p_invoice_id: invoiceId, p_pdf_path: pdfPath as string, p_xml_path: xmlPath as string });
       fail(error, "caminhos");
     },
-    /** Emitidas pelo Asaas sem o PDF guardado (o download falhou): a rotina tenta de novo. */
+    /** Emitidas pelo Asaas sem o PDF guardado (o download falhou): a rotina tenta de novo, só nos últimos 7 dias, das mais novas (as travadas não bloqueiam as novas). */
     async missingFiles(limit = 50): Promise<{ invoiceId: string; clinicId: string; issuerId: string; asaasInvoiceId: string }[]> {
       const { data, error } = await db
         .from("nfse_invoices")
@@ -833,6 +833,8 @@ export function platformInvoiceFiles(env: ServiceEnv = platformEnv()) {
         .in("status", ["issued", "canceling", "canceled"])
         .is("pdf_path", null)
         .not("asaas_invoice_id", "is", null)
+        .gte("requested_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
+        .order("requested_at", { ascending: false })
         .limit(limit);
       fail(error, "pendentes");
       return (data ?? []).map((r) => ({ invoiceId: r.id, clinicId: r.clinic_id, issuerId: r.issuer_id!, asaasInvoiceId: r.asaas_invoice_id! }));
