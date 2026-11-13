@@ -1,5 +1,5 @@
 import type { DbClient } from "./clients";
-import { unwrapAll } from "./errors";
+import { unwrapAll, unwrapAllIn } from "./errors";
 import type { FunnelFlow } from "./whatsapp/funnel";
 
 // Métricas › Funil do bot e Retomar contato (F6.7; Fases 15 e 23 do piloto,
@@ -367,16 +367,19 @@ export function buildFunnelReportFromSessions(all: FunnelSession[], now: Date = 
  * concluiu depois), já resumidas pelo banco; só de um telefone, se filtrado.
  */
 export async function listFunnelSessions(db: DbClient, clinicId: string, start: Date, end: Date, phone: string | null = null): Promise<FunnelSession[]> {
-  const rows = await unwrapAll(
-    (from, to) =>
-      db
-        .rpc("metrics_bot_sessions", { p_clinic_id: clinicId, p_start: start.toISOString(), p_end: end.toISOString() })
-        .order("started_at")
-        .order("session_id")
-        .range(from, to),
-    "Agendamento digital",
-  );
-  return rows
+  const [rows, bookings] = await Promise.all([
+    unwrapAll(
+      (from, to) =>
+        db
+          .rpc("metrics_bot_sessions", { p_clinic_id: clinicId, p_start: start.toISOString(), p_end: end.toISOString() })
+          .order("started_at")
+          .order("session_id")
+          .range(from, to),
+      "Agendamento digital",
+    ),
+    listPortalBookings(db, clinicId, start, new Date(end.getTime() + LATE_SESSIONS_MS + PORTAL_LATER_MS)),
+  ]);
+  const sessions: FunnelSession[] = rows
     .filter((r) => !phone || r.contact_phone === phone)
     .map((r) => {
       const base = { sessionId: r.session_id, flow: r.flow as FunnelFlow, phone: r.contact_phone, contactId: r.contact_id };
@@ -400,7 +403,96 @@ export async function listFunnelSessions(db: DbClient, clinicId: string, start: 
         appointmentStatus: r.appointment_status,
       };
     });
+  linkPortalBookings(sessions, bookings);
+  return sessions;
 }
+
+// ---------------------------------------------------------------------------
+// Marcou depois pelo portal (cliente, 13/nov/2026): o link do WhatsApp venceu e a pessoa marcou pelo portal por
+// conta própria. A tentativa conta como "Marcaram", com o detalhe, se a mesma pessoa marcou pelo portal em até
+// 24 horas depois do pedido.
+// ---------------------------------------------------------------------------
+
+export const PORTAL_LATER_MS = 24 * 60 * 60_000;
+/** O banco (`metrics_bot_sessions`) também traz as tentativas dos 2 dias depois do período. */
+const LATE_SESSIONS_MS = 2 * 24 * 60 * 60_000;
+const MARCAR_FLOWS: FunnelFlow[] = ["booking", "return_booking", "exam"];
+
+/** Marcação feita pelo portal: quem marcou (contato e celular) e quando. */
+export type PortalBooking = { appointmentId: string; status: string; createdAt: Date; contactId: string; phone: string | null };
+
+async function listPortalBookings(db: DbClient, clinicId: string, start: Date, end: Date): Promise<PortalBooking[]> {
+  const rows = await unwrapAll(
+    (from, to) =>
+      db
+        .from("appointments")
+        .select("id, status, created_at, booked_by_contact_id")
+        .eq("clinic_id", clinicId)
+        .eq("booking_channel", "portal")
+        // Fora as marcadas pela sessão do link do WhatsApp: essas já fecham a própria tentativa.
+        .or("portal_entry.is.null,portal_entry.neq.whatsapp")
+        .not("booked_by_contact_id", "is", null)
+        .gte("created_at", start.toISOString())
+        .lt("created_at", end.toISOString())
+        .order("created_at")
+        .order("id")
+        .range(from, to),
+    "Marcações pelo portal",
+  );
+  const ids = [...new Set(rows.map((r) => r.booked_by_contact_id!))];
+  const contacts = await unwrapAllIn(
+    ids,
+    (chunk, from, to) => db.from("contacts").select("id, phone").eq("clinic_id", clinicId).in("id", chunk).order("id").range(from, to),
+    "Contatos das marcações pelo portal",
+  );
+  const phoneOf = new Map(contacts.map((c) => [c.id, c.phone]));
+  return rows.map((r) => ({
+    appointmentId: r.id,
+    status: r.status,
+    createdAt: new Date(r.created_at),
+    contactId: r.booked_by_contact_id!,
+    phone: phoneOf.get(r.booked_by_contact_id!) ?? null,
+  }));
+}
+
+/**
+ * Liga cada marcação pelo portal à tentativa de marcar mais recente da mesma pessoa (contato ou celular), iniciada até
+ * 24 horas antes, que recebeu o link e ainda não marcou. A tentativa ganha o passo "confirmed" com `portal_later` (no lugar do que a
+ * sessão do link gravaria) e o atendimento, para "seguem de pé". Uma marcação liga uma tentativa só.
+ */
+export function linkPortalBookings(sessions: FunnelSession[], bookings: PortalBooking[]): void {
+  const claimed = new Set(sessions.map((s) => s.appointmentId).filter(Boolean));
+  const open = sessions.filter((s) => MARCAR_FLOWS.includes(s.flow) && find(s, "link_sent") && !find(s, "confirmed"));
+  for (const b of [...bookings].sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime())) {
+    if (claimed.has(b.appointmentId)) continue;
+    const at = b.createdAt.getTime();
+    let best: FunnelSession | null = null;
+    for (const s of open) {
+      const started = s.startedAt.getTime();
+      if (started > at || at - started > PORTAL_LATER_MS) continue;
+      if (s.contactId !== b.contactId && s.phone !== b.phone) continue;
+      if (!best || started > best.startedAt.getTime()) best = s;
+    }
+    if (!best) continue;
+    claimed.add(b.appointmentId);
+    open.splice(open.indexOf(best), 1);
+    best.events.push({
+      sessionId: best.sessionId,
+      flow: best.flow,
+      step: "confirmed",
+      source: "web",
+      phone: best.phone,
+      contactId: best.contactId,
+      metadata: { appointment_id: b.appointmentId, portal_later: true },
+      occurredAt: b.createdAt,
+    });
+    best.appointmentId = b.appointmentId;
+    best.appointmentStatus = b.status;
+  }
+}
+
+/** A tentativa foi concluída pela marcação no portal depois que o link venceu. */
+export const markedLaterOnPortal = (s: FunnelSession) => find(s, "confirmed")?.metadata.portal_later === true;
 
 // ---------------------------------------------------------------------------
 // Agendamento digital (redesign das Métricas, M5, 22/out/2026): o funil
@@ -431,11 +523,13 @@ const OPERATION_FLOWS: Record<DigitalOperation, FunnelFlow[]> = {
   cancelar: ["cancel"],
 };
 
-/** Etapas em comum de cada operação (o retorno tem "tinham direito" no lugar de "identificaram"). */
+/**
+ * Etapas em comum de cada operação. Marcar sem "Identificaram o paciente" (cliente, 13/nov/2026): desde o bot enxuto
+ * quem identifica é o portal.
+ */
 const CONSOLIDATED: Record<"marcar" | "remarcar" | "cancelar", { label: string; steps: string[] }[]> = {
   marcar: [
-    { label: "Iniciaram", steps: ["started"] },
-    { label: "Identificaram o paciente", steps: ["patient_identified", "RETURN_SELECT"] },
+    { label: "Pediram para marcar", steps: ["started"] },
     { label: "Receberam o link", steps: ["link_sent"] },
     { label: "Abriram o link", steps: LINK_OPENED },
     { label: "Marcaram", steps: ["confirmed"] },
@@ -493,6 +587,8 @@ export type DigitalReport = {
   dropped: { label: string; count: number }[];
   errors: { label: string; count: number }[];
   linkOpenedLate: number;
+  /** Das concluídas, quantas a pessoa marcou pelo portal depois que o link venceu (em até 24 horas). */
+  markedLater: number;
   slotTaken: number;
   reception: {
     requested: number;
@@ -579,6 +675,7 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
   const dropped = new Map<string, number>();
   const errors = new Map<string, number>();
   let linkOpenedLate = 0;
+  let markedLater = 0;
   let slotTaken = 0;
   const standing = { standing: 0, canceledLater: 0, unlinked: 0 };
 
@@ -599,6 +696,7 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
     for (let i = 0; i <= max; i++) stageCounts[i]++;
     const failure = s.events.filter((e) => e.step === "confirm_failed").at(-1);
     if (outcome === "concluded") {
+      if (markedLaterOnPortal(s)) markedLater++;
       if (!s.appointmentId) standing.unlinked++;
       else if (s.appointmentStatus === "canceled") standing.canceledLater++;
       else standing.standing++;
@@ -709,6 +807,7 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
     dropped: sorted(dropped),
     errors: sorted(errors),
     linkOpenedLate,
+    markedLater,
     slotTaken,
     reception: {
       requested: requested.length,

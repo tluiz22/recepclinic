@@ -135,6 +135,10 @@ const OUTCOMES: { key: Outcome; label: string; color: string }[] = [
   { key: "declined", label: "Desistiram", color: "#7d8b87" },
   { key: "in_progress", label: "Em andamento", color: "#c5d3ce" },
 ];
+// Marcou depois pelo portal, quando o link já tinha vencido (cliente, 13/nov/2026): conta em "Marcaram", com o detalhe.
+const PORTAL_LATER_COLOR = "#6b4fc8";
+const laterShown = !!r && group === "marcar" && r.markedLater > 0;
+const laterText = r ? `${r.markedLater} pelo portal depois que o link venceu` : "";
 const card = "flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-5";
 const h2 = "font-display text-lg leading-tight font-bold text-ink";
 const sub = "text-sm leading-relaxed text-ink-soft";
@@ -226,16 +230,44 @@ import { metricas } from "../../../lib/ajuda/metricas";
               <li class="flex flex-col gap-1.5">
                 <div class="grid grid-cols-[minmax(0,7.5rem)_1fr_3.5rem] items-center gap-2.5 text-[14.5px] sm:grid-cols-[12rem_1fr_4rem] sm:text-[15px]">
                   <span class={i === r.stages.length - 1 ? "font-bold" : ""}>{stage.label}</span>
-                  <span class="h-[30px] overflow-hidden rounded-md bg-canvas-deep">
-                    <span
-                      class={`flex h-[30px] items-center rounded-md pl-2.5 text-sm font-bold text-white ${i === r.stages.length - 1 ? "bg-brand-strong" : "bg-brand"}`}
-                      style={`width:${bar(stage.count, r.stages[0].count)}`}
-                    >
-                      {stage.count > 0 && stage.count}
+                  {i === r.stages.length - 1 && laterShown ? (
+                    <span class="flex h-[30px] overflow-hidden rounded-md bg-canvas-deep">
+                      {stage.count - r.markedLater > 0 && (
+                        <span class="flex h-[30px] items-center rounded-l-md bg-brand-strong pl-2.5 text-sm font-bold text-white" style={`width:${bar(stage.count - r.markedLater, r.stages[0].count)}`}>
+                          {stage.count - r.markedLater}
+                        </span>
+                      )}
+                      <span
+                        class:list={["flex h-[30px] items-center pl-2.5 text-sm font-bold text-white", stage.count - r.markedLater > 0 ? "rounded-r-md" : "rounded-md"]}
+                        style={`width:${bar(r.markedLater, r.stages[0].count)};background:${PORTAL_LATER_COLOR}`}
+                      >
+                        {r.markedLater}
+                      </span>
                     </span>
-                  </span>
+                  ) : (
+                    <span class="h-[30px] overflow-hidden rounded-md bg-canvas-deep">
+                      <span
+                        class={`flex h-[30px] items-center rounded-md pl-2.5 text-sm font-bold text-white ${i === r.stages.length - 1 ? "bg-brand-strong" : "bg-brand"}`}
+                        style={`width:${bar(stage.count, r.stages[0].count)}`}
+                      >
+                        {stage.count > 0 && stage.count}
+                      </span>
+                    </span>
+                  )}
                   <b class="text-right tabular-nums">{stage.share === null ? "—" : formatRate(stage.share)}</b>
                 </div>
+                {i === r.stages.length - 1 && laterShown && (
+                  <p class="inline-flex flex-wrap gap-x-3 text-[13.5px] text-ink-soft sm:ml-[12.6rem]">
+                    <span class="inline-flex items-center gap-1.5">
+                      <span class="h-2.5 w-2.5 rounded-[2px] bg-brand-strong" aria-hidden="true" />
+                      {stage.count - r.markedLater} pelo link no prazo
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                      <span class="h-2.5 w-2.5 rounded-[2px]" style={`background:${PORTAL_LATER_COLOR}`} aria-hidden="true" />
+                      {laterText}
+                    </span>
+                  </p>
+                )}
                 {i < r.stages.length - 1 && stage.lostToNext > 0 && (
                   <p class:list={["text-[13.5px] sm:ml-[12.6rem]", stage.biggestLoss ? "self-start rounded-md bg-ns-100 px-2.5 py-1.5 font-bold text-ns-800" : "text-pend-800"]}>
                     ↓{" "}
@@ -281,13 +313,23 @@ import { metricas } from "../../../lib/ajuda/metricas";
                   {o.label}
                 </span>
                 <b class="tabular-nums">{r.outcomes[o.key]}</b>
-                <span class="col-span-2 h-2.5 overflow-hidden rounded-[3px] bg-canvas-deep" aria-hidden="true">
-                  <span class="block h-2.5" style={`width:${bar(r.outcomes[o.key], r.attempts)};background:${o.color}`} />
+                <span class="col-span-2 flex h-2.5 overflow-hidden rounded-[3px] bg-canvas-deep" aria-hidden="true">
+                  {o.key === "concluded" && laterShown ? (
+                    <>
+                      <span class="block h-2.5" style={`width:${bar(r.outcomes.concluded - r.markedLater, r.attempts)};background:${o.color}`} />
+                      <span class="block h-2.5" style={`width:${bar(r.markedLater, r.attempts)};background:${PORTAL_LATER_COLOR}`} />
+                    </>
+                  ) : (
+                    <span class="block h-2.5" style={`width:${bar(r.outcomes[o.key], r.attempts)};background:${o.color}`} />
+                  )}
                 </span>
+                {o.key === "concluded" && laterShown && <span class="col-span-2 text-[13px] text-ink-soft">{laterText}</span>}
               </li>
             ))}
           </ul>
-          <p class={sub}>"Em andamento": última resposta há menos de 30 minutos.</p>
+          <p class={sub}>
+            "Em andamento": última resposta há menos de 30 minutos.{laterShown && " Pelo portal: a mesma pessoa marcou em até 24 horas depois do pedido."}
+          </p>
         </div>
       </section>
 
