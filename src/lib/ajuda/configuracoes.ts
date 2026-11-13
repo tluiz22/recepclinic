@@ -194,7 +194,7 @@ export const configuracoes = {
         "Cada profissional ativo precisa de uma agenda; sem ela, a lista mostra \"sem agenda\".",
         "O WhatsApp do profissional serve para ele receber o lembrete dos atendimentos, se ligado em Lembretes.",
         "Especialidade é obrigatória (uma ou mais, da lista do Suporte): com mais de um profissional, o paciente escolhe por ela no WhatsApp.",
-        "Formas de pagamento, convênios e observações que o bot responde são de cada profissional.",
+        "Orientações ao paciente (pagamento, convênios e observações) são de cada profissional.",
       ],
       depende: [{ texto: "Clínica: os dados básicos, feitos primeiro.", href: "/admin/configuracoes" }],
       alimenta: [
@@ -202,6 +202,19 @@ export const configuracoes = {
         { texto: "Equipe: o papel Profissional liga a pessoa a este cadastro.", href: "/admin/configuracoes/equipe" },
         { texto: "Lembretes: o resumo do dia vai ao WhatsApp dele.", href: "/admin/configuracoes/lembretes" },
       ],
+    },
+    // configuracoes/profissionais/[id].astro (abas do cadastro), professionalTabs.ts e professionalAccess.ts.
+    profissional: {
+      serve: "Manter tudo de um profissional num lugar só, em abas: como ele aparece, como atende, o que aceita e como entra no painel.",
+      como: [
+        "Cada aba mostra a parte em leitura; toque em Editar para mudar e Salvar para voltar à leitura.",
+        "Perfil e Orientações são o que o paciente vê: no portal, no link de agendamento e no WhatsApp. Pagamento e convênios das Orientações só aparecem no WhatsApp.",
+        "Atendimento (perfil, prazo e idade limite) vale só para a agenda dele; Convênios é o que ele aceita, com o item Convênios.",
+        "Acesso ao painel (só o Administrador): informe o e-mail e envie o convite; ele entra vendo só a própria agenda.",
+        "E-mail de quem já é da Equipe: a tela pede a confirmação e liga o cadastro ao login dessa pessoa, somando o papel Profissional.",
+      ],
+      erro: "Convite que não chegou: em Acesso ao painel, use Reenviar o convite ou Trocar o e-mail. Profissional desativado não recebe convite: reative em Perfil.",
+      depende: [{ texto: "Equipe: o acesso ao painel é o mesmo convite da Equipe, com o papel Profissional.", href: "/admin/configuracoes/equipe" }],
     },
     // configuracoes/nota-fiscal.astro (certificado, ambiente) e "Emitir nota" em financeiro/pagamento/[id].astro; F11.3 e F11.4.
     notaFiscal: {

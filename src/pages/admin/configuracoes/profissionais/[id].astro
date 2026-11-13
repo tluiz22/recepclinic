@@ -24,6 +24,7 @@ import { listInsurancePlans, listProfessionalPlanNotes, listProfessionalPlans } 
 import { EMPTY_BOT_INFO, getProfessionalBotInfo } from "../../../../lib/data/config/professionalBotInfo";
 import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
+import HowItWorks from "../../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
 import { ownSettingsOnly } from "../../../../lib/clinicAccess";
 import { PHOTO_TYPES, profilePhotoLink } from "../../../../lib/data/config/profilePhotos";
@@ -201,7 +202,9 @@ const needsDialog =
               active: t.id === tab,
             }))}
           />
-          <p class="-mt-1 max-w-3xl text-[15px] text-ink-soft">{TAB_INTROS[tab]}</p>
+          <HowItWorks id="profissional" topic={configuracoes.comoFunciona.profissional} class="-mt-1">
+            <p class="max-w-3xl text-[15px] text-ink-soft">{TAB_INTROS[tab]}</p>
+          </HowItWorks>
         </>
       )
     }
