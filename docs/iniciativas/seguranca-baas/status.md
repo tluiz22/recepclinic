@@ -46,6 +46,14 @@
   repositório `tluiz22/recepclinic` está **público** no GitHub (é a intenção?).
 - Conferir na documentação do Supabase e da Vercel as frases usadas nas respostas (AES-256, AWS, hash de senha).
 
+**S9: Fornecedores (política adotada em 13/nov: `politica-de-fornecedores.md`)**
+- Ler os termos e o DPA de Vercel, Supabase, Cloudflare, GitHub, Meta, Resend, Better Stack, Asaas e da empresa de IA e
+  preencher o cadastro (coluna "Termo/DPA lido?"). Lacunas: decidir manter, mitigar ou trocar.
+- Advogado: revisar e transformar as cláusulas da seção 3 num **modelo de contrato** para prestador (sigilo, credenciais,
+  aviso de incidente em 24 h, proibição de subcontratar sem autorização, LGPD, rescisão).
+- Incluir a empresa de IA e a Meta na política de privacidade.
+- Ao contratar o primeiro desenvolvedor: seguir a seção 1 (contrato, conta nominal, staging, MFA, sem chave de produção).
+
 **S8: Rotinas**
 - 1ª revisão semestral de acessos: 05/2027 (maio e novembro). Revisão mensal dos alertas de dependência.
 
