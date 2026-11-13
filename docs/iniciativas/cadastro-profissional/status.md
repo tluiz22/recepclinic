@@ -3,8 +3,9 @@
 **Desenho aprovado:** Opção A, abas (https://claude.ai/artifact/DgoinspdLKPdwNKNcfRc7c).
 
 - **Código:** branch `tela-profissional` (worktree `../recepclinic-impl`), commits `53dfa542` (abas, leitura com Editar,
-  especialidades por busca, foto num botão), `eadc6d31` (aba Acesso ao painel e e-mail no cadastro novo) e `1f718c32`
-  (correções da revisão). Sem migração. Ainda **não** está na `main` nem no staging.
+  especialidades por busca, foto num botão), `eadc6d31` (aba Acesso ao painel e e-mail no cadastro novo) `1f718c32`
+  (correções da revisão) e um último commit (13/nov): aba Bot vira **Orientações** (sempre visível; sem o bot, só as
+  observações, que o portal mostra), página na largura das outras e uma explicação sob cada aba. Sem migração. Ainda **não** está na `main` nem no staging.
 - **Decisões do cliente (13/nov):** Opção A; foto num botão só (escolher já envia; Trocar e Remover com confirmação);
   e-mail de quem já é da Equipe → confirmação e ligação ao login existente (soma o papel Profissional); e-mail opcional
   no cadastro novo (preenchido, o convite já sai).
