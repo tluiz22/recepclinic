@@ -45,11 +45,11 @@ Registrada em 13/nov/2026, a pedido do cliente, para a avaliação BaaS do Asaas
 
 | Conta | MFA ligado? | Conferido em |
 |---|---|---|
-| E-mail corporativo | _a conferir_ | — |
-| Vercel | _a conferir_ | — |
-| Supabase | _a conferir_ | — |
-| GitHub | _a conferir_ | — |
-| Asaas | _a conferir_ | — |
-| Meta | _a conferir_ | — |
+| E-mail corporativo | Sim | 13/11/2026 (informado pelo cliente) |
+| Vercel | Sim | 13/11/2026 (informado pelo cliente) |
+| Supabase | Sim | 13/11/2026 (informado pelo cliente) |
+| GitHub | Sim | 13/11/2026 (informado pelo cliente) |
+| Asaas | Sim | 13/11/2026 (informado pelo cliente) |
+| Meta | Sim | 13/11/2026 (informado pelo cliente) |
 
 Responsável: o titular do RecepClinic (até haver um encarregado definido).
