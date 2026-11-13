@@ -29,3 +29,7 @@ Branch `metricas-usabilidade`, criada da `main`.
   vencida sem marcar; mais a maior perda do funil, com link para Portal. Cada sinal traz "o que pode significar" e "o que
   melhorar". "Remarcou 2 vezes no dia" ficou de fora: a remarcação guarda só a última data. Códigos e reservas valem
   30 dias. Banco local com a migração; staging e produção ainda não.
+
+- **Publicação (13/nov, a pedido do cliente):** juntada na `main` (`8905c68c`) e no staging (migrações antes do código); produção só com
+  esta frente (`b09b18c`, cherry-pick; sem a nota fiscal). Revisão `high` da U2: 8 achados, corrigidos na migração
+  `20270123130000` e no código. `revisto até: ae6814f8`.
