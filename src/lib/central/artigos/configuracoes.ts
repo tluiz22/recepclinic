@@ -39,7 +39,7 @@ export const configuracoesArtigos = [
     module: "Configurações › Profissionais",
     where: "Configurações › Profissionais",
     screen: C("/admin/configuracoes/profissionais"),
-    keywords: ["profissional", "médico", "conselho", "RQE", "especialidade", "limite de profissionais", "desativar"],
+    keywords: ["profissional", "médico", "conselho", "RQE", "especialidade", "limite de profissionais", "desativar", "convite", "acesso ao painel", "login"],
     synonyms: ["cadastrar médico", "cadastrar dentista", "novo profissional", "especialidades"],
     related: ["config-agendas", "equipe-convidar", "ordem-de-configuracao"],
     order: 61,
@@ -54,7 +54,7 @@ export const configuracoesArtigos = [
       { name: "WhatsApp", text: "Para ele receber, pelo WhatsApp da clínica, a lista dos atendimentos das agendas dele, como definido em Lembretes." },
       { name: "Limite de profissionais ativos", text: "A tela mostra \"X de Y ativos\". Atingido o limite, é preciso desativar um ou falar com o suporte." },
     ],
-    notes: ["Cada profissional ativo precisa de uma agenda; sem ela a lista mostra \"sem agenda\".", "Com muitos profissionais, use Buscar profissional acima da lista (nome, especialidade ou registro).", "Foto: depois de cadastrar, na aba Perfil, toque em Enviar foto e escolha o arquivo: ela já é enviada (PNG, JPG ou WebP, até 4 MB). Com foto, aparecem Trocar foto e Remover foto. O profissional com login também envia a própria. Por enquanto, a foto aparece só no cadastro.", "Para dar login ao profissional, convide-o em Equipe com o papel Profissional e ligue ao cadastro dele."],
+    notes: ["Cada profissional ativo precisa de uma agenda; sem ela a lista mostra \"sem agenda\".", "Com muitos profissionais, use Buscar profissional acima da lista (nome, especialidade ou registro).", "Foto: depois de cadastrar, na aba Perfil, toque em Enviar foto e escolha o arquivo: ela já é enviada (PNG, JPG ou WebP, até 4 MB). Com foto, aparecem Trocar foto e Remover foto. O profissional com login também envia a própria. Por enquanto, a foto aparece só no cadastro.", "Para dar login ao profissional, use a aba Acesso ao painel do cadastro (ou o campo de e-mail ao cadastrar): o convite sai com o papel Profissional e só a agenda dele. Se o e-mail já for de alguém da Equipe, a tela pede para confirmar e liga o cadastro ao login dessa pessoa. O que ele vê e faz continua em Equipe."],
     contextual: ["/admin/configuracoes/profissionais"],
   }),
   article({

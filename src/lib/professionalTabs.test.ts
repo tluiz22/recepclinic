@@ -14,6 +14,12 @@ describe("professionalTabs", () => {
     expect(professionalTabs(url(""), ALL).tabs.map((t) => t.label)).toEqual(["Perfil", "Atendimento", "Convênios", "Bot"]);
   });
 
+  it("Acesso ao painel só para quem pode convidar", () => {
+    expect(professionalTabs(url("?aba=acesso"), ALL).tab).toBe("perfil");
+    expect(professionalTabs(url("?aba=acesso"), { ...ALL, access: true })).toMatchObject({ tab: "acesso", edit: null });
+    expect(professionalTabs(url(""), { ...ALL, access: true }).tabs.at(-1)).toEqual({ id: "acesso", label: "Acesso ao painel" });
+  });
+
   it("aba desligada ou desconhecida volta ao Perfil", () => {
     expect(professionalTabs(url("?aba=bot"), { insurance: true, bot: false }).tab).toBe("perfil");
     expect(professionalTabs(url("?aba=xyz"), ALL).tab).toBe("perfil");
@@ -31,6 +37,8 @@ describe("tabOfAction e professionalPage", () => {
     expect(tabOfAction("salvar")).toEqual({ tab: "perfil", edit: "dados" });
     expect(tabOfAction("bot_info")).toEqual({ tab: "bot", edit: "bot" });
     expect(tabOfAction("foto")).toEqual({ tab: "perfil", edit: null });
+    expect(tabOfAction("convidar")).toEqual({ tab: "acesso", edit: null });
+    expect(tabOfAction("tirar_acesso")).toEqual({ tab: "acesso", edit: null });
   });
 
   it("monta o endereço com a aba, a edição e o filtro da lista", () => {

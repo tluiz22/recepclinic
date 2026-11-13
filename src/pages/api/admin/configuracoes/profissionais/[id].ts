@@ -16,6 +16,16 @@ import { agendaOfProfessional, updateAgendaAttendance } from "../../../../../lib
 import { attendanceFromForm } from "../../../../../lib/attendanceForm";
 import { allFilterOn } from "../../../../../lib/returnPath";
 import { professionalPage, tabOfAction } from "../../../../../lib/professionalTabs";
+import { ownSettingsOnly } from "../../../../../lib/clinicAccess";
+import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
+import {
+  changeInviteEmail,
+  inviteProfessional,
+  linkProfessionalToMember,
+  removeProfessionalAccess,
+  resendProfessionalInvite,
+  type InviteOutcome,
+} from "../../../../../lib/data/config/professionalAccess";
 import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Profissional (F4.3): criar (`novo`), salvar, desativar e reativar. O login
@@ -35,6 +45,19 @@ export const POST: APIRoute = async (context) => {
   // Cadastro em abas (cliente, 13/nov/2026): salvo, volta à aba da parte em leitura; com erro, com ela aberta.
   const { tab, edit } = tabOfAction(acao);
   const page = (target: string) => professionalPage(target, tab, null, all);
+  // E-mail de quem já é da Equipe: volta à aba Acesso pedindo a confirmação de ligar ao login.
+  const confirmLink = (target: string, email: string) => `${professionalPage(target, "acesso", null, all)}&ligar=${encodeURIComponent(email)}`;
+  const clinicRef = { id: clinic.clinicId, name: clinic.clinicName };
+  const notSent = (reason: string) => ` Mas o e-mail não saiu (${reason}).`;
+  const invited = (target: string, email: string, outcome: InviteOutcome) =>
+    outcome.kind === "member"
+      ? { redirectTo: confirmLink(target, email), message: `Este e-mail já é de alguém da Equipe (${outcome.name === email.trim().toLowerCase() ? "" : `${outcome.name}, `}${outcome.roles}). Confirme abaixo.` }
+      : {
+          redirectTo: professionalPage(target, "acesso", null, all),
+          message: outcome.email.sent
+            ? outcome.existingUser ? "Acesso liberado: a pessoa já tinha login e foi avisada por e-mail." : "Convite enviado."
+            : `${outcome.existingUser ? "Acesso liberado." : "Convite criado."}${notSent(outcome.email.reason)}`,
+        };
 
   return runFormAction(
     context,
@@ -81,6 +104,29 @@ export const POST: APIRoute = async (context) => {
         const message = !marked.length ? "Salvo: só particular." : acceptsPrivate ? "Salvo: particular e convênios." : "Salvo: só convênios.";
         return { redirectTo: page(id), message };
       }
+      if (["convidar", "ligar_login", "reenviar", "trocar_email", "cancelar_convite", "tirar_acesso"].includes(acao)) {
+        // Acesso ao painel (cliente, 13/nov/2026): só o Administrador, pela aba do cadastro.
+        if (ownSettingsOnly(clinic)) throw new DataError("forbidden", "Acesso ao painel: só o Administrador");
+        const actorId = locals.userId!;
+        const deps = onboardingDeps(new URL(request.url));
+        switch (acao) {
+          case "convidar":
+            return invited(id, formText(form, "email"), await inviteProfessional(db, actorId, clinicRef, id, formText(form, "email"), deps));
+          case "trocar_email":
+            return invited(id, formText(form, "email"), await changeInviteEmail(db, actorId, clinicRef, id, formText(form, "email"), deps));
+          case "ligar_login": {
+            const name = await linkProfessionalToMember(db, actorId, clinic.clinicId, id, formText(form, "email"));
+            return { redirectTo: page(id), message: `Cadastro ligado ao login de ${name}.` };
+          }
+          case "reenviar": {
+            const email = await resendProfessionalInvite(db, clinicRef, id, deps);
+            return { redirectTo: page(id), message: `Convite reenviado.${email.sent ? "" : notSent(email.reason)}` };
+          }
+          default:
+            await removeProfessionalAccess(db, actorId, clinic.clinicId, id);
+            return { redirectTo: page(id), message: acao === "cancelar_convite" ? "Convite cancelado." : "Acesso retirado." };
+        }
+      }
       if (acao === "desativar" || acao === "reativar") {
         await setProfessionalActive(db, clinic.clinicId, id, acao === "reativar");
         return { redirectTo: page(id), message: acao === "reativar" ? "Profissional reativado." : "Profissional desativado." };
@@ -100,6 +146,18 @@ export const POST: APIRoute = async (context) => {
       };
       if (!current) {
         const created = await createProfessional(db, clinic.clinicId, input);
+        // E-mail opcional no cadastro (cliente, 13/nov/2026): preenchido, o convite já sai.
+        const email = formOptionalText(form, "email");
+        if (email && !ownSettingsOnly(clinic)) {
+          try {
+            const outcome = await inviteProfessional(db, locals.userId!, clinicRef, created.id, email, onboardingDeps(new URL(request.url)));
+            const next = invited(created.id, email, outcome);
+            return { ...next, message: `Profissional cadastrado. ${next.message}` };
+          } catch (error) {
+            const reason = error instanceof DataError && error.code === "invalid" ? Object.values(error.fields)[0] : "tente pela aba Acesso ao painel";
+            return { redirectTo: professionalPage(created.id, "acesso", null, all), message: `Profissional cadastrado, mas o convite não saiu: ${reason}`, tone: "error" as const };
+          }
+        }
         return { redirectTo: page(created.id), message: "Profissional cadastrado." };
       }
       await updateProfessional(db, clinic.clinicId, id, input);

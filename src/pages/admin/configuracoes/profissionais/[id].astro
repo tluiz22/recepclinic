@@ -34,6 +34,8 @@ import { portalLinksOf } from "../../../../lib/data/config/portalLinks";
 import { agendaOfProfessional } from "../../../../lib/data/config/agendas";
 import { PROFILE_LABELS } from "../../../../lib/vocabulary";
 import { professionalPage, professionalTabs, type ProfessionalEdit, type ProfessionalTab } from "../../../../lib/professionalTabs";
+import { loadProfessionalAccess } from "../../../../lib/data/config/professionalAccess";
+import { formatInstant } from "../../../../lib/clinicTime";
 
 const clinic = Astro.locals.clinic!;
 const { id } = Astro.params;
@@ -64,7 +66,9 @@ const insuranceOn = clinic.features.includes("insurance") && !isNew;
 const botOn = clinic.features.includes("whatsapp_bot") && !isNew;
 
 // Abas e a parte aberta para edição (o cadastro novo é só o formulário).
-const { tabs, tab, edit } = professionalTabs(Astro.url, { insurance: insuranceOn, bot: botOn });
+// Acesso ao painel (cliente, 13/nov/2026): o Administrador convida pelo próprio cadastro.
+const canInvite = !isNew && !ownOnly;
+const { tabs, tab, edit } = professionalTabs(Astro.url, { insurance: insuranceOn, bot: botOn, access: canInvite });
 const pageHref = (t: ProfessionalTab, e?: ProfessionalEdit) => professionalPage(id!, t, e ?? null, all);
 const editing = (part: ProfessionalEdit) => isNew || edit === part;
 
@@ -79,6 +83,9 @@ const botInfo = botOn && tab === "bot" ? await getProfessionalBotInfo(db, clinic
 // Foto (cliente, 08/nov/2026): no cabeçalho e na linha "Foto" do Perfil.
 const photoUrl = isNew ? null : await profilePhotoLink(db, clinic.clinicId, { kind: "professional", id: id! });
 const agenda = isNew || tab !== "atendimento" ? null : await agendaOfProfessional(db, clinic.clinicId, id!);
+const access = canInvite ? await loadProfessionalAccess(db, clinic.clinicId, professional!) : null;
+// E-mail de quem já é da Equipe: a aba pede a confirmação de ligar ao login dessa pessoa.
+const linkEmail = tab === "acesso" && access?.state === "none" ? Astro.url.searchParams.get("ligar") : null;
 // Link de agendamento (F5b): só com o Portal, e quando o profissional aparece nele.
 const portalLink =
   !isNew && clinic.features.includes("portal")
@@ -111,7 +118,8 @@ const DT = "text-sm text-ink-soft";
 const DD = "mt-0.5 font-semibold break-words text-ink";
 const registry = professional ? professionalRegistry(professional) : "";
 // Diálogo de confirmação: o do Desativar já vem com o ActiveToggle.
-const needsDialog = !!photoUrl && (ownOnly || !professional?.isActive || tab !== "perfil");
+const needsDialog =
+  (!!photoUrl && tab === "perfil" && (ownOnly || !professional?.isActive)) || (tab === "acesso" && access?.state !== "none");
 ---
 
 <ConfigShell
@@ -174,6 +182,16 @@ const needsDialog = !!photoUrl && (ownOnly || !professional?.isActive || tab !==
               <div class="mt-1 flex flex-wrap gap-2">
                 <span class={chip(professional!.isActive ? "ok" : "off")}>{professional!.isActive ? "Ativo" : "Desativado"}</span>
                 {portalLink && <span class={chip(portalLink.shown ? "ok" : "off")}>{portalLink.shown ? "No portal" : "Fora do portal"}</span>}
+                {access?.state === "none" && (
+                  <a href={pageHref("acesso")} class={`${chip("pend")} no-underline hover:underline`}>
+                    Sem acesso ao painel · convidar
+                  </a>
+                )}
+                {access?.state === "invited" && (
+                  <a href={pageHref("acesso")} class="inline-flex items-center rounded-full bg-att-100 px-2.5 py-0.5 text-[13.5px] font-semibold text-att-800 no-underline hover:underline">
+                    Convite enviado
+                  </a>
+                )}
               </div>
             </div>
           </section>
@@ -296,6 +314,15 @@ const needsDialog = !!photoUrl && (ownOnly || !professional?.isActive || tab !==
                 class={INPUT}
               />
             </div>
+            {isNew && !ownOnly && (
+              <div class="border-t border-[#e6ecea] pt-5 sm:max-w-md">
+                <label for="email" class={LABEL}>E-mail para acessar o painel (opcional)</label>
+                <input id="email" name="email" type="email" autocomplete="off" placeholder="nome@email.com" aria-describedby="email-hint" class={INPUT} />
+                <p id="email-hint" class={HINT}>
+                  Preenchido, o convite sai ao cadastrar: o profissional cria a senha e vê a própria agenda. Dá para convidar depois, na aba Acesso ao painel.
+                </p>
+              </div>
+            )}
             <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
               <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
               <a href={isNew ? list : pageHref("perfil")} class={SECONDARY_BUTTON}>Cancelar</a>
@@ -540,6 +567,131 @@ const needsDialog = !!photoUrl && (ownOnly || !professional?.isActive || tab !==
             </dl>
           </section>
         ))
+    }
+
+    {
+      canInvite && tab === "acesso" && access && (
+        <>
+          {linkEmail && (
+            <section class="flex flex-col gap-3 rounded-xl border-2 border-pend-200 bg-pend-50 p-4 sm:p-5" aria-labelledby="ligar-titulo">
+              <h2 id="ligar-titulo" class={SECTION_TITLE}>Ligar ao login de quem já é da Equipe?</h2>
+              <p class="text-[15px] text-ink">
+                <strong>{linkEmail}</strong> já entra no painel desta clínica. Ligado, este cadastro passa a usar esse login: a pessoa ganha o papel
+                Profissional e vê também a agenda de {professional!.displayName}. Sem convite novo.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <form method="POST" action={action}>
+                  <input type="hidden" name="acao" value="ligar_login" />
+                  <input type="hidden" name="email" value={linkEmail} />
+                  <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Ligando…">Ligar ao login</button>
+                </form>
+                <a href={pageHref("acesso")} class={SECONDARY_BUTTON}>Cancelar</a>
+              </div>
+            </section>
+          )}
+          <section class={`${CARD} flex min-w-0 flex-col gap-4 p-4 sm:p-5`} aria-labelledby="acesso-titulo">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="acesso-titulo" class={SECTION_TITLE}>Acesso ao painel</h2>
+              {access.state === "none" && <span class={chip("pend")}>Sem acesso</span>}
+              {access.state === "invited" && <span class="inline-flex items-center rounded-full bg-att-100 px-2.5 py-0.5 text-[13.5px] font-semibold text-att-800">Convite enviado</span>}
+              {access.state === "active" && <span class={chip("ok")}>Com acesso</span>}
+            </div>
+
+            {access.state === "none" && (
+              <form method="POST" action={action} class="flex flex-col gap-4">
+                <input type="hidden" name="acao" value="convidar" />
+                <p class="text-[15px] text-ink-soft">
+                  Com o acesso, {professional!.displayName} entra no RecepClinic com e-mail e senha e vê a própria agenda e o próprio cadastro.
+                </p>
+                <div class="sm:max-w-md">
+                  <label for="email" class={LABEL}>E-mail do profissional</label>
+                  <input id="email" name="email" type="email" required autocomplete="off" placeholder="nome@email.com" aria-describedby="email-hint" class={INPUT} />
+                  <p id="email-hint" class={HINT}>Ele recebe o convite para criar a senha. Se já tiver login no RecepClinic, entra direto e recebe um aviso.</p>
+                </div>
+                <button type="submit" class={`${PRIMARY_BUTTON} self-start`} data-sending-label="Enviando…">Enviar convite</button>
+              </form>
+            )}
+
+            {access.state === "invited" && (
+              <>
+                <p class="text-[15.5px] text-ink">
+                  Enviado para <strong class="break-all">{access.email}</strong>
+                  {access.sentAt && ` em ${formatInstant(access.sentAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}`}.
+                </p>
+                <p class="-mt-2 text-[15px] text-ink-soft">Ainda não criou a senha. O link do e-mail vale 24 horas; depois, reenvie.</p>
+                <div class="flex flex-wrap gap-2">
+                  <form method="POST" action={action}>
+                    <input type="hidden" name="acao" value="reenviar" />
+                    <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Reenviando…">Reenviar convite</button>
+                  </form>
+                  <form method="POST" action={action}>
+                    <input type="hidden" name="acao" value="cancelar_convite" />
+                    <button
+                      type="submit"
+                      class={`${DANGER_BUTTON} js-confirm-delete`}
+                      data-confirm-title="Cancelar o convite?"
+                      data-confirm-message={`O link enviado para ${access.email} deixa de valer. Dá para convidar de novo depois.`}
+                      data-confirm-label="Cancelar o convite"
+                    >
+                      Cancelar o convite
+                    </button>
+                  </form>
+                </div>
+                <details class="group rounded-lg border border-line-strong">
+                  <summary class="flex min-h-11 cursor-pointer list-none items-center px-3 text-[15px] font-semibold text-brand [&::-webkit-details-marker]:hidden">
+                    Trocar o e-mail
+                  </summary>
+                  <form method="POST" action={action} class="flex flex-col gap-3 border-t border-line p-3">
+                    <input type="hidden" name="acao" value="trocar_email" />
+                    <div class="sm:max-w-md">
+                      <label for="email" class={LABEL}>E-mail novo</label>
+                      <input id="email" name="email" type="email" required autocomplete="off" class={INPUT} />
+                      <p class={HINT}>O convite antigo deixa de valer e um novo sai para este e-mail.</p>
+                    </div>
+                    <button type="submit" class={`${PRIMARY_BUTTON} self-start`} data-sending-label="Enviando…">Enviar para o e-mail novo</button>
+                  </form>
+                </details>
+              </>
+            )}
+
+            {access.state === "active" && (
+              <>
+                <dl class="grid gap-x-6 gap-y-4 text-[15.5px] sm:grid-cols-2">
+                  <div>
+                    <dt class={DT}>E-mail de login</dt>
+                    <dd class={`${DD} break-all`}>{access.email ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt class={DT}>Papel na clínica</dt>
+                    <dd class={DD}>{access.roles.join(" e ")}</dd>
+                  </div>
+                </dl>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <a href={`/admin/configuracoes/equipe/${access.userId}`} class="inline-flex min-h-10 items-center text-[15px] font-semibold text-brand underline">
+                    Mudar o que vê e faz (Equipe)
+                  </a>
+                  {access.onlyProfessional && (
+                    <form method="POST" action={action}>
+                      <input type="hidden" name="acao" value="tirar_acesso" />
+                      <button
+                        type="submit"
+                        class={`${DANGER_BUTTON} js-confirm-delete`}
+                        data-confirm-title="Tirar o acesso?"
+                        data-confirm-message={`${professional!.displayName} deixa de entrar no painel desta clínica. O cadastro, a agenda e o histórico ficam. Dá para convidar de novo.`}
+                        data-confirm-label="Tirar o acesso"
+                      >
+                        Tirar o acesso
+                      </button>
+                    </form>
+                  )}
+                </div>
+                {!access.onlyProfessional && <p class={`${HINT} mt-0`}>Esta pessoa também é {access.roles.filter((r) => r !== "Profissional").join(" e ")}: o acesso muda pela Equipe.</p>}
+              </>
+            )}
+          </section>
+          <p class="text-sm text-ink-soft">O que ele vê e faz no painel (agendas e permissões) continua em Configurações › Equipe.</p>
+        </>
+      )
     }
   </div>
   {needsDialog && <ConfirmDeleteDialog />}
