@@ -1,6 +1,7 @@
 # Nota fiscal (NFS-e pelo Asaas)
 > **A REPLANEJAR (cliente, 14/nov/2026):** o Asaas **não emitirá mais as notas**; ele fica só no faturamento do SaaS (F12). Motivo: o cadastro da subconta (documentos do titular, aprovação manual) pesa demais para o profissional. A D13 será revista. Caminhos a levantar: emissão direta no Emissor Nacional (certificado A1, sem terceiros) ou intermediário só de notas. Tudo abaixo descreve o que foi feito pelo Asaas (N1–N5), hoje no staging.
-**Plano:** `../../planejamento-nfse-asaas.md` (decisão D13; N-P1 a N-P7 na seção 14.7; roteiro da validação na 15.2).
+**Plano novo (aprovado pelo cliente em 14/nov):** `../../planejamento-nfse-provedor.md`, com a Focus NFe como primeiro provedor, a cobrança por CNPJ emissor e o preço configurável (inicial: R$ 49,90/mês, 100 notas, R$ 0,50 por excedente). Decididas: DP-1 (Start da Focus quando houver 3 clínicas), DP-2 (uma contratação por CNPJ, valendo em todas as clínicas) e DP-5. Faltam DP-3, DP-4 e DP-6 a DP-10; depois vem a P0.
+**Plano antigo:** `../../planejamento-nfse-asaas.md` (decisão D13; N-P1 a N-P7 na seção 14.7; roteiro da validação na 15.2).
 - **Código:** N1–N5 na branch `nota-fiscal` (6 migrações `20270121120000`–`20270121170000`), **na `main` e no staging desde 13/nov** (branch apagada). Em
   12/nov: recebeu a `main` (merge `3b12ef3d`, 0 atrás e 11 à frente) e foi enviada ao `origin/nota-fiscal`.
 - **Testes (12/nov, na branch):** `astro check` 0 erros; `npm test` 1226 ok; `npm run test:db` 1153 ok (após `db reset`).
