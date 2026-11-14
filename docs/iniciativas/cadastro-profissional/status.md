@@ -12,5 +12,6 @@
 - **Testes:** `astro check` 0 erros; `npm test` 1306 ok; Playwright da tela (abas, editar e salvar em cada aba,
   especialidades, foto, convite, trocar e-mail, cancelar, ligar ao login, visão do profissional, volta da Equipe);
   390 e 1280 px conferidos. Revisão `/code-review high`: 10 achados, todos corrigidos.
-- **Próxima ação:** validação do cliente no `npm run dev` da branch; depois `juntar-branch` e publicar no staging;
+- **Junção (13/nov):** juntada na `main` (local, sem push); revisto até: `d2701164`. Suíte: 1308 unidade, 1172 banco, build ok.
+- **Próxima ação (antiga):** validação do cliente no `npm run dev` da branch; depois `juntar-branch` e publicar no staging;
   então retomar a Nota fiscal no passo 2 do roteiro 15.2.
