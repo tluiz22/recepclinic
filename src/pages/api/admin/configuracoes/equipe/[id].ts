@@ -6,6 +6,7 @@ import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { removeProfilePhoto, uploadProfilePhoto } from "../../../../../lib/data/config/profilePhotos";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { professionalReturn } from "../../../../../lib/professionalTabs";
 import { resendInvitation } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { formAll, formChecked, formOptionalText, formText } from "../../../../../lib/forms";
@@ -20,7 +21,9 @@ export const POST: APIRoute = async (context) => {
   const actorId = locals.userId!;
   const db = createUserClient(request, cookies);
   const list = "/admin/configuracoes/equipe";
-  const page = (target: string) => `${list}/${target}`;
+  // Aberto do cadastro do profissional: a volta segue na tela da pessoa.
+  const volta = professionalReturn(url.searchParams.get("volta"));
+  const page = (target: string) => `${list}/${target}${volta ? `?volta=${encodeURIComponent(volta)}` : ""}`;
   const notSent = (reason: string) => ` Mas o e-mail não saiu (${reason}).`;
   const access = (): MemberAccessInput => ({
     displayName: formOptionalText(form, "display_name"),
