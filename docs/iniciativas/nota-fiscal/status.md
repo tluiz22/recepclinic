@@ -14,4 +14,13 @@
 - **Não implementado:** N6 (emissão real).
 - **Bloqueios externos:** reanálise do BaaS pelo Asaas (aguardando), contador (PIS/COFINS), advogado (contrato do
   profissional pagador).
-- **Próxima ação:** validação pelo roteiro 15.2; (junção feita). revisto até: **commit deste registro** (13/nov: graves e médios corrigidos; revisão do delta achou 2 pontos, corrigidos).
+- **Validação no staging (14/nov, Claude + Playwright, Clínica Exemplo com o financeiro ligado):** passos 2 a 7 do roteiro 15.2
+  passaram até onde o Asaas permite: emissor e lista de profissionais; troca "Como emite"; dados fiscais (CNPJ inválido mantém
+  os campos); **subconta criada no Sandbox** (CEP e CNPJ repetido recusados com mensagem clara); contrato do profissional
+  (Suporte define, profissional aceita); "Quem paga" (profissional exige login); CPF/e-mail/CEP do paciente (CEP preenche
+  rua e bairro); pagamento com confirmação; nota bloqueada com "emissão não ligada".
+- **Não validado:** envio da configuração fiscal/certificado (o Asaas recusa até aprovar o cadastro geral, manual); emitir,
+  conferir, PDF, enviar e cancelar nota; cartão "Notas fiscais" da Assinatura (exige o preço da nota no contrato da clínica).
+- **Dados de teste que ficaram no staging:** `finance` ligado na Clínica Exemplo; Dr. Bruno com CNPJ próprio fictício
+  (13.897.827/0001-91), subconta Sandbox, pagador = profissional, contrato aceito e ligado ao login da recepção; 1 pagamento de R$ 600.
+- **Próxima ação:** aprovar o cadastro da subconta no painel do Asaas Sandbox e repetir o envio do certificado e a emissão.
