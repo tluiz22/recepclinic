@@ -1,6 +1,6 @@
 # Roadmap (fonte única do estado)
 
-> Atualizado em 13/nov/2026 (nota fiscal na `main`). Só se edita na `main`. Marcas: **Código** = conferido no
+> Atualizado em 14/nov/2026 (Nota fiscal a replanejar). Só se edita na `main`. Marcas: **Código** = conferido no
 > git; **Doc** = só o que o documento afirma; **A confirmar** = depende do cliente. Detalhe de cada frente: `status.md`.
 
 ## Ambientes
@@ -11,7 +11,7 @@
 | Frente | Estado | Branch | Bloqueio externo | Próxima ação |
 |---|---|---|---|---|
 | [Recepção digital](iniciativas/recepcao-digital/status.md) | F1–F6 na `main` e no staging, **tudo validado pelo cliente (12/nov)**, incluindo F3f, F5b e F6. **F3f e F6 na produção desde 12/nov**. **Limpeza do código do `/agendar` feita na `main` (12/nov, ainda não publicada)**; falta apagar a tabela `booking_links` (migração). **Correção do bot na produção (E1–E5, 13/nov): validada e juntada na `producao` e na `main` locais, sem push**; migração `20270124120000` | — (juntada) | Meta: modelo `rc_lembrete_v2`; reunião com a clínica (RD6, só se a clínica usar horário por convênio); advogado (LGPD) antes da produção | Publicar a correção do bot: migração no staging e na produção, o Suporte publica a base, depois o push da `main` e da `producao`; depois, publicar a limpeza e a migração que apaga `booking_links` |
-| [Nota fiscal (NFS-e)](iniciativas/nota-fiscal/status.md) | N1–N5 na `main` e no staging (13/nov), revisão feita; validação pelo roteiro 15.2 parada no passo 2 (espera o cadastro do profissional); N6 bloqueada | — (juntada) | Asaas (BaaS), contador, advogado | Validar pelo roteiro 15.2 no staging, depois do cadastro do profissional |
+| [Nota fiscal (NFS-e)](iniciativas/nota-fiscal/status.md) | **A REPLANEJAR (cliente, 14/nov): o Asaas deixa de emitir nota fiscal e fica só no faturamento do SaaS.** O código N1–N5 (emissão pelo Asaas) está na `main` e no staging, **fora da produção**; a D13 será revista | — (juntada) | Decisão do novo caminho (emissão direta no Emissor Nacional ou intermediário só de notas), contador, advogado | Replanejar a frente (levantar esforço, custo por nota e riscos) e rever a D13 com o cliente; **não publicar na produção o código N1–N5 antes disso** |
 | [Cadastro do profissional (abas e convite)](iniciativas/cadastro-profissional/status.md) | Validado pelo cliente, juntado na `main` e enviado ao staging (push 13/nov); sem migração | — (juntada) | — | Conferir a tela no staging e retomar a Nota fiscal no passo 2 |
 | [Faturamento SaaS (Asaas)](iniciativas/faturamento-asaas/status.md) | Código na `main` (F12.1–F12.8) | — (juntada) | Asaas: reanálise do BaaS e tokenização do cartão | Conferir tokenização antes do 1º contrato no cartão |
 | [Funil do portal e Usabilidade](iniciativas/usabilidade/status.md) | U1 e U2 juntas na `main`, no staging e na produção (13/nov), aguardando a validação do cliente | — | — | Validar a aba Usabilidade e o funil na produção; depois, os sinais que pedem gravação nova (formulário com erro, cancelamento desfeito) |

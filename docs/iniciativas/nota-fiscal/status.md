@@ -1,4 +1,5 @@
 # Nota fiscal (NFS-e pelo Asaas)
+> **A REPLANEJAR (cliente, 14/nov/2026):** o Asaas **não emitirá mais as notas**; ele fica só no faturamento do SaaS (F12). Motivo: o cadastro da subconta (documentos do titular, aprovação manual) pesa demais para o profissional. A D13 será revista. Caminhos a levantar: emissão direta no Emissor Nacional (certificado A1, sem terceiros) ou intermediário só de notas. Tudo abaixo descreve o que foi feito pelo Asaas (N1–N5), hoje no staging.
 **Plano:** `../../planejamento-nfse-asaas.md` (decisão D13; N-P1 a N-P7 na seção 14.7; roteiro da validação na 15.2).
 - **Código:** N1–N5 na branch `nota-fiscal` (6 migrações `20270121120000`–`20270121170000`), **na `main` e no staging desde 13/nov** (branch apagada). Em
   12/nov: recebeu a `main` (merge `3b12ef3d`, 0 atrás e 11 à frente) e foi enviada ao `origin/nota-fiscal`.
