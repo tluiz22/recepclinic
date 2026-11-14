@@ -2,8 +2,8 @@
 Reúne: Central, ciclo do atendimento, conversas que não são atendimento, falhas de envio, pedido não concluído.
 Detalhe completo (só por `grep`): `../arquivo/modulos/` — `planejamento-central-atendimento.md` (seções 11, 14, 15, 16),
 `ciclo-atendimento-humano.md`, `conversas-nao-atendimento.md`, `falhas-de-envio.md`, `pedido-nao-concluido.md`.
-**Estado (segundo os documentos, 07/nov):** Central finalizada, na produção e ligada na clínica piloto. CA (04–05/nov),
-PN (03/nov), FE (05/nov) e NA (07/nov, "produção não" no documento) — validação do cliente e produção da NA: **a confirmar**.
+**Estado:** Central finalizada, na produção e ligada na clínica piloto. CA (05/nov), PN (03/nov), FE (05/nov) e NA
+(07/nov, `d4aff65`) estão na produção (`producao.md`); validado (14/nov: implantado conta como validado).
 Em aberto: preço/pacote do item e advogado (termo, contrato, política). Etapa 2 (Gestão) só se o cliente reabrir.
 
 ## Decisões que valem

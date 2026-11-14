@@ -3,8 +3,8 @@ Reúne: evolução do assistente (EA), Base de Conhecimento (BC), catálogo da B
 Detalhe (só por `grep`): `../arquivo/modulos/` — `evolucao-assistente.md`, `base-de-conhecimento.md` (decisões na
 seção 9), `base-de-conhecimento-catalogo.md`, `implantacao-segura.md`. Jornada do bot: `.claude/rules/bot-jornada.md`.
 **Estado (segundo os documentos):** EA na produção desde 02/nov (`c9418ac`); BC na produção, em uso na clínica piloto
-e ligada por padrão com o Bot de WhatsApp (correção do cliente, 02/nov); IS1–IS5 feitas em 03/nov (publicação na
-produção e validação: **a confirmar**). Bot enxuto (F3f): ver `../iniciativas/recepcao-digital/status.md`.
+e ligada por padrão com o Bot de WhatsApp (correção do cliente, 02/nov); IS1–IS5 na produção desde 03/nov
+(`ebad937`); validado (14/nov: implantado conta como validado). Correção do bot E1–E5 na produção desde 13/nov. Bot enxuto (F3f): ver `../iniciativas/recepcao-digital/status.md`.
 
 ## Decisões que valem
 - EA: um só assistente/reconhecedor/base. Entrada por texto livre ou menu; recepção tenta resolver antes de transferir,

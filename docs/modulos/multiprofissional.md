@@ -1,8 +1,8 @@
 # Clínica com vários profissionais (ficha)
 Detalhe (só por `grep`): `../arquivo/modulos/planejamento-multiprofissional.md` (seções 2–5 etapas ME/MC/MI/MB; 9–10 MS;
 11–13 ajustes de 08/nov). Roteiros de validação nas seções 8 e 10.
-**Estado (segundo o documento, 07/nov–08/nov):** ME, MC, MI, MB, MS e os ajustes 11–13 feitos, no staging; consta na
-produção desde a implantação de 11/nov. Validação do cliente: **a confirmar**.
+**Estado:** ME, MC, MI, MB, MS e os ajustes 11–13 na produção (08/nov, `64ec6b1`; registro em `producao.md`).
+Validado (14/nov: implantado conta como validado).
 
 ## Decisões que valem
 - Especialidades, convênios, informações do bot, perfil, prazo de oferta de horários e idade limite **por profissional**.

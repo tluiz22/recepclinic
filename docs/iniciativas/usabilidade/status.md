@@ -1,5 +1,5 @@
 # Funil do portal e aba Usabilidade
-**Em andamento (13/nov/2026).** Desenho aprovado: canvas "Métricas: funil do portal e usabilidade" (Claude Design).
+**Na produção desde 13/nov/2026 (`b09b18c`); validada por estar implantada (14/nov).** Desenho aprovado: canvas "Métricas: funil do portal e usabilidade" (Claude Design).
 Branch `metricas-usabilidade`, criada da `main`.
 
 ## Decisões do cliente (13/nov)
@@ -11,7 +11,7 @@ Branch `metricas-usabilidade`, criada da `main`.
 - **Alcance:** uma clínica por vez, como o resto de Métricas. O ranking entre clínicas fica para depois.
 
 ## Etapas
-- **U1 (feita na branch, 13/nov; aguarda validação):** migração `20270122120000_portal_visitas` (tabela `portal_visits`,
+- **U1 (feita, 13/nov; na produção):** migração `20270122120000_portal_visitas` (tabela `portal_visits`,
   `portal_visit_step`, `metrics_portal_steps`, limpeza de 30 dias, Suporte/auditoria/suspensão), anotação nas telas do
   portal (`trackPortalStep`, depois da resposta) e funil de **8 passos** em Métricas › Portal, com filtro por entrada e
   maior perda. Os passos reais do portal são 8, não 10 como no desenho: especialidade e local não são telas próprias.
@@ -22,7 +22,7 @@ Branch `metricas-usabilidade`, criada da `main`.
   à anotação; `portalSteps` antigo removido). `metrics_portal` ainda calcula as colunas de sessão que a tela não usa
   (custo pequeno, só ao abrir Métricas). Banco local com a migração; staging e produção ainda não.
 - **U1 confirmada pelo cliente (13/nov).**
-- **U2 (feita na branch, 13/nov; aguarda validação):** migração `20270123120000_usabilidade_sinais` (função
+- **U2 (feita, 13/nov; na produção):** migração `20270123120000_usabilidade_sinais` (função
   `metrics_usability`, só Suporte, sem tabela nova) e aba **Usabilidade** em Métricas (só `isPlatformStaff`, uma clínica,
   período como as outras). 5 sinais de dados existentes: marcou e cancelou em menos de 5 min (recepção); marcou e
   cancelou em menos de 1 h (portal); remarcou em menos de 1 h depois de marcar; errou o código do celular; reserva
