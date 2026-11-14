@@ -2,6 +2,9 @@
 **Plano:** `../../planejamento-faturamento-saas.md` (o cabeçalho dele diz "branch local", **desatualizado**: a
 `faturamento` foi juntada na `main`, commit `3919ca4e`, F12.1–F12.8).
 - **Código (na `main` e na produção desde 07/nov, `47e086d`; validado):** F12.1–F12.8. Demos sem o módulo financeiro até ficar pronto.
-- **Bloqueios externos:** reanálise do BaaS pelo Asaas (e-mail de 07/nov); tokenização do cartão em produção pedida.
+- **Tokenização do cartão em produção: aprovada pelo Asaas (cliente, 14/nov); falta validar com um pagamento real no Checkout** (a API não confirma sem os dados de um cartão).
+- **Contrato:** texto revisado e aprovado como está (cliente, 14/nov); qualquer ajuste, o cliente traz.
+- **Nota fiscal:** o Asaas não emitirá mais (burocracia, cliente, 14/nov); fica só no faturamento do SaaS.
+- **Bloqueio externo restante:** reanálise do BaaS pelo Asaas, em andamento (e-mail de 07/nov).
 - **Divergências contrato × sistema:** multa e juros no Asaas; exportação dos dados em 60 dias (seção do plano).
-- **Próxima ação:** conferir a tokenização antes do 1º contrato com implantação no cartão. Validação e produção: feitas (14/nov: implantado conta como validado).
+- **Próxima ação:** validar a tokenização com um pagamento real no cartão (valor baixo, na clínica piloto) e fazer o 1º teste de ciclo em produção; faltam o valor combinado com a clínica piloto, conferir avisos do Asaas desligados (11.11) e o módulo financeiro ligado na clínica. Validação e produção: feitas (14/nov: implantado conta como validado).
