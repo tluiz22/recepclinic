@@ -13,5 +13,5 @@
   especialidades, foto, convite, trocar e-mail, cancelar, ligar ao login, visão do profissional, volta da Equipe);
   390 e 1280 px conferidos. Revisão `/code-review high`: 10 achados, todos corrigidos.
 - **Junção (13/nov):** juntada na `main` (local, sem push); revisto até: `d2701164`. Suíte: 1308 unidade, 1172 banco, build ok.
-- **Próxima ação (antiga):** validação do cliente no `npm run dev` da branch; depois `juntar-branch` e publicar no staging;
-  então retomar a Nota fiscal no passo 2 do roteiro 15.2.
+- **Publicação (13/nov):** push da `main` (`62a28ce2`) publica o staging; banco do staging já em dia (`db push --dry-run`: nada a aplicar).
+- **Próxima ação:** conferir a tela no staging; depois retomar a Nota fiscal no passo 2 do roteiro 15.2.
