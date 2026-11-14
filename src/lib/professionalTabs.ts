@@ -28,7 +28,8 @@ export function professionalTabs(
   features: { insurance: boolean; orientations: boolean; access?: boolean },
 ): { tabs: { id: ProfessionalTab; label: string }[]; tab: ProfessionalTab; edit: ProfessionalEdit | null } {
   const ids: ProfessionalTab[] = ["perfil", "atendimento", ...(features.insurance ? ["convenios" as const] : []), ...(features.orientations ? ["orientacoes" as const] : []), ...(features.access ? ["acesso" as const] : [])];
-  const asked = url.searchParams.get("aba");
+  // `bot` era o nome antigo da aba Orientações (links salvos).
+  const asked = url.searchParams.get("aba") === "bot" ? "orientacoes" : url.searchParams.get("aba");
   const tab = ids.find((id) => id === asked) ?? "perfil";
   const editOfTab = EDIT_OF[tab];
   const edit = editOfTab && url.searchParams.get("editar") === editOfTab ? editOfTab : null;
@@ -69,11 +70,20 @@ export function professionalReturn(value: string | null | undefined): string | n
   return value && /^\/admin\/configuracoes\/profissionais\/[0-9a-f-]{36}(\?[a-z=&]*)?$/.test(value) ? value : null;
 }
 
-/** Explicação de cada aba (cliente, 13/nov/2026): para que serve e onde o que está nela aparece. */
-export const TAB_INTROS: Record<ProfessionalTab, string> = {
-  perfil: "Como o profissional aparece para o paciente: no portal, no link de agendamento e nas mensagens do WhatsApp.",
-  atendimento: "Quem este profissional atende, com quanta antecedência o paciente pode marcar e a idade limite. Vale só para a agenda dele.",
-  convenios: "O que o profissional aceita: particular e convênios. O paciente vê ao agendar e nas respostas do WhatsApp.",
-  orientacoes: "Textos que o paciente lê sobre este profissional. As observações aparecem no portal, ao escolher o profissional; pagamento e convênios, no WhatsApp.",
-  acesso: "Como o profissional entra no painel: o e-mail recebe o convite e ele passa a ver só a própria agenda.",
-};
+/** Explicação de cada aba (cliente, 13/nov/2026): para que serve e onde o que está nela aparece; `bot`: a clínica tem o WhatsApp. */
+export function tabIntro(tab: ProfessionalTab, bot: boolean): string {
+  switch (tab) {
+    case "perfil":
+      return `Como o profissional aparece para o paciente: no portal${bot ? ", no link de agendamento e nas mensagens do WhatsApp" : " e no link de agendamento"}.`;
+    case "atendimento":
+      return "Quem este profissional atende, com quanta antecedência o paciente pode marcar e a idade limite. Vale só para a agenda dele.";
+    case "convenios":
+      return `O que o profissional aceita: particular e convênios. O paciente vê ao agendar${bot ? " e nas respostas do WhatsApp" : ""}.`;
+    case "orientacoes":
+      return bot
+        ? "Textos que o paciente lê sobre este profissional. As observações aparecem no portal, ao escolher o profissional; pagamento e convênios, no WhatsApp."
+        : "O que o paciente lê sobre este profissional: as observações aparecem no portal, ao escolher o profissional.";
+    case "acesso":
+      return "Como o profissional entra no painel: o e-mail recebe o convite e ele passa a ver só a própria agenda.";
+  }
+}

@@ -25,6 +25,10 @@ describe("professionalTabs", () => {
     expect(professionalTabs(url("?aba=xyz"), ALL).tab).toBe("perfil");
   });
 
+  it("o nome antigo da aba (bot) leva às Orientações", () => {
+    expect(professionalTabs(url("?aba=bot&editar=orientacoes"), ALL)).toMatchObject({ tab: "orientacoes", edit: "orientacoes" });
+  });
+
   it("abre a edição só da parte daquela aba", () => {
     expect(professionalTabs(url("?aba=convenios&editar=convenios"), ALL)).toMatchObject({ tab: "convenios", edit: "convenios" });
     expect(professionalTabs(url("?editar=dados"), ALL)).toMatchObject({ tab: "perfil", edit: "dados" });

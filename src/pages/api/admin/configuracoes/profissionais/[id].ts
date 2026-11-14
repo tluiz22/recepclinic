@@ -83,8 +83,8 @@ export const POST: APIRoute = async (context) => {
         return { redirectTo: page(id), message: "Atendimento salvo." };
       }
       if (acao === "bot_info") {
-        // Sem o bot, a tela só tem as observações: pagamento e convênios ficam como estão.
-        const kept = form?.has("payment_info") ? null : await getProfessionalBotInfo(db, clinic.clinicId, id);
+        // Sem o bot (decidido pela clínica, não pelo formulário), a tela só tem as observações: pagamento e convênios ficam como estão.
+        const kept = clinic.features.includes("whatsapp_bot") ? null : await getProfessionalBotInfo(db, clinic.clinicId, id);
         await setProfessionalBotInfo(db, clinic.clinicId, id, {
           paymentInfo: kept ? kept.paymentInfo : formOptionalText(form, "payment_info"),
           insuranceInfo: kept ? kept.insuranceInfo : formOptionalText(form, "insurance_info"),

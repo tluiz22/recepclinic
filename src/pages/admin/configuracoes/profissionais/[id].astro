@@ -36,7 +36,7 @@ import { loadPortalSettings } from "../../../../lib/data/config/portal";
 import { portalLinksOf } from "../../../../lib/data/config/portalLinks";
 import { agendaOfProfessional } from "../../../../lib/data/config/agendas";
 import { PROFILE_LABELS } from "../../../../lib/vocabulary";
-import { professionalPage, professionalTabs, TAB_INTROS, type ProfessionalEdit, type ProfessionalTab } from "../../../../lib/professionalTabs";
+import { professionalPage, professionalTabs, tabIntro, type ProfessionalEdit, type ProfessionalTab } from "../../../../lib/professionalTabs";
 import { loadProfessionalAccess } from "../../../../lib/data/config/professionalAccess";
 import { listTeam } from "../../../../lib/data/config/team";
 import { formatInstant } from "../../../../lib/clinicTime";
@@ -67,7 +67,7 @@ const chosenIds = new Set(chosen.map((s) => s.id));
 const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(db)).filter((s) => !chosenIds.has(s.id))];
 // Particular e convênios (MC; F1 da recepção digital): só com o item "Convênios".
 const insuranceOn = clinic.features.includes("insurance") && !isNew;
-// Informações que o bot responde (MI, M5): só por profissional, com o bot.
+// Orientações ao paciente (MI, M5): a aba existe em todo cadastro; pagamento e convênios só com o bot (`botOn`).
 const botOn = clinic.features.includes("whatsapp_bot");
 
 // Abas e a parte aberta para edição (o cadastro novo é só o formulário).
@@ -113,6 +113,9 @@ const chip = (tone: "ok" | "off" | "pend") =>
 const EDIT_LINK = `${SECONDARY_BUTTON} shrink-0`;
 const DT = `${DT_BASE} text-sm`;
 const DD = `${DD_BASE} mt-0.5`;
+// "Como funciona?": o profissional com login próprio não vê o que é do Administrador (acesso e convite).
+const fullTopic = configuracoes.comoFunciona.profissional;
+const helpTopic = ownOnly ? { ...fullTopic, como: fullTopic.como.slice(0, 3), erro: undefined, depende: undefined } : fullTopic;
 const registry = professional ? professionalRegistry(professional) : "";
 // Diálogo de confirmação: o do Desativar já vem com o ActiveToggle.
 const needsDialog =
@@ -202,8 +205,8 @@ const needsDialog =
               active: t.id === tab,
             }))}
           />
-          <HowItWorks id="profissional" topic={configuracoes.comoFunciona.profissional} class="-mt-1">
-            <p class="max-w-3xl text-[15px] text-ink-soft">{TAB_INTROS[tab]}</p>
+          <HowItWorks id="profissional" topic={helpTopic} class="-mt-1">
+            <p class="max-w-3xl text-[15px] text-ink-soft">{tabIntro(tab, botOn)}</p>
           </HowItWorks>
         </>
       )
